@@ -1,10 +1,71 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>My GitHub Page</title>
+  <meta charset="UTF-8" />
+  <title>Sibsan</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: #111;
+      font-family: sans-serif;
+      color: white;
+    }
+
+    #info {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 1;
+      background: rgba(0, 0, 0, 0.6);
+      padding: 10px 20px;
+      border-radius: 10px;
+    }
+  </style>
 </head>
 <body>
-  <h1>สวัสดีครับ ยินดีต้อนรับสู่เว็บไซต์ของผม!</h1>
+  <div id="info">
+    <h1>Hello, I'm Sibsan!</h1>
+    <p>This is my 3D homepage with Three.js</p>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.min.js"></script>
+  <script>
+    // สร้าง Scene
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // กล่อง
+    const geometry = new THREE.BoxGeometry();
+    const material = new THREE.MeshStandardMaterial({ color: 0x00ffcc });
+    const cube = new THREE.Mesh(geometry, material);
+    scene.add(cube);
+
+    // แสง
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(5, 5, 5);
+    scene.add(light);
+
+    // กล้อง
+    camera.position.z = 3;
+
+    // ปรับขนาดตามหน้าจอ
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // หมุนกล่อง
+    function animate() {
+      requestAnimationFrame(animate);
+      cube.rotation.x += 0.01;
+      cube.rotation.y += 0.01;
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
 </body>
 </html>
