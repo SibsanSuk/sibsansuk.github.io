@@ -1,0 +1,35 @@
+<!-- index.html (ย่อให้เหลือส่วนสำคัญ) -->
+<body>
+<canvas id="c"></canvas>
+<script src="https://unpkg.com/three@latest/build/three.min.js"></script>
+<script>
+const canvas   = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({canvas});
+renderer.setSize(window.innerWidth, window.innerHeight);
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 1000);
+camera.position.z = 2;
+
+// STEP 1: สร้าง Geometry (สามเหลี่ยม)
+const verts = new Float32Array([
+   0.0,  0.5, 0.0,
+  -0.5, -0.5, 0.0,
+   0.5, -0.5, 0.0
+]);
+const geo = new THREE.BufferGeometry();
+geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+
+const mat  = new THREE.MeshBasicMaterial({color: 0xffcc00});
+const mesh = new THREE.Mesh(geo, mat);
+scene.add(mesh);
+
+// STEP 2: Loop + Transform
+function animate() {
+   requestAnimationFrame(animate);
+   mesh.rotation.y += 0.01;   // แสดงให้เห็นการแปลง
+   renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
