@@ -17,6 +17,23 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script>
+        function LoadObj(url) {
+            const loader = new THREE.OBJLoader();
+            loader.load(url, function (object) {
+                object.traverse(function (child) {
+                    if (child.isMesh) {
+                        child.castShadow = true; // ✅ วัตถุนี้สร้างเงา
+                        child.receiveShadow = true; // ✅ วัตถุนี้รับเงา
+                    }
+                });
+                return object
+            });
+            return null;
+        }
+
+    </script>
+
+    <script>
 
         const renderer = new THREE.WebGLRenderer();
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -67,19 +84,8 @@
         scene.add(plane);
 
 
-        const loader = new THREE.OBJLoader();
-        loader.load('model1.obj', function (object) {
-            object.traverse(function (child) {
-                if (child.isMesh) {
-                    child.castShadow = true; // ✅ วัตถุนี้สร้างเงา
-                    child.receiveShadow = true; // ✅ วัตถุนี้รับเงา
-                }
-            });
-            scene.add(object);
-        }, undefined, function (error) {
-            console.error('Error loading OBJ:', error);
-        });
-
+        let obj = LoadObj('https://sibsansuk.github.io/myModel.obj');
+        scene.add(obj);
 
         // ✅ render loop
         function animate(t) {
