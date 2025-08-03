@@ -14,14 +14,7 @@
 <body>
     <!-- core three.js -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-
-    <!-- loader ที่เข้ากันกับ r128 -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
-
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/fflate@0.7.4/umd/index.min.js"></script>
-
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
 
     <script>
 
@@ -43,8 +36,6 @@
         );
         camera.position.set(0, 2, 5);
         camera.lookAt(0, 0, 0);
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-
 
         // ✅ Directional Light ที่สร้างเงา
         const light = new THREE.DirectionalLight(0xffffff, 1);
@@ -75,55 +66,22 @@
         scene.add(plane);
 
 
-
         const loader = new THREE.OBJLoader();
-        loader.load('https://sibsansuk.github.io/myModel.obj', function (object) {
-            object.castShadow = true; // ✅ วัตถุนี้สร้างเงา
-            // ตั้งค่า castShadow กับทุก mesh ใน object
-        object.traverse(function (child) {
-          if (child.isMesh) {
-            child.castShadow = true;
-            child.receiveShadow = false;
-            child.material.side = THREE.DoubleSide;
-          }
-        });
+        loader.load('model1.obj', function (object) {
+            object.traverse(function (child) {
+                if (child.isMesh) {
+                    child.castShadow = true; // ✅ วัตถุนี้สร้างเงา
+                    child.receiveShadow = true; // ✅ วัตถุนี้รับเงา
+                }
+            });
             scene.add(object);
         }, undefined, function (error) {
             console.error('Error loading OBJ:', error);
         });
 
-        let mixer;
-        const clock = new THREE.Clock();
-        const fbxLoader = new THREE.FBXLoader();
-        fbxLoader.load('https://sibsansuk.github.io/myModel.fbx', function (object) {
-            object.scale.set(0.01, 0.01, 0.01); // ปรับขนาดให้เหมาะสม
-            // ตั้งค่า castShadow กับทุก mesh ใน object
-        object.traverse(function (child) {
-          if (child.isMesh) {
-            child.castShadow = true;
-            child.receiveShadow = false;
-            child.material.side = THREE.DoubleSide;
-          }
-        });
-
-            mixer = new THREE.AnimationMixer(object);
-
-            if (object.animations.length > 0) {
-                const action = mixer.clipAction(object.animations[0]);
-                action.play();
-            }
-            object.position.set(0, 0, 2);
-            scene.add(object);
-        }, undefined, function (error) {
-            console.error('FBX load error:', error);
-        });
-
 
         // ✅ render loop
         function animate(t) {
-
-            const delta = clock.getDelta();
-             if (mixer) mixer.update(delta);
 
             renderer.render(scene, camera);
             requestAnimationFrame(animate);
