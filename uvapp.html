@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>UV Thai – แผนที่สถานี (React + Leaflet + Chart.js)</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" />
+  <style>
+    /* Light Theme */
+    html, body, #root { height: 100%; margin: 0; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", sans-serif; background: #f8fafc; color: #0f172a; }
+    .app { display: grid; grid-template-rows: 56px 1fr; height: 100%; }
+    header { display: flex; align-items: center; gap: 10px; padding: 0 16px; background: #ffffff; border-bottom: 1px solid #e5e7eb; }
+    .logo { width: 28px; height: 28px; background: conic-gradient(from 120deg,#22d3ee,#0ea5e9,#8b5cf6); border-radius: 8px; }
+    .content.landscape { display: grid; grid-template-columns: 1fr 420px; }
+    .content.portrait { display: grid; grid-template-rows: 1fr auto; }
+    #map { width: 100%; height: 100%; }
+    .panel { background: #ffffff; padding: 12px; border-left: 1px solid #e5e7eb; overflow:auto; }
+    .panel-top{display:flex;align-items:center;justify-content:space-between;padding:4px 2px 8px 2px;border-bottom:1px solid #eef2f7;margin-bottom:8px}
+    .panel-title{font-size:16px;font-weight:700}
+    .icon-btn{width:34px;height:34px;border-radius:999px;border:1px solid #e5e7eb;background:#ffffff;color:#0f172a;box-shadow:0 1px 2px rgba(0,0,0,.04);cursor:pointer;display:grid;place-items:center}
+    .icon-btn:active{transform:translateY(1px)}
+    .muted { color: #475569; }
+    .btn { margin: 4px 6px 0 0; padding: 8px 10px; border-radius: 10px; border: 1px solid #e5e7eb; background: #ffffff; color: #0f172a; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+    .btn:active { transform: translateY(1px); }
+    .btn-list button{margin-bottom:6px; text-align:left}
+    .key { display:grid; grid-template-columns:120px 1fr; gap:6px; padding:8px 0; border-top:1px dashed #e2e8f0; }
+
+    /* Legend & UVI chips (light theme) */
+    .legend{background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;padding:8px 10px;color:#0f172a;box-shadow:0 2px 10px rgba(15,23,42,.08)}
+    .legend h4{margin:0 0 6px 0;font-size:12px;color:#0f172a}
+    .legend .row{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:12px;color:#334155}
+    .swatch{width:14px;height:14px;border-radius:4px;border:1px solid #cbd5e1}
+    .icon-uvi{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:999px;font-size:12px;font-weight:800;color:#0f172a;border:1px solid rgba(0,0,0,.12);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+    .badge-uvi{display:inline-grid;place-items:center;min-width:28px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:800;color:#0f172a;border:1px solid rgba(0,0,0,.12)}
+    .chart-wrap{margin-top:10px; padding:10px; border:1px solid #e5e7eb; border-radius:12px; background:#fff}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <!-- libs -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <script>
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    // API URLs
+    const API_URL = 'https://sheets.livepolls.app/api/spreadsheets/080e1666-1a69-4030-9ea5-5a2fd6b62a68/Stations';
+    const SERIES_API_URL = null; // ใส่ URL จริงภายหลัง เช่น `${base}/series?stationId=...`
+
+    // Helpers
+    function useLandscape(){
+      const [land, setLand] = useState(window.innerWidth > window.innerHeight);
+      useEffect(function(){
+        const onResize = function(){ setLand(window.innerWidth > window.innerHeight); };
+        window.addEventListener('resize', onResize);
+        return function(){ window.removeEventListener('resize', onResize); };
+      },[]);
+      return land;
+    }
+
+    function getUviInfo(uvi){
+      const n = Number(uvi);
+      if (!Number.isFinite(n)) return { label:'-', color:'#94a3b8', range:'-', level:'ไม่ทราบ' };
+      if (n <= 2)  return { label:String(n), color:'#22c55e', range:'0–2',  level:'ต่ำ' };
+      if (n <= 5)  return { label:String(n), color:'#facc15', range:'3–5',  level:'ปานกลาง' };
+      if (n <= 7)  return { label:String(n), color:'#fb923c', range:'6–7',  level:'สูง' };
+      if (n <= 10) return { label:String(n), color:'#ef4444', range:'8–10', level:'สูงมาก' };
+      return { label:String(n), color:'#a855f7', range:'11+', level:'รุนแรงมาก' };
+    }
+
+    // Mock series (time, uvi) 15-20 จุดภายในวันเดียว; ใช้ ISO HH:mm
+    function buildMockSeriesFor(id){
+      const base = new Date();
+      base.setHours(4,0,0,0);
+      const pts = [];
+      const seed = (parseInt(String(id), 10) || 1) * 7; // แตกต่างกันตามสถานี
+      for (let i=0;i<17;i++){
+        const t = new Date(base.getTime() + i*30*60*1000); // ทุก 30 นาที
+        const h = t.getHours()+t.getMinutes()/60;
+        // รูปคลื่นจำลองเที่ยงวันพีค
+        const peak = 13 + (seed % 2 === 0 ? 0.5 : 0);
+        let val = Math.max(0, Math.sin((h-6)/ (peak-6) * Math.PI)) * (8 + (seed % 5));
+        val = Math.round(val * 10)/10;
+        pts.push({ time: t.toTimeString().slice(0,5), uvi: val });
+      }
+      return pts;
+    }
+
+    async function loadSeries(stationId){
+      if (SERIES_API_URL){
+        const url = SERIES_API_URL.replace('{id}', encodeURIComponent(stationId));
+        const r = await fetch(url);
+        if (!r.ok) throw new Error('series api failed');
+        const json = await r.json();
+        // คาดรูปแบบ [{time:"HH:mm", uvi:Number}] ถ้าชื่อคีย์ต่างให้ map ที่นี่
+        return Array.isArray(json)? json : (json.data || []);
+      }
+      return buildMockSeriesFor(stationId);
+    }
+
+    // Map component
+    function ThailandMap(props){
+      const sites = props.sites, onSelect = props.onSelect, selectedId = props.selectedId, fitAllTick = props.fitAllTick;
+      const mapRef = useRef(null);
+      const markersRef = useRef({});
+      const circleRef = useRef(null);
+      const legendRef = useRef(null);
+
+      if (!window.L) {
+        return React.createElement('div', { id: 'map', style: {display:'grid',placeItems:'center',color:'#94a3b8'} }, 'แผนที่ไม่พร้อมใช้งาน (Leaflet โหลดไม่สำเร็จ)');
+      }
+
+      const makeIcon = function(uvi){
+        const info = getUviInfo(uvi);
+        const html = '<div class="icon-uvi" style="background:'+info.color+'">'+info.label+'</div>';
+        return L.divIcon({ html: html, className:'', iconSize:[28,28], iconAnchor:[14,14] });
+      };
+
+      useEffect(function(){
+        if (!mapRef.current){
+          const map = L.map('map').setView([15.87, 100.99], 6);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+          mapRef.current = map;
+          const legend = L.control({ position:'bottomleft' });
+          legend.onAdd = function(){
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = '<h4>UVI (WHO)</h4>'+
+              '<div class="row"><span class="swatch" style="background:#22c55e"></span> 0–2 ต่ำ</div>'+
+              '<div class="row"><span class="swatch" style="background:#facc15"></span> 3–5 ปานกลาง</div>'+
+              '<div class="row"><span class="swatch" style="background:#fb923c"></span> 6–7 สูง</div>'+
+              '<div class="row"><span class="swatch" style="background:#ef4444"></span> 8–10 สูงมาก</div>'+
+              '<div class="row"><span class="swatch" style="background:#a855f7"></span> 11+ รุนแรงมาก</div>'+
+              '<div class="row" style="margin-top:6px;color:#64748b">ตัวเลขบนจุดคือค่า UVI ปัจจุบัน</div>';
+            legendRef.current = div;
+            return div;
+          };
+          legend.addTo(map);
+        }
+        const map = mapRef.current;
+        (sites||[]).forEach(function(s){
+          const id = s.id;
+          const icon = makeIcon(s.uvi);
+          if (!markersRef.current[id]){
+            const mk = L.marker([s.lat, s.lng], { icon: icon }).addTo(map).on('click', function(){ onSelect(id); });
+            mk.bindTooltip(s.name+'<br/>UVI: '+(s.uvi!=null? s.uvi : '-'), {direction:'top'});
+            markersRef.current[id] = mk;
+          } else {
+            markersRef.current[id].setLatLng([s.lat, s.lng]);
+            markersRef.current[id].setIcon(icon);
+            if (markersRef.current[id].getTooltip()) {
+              markersRef.current[id].setTooltipContent(s.name+'<br/>UVI: '+(s.uvi!=null? s.uvi : '-'));
+            } else {
+              markersRef.current[id].bindTooltip(s.name+'<br/>UVI: '+(s.uvi!=null? s.uvi : '-'), {direction:'top'});
+            }
+          }
+        });
+      }, [sites, onSelect]);
+
+      useEffect(function(){
+        if (!mapRef.current) return;
+        if (circleRef.current){ circleRef.current.remove(); circleRef.current = null; }
+        const site = (sites||[]).find(function(s){ return s.id === selectedId; });
+        if (site){
+          const info = getUviInfo(site.uvi);
+          circleRef.current = L.circleMarker([site.lat, site.lng], { radius: 20, color: info.color, weight:2, fillOpacity:0.15, fillColor:info.color }).addTo(mapRef.current);
+          mapRef.current.flyTo([site.lat, site.lng], 8);
+        }
+      }, [selectedId, sites]);
+
+      // Fit to Thailand / all markers when requested
+      useEffect(function(){
+        if (!mapRef.current) return;
+        const map = mapRef.current;
+        const pts = (sites||[]).map(function(s){ return [s.lat, s.lng]; });
+        if (pts.length){
+          const b = L.latLngBounds(pts).pad(0.2);
+          map.fitBounds(b);
+        } else {
+          const b = L.latLngBounds([ [5.5,97.3], [20.5,105.9] ]).pad(0.05); // Thailand approx
+          map.fitBounds(b);
+        }
+      }, [fitAllTick, sites]);
+
+      return React.createElement('div', { id: 'map' });
+    }
+
+    // Chart component
+    function UviChart(props){
+      const series = props.series;
+      const canvasRef = useRef(null);
+      const chartRef = useRef(null);
+
+      useEffect(function(){
+        if (!window.Chart || !canvasRef.current) return;
+        const ctx = canvasRef.current.getContext('2d');
+        const labels = series.map(function(p){ return p.time; });
+        const data = series.map(function(p){ return p.uvi; });
+        if (chartRef.current){ chartRef.current.destroy(); }
+        chartRef.current = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: 'UV Index',
+                data: data,
+                tension: 0.3,
+                pointRadius: 2
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { ticks: { maxRotation: 0 } },
+              y: { beginAtZero: true, suggestedMax: 12 }
+            }
+          }
+        });
+        return function(){ if (chartRef.current){ chartRef.current.destroy(); chartRef.current = null; } };
+      }, [series]);
+
+      return React.createElement('div', { className:'chart-wrap' },
+        React.createElement('canvas', { ref: canvasRef, height: 200 })
+      );
+    }
+
+    function Panel(props){
+      const site = props.site, sites = props.sites, onClear = props.onClear, series = props.series, loadingSeries = props.loadingSeries, seriesError = props.seriesError;
+      return React.createElement('div', { className: 'panel' },
+        site ? (
+          React.createElement('div', null,
+            React.createElement('div', { className:'panel-top' },
+              React.createElement('div', { className:'panel-title' }, 'รายละเอียดสถานี'),
+              React.createElement('button', { className:'icon-btn', title:'ย้อนกลับ', 'aria-label':'ย้อนกลับ', onClick:onClear }, '←')
+            ),
+            React.createElement('h2', null, site.name),
+            React.createElement('div', { className:'key' },
+              React.createElement('div', { className:'muted' }, 'พิกัด'),
+              React.createElement('div', null, (Number.isFinite(site.lat)?site.lat.toFixed(4):'?')+', '+(Number.isFinite(site.lng)?site.lng.toFixed(4):'?'))
+            ),
+            React.createElement('div', { className:'key' },
+              React.createElement('div', { className:'muted' }, 'UVI ตอนนี้'),
+              (function(){
+                const info = getUviInfo(site.uvi);
+                return React.createElement('div', null,
+                  React.createElement('span', { className:'badge-uvi', style:{background:info.color, marginRight:8}}, info.label),
+                  info.range+' • '+info.level
+                );
+              })()
+            ),
+            site.update_time ? React.createElement('div', { className:'key' },
+              React.createElement('div', { className:'muted' }, 'อัปเดต'),
+              React.createElement('div', null, site.update_time)
+            ) : null,
+            loadingSeries ? React.createElement('div', { className:'muted', style:{marginTop:8}}, 'กำลังโหลดกราฟ…') : null,
+            seriesError ? React.createElement('div', { style:{color:'#b91c1c', marginTop:8} }, 'โหลดกราฟไม่สำเร็จ: '+seriesError) : null,
+            (series && series.length) ? React.createElement(UviChart, { series: series }) : null
+          )
+        ) : (
+          React.createElement('div', null,
+            React.createElement('div', { className:'panel-top' },
+              React.createElement('div', { className:'panel-title' }, 'เลือกสถานีทั้งหมด'),
+              null
+            ),
+            React.createElement('div', { className:'btn-list' },
+              (sites||[]).map(function(s){ return React.createElement('button', { className:'btn', key: s.id, onClick: function(){ onClear(); window.dispatchEvent(new CustomEvent('pick-site',{detail:s.id})); } }, s.name); })
+            ),
+            React.createElement('div', { style:{marginTop:10} },
+              React.createElement('div', { className:'muted' }, 'สเกล WHO: 0–2 ต่ำ, 3–5 ปานกลาง, 6–7 สูง, 8–10 สูงมาก, 11+ รุนแรงมาก')
+            )
+          )
+        )
+      );
+    }
+
+    function App(){
+      const [stations, setStations] = useState([]);
+      const [selectedId, setSelectedId] = useState(null);
+      const [error, setError] = useState(null);
+      const [series, setSeries] = useState([]);
+      const [loadingSeries, setLoadingSeries] = useState(false);
+      const [seriesError, setSeriesError] = useState(null);
+      const [fitAllTick, setFitAllTick] = useState(0);
+      const isLandscape = useLandscape();
+
+      useEffect(function(){
+        let alive = true;
+        fetch(API_URL)
+          .then(function(res){ return res.json(); })
+          .then(function(json){
+            if (!alive) return;
+            const rows = Array.isArray(json) ? json : (json.data || []);
+            const parsed = rows.map(function(d){
+              const parts = String(d.lat_long || '').split(',');
+              const lat = parseFloat(parts[0]);
+              const lng = parseFloat(parts[1]);
+              return { id: String(d.id), name: d.name || '', lat: lat, lng: lng, uvi: d.uvi!==undefined? Number(d.uvi): null, update_time: d.update_time || null };
+            }).filter(function(s){ return Number.isFinite(s.lat) && Number.isFinite(s.lng); });
+            setStations(parsed);
+            // zoom out to whole Thailand (all stations) on first load
+            setFitAllTick(function(t){ return t+1; });
+          })
+          .catch(function(err){ console.error('API fetch error', err); setError(err.message || 'โหลดข้อมูลไม่สำเร็จ'); });
+        const h = function(e){ setSelectedId(e.detail); };
+        window.addEventListener('pick-site', h);
+        return function(){ alive = false; window.removeEventListener('pick-site', h); };
+      },[]);
+
+      // load series when selected station changes
+      useEffect(function(){
+        if (!selectedId) { setSeries([]); return; }
+        let alive = true;
+        setLoadingSeries(true); setSeriesError(null);
+        loadSeries(selectedId)
+          .then(function(ser){ if (!alive) return; setSeries(ser); })
+          .catch(function(err){ if (!alive) return; setSeriesError(err.message || 'error'); setSeries([]); })
+          .finally(function(){ if (alive) setLoadingSeries(false); });
+        return function(){ alive = false; };
+      }, [selectedId]);
+
+      // Tests (keep existing + add a few more)
+      useEffect(function(){
+        if (stations.length){
+          console.assert(typeof stations[0].id === 'string', 'station.id should be string');
+          console.assert(Number.isFinite(stations[0].lat) && Number.isFinite(stations[0].lng), 'lat/lng should be numbers');
+          var sample = [0,2,3,5,6,7,8,10,11];
+          var colors = sample.map(function(n){ if(n<=2) return '#22c55e'; if(n<=5) return '#facc15'; if(n<=7) return '#fb923c'; if(n<=10) return '#ef4444'; return '#a855f7'; });
+          console.assert(colors.length===9, 'WHO color mapping test');
+          // Added explicit boundary checks
+          var expect = function(val, color){ var info = getUviInfo(val); console.assert(info.color===color, 'expected '+color+' for '+val+', got '+info.color); };
+          expect(2,'#22c55e'); expect(3,'#facc15'); expect(7,'#fb923c'); expect(8,'#ef4444'); expect(11,'#a855f7');
+        }
+        if (series && series.length){
+          // series tests
+          console.assert(typeof series[0].time === 'string', 'series.time should be string HH:mm');
+          console.assert(typeof series[0].uvi === 'number', 'series.uvi should be number');
+          // monotonic labels (non-decreasing lexicographically for HH:mm)
+          var ok = true; for (var i=1;i<series.length;i++){ if (series[i-1].time > series[i].time) { ok=false; break; } }
+          console.assert(ok, 'series times should be non-decreasing');
+        }
+        // orientation boolean
+        var isLand = window.innerWidth > window.innerHeight;
+        console.assert(typeof isLand === 'boolean', 'orientation should be boolean');
+      }, [stations, series]);
+
+      const selectedSite = useMemo(function(){ return stations.find(function(s){ return s.id === selectedId; }) || null; }, [stations, selectedId]);
+
+      return React.createElement('div', { className: 'app' },
+        React.createElement('header', null,
+          React.createElement('div', { className: 'logo' }),
+          React.createElement('h1', null, 'UV Thai'),
+          error ? React.createElement('div', { className:'muted', style:{marginLeft:'auto'} }, 'Error: ', error) : null
+        ),
+        React.createElement('main', { className: 'content '+(isLandscape ? 'landscape' : 'portrait') },
+          React.createElement(ThailandMap, { sites: stations, selectedId: selectedId, onSelect: setSelectedId, fitAllTick: fitAllTick }),
+          React.createElement(Panel, { site: selectedSite, sites: stations, onClear: function(){ setSelectedId(null); setFitAllTick(function(t){ return t+1; }); }, series: series, loadingSeries: loadingSeries, seriesError: seriesError })
+        )
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+  </script>
+</body>
+</html>
