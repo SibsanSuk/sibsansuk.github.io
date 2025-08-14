@@ -34,6 +34,11 @@
     .icon-uvi{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:999px;font-size:12px;font-weight:800;color:#0f172a;border:1px solid rgba(0,0,0,.12);box-shadow:0 1px 2px rgba(0,0,0,.08)}
     .badge-uvi{display:inline-grid;place-items:center;min-width:28px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:800;color:#0f172a;border:1px solid rgba(0,0,0,.12)}
     .chart-wrap{margin-top:10px; padding:10px; border:1px solid #e5e7eb; border-radius:12px; background:#fff}
+  .content{min-height:0}
+    .content > #map, .content > .panel{min-height:0}
+    /* แสดงอย่างละครึ่งเมื่อแนวตั้ง และให้พาเนล scroll ได้ */
+    .content.portrait{grid-template-rows:1fr 1fr}
+    @media (max-height:700px){.content.portrait{grid-template-rows:55% 45%}}
   </style>
 </head>
 <body>
@@ -125,6 +130,13 @@
           const map = L.map('map').setView([15.87, 100.99], 6);
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
           mapRef.current = map;
+          // ensure map resizes when container changes (portrait half/landscape panel)
+          var mapEl = document.getElementById('map');
+          if (window.ResizeObserver && mapEl){
+            var ro = new ResizeObserver(function(){ map.invalidateSize(); });
+            ro.observe(mapEl);
+            mapRef.current.__ro = ro;
+          }
           const legend = L.control({ position:'bottomleft' });
           legend.onAdd = function(){
             const div = L.DomUtil.create('div', 'legend');
