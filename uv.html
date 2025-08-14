@@ -136,7 +136,8 @@
       background:#fff;
     }
     .siteFooter b{ color:#111 }
-    @media (max-width: 420px){ .kv{grid-template-columns:100px 1fr} }
+    @media (max-width: 600px) and (orientation: landscape){
+  .siteFooter{ font-size:11px; }}
   </style>
 </head>
 <body>
@@ -187,7 +188,7 @@
   <footer class="siteFooter">
     <div><b>โครงการ การพัฒนาแบบจำลองพยากรณ์รังสีอัลตราไวโอเลต</b><br/>(Development of UV forecasting models)</div>
     <div>ได้รับทุนอุดหนุนการวิจัยจาก<br/>สำนักงานคณะกรรมการส่งเสริมวิทยาศาสตร์ วิจัยและนวัตกรรม (สกสว.) กองทุนส่งเสริม วิทยาศาสตร์ วิจัยและนวัตกรรม (ววน.) ประจำปีงบประมาณ พ.ศ. 2567</div>
-    <div style="margin-top:6px">สอบถามเพิ่มเติมติดต่อ ภาควิชาฟิสิกส์ คณะวิทยาศาสตร์ มหาวิทยาลัยศิลปากร โทร. <b>0861613292</b></div>
+    <div style="margin-top:6px">สอบถามเพิ่มเติมติดต่อ ภาควิชาฟิสิกส์ คณะวิทยาศาสตร์ มหาวิทยาลัยศิลปากร โทร.0861613292</div>
   </footer>
 
   <!-- Leaflet JS -->
@@ -323,7 +324,7 @@ fetch(TH_OUTLINE_URL)
     'Minimal + Labels': L.layerGroup([cartoNoLabels, cartoOnlyLabels]),
     'OSM (เดิม)': osm
   };
-  L.control.layers(baseLayers, null, { position: 'topright', collapsed: true }).addTo(map);
+  //L.control.layers(baseLayers, null, { position: 'topright', collapsed: true }).addTo(map);
 
   // คลิกที่แผนที่ว่างเพื่อปิดแผงรายละเอียด (คงโค้ดเดิมไว้)
   map.on('click', () => closePanel());
