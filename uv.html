@@ -223,8 +223,8 @@
 
   // กรอบประเทศไทย (ประมาณ) เพื่อจำกัดการเลื่อน
   const TH_BOUNDS = L.latLngBounds(
-    [5.0,  97.0],   // S, W
-    [21.5, 106.5]   // N, E
+    [3.0,  95.5],  // S, W (ลดลงใต้/ซ้าย)
+  [23.8, 108.0]  // N, E (ขยายเหนือ/ขวา)
   );
 
   const map = L.map('map', {
@@ -278,6 +278,8 @@ fetch(TH_OUTLINE_URL)
         fill: false
       }
     }).addTo(map);
+
+    
     
   })
   .catch(err => console.error('โหลดขอบประเทศไทยไม่สำเร็จ:', err));
