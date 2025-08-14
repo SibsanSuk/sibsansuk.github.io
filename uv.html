@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <title>Thailand UV Index (Leaflet) – Lazy Timeline (UVI ↔︎ Erythemal)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+
+  <style>
+    :root{
+      --bg:#ffffff; --text:#111; --muted:#555; --border:#e5e7eb;
+      --green:#3CB371; --yellow:#FFD54F; --orange:#FFB74D; --red:#E57373; --purple:#BA68C8;
+      --shadow: 0 10px 25px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.06);
+      --brand:#0b57d0;
+      --panelZ: 3000; --legendZ: 900; --creditZ: 800; --leafletMarkerZ: 650;
+    }
+    *{box-sizing:border-box}
+    html, body{height:100%}
+    body{
+      margin:0; background:var(--bg); color:var(--text);
+      font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans Thai";
+    }
+
+    /* Header */
+    .header{
+      padding:14px 16px; border-bottom:1px solid var(--border);
+      display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    }
+    .logo{font-weight:800; letter-spacing:.2px; color:#0f172a; font-size:18px}
+    .sub{color:var(--muted); font-size:13px}
+    .btn{
+      appearance:none; border:1px solid var(--border); background:#fff;
+      padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:600;
+    }
+    .btn:hover{background:#f7f7f7}
+
+    /* Layout */
+    .layout{
+      min-height:calc(100% - 56px); /* เว้นที่ให้ footer ด้านล่าง */
+      display:grid; grid-template-columns: 1fr; grid-template-rows: 1fr;
+      position:relative;
+    }
+    #map{width:100%; height:100%}
+
+    /* Panel (รายละเอียด + กราฟ) – อยู่บนสุดเสมอ */
+    .panel{
+      position:relative;
+      background:#fff; border-left:1px solid var(--border);
+      box-shadow: var(--shadow);
+      display:flex; flex-direction:column;
+      z-index: var(--panelZ);
+    }
+    .panelHeader{
+      display:flex; align-items:center; justify-content:space-between;
+      padding:12px 14px; border-bottom:1px solid var(--border);
+      gap:8px;
+    }
+    .panelTitle{font-weight:700}
+    .panelBody{padding:12px 14px; overflow:auto}
+    .controls{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px}
+    .seg{display:flex; border:1px solid var(--border); border-radius:10px; overflow:hidden}
+    .seg button{border:none; background:#fff; padding:8px 12px; cursor:pointer; font-weight:600}
+    .seg button.active{background:#eef2ff; color:#1d4ed8}
+    .kv{display:grid; grid-template-columns:120px 1fr; gap:8px; padding:6px 0; border-bottom:1px dashed var(--border)}
+    .kv:last-child{border-bottom:none}
+    .muted{color:var(--muted)}
+    .tip{margin-top:10px; padding:10px 12px; border-radius:12px; background:#f9fafb; border:1px solid var(--border)}
+
+    /* Chart container (กันยืดหน้าเว็บ) */
+    .chartWrap{ height: clamp(220px, 38vh, 360px); width: 100%; }
+    .layout.portrait .chartWrap{ height: clamp(200px, 35vh, 320px); }
+    .chartWrap canvas{ display:block; width:100% !important; height:100% !important; }
+
+    /* Orientation-aware */
+    .layout.panel-open.portrait{ grid-template-rows: auto min(48%, 420px) }
+    .layout.panel-open.landscape{ grid-template-columns: 1fr clamp(340px, 36vw, 460px) }
+    .layout.panel-open.portrait .panel{ border-left:none; border-top:1px solid var(--border) }
+
+    /* Legend – ย้ายไปขวาบน ไม่ชนปุ่มซูม */
+    .legend{
+      position:absolute; right:12px; top:12px;
+      background:rgba(255,255,255,.95); border:1px solid var(--border);
+      backdrop-filter: blur(4px);
+      border-radius:10px; padding:8px 10px; box-shadow: var(--shadow);
+      font-size:12px; color:#111; z-index: var(--legendZ);
+    }
+    .legendRow{display:flex; align-items:center; gap:8px; margin:4px 0}
+    .chip{width:16px; height:10px; border-radius:4px; border:1px solid rgba(0,0,0,.1)}
+
+    /* Credit (ย้ายซ้ายล่าง ให้พ้น panel แนวนอน) */
+    .credit{
+      position:absolute; left:10px; bottom:10px;
+      padding:6px 8px; border-radius:8px; background:#fff; border:1px solid var(--border);
+      font-size:11px; color:#666; z-index: var(--creditZ);
+    }
+
+    /* UV DivIcon (ตัวเลขบนหมุด) */
+    .uv-pin{
+      display:grid; place-items:center;
+      width:34px; height:34px; border-radius:50%;
+      color:#111; font-weight:800; font-size:13px;
+      border:2px solid rgba(0,0,0,.25); box-shadow: 0 2px 6px rgba(0,0,0,.15);
+      text-shadow: 0 1px 0 rgba(255,255,255,.7);
+      position: relative;
+    }
+    .leaflet-marker-pane{ z-index: var(--leafletMarkerZ) !important }
+    .leaflet-pane.leaflet-overlay-pane{ z-index: 400 !important }
+    .leaflet-pane.leaflet-tile-pane{ z-index: 200 !important }
+
+    /* Loading state */
+    .loading{
+      display:flex; align-items:center; gap:10px;
+      color:#374151; background:#f9fafb; border:1px solid var(--border);
+      padding:10px 12px; border-radius:10px; margin:8px 0;
+    }
+    .spinner{
+      width:16px; height:16px; border:2px solid #d1d5db; border-top-color:#4f46e5;
+      border-radius:50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin{ to{ transform: rotate(360deg) } }
+
+    /* Footer info (ตามข้อความที่ให้มา) */
+    .siteFooter{
+      border-top:1px solid var(--border);
+      padding:14px 16px;
+      font-size:13px; line-height:1.6; color:#374151;
+      background:#fff;
+    }
+    .siteFooter b{ color:#111 }
+    @media (max-width: 420px){ .kv{grid-template-columns:100px 1fr} }
+  </style>
+</head>
+<body>
+  <header class="header" role="banner">
+    <div class="logo">UV Index – ประเทศไทย</div>
+    <div class="sub">โครงการ การพัฒนาแบบจำลองพยากรณ์รังสีอัลตราไวโอเลต</div>
+    
+    <div class="sub" style="margin-left:auto; display:flex; gap:8px">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Logo_of_Silpakorn_University.svg/1200px-Logo_of_Silpakorn_University.svg.png" style="height:64px">
+      <img src="https://wp.tsri.or.th/wp-content/uploads/2024/02/image-78.png" style="height:64px">
+  </div>
+  <!--
+    <div style="margin-left:auto; display:flex; gap:8px">
+      <button class="btn" id="btnRefresh">รีเฟรชข้อมูล</button>
+    </div>
+-->
+</header>
+
+
+  <main class="layout" id="layout">
+    <div id="map" role="region" aria-label="แผนที่ประเทศไทย (UV Index)"></div>
+
+    <!-- Panel -->
+    <section class="panel" id="panel" aria-live="polite" style="display:none">
+      <div class="panelHeader">
+        <div class="panelTitle" id="panelTitle">รายละเอียดสถานี</div>
+        <div style="display:flex; gap:8px">
+          <button class="btn" id="btnClose">ปิด</button>
+        </div>
+      </div>
+      <div class="panelBody" id="panelBody"></div>
+    </section>
+
+    <!-- Legend: ขวาบน ไม่ทับปุ่มซูม -->
+    <aside class="legend" aria-label="คำอธิบายสี UV Index">
+      <div class="legendRow"><span class="chip" style="background:var(--green)"></span> 0–2 ต่ำ</div>
+      <div class="legendRow"><span class="chip" style="background:var(--yellow)"></span> 3–5 ปานกลาง</div>
+      <div class="legendRow"><span class="chip" style="background:var(--orange)"></span> 6–7 สูง</div>
+      <div class="legendRow"><span class="chip" style="background:var(--red)"></span> 8–10 สูงมาก</div>
+      <div class="legendRow"><span class="chip" style="background:var(--purple)"></span> 11+ อันตรายมาก</div>
+    </aside>
+
+    <!-- Attribution -->
+    <div class="credit">แผนที่: © OpenStreetMap | Leaflet • กราฟ: Chart.js</div>
+  </main>
+
+  <!-- ข้อความด้านล่างเว็บ -->
+  <footer class="siteFooter">
+    <div><b>โครงการ การพัฒนาแบบจำลองพยากรณ์รังสีอัลตราไวโอเลต</b><br/>(Development of UV forecasting models)</div>
+    <div>ได้รับทุนอุดหนุนการวิจัยจาก<br/>สำนักงานคณะกรรมการส่งเสริมวิทยาศาสตร์ วิจัยและนวัตกรรม (สกสว.) กองทุนส่งเสริม วิทยาศาสตร์ วิจัยและนวัตกรรม (ววน.) ประจำปีงบประมาณ พ.ศ. 2567</div>
+    <div style="margin-top:6px">สอบถามเพิ่มเติมติดต่อ ภาควิชาฟิสิกส์ คณะวิทยาศาสตร์ มหาวิทยาลัยศิลปากร โทร. <b>0861613292</b></div>
+  </footer>
+
+  <!-- Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <script>
+    /* ================= Utilities & Config ================= */
+    const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    const uvColor = uv => uv<=2?cssVar('--green'):uv<=5?cssVar('--yellow'):uv<=7?cssVar('--orange'):uv<=10?cssVar('--red'):cssVar('--purple');
+    const uvLevelText = uv => uv<=2?'ต่ำ':uv<=5?'ปานกลาง':uv<=7?'สูง':uv<=10?'สูงมาก':'อันตรายมาก';
+    const uvAdvice = uv => uv<=2?'ปลอดภัยโดยรวม แต่ควรทากันแดดเมื่ออยู่กลางแจ้งนาน ๆ':uv<=5?'ทากันแดด สวมหมวก ปกป้องผิวเมื่ออยู่กลางแดดนาน':uv<=7?'ทากันแดด SPF สูง สวมหมวก/แว่นกันแดด หลีกเลี่ยงแดดช่วง 11:00–15:00':uv<=10?'หลบแดดช่วงเที่ยง–บ่ายต้น ใช้อุปกรณ์ปกป้องผิวเต็มรูปแบบ':'หลีกเลี่ยงแดดตรง ใช้ร่ม/อยู่ในร่ม ทากันแดดซ้ำบ่อย ๆ';
+
+    const START_HH = 4, END_HH = 20; // 04:00–20:00
+    const todayISO = () => new Date().toISOString().slice(0,10); // YYYY-MM-DD
+
+    const layoutEl = document.getElementById('layout');
+    const panelEl  = document.getElementById('panel');
+    function applyOrientation(){
+      const isPortrait = window.matchMedia('(orientation: portrait)').matches;
+      layoutEl.classList.toggle('portrait', isPortrait);
+      layoutEl.classList.toggle('landscape', !isPortrait);
+      if (layoutEl.classList.contains('panel-open')) setTimeout(()=> map.invalidateSize(), 0);
+    }
+    window.addEventListener('orientationchange', applyOrientation);
+    window.addEventListener('resize', applyOrientation);
+
+<!-- ===== Leaflet Map (แทนที่บล็อกเดิมทั้งหมดส่วนสร้าง map/tileLayer) ===== -->
+
+  // กรอบประเทศไทย (ประมาณ) เพื่อจำกัดการเลื่อน
+  const TH_BOUNDS = L.latLngBounds(
+    [5.0,  97.0],   // S, W
+    [21.5, 106.5]   // N, E
+  );
+
+  const map = L.map('map', {
+    zoomControl: true,
+    minZoom: 5,
+    maxZoom: 12,            // ไม่ให้ซูมเข้าเยอะจนเห็นเส้นถนนยิบย่อย
+    attributionControl: false,
+    maxBounds: TH_BOUNDS,   // จำกัดไม่ให้ออกนอกประเทศมากนัก
+    maxBoundsViscosity: 0.8 // เหนียวๆ เวลาเลื่อนชนขอบ
+  }).setView([15.0, 101.0], 6);
+
+
+  
+// ===== ใส่กรอบสีฟ้ารอบประเทศไทย =====
+// (อยู่เหนือแผนที่ tile แต่ต่ำกว่า marker เพื่อไม่ทับเลข UV)
+
+map.createPane('thFramePane');
+map.getPane('thFramePane').style.zIndex = 300;    // tile=200, overlay=400, marker=650
+map.getPane('thFramePane').style.pointerEvents = 'none'; // ไม่รับคลิก
+
+// 1) สร้าง pane แยกสำหรับเส้นขอบ (ให้อยู่เหนือไทล์ แต่อยู่ใต้ marker)
+map.createPane('thOutlinePane');
+map.getPane('thOutlinePane').style.zIndex = 500;      // tile=200, overlay=400, marker≈650
+map.getPane('thOutlinePane').style.pointerEvents = 'none';
+
+// 2) ดึง GeoJSON ประเทศไทย (พรมแดน) แล้ววาดเป็นเส้นสีฟ้า
+// แหล่งข้อมูล: johan/world.geo.json (ไฟล์เฉพาะ THA ขนาดเล็ก)
+const TH_OUTLINE_URL = 'https://raw.githubusercontent.com/johan/world.geo.json/master/countries/THA.geo.json';
+
+fetch(TH_OUTLINE_URL)
+  .then(r => r.json())
+  .then(geo => {
+    // เส้นหลัก
+    L.geoJSON(geo, {
+      pane: 'thOutlinePane',
+      style: {
+        color: '#38BDF8',   // ฟ้า
+        weight: 3,          // ความหนาเส้น
+        opacity: 0.95,
+        fill: false
+      }
+    }).addTo(map);
+
+    // (ทางเลือก) เส้นเรืองนิด ๆ ใต้เส้นหลักให้เด่นขึ้น
+    L.geoJSON(geo, {
+      pane: 'thOutlinePane',
+      style: {
+        color: '#38BDF8',
+        weight: 10,
+        opacity: 0.12,
+        fill: false
+      }
+    }).addTo(map);
+    
+  })
+  .catch(err => console.error('โหลดขอบประเทศไทยไม่สำเร็จ:', err));
+
+
+  // --- เบสแมพแบบ Minimal (CartoDB Positron – no labels) ---
+  const cartoNoLabels = L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',
+    {
+      subdomains: 'abcd',
+      maxZoom: 20,
+      attribution:
+        '© OpenStreetMap contributors, © CARTO'
+    }
+  );
+
+  // --- เลเยอร์ตัวอักษรอย่างเดียว (labels) จาก CartoDB ---
+  const cartoOnlyLabels = L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',
+    {
+      subdomains: 'abcd',
+      maxZoom: 20,
+      attribution: ''
+    }
+  );
+
+  // --- OSM เดิม (เผื่ออยากสลับกลับ) ---
+  const osm = L.tileLayer(
+    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    { attribution: '© OpenStreetMap contributors' }
+  );
+
+  // ใช้ค่าเริ่มต้น: Minimal + Labels บาง ๆ
+  cartoNoLabels.addTo(map);
+  cartoOnlyLabels.setOpacity(0.8).addTo(map);
+
+  // (ทางเลือก) ลดความจัดของไทล์ให้เรียบตาอีกนิด
+  // คุณสามารถเปิดคอมเมนต์บรรทัดด้านล่างเพื่อทำให้พื้นหลังยิ่งเรียบ:
+  // document.querySelector('.leaflet-tile-pane').style.filter = 'saturate(0.8) contrast(0.98)';
+
+  // ตัวเลือกสลับเบสแมพ (เมนูเล็ก ๆ ขวาบน)
+  const baseLayers = {
+    //'Minimal (No labels)': cartoNoLabels,
+    'Minimal + Labels': L.layerGroup([cartoNoLabels, cartoOnlyLabels]),
+    'OSM (เดิม)': osm
+  };
+  L.control.layers(baseLayers, null, { position: 'topright', collapsed: true }).addTo(map);
+
+  // คลิกที่แผนที่ว่างเพื่อปิดแผงรายละเอียด (คงโค้ดเดิมไว้)
+  map.on('click', () => closePanel());
+
+  
+
+
+    /* ================= Mock APIs =================
+       (สลับเป็น fetch จริงได้ทันที)
+    ================================================= */
+
+    // 1) รายชื่อสถานี + UVI ปัจจุบัน
+    async function fetchStationList(){
+      const nowISO = new Date().toISOString();
+      return [
+        { id:'su-npt', name:'มหาวิทยาลัยศิลปากร (นครปฐม)', lat:13.8199, lon:100.0400, uv: 9.2,  updatedAt: nowISO },
+        { id:'met-cmi', name:'ศูนย์อุตุนิยมวิทยาเชียงใหม่',    lat:18.7900, lon: 98.9800, uv: 7.1,  updatedAt: nowISO },
+        { id:'met-ubn', name:'ศูนย์อุตุนิยมวิทยา อุบลราชธานี',  lat:15.2440, lon:104.8530, uv: 6.4,  updatedAt: nowISO },
+        { id:'met-ska', name:'ศูนย์อุตุนิยมวิทยา สงขลา',        lat: 7.1970, lon:100.5950, uv: 11.0, updatedAt: nowISO }
+      ];
+      // ตัวอย่างจริง:
+      // const resp = await fetch('https://YOUR-ENDPOINT/stations');
+      // return (await resp.json()).stations;
+    }
+
+    // 2) ไทม์ซีรีส์รายชั่วโมงของ “วันนี้” (แบบไม่ต่อเนื่อง/หยึกๆหยักๆ)
+    async function fetchTimeseriesByStationId(stationId, dateISO){
+      const basePeak = { 'su-npt':9.2, 'met-cmi':7.1, 'met-ubn':6.4, 'met-ska':11.0 }[stationId] ?? 8.0;
+      const times = [];
+      for (let h=START_HH; h<=END_HH; h++){
+        times.push(`${String(h).padStart(2,'0')}:00`);
+        if (Math.random() > 0.25) times.push(`${String(h).padStart(2,'0')}:30`);
+      }
+      const filteredTimes = times.filter(()=> Math.random() > 0.15); // ลบให้ไม่ต่อเนื่อง
+
+      const center = 13, sigma = 3.2;
+      const series = filteredTimes.map(t=>{
+        const [hh,mm] = t.split(':').map(Number);
+        const hour = hh + (mm||0)/60;
+        const gaussian = Math.exp(-Math.pow(hour - center, 2) / (2*sigma*sigma));
+        let uvi = basePeak * gaussian;
+        uvi *= (0.9 + Math.random()*0.4);     // noise
+        if (Math.random() < 0.2) uvi *= 0.5;  // เมฆบัง
+        if (hour < 6 || hour > 18) uvi *= 0.6;
+        return { time:t, uvi: +Math.max(0, uvi).toFixed(2) };
+      }).sort((a,b)=>{
+        const ah = Number(a.time.slice(0,2)) + Number(a.time.slice(3))/60;
+        const bh = Number(b.time.slice(0,2)) + Number(b.time.slice(3))/60;
+        return ah - bh;
+      });
+
+      await new Promise(r=> setTimeout(r, 350)); // จำลอง latency
+      return series;
+
+      // ตัวอย่างจริง:
+      // const resp = await fetch(`https://YOUR-ENDPOINT/station/${stationId}/timeseries?date=${dateISO}`);
+      // return (await resp.json()).timeseries;
+    }
+
+    /* ================= Markers ================= */
+    let markerGroup = L.layerGroup().addTo(map);
+    function makeDivIcon(uv){
+      const el = document.createElement('div');
+      el.className = 'uv-pin';
+      el.style.background = uvColor(uv);
+      el.textContent = Math.round(uv);
+      return L.divIcon({ html: el, className:'', iconSize:[34,34], iconAnchor:[17,17] });
+    }
+    function renderMarkers(stations){
+      markerGroup.clearLayers();
+      stations.forEach(s=>{
+        const m = L.marker([s.lat, s.lon], { icon: makeDivIcon(s.uv) });
+        m.on('click', ()=> openPanel(s));
+        m.addTo(markerGroup);
+      });
+    }
+
+    /* ================= Panel + Chart (lazy timeseries) ================= */
+    let chart = null;
+    let chartMode = 'UVI'; // 'UVI' or 'ERY' (mW/m²)
+    let lastOpenedStationId = null;
+
+    function openPanel(station){
+      lastOpenedStationId = station.id;
+
+      const body = document.getElementById('panelBody');
+      body.innerHTML = `
+        <div style="font-size:16px; font-weight:800; margin-bottom:6px">${station.name}</div>
+        <div class="kv"><div class="muted">UV ตอนนี้</div><div><b style="color:${uvColor(station.uv)}">${station.uv.toFixed(1)}</b> (${uvLevelText(station.uv)})</div></div>
+        <div class="kv"><div class="muted">พิกัด</div><div>Lat ${station.lat.toFixed(4)}°, Lon ${station.lon.toFixed(4)}°</div></div>
+        <div class="kv"><div class="muted">อัปเดต</div><div>${new Date(station.updatedAt).toLocaleString()}</div></div>
+
+        <div class="controls">
+          <div class="seg" role="tablist" aria-label="โหมดกราฟ">
+            <button id="modeUVI" class="${chartMode==='UVI'?'active':''}" aria-selected="${chartMode==='UVI'}">UV Index</button>
+            <button id="modeERY" class="${chartMode==='ERY'?'active':''}" aria-selected="${chartMode==='ERY'}">Erythemal (mW/m²)</button>
+          </div>
+        </div>
+
+        <div class="loading"><span class="spinner"></span> กำลังดึงข้อมูลรายชั่วโมงของวันนี้...</div>
+        <div class="chartWrap" style="display:none"><canvas id="uvChart" aria-label="กราฟความเข้ม UV วันนี้" role="img"></canvas></div>
+        <div class="tip">
+          <div style="font-weight:700; margin-bottom:4px">คำแนะนำ</div>
+          <div>${uvAdvice(station.uv)}</div>
+        </div>
+      `;
+
+      panelEl.style.display = 'flex';
+      layoutEl.classList.add('panel-open');
+      applyOrientation();
+      setTimeout(()=> map.invalidateSize(), 40);
+
+      body.querySelector('#modeUVI').onclick = ()=> switchMode('UVI');
+      body.querySelector('#modeERY').onclick = ()=> switchMode('ERY');
+
+      (async ()=>{
+        const loadingEl = body.querySelector('.loading');
+        const chartWrap = body.querySelector('.chartWrap');
+        const series = await fetchTimeseriesByStationId(station.id, todayISO());
+        if (lastOpenedStationId !== station.id) return;
+
+        const filtered = series.filter(p=>{
+          const [hh,mm] = p.time.split(':').map(Number);
+          const hour = hh + (mm||0)/60;
+          return hour >= START_HH && hour <= END_HH;
+        });
+
+        const labels = filtered.map(p=> p.time);
+        const uviArr = filtered.map(p=> p.uvi);
+        const dataToShow = (chartMode==='UVI') ? uviArr : uviArr.map(v => +(v*25).toFixed(2));
+        const labelToShow = (chartMode==='UVI') ? 'UV Index' : 'Erythemal (mW/m²)';
+
+        chartWrap.style.display = 'block';
+        loadingEl.style.display = 'none';
+        const ctx = document.getElementById('uvChart').getContext('2d');
+        if (chart) chart.destroy();
+        chart = new Chart(ctx, getChartConfig(labels, dataToShow, labelToShow, chartMode==='UVI', uviArr));
+        chart.$uvi = uviArr;
+        chart.resize();
+      })();
+    }
+
+    function closePanel(){
+      layoutEl.classList.remove('panel-open');
+      panelEl.style.display = 'none';
+      setTimeout(()=> map.invalidateSize(), 40);
+    }
+    document.getElementById('btnClose').addEventListener('click', closePanel);
+
+    function switchMode(mode){
+      chartMode = mode;
+      const panelBody = document.getElementById('panelBody');
+      const btnUVI = panelBody.querySelector('#modeUVI');
+      const btnERY = panelBody.querySelector('#modeERY');
+      btnUVI.classList.toggle('active', mode==='UVI');
+      btnERY.classList.toggle('active', mode==='ERY');
+
+      if (!chart) return;
+      const labels = chart.data.labels.slice();
+      const uviArr = (chart.$uvi || []).slice();
+      const data = (mode==='UVI') ? uviArr : uviArr.map(v => +(v*25).toFixed(2));
+      const labelText = (mode==='UVI') ? 'UV Index' : 'Erythemal (mW/m²)';
+      updateChart(labels, data, labelText, mode==='UVI', uviArr);
+    }
+
+    /* ================= Chart helpers ================= */
+    function getChartConfig(labels, data, label, isUVI, uviOriginalArr){
+      return {
+        type:'line',
+        data:{ labels, datasets:[{
+          label, data,
+          tension:0.3, borderWidth:3, fill:false,
+          segment: { borderColor: ctx => {
+            const idx = ctx.p1DataIndex;
+            const uvi = (uviOriginalArr && uviOriginalArr[idx] != null)
+              ? uviOriginalArr[idx]
+              : (uviOriginalArr ? uviOriginalArr[uviOriginalArr.length-1] : data[idx]);
+            return uvColor(uvi);
+          }},
+          pointRadius: 0,
+          pointHitRadius: 10
+        }]},
+        options:{
+          maintainAspectRatio:false,
+          interaction:{ mode:'nearest', intersect:false },
+          plugins:{
+            legend:{ display:false },
+            tooltip:{ callbacks:{ label:(c)=> `${label}: ${c.parsed.y}` } }
+          },
+          scales:{
+            x:{ grid:{display:false}, ticks:{ maxRotation:0, autoSkip:true, maxTicksLimit:10 } },
+            y:{ beginAtZero:true, grid:{color:'#f1f5f9'}, ticks:{ callback:(v)=> isUVI ? v : Number(v).toFixed(0) } }
+          }
+        }
+      };
+    }
+
+    function updateChart(labels, data, label, isUVI, uviOriginalArr){
+      if (!chart) return;
+      chart.data.labels = labels;
+      chart.data.datasets[0].data = data;
+      chart.data.datasets[0].label = label;
+      chart.$uvi = uviOriginalArr;
+      chart.options.plugins.tooltip.callbacks.label = (c)=> `${label}: ${c.parsed.y}`;
+      chart.options.scales.y.ticks.callback = (v)=> isUVI ? v : Number(v).toFixed(0);
+      chart.update();
+    }
+
+    /* ================= Refresh all ================= */
+    async function refresh(){
+      const stations = await fetchStationList();
+      renderMarkers(stations);
+      if (stations.length){
+        const bounds = L.latLngBounds(stations.map(s => [s.lat, s.lon]));
+        map.fitBounds(bounds.pad(0.2), { animate:false });
+      }
+    }
+    //document.getElementById('btnRefresh').addEventListener('click', refresh);
+
+    /* ================= Boot ================= */
+    applyOrientation();
+    refresh();
+
+  </script>
+</body>
+</html>
