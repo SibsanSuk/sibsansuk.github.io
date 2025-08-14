@@ -223,18 +223,18 @@
 
   // กรอบประเทศไทย (ประมาณ) เพื่อจำกัดการเลื่อน
   const TH_BOUNDS = L.latLngBounds(
-    [3.0,  95.5],  // S, W (ลดลงใต้/ซ้าย)
+    [4.0,  95.5],  // S, W (ลดลงใต้/ซ้าย)
   [23.8, 108.0]  // N, E (ขยายเหนือ/ขวา)
   );
 
   const map = L.map('map', {
     zoomControl: true,
     minZoom: 5,
-    maxZoom: 12,            // ไม่ให้ซูมเข้าเยอะจนเห็นเส้นถนนยิบย่อย
+    maxZoom: 8,            // ไม่ให้ซูมเข้าเยอะจนเห็นเส้นถนนยิบย่อย
     attributionControl: false,
     maxBounds: TH_BOUNDS,   // จำกัดไม่ให้ออกนอกประเทศมากนัก
     maxBoundsViscosity: 0.8 // เหนียวๆ เวลาเลื่อนชนขอบ
-  }).setView([15.0, 101.0], 6);
+  }).setView([15.0, 102.0], 5);
 
 
   
