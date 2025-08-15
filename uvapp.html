@@ -42,7 +42,7 @@
 
     /* Map top-center metric toggle */
     .map-toggle{
-      position:relative;  top:8px; right: 12px;
+      position:relative;  top:8px; 
       background:#ffffff; border:1px solid #e5e7eb; border-radius:999px;
       box-shadow:0 6px 20px rgba(15,23,42,.15);
       display:flex; padding:4px; gap:4px; z-index:1000;
@@ -54,6 +54,28 @@
     .map-toggle button.active{
       background:#0ea5e9; color:#ffffff; border-color:#0ea5e9;
       box-shadow:0 1px 2px rgba(14,165,233,.3) inset;
+    }
+
+    /* ===== Station list (แทนปุ่ม balloon) ===== */
+    .station-list {
+      list-style: none;
+      margin: 4px 0 0 0;
+      padding: 0;
+      font-size: 13px; /* ลดขนาดฟอนต์ลง */
+    }
+    .station-list li{display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:6px;border:1px solid #e5e7eb;border-radius:10px;background:#ffffff;box-shadow:0 1px 2px rgba(0,0,0,.04);cursor:pointer}
+    .station-list li:active{transform:translateY(1px)}
+    .station-list .dot{width:10px;height:10px;border-radius:999px;border:1px solid rgba(0,0,0,.1)}
+    .station-list .name{flex:1}
+    .station-list .value{font-weight:700;color:#0f172a}
+
+    /* ===== Loading spinner สำหรับโหลดรายชื่อสถานี ===== */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading { display:grid; place-items:center; padding:24px; color:#64748b; }
+    .loading .ring {
+      width:28px; height:28px; border:3px solid #e5e7eb;
+      border-top-color:#0ea5e9; border-radius:50%;
+      animation: spin 1s linear infinite; margin-bottom:8px;
     }
   </style>
 </head>
@@ -112,7 +134,7 @@
     }
 
     function unitLabel(metric){
-      return metric === METRIC_UVI ? 'UVI' : 'mW/m² (Erythemal)';
+      return metric === METRIC_UVI ? 'UV Index' : 'mW/m² (Erythemal)';
     }
 
     function legendHTML(metric){
@@ -227,7 +249,7 @@
             },
             onRemove: function(){}
           });
-          map.addControl(new ctrl({ position:'topleft' })); // วางที่ corner แล้วจัดกลางด้วย CSS
+          map.addControl(new ctrl({ position:'topright' })); // วางที่ corner แล้วจัดกลางด้วย CSS
         }
 
         const map = mapRef.current;
@@ -350,7 +372,7 @@
 
     // ===== Panel =====
     function Panel(props){
-      const { site, sites, onClear, series, loadingSeries, seriesError, metric } = props;
+      const { site, sites, onClear, series, loadingSeries, seriesError, metric, loadingStations } = props;
       return React.createElement('div', { className: 'panel' },
         site ? (
           React.createElement('div', null,
@@ -386,12 +408,28 @@
         ) : (
           React.createElement('div', null,
             React.createElement('div', { className:'panel-top' },
-              React.createElement('div', { className:'panel-title' }, 'เลือกสถานีทั้งหมด'),
+              React.createElement('div', { className:'panel-title' }, 'เลือกสถานี'),
               null
             ),
-            React.createElement('div', { className:'btn-list' },
-              (sites||[]).map(function(s){ return React.createElement('button', { className:'btn', key: s.id, onClick: function(){ onClear(); window.dispatchEvent(new CustomEvent('pick-site',{detail:s.id})); } }, s.name); })
-            ),
+            loadingStations
+              ? React.createElement('div', { className:'loading', role:'status', 'aria-live':'polite' },
+                  React.createElement('div', { className:'ring', 'aria-hidden':'true' }),
+                  'กำลังโหลดสถานี…'
+                )
+              : React.createElement('ul', { className:'station-list' },
+                  (sites||[]).map(function(s){
+                    var info = getUviInfo(s.uvi);
+                    var shown = convertFromUvi(s.uvi, metric);
+                    return React.createElement('li', {
+                      key: s.id,
+                      onClick: function(){ onClear(); window.dispatchEvent(new CustomEvent('pick-site',{detail:s.id})); }
+                    },
+                      React.createElement('span', { className:'dot', style:{ background: info.color } }),
+                      React.createElement('span', { className:'name' }, s.name),
+                      React.createElement('span', { className:'value' }, (shown!=null? shown : '-') + ' ' + unitLabel(metric).replace(' (Erythemal)',''))
+                    );
+                  })
+                ),
             React.createElement('div', { 
               style: {
                 marginTop: 10,
@@ -426,10 +464,12 @@
       const [seriesError, setSeriesError] = useState(null);
       const [fitAllTick, setFitAllTick] = useState(0);
       const [metric, setMetric] = useState(METRIC_UVI); // <-- หน่วยที่เลือก
+      const [loadingStations, setLoadingStations] = useState(true); // <-- ใหม่
       const isLandscape = useLandscape();
 
       useEffect(function(){
         let alive = true;
+        setLoadingStations(true); // เริ่มโหลดรายชื่อสถานี
         fetch(API_URL)
           .then(function(res){ return res.json(); })
           .then(function(json){
@@ -444,7 +484,8 @@
             setStations(parsed);
             setFitAllTick(function(t){ return t+1; }); // zoom to all on first load
           })
-          .catch(function(err){ console.error('API fetch error', err); setError(err.message || 'โหลดข้อมูลไม่สำเร็จ'); });
+          .catch(function(err){ console.error('API fetch error', err); setError(err.message || 'โหลดข้อมูลไม่สำเร็จ'); })
+          .finally(function(){ if (alive) setLoadingStations(false); }); // จบโหลด
         const h = function(e){ setSelectedId(e.detail); };
         window.addEventListener('pick-site', h);
         return function(){ alive = false; window.removeEventListener('pick-site', h); };
@@ -502,7 +543,8 @@
             series: series,
             loadingSeries: loadingSeries,
             seriesError: seriesError,
-            metric: metric
+            metric: metric,
+            loadingStations: loadingStations
           })
         )
       );
