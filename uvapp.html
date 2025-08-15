@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>UV Thai – แผนที่สถานี (React + Leaflet + Chart.js)</title>
+  <title>UV Thai : ภาควิชาฟิสิกส์ คณะวิทยาศาสตร์ มหาวิทยาลัยศิลปากร</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" />
   <style>
     /* Light Theme */
@@ -14,7 +14,7 @@
     .logo { width: 28px; height: 28px; background: conic-gradient(from 120deg,#22d3ee,#0ea5e9,#8b5cf6); border-radius: 8px; }
     .content.landscape { display: grid; grid-template-columns: 1fr 420px; }
     .content.portrait { display: grid; grid-template-rows: 1fr auto; }
-    #map { width: 100%; height: 100%; }
+    #map { width: 100%; height: 100%; position: relative; }
     .panel { background: #ffffff; padding: 12px; border-left: 1px solid #e5e7eb; overflow:auto; }
     .panel-top{display:flex;align-items:center;justify-content:space-between;padding:4px 2px 8px 2px;border-bottom:1px solid #eef2f7;margin-bottom:8px}
     .panel-title{font-size:16px;font-weight:700}
@@ -34,11 +34,27 @@
     .icon-uvi{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:999px;font-size:12px;font-weight:800;color:#0f172a;border:1px solid rgba(0,0,0,.12);box-shadow:0 1px 2px rgba(0,0,0,.08)}
     .badge-uvi{display:inline-grid;place-items:center;min-width:28px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:800;color:#0f172a;border:1px solid rgba(0,0,0,.12)}
     .chart-wrap{margin-top:10px; padding:10px; border:1px solid #e5e7eb; border-radius:12px; background:#fff}
-  .content{min-height:0}
+    .content{min-height:0}
     .content > #map, .content > .panel{min-height:0}
     /* แสดงอย่างละครึ่งเมื่อแนวตั้ง และให้พาเนล scroll ได้ */
     .content.portrait{grid-template-rows:1fr 1fr}
     @media (max-height:700px){.content.portrait{grid-template-rows:55% 45%}}
+
+    /* Map top-center metric toggle */
+    .map-toggle{
+      position:relative;  top:8px; right: 12px;
+      background:#ffffff; border:1px solid #e5e7eb; border-radius:999px;
+      box-shadow:0 6px 20px rgba(15,23,42,.15);
+      display:flex; padding:4px; gap:4px; z-index:1000;
+    }
+    .map-toggle button{
+      appearance:none; border:1px solid transparent; background:transparent;
+      padding:6px 10px; border-radius:999px; cursor:pointer; font-size:13px; color:#0f172a;
+    }
+    .map-toggle button.active{
+      background:#0ea5e9; color:#ffffff; border-color:#0ea5e9;
+      box-shadow:0 1px 2px rgba(14,165,233,.3) inset;
+    }
   </style>
 </head>
 <body>
@@ -54,9 +70,12 @@
 
     // API URLs
     const API_URL = 'https://sheets.livepolls.app/api/spreadsheets/080e1666-1a69-4030-9ea5-5a2fd6b62a68/Stations';
-    const SERIES_API_URL = null; // ใส่ URL จริงภายหลัง เช่น `${base}/series?stationId=...`
+    const SERIES_API_URL = null; // ถ้ามี API จริงให้แทนที่ {id}
 
-    // Helpers
+    // ===== Helpers / Units =====
+    const METRIC_UVI = 'uvi';
+    const METRIC_ERY = 'ery'; // erythemal irradiance (mW/m²), 1 UVI ≈ 25 mW/m²
+
     function useLandscape(){
       const [land, setLand] = useState(window.innerWidth > window.innerHeight);
       useEffect(function(){
@@ -75,6 +94,44 @@
       if (n <= 7)  return { label:String(n), color:'#fb923c', range:'6–7',  level:'สูง' };
       if (n <= 10) return { label:String(n), color:'#ef4444', range:'8–10', level:'สูงมาก' };
       return { label:String(n), color:'#a855f7', range:'11+', level:'รุนแรงมาก' };
+    }
+
+    function convertFromUvi(uvi, metric){
+      const n = Number(uvi);
+      if (!Number.isFinite(n)) return null;
+      if (metric === METRIC_UVI) return n;
+      if (metric === METRIC_ERY) return Math.round(n * 25); // mW/m²
+      return n;
+    }
+
+    function formatValue(val, metric){
+      if (val == null) return '-';
+      if (metric === METRIC_UVI) return String(val);
+      if (metric === METRIC_ERY) return String(val); // จะใส่หน่วยที่ตำแหน่งแสดงผล
+      return String(val);
+    }
+
+    function unitLabel(metric){
+      return metric === METRIC_UVI ? 'UVI' : 'mW/m² (Erythemal)';
+    }
+
+    function legendHTML(metric){
+      if (metric === METRIC_UVI){
+        return '<h4>UV Index</h4>'+
+          '<div class="row"><span class="swatch" style="background:#22c55e"></span> 0–2 ต่ำ</div>'+
+          '<div class="row"><span class="swatch" style="background:#facc15"></span> 3–5 ปานกลาง</div>'+
+          '<div class="row"><span class="swatch" style="background:#fb923c"></span> 6–7 สูง</div>'+
+          '<div class="row"><span class="swatch" style="background:#ef4444"></span> 8–10 สูงมาก</div>'+
+          '<div class="row"><span class="swatch" style="background:#a855f7"></span> 11+ รุนแรงมาก</div>';
+      } else {
+        // คูณช่วง UVI ด้วย 25 ตามนิยาม
+        return '<h4>Erythemal (mW/m²)</h4>'+
+          '<div class="row"><span class="swatch" style="background:#22c55e"></span> 0–50 ต่ำ</div>'+
+          '<div class="row"><span class="swatch" style="background:#facc15"></span> 75–125 ปานกลาง</div>'+
+          '<div class="row"><span class="swatch" style="background:#fb923c"></span> 150–175 สูง</div>'+
+          '<div class="row"><span class="swatch" style="background:#ef4444"></span> 200–250 สูงมาก</div>'+
+          '<div class="row"><span class="swatch" style="background:#a855f7"></span> 275+ รุนแรงมาก</div>';
+      }
     }
 
     // Mock series (time, uvi) 15-20 จุดภายในวันเดียว; ใช้ ISO HH:mm
@@ -101,27 +158,30 @@
         const r = await fetch(url);
         if (!r.ok) throw new Error('series api failed');
         const json = await r.json();
-        // คาดรูปแบบ [{time:"HH:mm", uvi:Number}] ถ้าชื่อคีย์ต่างให้ map ที่นี่
         return Array.isArray(json)? json : (json.data || []);
       }
       return buildMockSeriesFor(stationId);
     }
 
-    // Map component
+    // ===== Map component =====
     function ThailandMap(props){
-      const sites = props.sites, onSelect = props.onSelect, selectedId = props.selectedId, fitAllTick = props.fitAllTick;
+      const { sites, onSelect, selectedId, fitAllTick, metric, onMetricChange } = props;
       const mapRef = useRef(null);
       const markersRef = useRef({});
       const circleRef = useRef(null);
       const legendRef = useRef(null);
+      const toggleRef = useRef(null);
 
       if (!window.L) {
         return React.createElement('div', { id: 'map', style: {display:'grid',placeItems:'center',color:'#94a3b8'} }, 'แผนที่ไม่พร้อมใช้งาน (Leaflet โหลดไม่สำเร็จ)');
       }
 
-      const makeIcon = function(uvi){
+      const makeIcon = function(uvi, metric){
+        // สีอิงระดับตาม UVI เสมอ เพื่อความสอดคล้องกับ WHO
         const info = getUviInfo(uvi);
-        const html = '<div class="icon-uvi" style="background:'+info.color+'">'+info.label+'</div>';
+        const shown = convertFromUvi(uvi, metric);
+        const html = '<div class="icon-uvi" style="background:'+info.color+'">'+
+          (shown!=null ? String(shown) : '-') +'</div>';
         return L.divIcon({ html: html, className:'', iconSize:[28,28], iconAnchor:[14,14] });
       };
 
@@ -130,48 +190,74 @@
           const map = L.map('map').setView([15.87, 100.99], 6);
           L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
           mapRef.current = map;
-          // ensure map resizes when container changes (portrait half/landscape panel)
+          // Resize observer
           var mapEl = document.getElementById('map');
           if (window.ResizeObserver && mapEl){
             var ro = new ResizeObserver(function(){ map.invalidateSize(); });
             ro.observe(mapEl);
             mapRef.current.__ro = ro;
           }
+          // Legend control
           const legend = L.control({ position:'bottomleft' });
           legend.onAdd = function(){
             const div = L.DomUtil.create('div', 'legend');
-            div.innerHTML = '<h4>UVI (WHO)</h4>'+
-              '<div class="row"><span class="swatch" style="background:#22c55e"></span> 0–2 ต่ำ</div>'+
-              '<div class="row"><span class="swatch" style="background:#facc15"></span> 3–5 ปานกลาง</div>'+
-              '<div class="row"><span class="swatch" style="background:#fb923c"></span> 6–7 สูง</div>'+
-              '<div class="row"><span class="swatch" style="background:#ef4444"></span> 8–10 สูงมาก</div>'+
-              '<div class="row"><span class="swatch" style="background:#a855f7"></span> 11+ รุนแรงมาก</div>'+
-              '<div class="row" style="margin-top:6px;color:#64748b">ตัวเลขบนจุดคือค่า UVI ปัจจุบัน</div>';
+            div.innerHTML = legendHTML(metric);
             legendRef.current = div;
             return div;
           };
           legend.addTo(map);
+
+          // Top-center metric toggle (custom control)
+          const ctrl = L.Control.extend({
+            onAdd: function(){
+              const wrap = L.DomUtil.create('div', 'map-toggle');
+              wrap.innerHTML =
+                '<button type="button" data-m="uvi" class="'+(metric===METRIC_UVI?'active':'')+'">UV Index</button>'+
+                '<button type="button" data-m="ery" class="'+(metric===METRIC_ERY?'active':'')+'">Erythemal</button>';
+              // ป้องกันการแพน/ซูมเมื่อแตะ toggle
+              L.DomEvent.disableClickPropagation(wrap);
+              L.DomEvent.disableScrollPropagation(wrap);
+              wrap.addEventListener('click', function(e){
+                if (e.target && e.target.dataset && e.target.dataset.m){
+                  onMetricChange(e.target.dataset.m);
+                }
+              });
+              toggleRef.current = wrap;
+              return wrap;
+            },
+            onRemove: function(){}
+          });
+          map.addControl(new ctrl({ position:'topleft' })); // วางที่ corner แล้วจัดกลางด้วย CSS
         }
+
         const map = mapRef.current;
+        // สร้าง/อัปเดต markers
         (sites||[]).forEach(function(s){
           const id = s.id;
-          const icon = makeIcon(s.uvi);
+          const icon = makeIcon(s.uvi, metric);
           if (!markersRef.current[id]){
             const mk = L.marker([s.lat, s.lng], { icon: icon }).addTo(map).on('click', function(){ onSelect(id); });
-            mk.bindTooltip(s.name+'<br/>UVI: '+(s.uvi!=null? s.uvi : '-'), {direction:'top'});
+            const shown = convertFromUvi(s.uvi, metric);
+            mk.bindTooltip(
+              s.name+'<br/>'+unitLabel(metric)+': '+(shown!=null? shown : '-'),
+              {direction:'top'}
+            );
             markersRef.current[id] = mk;
           } else {
-            markersRef.current[id].setLatLng([s.lat, s.lng]);
-            markersRef.current[id].setIcon(icon);
-            if (markersRef.current[id].getTooltip()) {
-              markersRef.current[id].setTooltipContent(s.name+'<br/>UVI: '+(s.uvi!=null? s.uvi : '-'));
+            const mk = markersRef.current[id];
+            mk.setLatLng([s.lat, s.lng]);
+            mk.setIcon(icon);
+            const shown = convertFromUvi(s.uvi, metric);
+            if (mk.getTooltip()) {
+              mk.setTooltipContent(s.name+'<br/>'+unitLabel(metric)+': '+(shown!=null? shown : '-'));
             } else {
-              markersRef.current[id].bindTooltip(s.name+'<br/>UVI: '+(s.uvi!=null? s.uvi : '-'), {direction:'top'});
+              mk.bindTooltip(s.name+'<br/>'+unitLabel(metric)+': '+(shown!=null? shown : '-'), {direction:'top'});
             }
           }
         });
-      }, [sites, onSelect]);
+      }, [sites, onSelect, metric]);
 
+      // อัปเดตวงกลมไฮไลต์สถานีที่เลือก
       useEffect(function(){
         if (!mapRef.current) return;
         if (circleRef.current){ circleRef.current.remove(); circleRef.current = null; }
@@ -183,7 +269,7 @@
         }
       }, [selectedId, sites]);
 
-      // Fit to Thailand / all markers when requested
+      // Fit to all
       useEffect(function(){
         if (!mapRef.current) return;
         const map = mapRef.current;
@@ -192,17 +278,37 @@
           const b = L.latLngBounds(pts).pad(0.2);
           map.fitBounds(b);
         } else {
-          const b = L.latLngBounds([ [5.5,97.3], [20.5,105.9] ]).pad(0.05); // Thailand approx
+          const b = L.latLngBounds([ [5.5,97.3], [20.5,105.9] ]).pad(0.05);
           map.fitBounds(b);
         }
       }, [fitAllTick, sites]);
 
+      // อัปเดตข้อความ Legend และปุ่ม active เมื่อ metric เปลี่ยน
+      useEffect(function(){
+        if (legendRef.current){
+          legendRef.current.innerHTML = legendHTML(metric);
+        }
+        if (toggleRef.current){
+          Array.from(toggleRef.current.querySelectorAll('button')).forEach(function(btn){
+            btn.classList.toggle('active', btn.dataset.m === metric);
+          });
+        }
+        // อัปเดต tooltip ของ marker ให้สะท้อนหน่วยใหม่
+        Object.values(markersRef.current).forEach(function(mk){
+          const s = (sites||[]).find(function(t){ return mk.getLatLng().lat===t.lat && mk.getLatLng().lng===t.lng; });
+          if (s){
+            const shown = convertFromUvi(s.uvi, metric);
+            mk.setTooltipContent(s.name+'<br/>'+unitLabel(metric)+': '+(shown!=null? shown : '-'));
+          }
+        });
+      }, [metric, sites]);
+
       return React.createElement('div', { id: 'map' });
     }
 
-    // Chart component
+    // ===== Chart component =====
     function UviChart(props){
-      const series = props.series;
+      const { series, metric } = props;
       const canvasRef = useRef(null);
       const chartRef = useRef(null);
 
@@ -210,7 +316,7 @@
         if (!window.Chart || !canvasRef.current) return;
         const ctx = canvasRef.current.getContext('2d');
         const labels = series.map(function(p){ return p.time; });
-        const data = series.map(function(p){ return p.uvi; });
+        const data = series.map(function(p){ return metric===METRIC_UVI ? p.uvi : convertFromUvi(p.uvi, METRIC_ERY); });
         if (chartRef.current){ chartRef.current.destroy(); }
         chartRef.current = new Chart(ctx, {
           type: 'line',
@@ -218,7 +324,7 @@
             labels: labels,
             datasets: [
               {
-                label: 'UV Index',
+                label: metric===METRIC_UVI ? 'UV Index' : 'Erythemal (mW/m²)',
                 data: data,
                 tension: 0.3,
                 pointRadius: 2
@@ -230,20 +336,21 @@
             plugins: { legend: { display: false } },
             scales: {
               x: { ticks: { maxRotation: 0 } },
-              y: { beginAtZero: true, suggestedMax: 12 }
+              y: { beginAtZero: true, suggestedMax: metric===METRIC_UVI ? 12 : 300 }
             }
           }
         });
         return function(){ if (chartRef.current){ chartRef.current.destroy(); chartRef.current = null; } };
-      }, [series]);
+      }, [series, metric]);
 
       return React.createElement('div', { className:'chart-wrap' },
         React.createElement('canvas', { ref: canvasRef, height: 200 })
       );
     }
 
+    // ===== Panel =====
     function Panel(props){
-      const site = props.site, sites = props.sites, onClear = props.onClear, series = props.series, loadingSeries = props.loadingSeries, seriesError = props.seriesError;
+      const { site, sites, onClear, series, loadingSeries, seriesError, metric } = props;
       return React.createElement('div', { className: 'panel' },
         site ? (
           React.createElement('div', null,
@@ -257,12 +364,14 @@
               React.createElement('div', null, (Number.isFinite(site.lat)?site.lat.toFixed(4):'?')+', '+(Number.isFinite(site.lng)?site.lng.toFixed(4):'?'))
             ),
             React.createElement('div', { className:'key' },
-              React.createElement('div', { className:'muted' }, 'UVI ตอนนี้'),
+              React.createElement('div', { className:'muted' }, 'ค่าปัจจุบัน'),
               (function(){
-                const info = getUviInfo(site.uvi);
+                const shown = convertFromUvi(site.uvi, metric);
+                const info = getUviInfo(site.uvi); // ระดับยังยึดตาม UVI
+                const unit = unitLabel(metric);
                 return React.createElement('div', null,
-                  React.createElement('span', { className:'badge-uvi', style:{background:info.color, marginRight:8}}, info.label),
-                  info.range+' • '+info.level
+                  React.createElement('span', { className:'badge-uvi', style:{background:info.color, marginRight:8}}, formatValue(shown, metric)),
+                  unit + ' • ระดับ: ' + info.level
                 );
               })()
             ),
@@ -272,7 +381,7 @@
             ) : null,
             loadingSeries ? React.createElement('div', { className:'muted', style:{marginTop:8}}, 'กำลังโหลดกราฟ…') : null,
             seriesError ? React.createElement('div', { style:{color:'#b91c1c', marginTop:8} }, 'โหลดกราฟไม่สำเร็จ: '+seriesError) : null,
-            (series && series.length) ? React.createElement(UviChart, { series: series }) : null
+            (series && series.length) ? React.createElement(UviChart, { series: series, metric }) : null
           )
         ) : (
           React.createElement('div', null,
@@ -283,14 +392,31 @@
             React.createElement('div', { className:'btn-list' },
               (sites||[]).map(function(s){ return React.createElement('button', { className:'btn', key: s.id, onClick: function(){ onClear(); window.dispatchEvent(new CustomEvent('pick-site',{detail:s.id})); } }, s.name); })
             ),
-            React.createElement('div', { style:{marginTop:10} },
-              React.createElement('div', { className:'muted' }, 'สเกล WHO: 0–2 ต่ำ, 3–5 ปานกลาง, 6–7 สูง, 8–10 สูงมาก, 11+ รุนแรงมาก')
+            React.createElement('div', { 
+              style: {
+                marginTop: 10,
+                padding: '12px 14px',
+                border: '1px solid #e5e7eb',
+                borderRadius: '12px',
+                background: '#f9fafb',
+                fontFamily: '"Noto Sans Thai", "Noto Sans", "Segoe UI", Arial, sans-serif',
+                fontSize: '13px',
+                lineHeight: '1.7',
+                whiteSpace: 'pre-line',
+                color: '#64748b',
+                boxShadow: '0 2px 8px rgba(100,116,139,0.06)'
+              }
+            },
+              'โครงการ การพัฒนาแบบจำลองพยากรณ์รังสีอัลตราไวโอเลต\
+              (Development of UV forecasting models)\
+              \nได้รับทุนอุดหนุนการวิจัยจากสำนักงานคณะกรรมการส่งเสริมวิทยาศาสตร์ วิจัยและนวัตกรรม (สกสว.) กองทุนส่งเสริม วิทยาศาสตร์ วิจัยและนวัตกรรม (ววน.) ประจำปีงบประมาณ พ.ศ. 2567\n\nสอบถามเพิ่มเติมติดต่อ ภาควิชาฟิสิกส์ คณะวิทยาศาสตร์ มหาวิทยาลัยศิลปากร โทร.0861613292'
             )
           )
         )
       );
     }
 
+    // ===== App =====
     function App(){
       const [stations, setStations] = useState([]);
       const [selectedId, setSelectedId] = useState(null);
@@ -299,6 +425,7 @@
       const [loadingSeries, setLoadingSeries] = useState(false);
       const [seriesError, setSeriesError] = useState(null);
       const [fitAllTick, setFitAllTick] = useState(0);
+      const [metric, setMetric] = useState(METRIC_UVI); // <-- หน่วยที่เลือก
       const isLandscape = useLandscape();
 
       useEffect(function(){
@@ -315,8 +442,7 @@
               return { id: String(d.id), name: d.name || '', lat: lat, lng: lng, uvi: d.uvi!==undefined? Number(d.uvi): null, update_time: d.update_time || null };
             }).filter(function(s){ return Number.isFinite(s.lat) && Number.isFinite(s.lng); });
             setStations(parsed);
-            // zoom out to whole Thailand (all stations) on first load
-            setFitAllTick(function(t){ return t+1; });
+            setFitAllTick(function(t){ return t+1; }); // zoom to all on first load
           })
           .catch(function(err){ console.error('API fetch error', err); setError(err.message || 'โหลดข้อมูลไม่สำเร็จ'); });
         const h = function(e){ setSelectedId(e.detail); };
@@ -336,29 +462,16 @@
         return function(){ alive = false; };
       }, [selectedId]);
 
-      // Tests (keep existing + add a few more)
+      // Tests
       useEffect(function(){
         if (stations.length){
           console.assert(typeof stations[0].id === 'string', 'station.id should be string');
           console.assert(Number.isFinite(stations[0].lat) && Number.isFinite(stations[0].lng), 'lat/lng should be numbers');
-          var sample = [0,2,3,5,6,7,8,10,11];
-          var colors = sample.map(function(n){ if(n<=2) return '#22c55e'; if(n<=5) return '#facc15'; if(n<=7) return '#fb923c'; if(n<=10) return '#ef4444'; return '#a855f7'; });
-          console.assert(colors.length===9, 'WHO color mapping test');
-          // Added explicit boundary checks
-          var expect = function(val, color){ var info = getUviInfo(val); console.assert(info.color===color, 'expected '+color+' for '+val+', got '+info.color); };
-          expect(2,'#22c55e'); expect(3,'#facc15'); expect(7,'#fb923c'); expect(8,'#ef4444'); expect(11,'#a855f7');
         }
         if (series && series.length){
-          // series tests
           console.assert(typeof series[0].time === 'string', 'series.time should be string HH:mm');
           console.assert(typeof series[0].uvi === 'number', 'series.uvi should be number');
-          // monotonic labels (non-decreasing lexicographically for HH:mm)
-          var ok = true; for (var i=1;i<series.length;i++){ if (series[i-1].time > series[i].time) { ok=false; break; } }
-          console.assert(ok, 'series times should be non-decreasing');
         }
-        // orientation boolean
-        var isLand = window.innerWidth > window.innerHeight;
-        console.assert(typeof isLand === 'boolean', 'orientation should be boolean');
       }, [stations, series]);
 
       const selectedSite = useMemo(function(){ return stations.find(function(s){ return s.id === selectedId; }) || null; }, [stations, selectedId]);
@@ -367,11 +480,30 @@
         React.createElement('header', null,
           React.createElement('div', { className: 'logo' }),
           React.createElement('h1', null, 'UV Thai'),
+          React.createElement('div', { style: { display: 'flex', gap: '8px', marginLeft: 'auto' } },
+            React.createElement('img', { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Logo_of_Silpakorn_University.svg/1200px-Logo_of_Silpakorn_University.svg.png', alt: 'SU Logo', style: { width: '48px', height: '48px' } }),
+            React.createElement('img', { src: 'https://wp.tsri.or.th/wp-content/uploads/2024/02/image-78.png', alt: 'สกสว Logo', style: { width: '48px', height: '48px' } })
+          ),
           error ? React.createElement('div', { className:'muted', style:{marginLeft:'auto'} }, 'Error: ', error) : null
         ),
         React.createElement('main', { className: 'content '+(isLandscape ? 'landscape' : 'portrait') },
-          React.createElement(ThailandMap, { sites: stations, selectedId: selectedId, onSelect: setSelectedId, fitAllTick: fitAllTick }),
-          React.createElement(Panel, { site: selectedSite, sites: stations, onClear: function(){ setSelectedId(null); setFitAllTick(function(t){ return t+1; }); }, series: series, loadingSeries: loadingSeries, seriesError: seriesError })
+          React.createElement(ThailandMap, {
+            sites: stations,
+            selectedId: selectedId,
+            onSelect: setSelectedId,
+            fitAllTick: fitAllTick,
+            metric: metric,
+            onMetricChange: setMetric
+          }),
+          React.createElement(Panel, {
+            site: selectedSite,
+            sites: stations,
+            onClear: function(){ setSelectedId(null); setFitAllTick(function(t){ return t+1; }); },
+            series: series,
+            loadingSeries: loadingSeries,
+            seriesError: seriesError,
+            metric: metric
+          })
         )
       );
     }
