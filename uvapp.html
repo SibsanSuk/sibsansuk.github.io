@@ -10,6 +10,9 @@
     html, body, #root { height: 100%; margin: 0; }
     body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", sans-serif; background: #f8fafc; color: #0f172a; }
     .app { display: grid; grid-template-rows: 56px 1fr; height: 100%; }
+@media (min-width: 1024px){
+  .app { grid-template-rows: auto 1fr; }
+}
     header { display: flex; align-items: center; gap: 10px; padding: 0 16px; background: #ffffff; border-bottom: 1px solid #e5e7eb; }
     .logo { width: 28px; height: 28px; background: conic-gradient(from 120deg,#22d3ee,#0ea5e9,#8b5cf6); border-radius: 8px; }
     .content.landscape { display: grid; grid-template-columns: 1fr 420px; }
@@ -25,6 +28,7 @@
     .btn:active { transform: translateY(1px); }
     .btn-list button{margin-bottom:6px; text-align:left}
     .key { display:grid; grid-template-columns:120px 1fr; gap:6px; padding:8px 0; border-top:1px dashed #e2e8f0; }
+    .key:first-of-type{border-top:none}
 
     /* Legend & UVI chips (light theme) */
     .legend{background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;padding:8px 10px;color:#0f172a;box-shadow:0 2px 10px rgba(15,23,42,.08)}
@@ -68,6 +72,24 @@
     .station-list .dot{width:10px;height:10px;border-radius:999px;border:1px solid rgba(0,0,0,.1)}
     .station-list .name{flex:1}
     .station-list .value{font-weight:700;color:#0f172a}
+
+    
+    /* Header title styles */
+    .title-box{display:flex;flex-direction:column;line-height:1.1}
+    .title-top{font-weight:800;color:#fb923c;font-family:"Sarabun","Noto Sans Thai","Noto Sans",system-ui,Segoe UI,Arial,sans-serif;font-size:18px}
+    .title-sub{font-weight:600;color:#64748b;font-family:"Sarabun","Noto Sans Thai","Noto Sans",system-ui,Segoe UI,Arial,sans-serif;font-size:12px;opacity:.95}
+    header img.logo-img{width:48px;height:48px;border-radius:8px}
+    @media (min-width: 640px){
+      .title-top{font-size:20px}
+      .title-sub{font-size:13px}
+      header img.logo-img{width:56px;height:56px}
+    }
+    @media (min-width: 1024px){
+      header{padding:12px 20px}
+      .title-top{font-size:32px}
+      .title-sub{font-size:14px}
+      header img.logo-img{width:72px;height:72px}
+    }
 
     /* ===== Loading spinner สำหรับโหลดรายชื่อสถานี ===== */
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -136,6 +158,12 @@
     function unitLabel(metric){
       return metric === METRIC_UVI ? 'UV Index' : 'mW/m² (Erythemal)';
     }
+    function unitShort(metric){
+      return metric === METRIC_UVI ? 'UV Index' : 'mW/m²';
+    }
+    function measurementTitle(metric){
+      return metric === METRIC_UVI ? 'UV Index' : 'Erythemal UV irradiance';
+    }
 
     function legendHTML(metric){
       if (metric === METRIC_UVI){
@@ -147,7 +175,7 @@
           '<div class="row"><span class="swatch" style="background:#a855f7"></span> 11+ รุนแรงมาก</div>';
       } else {
         // คูณช่วง UVI ด้วย 25 ตามนิยาม
-        return '<h4>Erythemal (mW/m²)</h4>'+
+        return '<h4>Erythemal UV</h4>'+
           '<div class="row"><span class="swatch" style="background:#22c55e"></span> 0–50 ต่ำ</div>'+
           '<div class="row"><span class="swatch" style="background:#facc15"></span> 75–125 ปานกลาง</div>'+
           '<div class="row"><span class="swatch" style="background:#fb923c"></span> 150–175 สูง</div>'+
@@ -156,22 +184,39 @@
       }
     }
 
-    // Mock series (time, uvi) 15-20 จุดภายในวันเดียว; ใช้ ISO HH:mm
-    function buildMockSeriesFor(id){
-      const base = new Date();
-      base.setHours(4,0,0,0);
-      const pts = [];
-      const seed = (parseInt(String(id), 10) || 1) * 7; // แตกต่างกันตามสถานี
-      for (let i=0;i<17;i++){
-        const t = new Date(base.getTime() + i*30*60*1000); // ทุก 30 นาที
-        const h = t.getHours()+t.getMinutes()/60;
-        // รูปคลื่นจำลองเที่ยงวันพีค
-        const peak = 13 + (seed % 2 === 0 ? 0.5 : 0);
-        let val = Math.max(0, Math.sin((h-6)/ (peak-6) * Math.PI)) * (8 + (seed % 5));
-        val = Math.round(val * 10)/10;
-        pts.push({ time: t.toTimeString().slice(0,5), uvi: val });
+    // ===== Fixed half-hour labels 04:00–20:00 =====
+    function buildDayLabels(){
+      const labels = [];
+      let h = 4, m = 0;
+      while (h < 20 || (h === 20 && m === 0)){
+        const hh = String(h).padStart(2,'0');
+        const mm = String(m).padStart(2,'0');
+        labels.push(hh+':'+mm);
+        m += 30;
+        if (m === 60){ h += 1; m = 0; }
       }
-      return pts;
+      return labels; // 33 จุด
+    }
+    const DAY_LABELS = buildDayLabels();
+
+    // Mock series (time, uvi) ครอบคลุม 04:00–20:00 ทุก 30 นาที
+    function buildMockSeriesFor(id){
+      const seed = (parseInt(String(id), 10) || 1) * 7; // แตกต่างกันตามสถานี
+      const peakHour = 13 + ((seed % 3) - 1) * 0.5; // 12.5–13.5
+      const amplitude = 10 + (seed % 4); // พีคประมาณ 10–13 UVI
+      const arr = [];
+      for (const t of DAY_LABELS){
+        const h = parseInt(t.slice(0,2),10) + parseInt(t.slice(3,5),10)/60;
+        // รูปคลื่น: sunrise ~6h, peak ใกล้เที่ยง-บ่ายต้น, sunset ~18h
+        const daylightFactor = Math.max(0, Math.min(1, (h-6)/ (peakHour-6))) * Math.max(0, Math.min(1, (18-h)/ (18-peakHour)));
+        let uvi = Math.max(0, Math.sin(Math.PI * Math.max(0, Math.min(1, (h-6)/12))) * amplitude * (0.8 + (seed%5)*0.05));
+        // เพิ่ม variation เล็กน้อยตาม seed และเวลา
+        uvi = uvi * (0.9 + ((seed % 7) * 0.01)) * (0.95 + (Math.sin(h*1.3 + seed)*0.05));
+        uvi = Math.round(uvi * 10) / 10;
+        if (h < 6 || h > 18) uvi = 0; // กลางคืน/เช้ามืดเป็นศูนย์
+        arr.push({ time: t, uvi });
+      }
+      return arr;
     }
 
     async function loadSeries(stationId){
@@ -180,7 +225,10 @@
         const r = await fetch(url);
         if (!r.ok) throw new Error('series api failed');
         const json = await r.json();
-        return Array.isArray(json)? json : (json.data || []);
+        const raw = Array.isArray(json)? json : (json.data || []);
+        // ทำให้สอดคล้องกับ DAY_LABELS: หาก API ให้มาบางช่วง ก็ map ลงไป
+        const map = new Map(raw.map(p => [String(p.time).slice(0,5), Number(p.uvi)]));
+        return DAY_LABELS.map(t => ({ time:t, uvi: (map.has(t)? Number(map.get(t)) : null) }));
       }
       return buildMockSeriesFor(stationId);
     }
@@ -235,7 +283,7 @@
               const wrap = L.DomUtil.create('div', 'map-toggle');
               wrap.innerHTML =
                 '<button type="button" data-m="uvi" class="'+(metric===METRIC_UVI?'active':'')+'">UV Index</button>'+
-                '<button type="button" data-m="ery" class="'+(metric===METRIC_ERY?'active':'')+'">Erythemal</button>';
+                '<button type="button" data-m="ery" class="'+(metric===METRIC_ERY?'active':'')+'">Erythemal UV</button>';
               // ป้องกันการแพน/ซูมเมื่อแตะ toggle
               L.DomEvent.disableClickPropagation(wrap);
               L.DomEvent.disableScrollPropagation(wrap);
@@ -334,11 +382,18 @@
       const canvasRef = useRef(null);
       const chartRef = useRef(null);
 
+      // เตรียมข้อมูลให้ครบทุกเวลาใน DAY_LABELS
+      function buildDataArrays(){
+        const lookup = new Map((series||[]).map(p => [String(p.time).slice(0,5), (p.uvi==null? null : Number(p.uvi))]));
+        const uviArr = DAY_LABELS.map(t => (lookup.has(t) ? lookup.get(t) : null));
+        const dataArr = uviArr.map(v => (v==null ? null : (metric===METRIC_UVI ? v : Math.round(v*25))));
+        return { labels: DAY_LABELS, uviArr, dataArr };
+      }
+
       useEffect(function(){
         if (!window.Chart || !canvasRef.current) return;
         const ctx = canvasRef.current.getContext('2d');
-        const labels = series.map(function(p){ return p.time; });
-        const data = series.map(function(p){ return metric===METRIC_UVI ? p.uvi : convertFromUvi(p.uvi, METRIC_ERY); });
+        const { labels, uviArr, dataArr } = buildDataArrays();
         if (chartRef.current){ chartRef.current.destroy(); }
         chartRef.current = new Chart(ctx, {
           type: 'line',
@@ -346,26 +401,46 @@
             labels: labels,
             datasets: [
               {
-                label: metric===METRIC_UVI ? 'UV Index' : 'Erythemal (mW/m²)',
-                data: data,
+                label: metric===METRIC_UVI ? 'UV Index' : 'mW/m² (Erythemal)',
+                data: dataArr,
                 tension: 0.3,
-                pointRadius: 2
+                pointRadius: 2,
+                spanGaps: true, // ให้เส้นขาดช่วงหากเป็น null
+                borderWidth: 2,
+                // สีของเส้นและจุด ตามค่า UVI ของแต่ละช่วง/จุด
+                segment: {
+                  borderColor: ctx => {
+                    const i = ctx.p0DataIndex;
+                    const base = (uviArr[i] != null ? uviArr[i] : uviArr[i+1]);
+                    const u = Number.isFinite(base) ? base : 0;
+                    return getUviInfo(u).color;
+                  }
+                },
+                pointBackgroundColor: ctx => {
+                  const u = uviArr[ctx.dataIndex];
+                  return getUviInfo(u).color;
+                },
+                pointBorderColor: ctx => {
+                  const u = uviArr[ctx.dataIndex];
+                  return getUviInfo(u).color;
+                }
               }
             ]
           },
           options: {
             responsive: true,
-            plugins: { legend: { display: false } },
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { intersect:false, mode:'index' } },
             scales: {
-              x: { ticks: { maxRotation: 0 } },
-              y: { beginAtZero: true, suggestedMax: metric===METRIC_UVI ? 12 : 300 }
+              x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
+              y: { beginAtZero: true, min: 0, max: metric===METRIC_ERY ? 400 : 12 }
             }
           }
         });
         return function(){ if (chartRef.current){ chartRef.current.destroy(); chartRef.current = null; } };
       }, [series, metric]);
 
-      return React.createElement('div', { className:'chart-wrap' },
+      return React.createElement('div', { className:'chart-wrap', style:{height:220} },
         React.createElement('canvas', { ref: canvasRef, height: 200 })
       );
     }
@@ -381,29 +456,46 @@
               React.createElement('button', { className:'icon-btn', title:'ย้อนกลับ', 'aria-label':'ย้อนกลับ', onClick:onClear }, '←')
             ),
             React.createElement('h2', null, site.name),
+            // 1) พิกัด
             React.createElement('div', { className:'key' },
               React.createElement('div', { className:'muted' }, 'พิกัด'),
               React.createElement('div', null, (Number.isFinite(site.lat)?site.lat.toFixed(4):'?')+', '+(Number.isFinite(site.lng)?site.lng.toFixed(4):'?'))
             ),
+            // 2) ปริมาณ
             React.createElement('div', { className:'key' },
-              React.createElement('div', { className:'muted' }, 'ค่าปัจจุบัน'),
-              (function(){
-                const shown = convertFromUvi(site.uvi, metric);
-                const info = getUviInfo(site.uvi); // ระดับยังยึดตาม UVI
-                const unit = unitLabel(metric);
-                return React.createElement('div', null,
-                  React.createElement('span', { className:'badge-uvi', style:{background:info.color, marginRight:8}}, formatValue(shown, metric)),
-                  unit + ' • ระดับ: ' + info.level
-                );
-              })()
+              React.createElement('div', { className:'muted' }, 'ปริมาณ'),
+              React.createElement('div', null, measurementTitle(metric))
             ),
-            site.update_time ? React.createElement('div', { className:'key' },
+            // 3) ค่าปัจจุบัน
+            (function(){
+              const shown = convertFromUvi(site.uvi, metric);
+              const info = getUviInfo(site.uvi);
+              const unit = unitShort(metric);
+              return React.createElement('div', { className:'key' },
+                React.createElement('div', { className:'muted' }, 'ค่าปัจจุบัน'),
+                React.createElement('div', null,
+                  React.createElement('span', { className:'badge-uvi', style:{background:info.color, marginRight:8}}, formatValue(shown, metric)),
+                  unit
+                )
+              );
+            })(),
+            // 4) ระดับ
+            (function(){
+              const info = getUviInfo(site.uvi);
+              return React.createElement('div', { className:'key' },
+                React.createElement('div', { className:'muted' }, 'ระดับ'),
+                React.createElement('div', null, info.level)
+              );
+            })(),
+            // 5) อัปเดต
+            React.createElement('div', { className:'key' },
               React.createElement('div', { className:'muted' }, 'อัปเดต'),
-              React.createElement('div', null, site.update_time)
-            ) : null,
+              React.createElement('div', null, site.update_time || '-')
+            ),
             loadingSeries ? React.createElement('div', { className:'muted', style:{marginTop:8}}, 'กำลังโหลดกราฟ…') : null,
             seriesError ? React.createElement('div', { style:{color:'#b91c1c', marginTop:8} }, 'โหลดกราฟไม่สำเร็จ: '+seriesError) : null,
-            (series && series.length) ? React.createElement(UviChart, { series: series, metric }) : null
+            // แสดงกราฟเสมอ (แม้กำลังโหลด) โดยมีแกนเวลา 04:00–20:00
+            React.createElement(UviChart, { series: series, metric })
           )
         ) : (
           React.createElement('div', null,
@@ -509,9 +601,8 @@
           console.assert(typeof stations[0].id === 'string', 'station.id should be string');
           console.assert(Number.isFinite(stations[0].lat) && Number.isFinite(stations[0].lng), 'lat/lng should be numbers');
         }
-        if (series && series.length){
-          console.assert(typeof series[0].time === 'string', 'series.time should be string HH:mm');
-          console.assert(typeof series[0].uvi === 'number', 'series.uvi should be number');
+        if (series){
+          console.assert(Array.isArray(series), 'series should be array');
         }
       }, [stations, series]);
 
@@ -519,14 +610,16 @@
 
       return React.createElement('div', { className: 'app' },
         React.createElement('header', null,
-          React.createElement('div', { className: 'logo' }),
-          React.createElement('h1', null, 'UV Thai'),
-          React.createElement('div', { style: { display: 'flex', gap: '8px', marginLeft: 'auto' } },
-            React.createElement('img', { src: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Logo_of_Silpakorn_University.svg/1200px-Logo_of_Silpakorn_University.svg.png', alt: 'SU Logo', style: { width: '48px', height: '48px' } }),
-            React.createElement('img', { src: 'https://wp.tsri.or.th/wp-content/uploads/2024/02/image-78.png', alt: 'สกสว Logo', style: { width: '48px', height: '48px' } })
-          ),
-          error ? React.createElement('div', { className:'muted', style:{marginLeft:'auto'} }, 'Error: ', error) : null
+            React.createElement('img', { className:'logo-img', src: 'https://phy.sc.su.ac.th/image66/bg/logo_physicsSU.jpg', alt: 'Physics Logo' }),
+            React.createElement('div', { className:'title-box' },
+              React.createElement('div', { className:'title-top' }, 'UV Radiation in Thailand'),
+              React.createElement('div', { className:'title-sub' }, 'From ground-based measurement')
+            ),
+            React.createElement('div', { style: { display: 'flex', gap: '8px', marginLeft: 'auto' } },
+            ),
+            error ? React.createElement('div', { className:'muted', style:{marginLeft:'auto'} }, 'Error: ', error) : null
         ),
+        
         React.createElement('main', { className: 'content '+(isLandscape ? 'landscape' : 'portrait') },
           React.createElement(ThailandMap, {
             sites: stations,
