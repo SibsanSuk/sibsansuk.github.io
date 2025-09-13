@@ -1,0 +1,40 @@
+{
+  "menus": {
+    "drinks": {
+      "butter-beer": {
+        "name": "Butter Beer (butter scott)",
+        "img": "",
+        "emoji": "🍺",
+        "price": 65,
+        "available": true,
+        "order": 1
+      },
+      "peach-yuzu-tea": {
+        "name": "ชาพีชยูสุ",
+        "img": "",
+        "emoji": "🍑🍋",
+        "price": 55,
+        "available": true,
+        "order": 2
+      },
+      "yuzu-blue-hawaii": {
+        "name": "ยูสุบลูฮาวาย",
+        "img": "",
+        "emoji": "🫐🌊",
+        "price": 60,
+        "available": true,
+        "order": 3
+      }
+    }
+  },
+  "settings": {
+    "boardgame": {
+      "rates": {
+        "30m":  { "minutes": 30,  "label": "30 นาที",                 "price": 20 },
+        "60m":  { "minutes": 60,  "label": "1 ชั่วโมง",               "price": 40 },
+        "120m": { "minutes": 120, "label": "2 ชั่วโมง",               "price": 80 },
+        "180m": { "minutes": 180, "label": "3 ชั่วโมง (เหมาวัน)",     "price": 120 }
+      }
+    }
+  }
+}
