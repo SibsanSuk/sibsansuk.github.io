@@ -1,769 +1,456 @@
 <!DOCTYPE html>
-<html lang="th">
-
+<html>
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>สั่งเครื่องดื่ม & บอร์ดเกม (Firebase Realtime DB)</title>
-    <style>
-        :root {
-            --bg: #ffffff;
-            --ink: #0f172a;
-            --muted: #6b7280;
-            --border: #e5e7eb;
-            --soft: #f8fafc;
-            --brand: #0ea5e9;
-            --brand2: #22c55e;
-            --danger: #ef4444;
-            --radius: 16px;
-            --shadow: 0 10px 25px rgba(2, 6, 23, .08)
-        }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>คาเฟ่: React (No JSX) + Shoelace + Firebase (Single File)</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ctext y='14' font-size='14'%3E%F0%9F%8D%B4%3C/text%3E%3C/svg%3E">
 
-        * {
-            box-sizing: border-box
-        }
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;600;800&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
-        html,
-        body {
-            margin: 0;
-            padding: 0;
-            background: var(--bg);
-            color: var(--ink);
-            font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, TH Sarabun New, Arial, sans-serif
-        }
+  <!-- Shoelace (Web Components) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn/themes/light.css">
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.15.0/cdn/shoelace.js"></script>
 
-        img {
-            display: block;
-            max-width: 100%
-        }
-
-        button {
-            cursor: pointer
-        }
-
-        .wrap {
-            max-width: 980px;
-            margin: 0 auto;
-            padding: calc(76px + env(safe-area-inset-top)) 14px 110px
-        }
-
-        /* Top bar */
-        .cartbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 30;
-            background: #fff;
-            padding: calc(env(safe-area-inset-top) + 6px) 12px 10px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 10px
-        }
-
-        .table-pill {
-            font-size: 13px;
-            color: var(--muted);
-            white-space: nowrap
-        }
-
-        .cart-track {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            overflow-x: auto;
-            padding: 4px 2px;
-            scroll-snap-type: x proximity
-        }
-
-        .cart-icon {
-            position: relative;
-            min-width: 54px;
-            min-height: 54px;
-            border-radius: 999px;
-            border: 1px solid var(--border);
-            background: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: inset 0 0 0 6px #fff, var(--shadow);
-            scroll-snap-align: start
-        }
-
-        .cart-icon .thumb {
-            width: 70%;
-            height: 70%;
-            border-radius: 12px;
-            overflow: hidden;
-            display: grid;
-            place-items: center
-        }
-
-        .cart-icon .emoji {
-            font-size: 24px
-        }
-
-        .badge {
-            position: absolute;
-            right: -4px;
-            top: -6px;
-            min-width: 22px;
-            height: 22px;
-            padding: 0 6px;
-            background: var(--brand);
-            color: #fff;
-            font-size: 12px;
-            border-radius: 999px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid #fff;
-            font-weight: 700
-        }
-
-        .badge.gray {
-            background: #64748b
-        }
-
-        .send-btn {
-            border: none;
-            padding: 10px 14px;
-            border-radius: 12px;
-            font-weight: 800;
-            color: #fff;
-            background: linear-gradient(135deg, var(--brand), #38bdf8);
-            white-space: nowrap;
-            box-shadow: var(--shadow)
-        }
-
-        /* Grid */
-        .grid {
-            display: grid;
-            gap: 14px;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))
-        }
-
-        .card {
-            background: #fff;
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            overflow: hidden;
-            transition: transform .08s ease
-        }
-
-        .card:active {
-            transform: translateY(1px)
-        }
-
-        .imgbox {
-            aspect-ratio: 1/1;
-            position: relative;
-            overflow: hidden;
-            background: linear-gradient(180deg, #f5faff, #eef7ff);
-            display: grid;
-            place-items: center
-        }
-
-        .imgbox img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover
-        }
-
-        .imgbox .emoji {
-            font-size: 64px
-        }
-
-        .content {
-            padding: 12px
-        }
-
-        .title {
-            font-weight: 900;
-            font-size: 16px;
-            margin: 0 0 6px
-        }
-
-        .muted {
-            color: var(--muted)
-        }
-
-        .row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px
-        }
-
-        .btn {
-            border: 1px solid var(--border);
-            background: #fff;
-            padding: 10px 12px;
-            border-radius: 12px;
-            font-weight: 800
-        }
-
-        .btn.brand {
-            background: var(--brand);
-            color: #fff;
-            border-color: var(--brand)
-        }
-
-        .btn.dark {
-            background: var(--ink);
-            color: #fff;
-            border-color: var(--ink)
-        }
-
-        .btn.danger {
-            background: var(--danger);
-            color: #fff;
-            border-color: var(--danger)
-        }
-
-        /* Skeleton */
-        .sk {
-            animation: sh 1.2s linear infinite;
-            background: linear-gradient(90deg, #f8fafc 25%, #eef2f7 37%, #f8fafc 63%);
-            background-size: 400% 100%
-        }
-
-        @keyframes sh {
-            0% {
-                background-position: 100% 0
-            }
-
-            100% {
-                background-position: 0 0
-            }
-        }
-
-        /* Qty */
-        .qty {
-            display: inline-flex;
-            align-items: center;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            overflow: hidden
-        }
-
-        .qty button {
-            width: 36px;
-            height: 36px;
-            border: none;
-            background: #f1f5f9;
-            font-size: 18px
-        }
-
-        .qty input {
-            width: 56px;
-            height: 36px;
-            border: none;
-            text-align: center;
-            font-size: 16px
-        }
-
-        /* Fly clone */
-        .fly-clone {
-            position: fixed;
-            z-index: 50;
-            pointer-events: none;
-            transform-origin: center;
-            transition: transform .6s cubic-bezier(.22, 1, .36, 1), opacity .6s ease;
-            box-shadow: 0 8px 20px rgba(2, 6, 23, .18);
-            border-radius: 14px;
-            overflow: hidden
-        }
-
-        /* Dialog */
-        dialog {
-            width: min(780px, 92vw);
-            border: none;
-            border-radius: 16px;
-            padding: 0;
-            overflow: hidden
-        }
-
-        dialog::backdrop {
-            background: rgba(0, 0, 0, .35)
-        }
-
-        .dlg-h {
-            padding: 12px 14px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: #fff
-        }
-
-        .dlg-b {
-            padding: 14px;
-            background: #fff
-        }
-
-        .chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px
-        }
-
-        .chip {
-            padding: 10px 12px;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            background: #fff;
-            cursor: pointer;
-            font-size: 14px
-        }
-
-        .chip.active {
-            background: #e6f7ff;
-            border-color: #bae6fd
-        }
-
-        .kvs {
-            display: grid;
-            grid-template-columns: 120px 1fr;
-            gap: 10px;
-            align-items: center
-        }
-
-        .kvs input[type="number"],
-        .kvs input[type="text"] {
-            width: 100%;
-            padding: 10px 12px;
-            border-radius: 12px;
-            border: 1px solid var(--border)
-        }
-
-        hr.sep {
-            margin: 12px 0;
-            border: none;
-            border-top: 1px solid var(--border)
-        }
-
-        /* Toast */
-        .toast {
-            position: fixed;
-            left: 50%;
-            bottom: 22px;
-            transform: translateX(-50%);
-            background: #0f172a;
-            color: #fff;
-            padding: 10px 14px;
-            border-radius: 12px;
-            box-shadow: var(--shadow);
-            z-index: 60;
-            opacity: 0;
-            transition: opacity .2s
-        }
-
-        .toast.show {
-            opacity: 1
-        }
-    </style>
+  <style>
+    :root{ --bg:#ffffff; --ink:#0f172a; --muted:#6b7280; --border:#e5e7eb; --soft:#f8fafc; --brand:#0ea5e9; --brand2:#22c55e; --danger:#ef4444; --radius:16px; --shadow:0 10px 25px rgba(2,6,23,.08); --font-sans: "Prompt", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Thai", Arial, "TH Sarabun New", sans-serif; }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--font-sans);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+    img{display:block;max-width:100%}
+    .wrap{max-width:980px;margin:0 auto;padding: calc(76px + env(safe-area-inset-top)) 14px 110px}
+    .cartbar{position:fixed;top:0;left:0;right:0;z-index:30;background:#fff;padding: calc(env(safe-area-inset-top) + 6px) 12px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+    .table-pill{font-size:13px;color:var(--muted);white-space:nowrap}
+    .cart-track{flex:1;display:flex;align-items:center;gap:8px;overflow-x:auto;padding:4px 2px;scroll-snap-type:x proximity}
+    .cart-icon{position:relative;min-width:54px;min-height:54px;border-radius:999px;border:1px solid var(--border);background:#fff;display:flex;align-items:center;justify-content:center;box-shadow: inset 0 0 0 6px #fff, var(--shadow);scroll-snap-align:start}
+    .cart-icon .thumb{width:70%;height:70%;border-radius:12px;overflow:hidden;display:grid;place-items:center}
+    .cart-icon .emoji{font-size:24px}
+    .badge{position:absolute;right:-4px;top:-6px;min-width:22px;height:22px;padding:0 6px;background:var(--brand);color:#fff;font-size:12px;border-radius:999px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;font-weight:700}
+    .badge.gray{background:#64748b}
+    .grid{display:grid;gap:14px;grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))}
+    .card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transition:transform .08s ease}
+    .card:active{transform:translateY(1px)}
+    .imgbox{aspect-ratio:1/1;position:relative;overflow:hidden;background:linear-gradient(180deg,#f5faff,#eef7ff);display:grid;place-items:center;cursor:pointer}
+    .imgbox img{width:100%;height:100%;object-fit:cover}
+    .imgbox .emoji{font-size:64px}
+    .content{padding:12px}
+    .title{font-weight:900;font-size:16px;margin:0 0 6px;letter-spacing:.2px}
+    .muted{color:var(--muted)}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .sk{animation:sh 1.2s linear infinite;background:linear-gradient(90deg,#f8fafc 25%,#eef2f7 37%,#f8fafc 63%);background-size:400% 100%}
+    @keyframes sh{0%{background-position:100% 0}100%{background-position:0 0}}
+    .qty{display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+    .qty button{width:36px;height:36px;border:none;background:#f1f5f9;font-size:18px}
+    .qty input{width:56px;height:36px;border:none;text-align:center;font-size:16px}
+    .fly-clone{position:fixed;z-index:50;pointer-events:none;transform-origin:center;transition:transform .6s cubic-bezier(.22,1,.36,1),opacity .6s ease;box-shadow:0 8px 20px rgba(2,6,23,.18);border-radius:14px;overflow:hidden}
+    .dlg-body{padding:14px}
+    .fab{position:fixed;right:16px;bottom:18px;z-index:55;box-shadow:var(--shadow)}
+  </style>
 </head>
 
 <body>
-    <header class="cartbar">
-        <div class="table-pill" id="tableLabel">โต๊ะ: —</div>
-        <div class="cart-track" id="cartTrack" aria-label="ตะกร้ารายการ (เลื่อนซ้าย-ขวา)"></div>
-        <button class="send-btn" id="sendOrderBtn">ส่งออเดอร์</button>
-    </header>
+  <div id="root"></div>
 
-    <main class="wrap">
-        <section id="hint" class="muted" style="margin:6px 0 10px">กำลังโหลดเมนูจากระบบ…</section>
-        <section class="grid" id="productGrid"></section>
-    </main>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-    <!-- Table Dialog -->
-    <dialog id="dlgTable">
-        <div class="dlg-h"><strong>เลือกเลขโต๊ะ</strong><button class="btn" id="dlgTableClose">ยกเลิก</button></div>
-        <div class="dlg-b">
-            <div class="kvs">
-                <label for="tableInput">โต๊ะหมายเลข</label>
-                <input id="tableInput" type="number" min="1" step="1" placeholder="เช่น 1, 2, 3" />
-            </div>
-            <div style="height:10px"></div>
-            <div class="row">
-                <div style="display:flex;gap:6px;flex-wrap:wrap">
-                    <button class="btn" data-quick="1">1</button>
-                    <button class="btn" data-quick="2">2</button>
-                    <button class="btn" data-quick="3">3</button>
-                    <button class="btn" data-quick="4">4</button>
-                    <button class="btn" data-quick="5">5</button>
-                    <button class="btn" data-quick="6">6</button>
-                    <button class="btn" data-quick="7">7</button>
-                    <button class="btn" data-quick="8">8</button>
-                    <button class="btn" data-quick="9">9</button>
-                    <button class="btn" data-quick="10">10</button>
-                </div>
-                <button class="btn brand" id="dlgTableOK">เริ่มสั่ง</button>
-            </div>
-        </div>
-    </dialog>
+  <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth-compat.js"></script>
 
-    <!-- Boardgame Dialog -->
-    <dialog id="dlgBoard">
-        <div class="dlg-h"><strong>ตั้งค่าบอร์ดเกม</strong><button class="btn" id="dlgBoardClose">ปิด</button></div>
-        <div class="dlg-b">
-            <div class="kvs">
-                <label>จำนวนคน</label>
-                <div class="qty">
-                    <button id="ppDec">−</button>
-                    <input id="ppInput" type="number" min="1" step="1" value="2" />
-                    <button id="ppInc">+</button>
-                </div>
-            </div>
-            <div style="height:10px"></div>
-            <div class="muted" style="margin-bottom:6px">เลือกระยะเวลา (คิดราคาต่อคน)</div>
-            <div class="chips" id="chipsDuration"></div>
-            <hr class="sep" />
-            <div class="row">
-                <div class="muted">ยอดรวม (เฉพาะบอร์ดเกม)</div>
-                <div id="boardTotal" style="font-weight:900">฿0</div>
-            </div>
-            <div style="margin-top:12px" class="row">
-                <button class="btn danger" id="clearBoard">ล้างบอร์ดเกม</button>
-                <button class="btn brand" id="saveBoard">บันทึก</button>
-            </div>
-        </div>
-    </dialog>
+  <script type="text/javascript">
+  const { useEffect, useMemo, useRef, useState } = React;
+  const h = React.createElement;
 
-    <!-- Drink Edit Dialog -->
-    <dialog id="dlgDrink">
-        <div class="dlg-h"><strong id="drinkTitle">แก้จำนวน</strong><button class="btn" id="dlgDrinkClose">ปิด</button>
-        </div>
-        <div class="dlg-b">
-            <div class="row" style="gap:12px">
-                <div class="qty">
-                    <button id="dqDec">−</button>
-                    <input id="dqInput" type="number" min="0" step="1" value="1" />
-                    <button id="dqInc">+</button>
-                </div>
-                <button class="btn danger" id="dqClear">ลบออก</button>
-            </div>
-            <div style="height:6px"></div>
-            <div class="muted">กด “บันทึก” เพื่ออัปเดตจำนวน</div>
-            <div style="height:10px"></div>
-            <div class="row">
-                <button class="btn" id="dqCancel">ยกเลิก</button>
-                <button class="btn dark" id="dqSave">บันทึก</button>
-            </div>
-        </div>
-    </dialog>
+  // ---- Utils ----
+  const toast = (msg, variant = 'primary', duration = 2200) => {
+    const t = document.createElement('sl-alert');
+    t.variant = variant; t.duration = duration; t.closable = true;
+    t.innerHTML = `<sl-icon name="${variant==='danger'?'x-circle':'check-circle'}" slot="icon"></sl-icon>${msg}`;
+    document.body.appendChild(t); t.toast(); t.addEventListener('sl-after-hide', () => t.remove());
+  };
+  const fmtTHB = n => '฿' + (n||0).toLocaleString('th-TH');
+  const shortDur = m => m===180 ? 'DAY' : (m>=60 ? (m/60)|0 : m);
+  const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch] || '&#39;'));
+  const todayKey = () => { const d=new Date(); const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; };
 
-    <!-- Confirm Dialog -->
-    <dialog id="dlgConfirm">
-        <div class="dlg-h"><strong>ยืนยันออเดอร์</strong><button class="btn" id="dlgConfirmClose">ปิด</button></div>
-        <div class="dlg-b" id="confirmBody"></div>
-        <div class="row" style="padding:0 14px 14px">
-            <button class="btn" id="backEdit">แก้ไขต่อ</button>
-            <button class="btn brand" id="confirmSend">ยืนยันส่งครัว</button>
-        </div>
-    </dialog>
+  // ---- App (Per-Item Status Model) ----
+  function App(){
+    const [table, setTable] = useState(()=>{ const sp=new URLSearchParams(location.search); return sp.get('t')||sp.get('table')||null; });
+    const [drinks, setDrinks] = useState([]);
+    const [rates,  setRates ] = useState([]);
 
-    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    // Items kept directly under orders/{date}/{table}/items/{key}
+    // each item: { id, type:'drink'|'boardgame', name, price, qty, status:'draft'|'confirmed'|'in_progress'|'ready'|'served'|'paid'|'closed' }
+    const [items, setItems] = useState([]);
 
-    <script>
-        // ===== Globals (will be filled from DB) =====
-        window.DRINKS = []; // [{id,name,img,emoji,price,available,order}]
-        window.RATES = []; // [{id, minutes, label, price}]
+    const [qtyDraft, setQtyDraft] = useState({}); // qty for draft drink items
+    const [boardDraft, setBoardDraft] = useState({ people:0, rateId:null });
 
-        const state = {
-            table: getParamTable() || null,
-            drinks: {}, // {id: qty}
-            board: { people: 0, rateId: null },
-            _editDrinkId: null,
-            _menusLoaded: false, _ratesLoaded: false
-        };
+    const [editId, setEditId] = useState(null);
+    const [editQty, setEditQty] = useState(1);
+    const [isAdmin, setIsAdmin] = useState(false);
 
-        const $ = sel => document.querySelector(sel);
-        const fmtTHB = n => "฿" + (n || 0).toLocaleString("th-TH");
-        const shortDur = m => m === 180 ? "DAY" : (m >= 60 ? (m / 60) | 0 : m);
+    const dlgTableRef = useRef();
+    const dlgBoardRef = useRef();
+    const dlgConfirmRef = useRef();
+    const dlgBillsRef = useRef();
+    const dlgQtyRef = useRef();
+    const imgRefs = useRef({});
+    const cartTrackRef = useRef();
 
-        // ---- Basic UI setup ----
-        (function initUI() {
-            if (!state.table) { openTableDialog(); } else { updateTableLabel(); }
-            renderSkeleton();
+    const [authed, setAuthed] = useState(false);
 
-            // Top actions
-            $("#sendOrderBtn").onclick = openConfirm;
+    // ---- Firebase boot ----
+    useEffect(()=>{
+      const cfg = { apiKey: 'AIzaSyBFHZdxp_67xx66vNGKvU26uc-ZxBbqYBU', authDomain: 'sharespace-329ec.firebaseapp.com', databaseURL: 'https://sharespace-329ec-default-rtdb.asia-southeast1.firebasedatabase.app', projectId: 'sharespace-329ec', storageBucket: 'sharespace-329ec.firebasestorage.app', messagingSenderId: '539897344128', appId: '1:539897344128:web:7b9d081d262b2a504a7665', measurementId: 'G-8GDPPJG6CR' };
+      if (!firebase.apps.length) firebase.initializeApp(cfg);
+      const db = firebase.database();
 
-            // Table dialog
-            $("#dlgTableClose").onclick = () => $("#dlgTable").close();
-            $("#dlgTableOK").onclick = confirmTableDialog;
-            document.querySelectorAll('#dlgTable [data-quick]').forEach(b => b.onclick = () => $("#tableInput").value = b.dataset.quick);
+      // Auth (anon) + simple admin list
+      const adminUIDs = [];
+      firebase.auth().onAuthStateChanged(u=> { setAuthed(!!u); setIsAdmin(u ? adminUIDs.includes(u.uid) : false); });
+      firebase.auth().signInAnonymously().catch(e=>{ console.error(e); toast('ล็อกอินไม่สำเร็จ','danger'); });
 
-            // Board dialog
-            $("#dlgBoardClose").onclick = () => $("#dlgBoard").close();
-            $("#ppDec").onclick = () => setPeople(Math.max(1, getPeople() - 1));
-            $("#ppInc").onclick = () => setPeople(getPeople() + 1);
-            $("#ppInput").addEventListener("change", e => setPeople(Math.max(1, parseInt(e.target.value || "1", 10))));
-            $("#clearBoard").onclick = () => { state.board = { people: 0, rateId: null }; updateBoardDialog(); renderCartBar(); };
-            $("#saveBoard").onclick = () => { $("#dlgBoard").close(); renderCartBar(); };
+      // Menus
+      db.ref('menus/drinks').on('value', snap=>{
+        const val = snap.val()||{}; 
+        const arr = Object.entries(val)
+          .map(([id,v])=>({id, ...v}))
+          .filter(x=> x.available !== false)
+          .sort((a,b)=> (a.order ?? 999) - (b.order ?? 999) || (a.name||'').localeCompare(b.name||'', 'th'));
+        setDrinks(arr);
+      });
 
-            // Drink dialog
-            $("#dlgDrinkClose").onclick = closeDrinkDialog;
-            $("#dqCancel").onclick = closeDrinkDialog;
-            $("#dqDec").onclick = () => $("#dqInput").value = Math.max(0, (parseInt($("#dqInput").value || "0", 10) - 1));
-            $("#dqInc").onclick = () => $("#dqInput").value = (parseInt($("#dqInput").value || "0", 10) + 1);
-            $("#dqClear").onclick = () => { $("#dqInput").value = 0; };
-            $("#dqSave").onclick = () => { const id = state._editDrinkId; if (!id) return; const n = Math.max(0, parseInt($("#dqInput").value || "0", 10)); state.drinks[id] = n; closeDrinkDialog(); renderCartBar(); };
+      // Boardgame rates
+      db.ref('settings/boardgame/rates').on('value', snap=>{
+        const val = snap.val()||{}; 
+        const arr = Object.entries(val).map(([id,v])=>({id,...v})).sort((a,b)=> (a.minutes||0)-(b.minutes||0)); 
+        setRates(arr);
+      });
+    },[]);
 
-            // Confirm dialog
-            $("#dlgConfirmClose").onclick = () => $("#dlgConfirm").close();
-            $("#backEdit").onclick = () => $("#dlgConfirm").close();
-            $("#confirmSend").onclick = confirmSendOrder;
-        })();
+    // ---- Subscribe items (per table) ----
+    useEffect(()=>{
+      if(!table) return;
+      const db = firebase.database();
+      const ref = db.ref(`orders/${todayKey()}/${table}/items`);
+      const handler = snap => {
+        const val = snap.val() || {};
+        const arr = Object.entries(val).map(([id,v])=>({ lineId:id, ...(v||{}) }));
+        setItems(arr);
 
-        function renderSkeleton() {
-            $("#hint").textContent = "กำลังโหลดเมนูจากระบบ…";
-            const grid = $("#productGrid"); grid.innerHTML = "";
-            for (let i = 0; i < 6; i++) {
-                const el = document.createElement("article"); el.className = "card";
-                el.innerHTML = `<div class="imgbox sk"></div><div class="content"><div class="title sk" style="height:18px;border-radius:8px"></div><div class="muted sk" style="height:14px;border-radius:8px;margin-top:8px;width:60%"></div></div>`;
-                grid.appendChild(el);
-            }
-        }
+        // build draft qty map from drink-type items with status 'draft'
+        const q = {};
+        arr.filter(it=> it.type==='drink' && it.status==='draft').forEach(it=>{ q[it.id] = it.qty||0; });
+        setQtyDraft(q);
 
-        function renderProducts() {
-            const grid = $("#productGrid"); grid.innerHTML = "";
-            const drinks = window.DRINKS;
-            if (!drinks || drinks.length === 0) {
-                $("#hint").textContent = "ยังไม่มีเมนูในระบบ";
-            } else {
-                $("#hint").textContent = "แตะการ์ดเพื่อเพิ่มรายการ • แถบด้านบนคือรายการที่สั่ง (เลื่อนได้)";
-            }
+        // boardgame draft
+        const bg = arr.find(it=> it.type==='boardgame' && it.status==='draft');
+        if(bg) setBoardDraft({ people: bg.people||0, rateId: bg.rate_id||null }); else setBoardDraft({ people:0, rateId:null });
+      };
+      ref.on('value', handler);
+      return ()=> ref.off('value', handler);
+    },[table]);
 
-            drinks.forEach(d => {
-                if (!(d.id in state.drinks)) state.drinks[d.id] = 0; // ensure key exists
-                const card = document.createElement("article"); card.className = "card";
-                card.innerHTML = `
-          <div class="imgbox" data-drink="${d.id}">
-            ${d.img ? `<img src="${d.img}" alt="${escapeHtml(d.name)}"/>` : `<div class="emoji" aria-hidden="true">${escapeHtml(d.emoji || "🥤")}</div>`}
-          </div>
-          <div class="content">
-            <div class="title">${escapeHtml(d.name || "")}</div>
-            <div class="row">
-              <button class="btn" data-add="${d.id}">+1 แก้ว</button>
-              <div class="muted">${d.price != null ? fmtTHB(d.price) : "—"}</div>
-            </div>
-          </div>`;
-                card.querySelector('[data-add]').onclick = e => { e.stopPropagation(); addDrink(d, card.querySelector('.imgbox')); };
-                card.querySelector('.imgbox').onclick = () => addDrink(d, card.querySelector('.imgbox'));
-                grid.appendChild(card);
-            });
+    // Derived
+    const hasDraft = useMemo(()=>
+      Object.values(qtyDraft).some(n=> n>0) || (boardDraft.people>0 && boardDraft.rateId)
+    ,[qtyDraft, boardDraft]);
 
-            // Board card
-            const boardCard = document.createElement("article"); boardCard.className = "card";
-            boardCard.innerHTML = `
-        <div class="imgbox"><div class="emoji" aria-hidden="true">🎲</div></div>
-        <div class="content">
-          <div class="title">เล่นบอร์ดเกม</div>
-          <div class="row">
-            <button class="btn brand" id="btnBoardCfg">ตั้งค่าบอร์ดเกม</button>
-            <div class="muted" id="boardBrief">ยังไม่ตั้งค่า</div>
-          </div>
-        </div>`;
-            boardCard.querySelector('#btnBoardCfg').onclick = openBoardDialog;
-            grid.appendChild(boardCard);
-            updateBoardBrief();
-        }
+    const confirmedOrMore = useMemo(()=> items.filter(it=> it.status && it.status!=='draft'), [items]);
 
-        function renderCartBar() {
-            const track = $("#cartTrack"); track.innerHTML = "";
-            // Drinks
-            Object.entries(state.drinks).forEach(([id, qty]) => {
-                if (qty > 0) {
-                    const d = window.DRINKS.find(x => x.id === id); if (!d) return;
-                    const icon = cartIcon(d, qty, () => openDrinkDialog(d));
-                    track.appendChild(icon);
-                }
-            });
-            // Board
-            if (state.board.people > 0) {
-                const rate = window.RATES.find(r => r.id === state.board.rateId);
-                const icon = cartIcon({ emoji: "🎲", name: "บอร์ดเกม", img: null }, state.board.people, openBoardDialog, rate ? shortDur(rate.minutes) : "");
-                track.appendChild(icon);
-            }
-        }
-
-        function cartIcon(item, badgeNum, onClick, smallBadge = "") {
-            const wrap = document.createElement("button"); wrap.className = "cart-icon"; wrap.title = "แก้ไข"; wrap.onclick = onClick;
-            const thumb = document.createElement("div"); thumb.className = "thumb";
-            if (item.img) { const im = document.createElement('img'); im.src = item.img; im.alt = item.name || ""; im.style.width = "100%"; im.style.height = "100%"; im.style.objectFit = "cover"; thumb.appendChild(im); } else { const e = document.createElement('div'); e.className = 'emoji'; e.textContent = item.emoji || '🥤'; thumb.appendChild(e); } wrap.appendChild(thumb);
-            const b1 = document.createElement('div'); b1.className = 'badge'; b1.textContent = badgeNum; wrap.appendChild(b1);
-            if (smallBadge) { const b2 = document.createElement('div'); b2.className = 'badge gray'; b2.style.left = '-6px'; b2.style.right = 'auto'; b2.style.top = 'auto'; b2.style.bottom = '-6px'; b2.textContent = smallBadge; wrap.appendChild(b2); } return wrap;
-        }
-
-        function addDrink(d, imgEl) {
-            state.drinks[d.id] = (state.drinks[d.id] || 0) + 1;
-            flyToCart(imgEl); renderCartBar(); $("#cartTrack").scrollTo({ left: 9999, behavior: "smooth" });
-        }
-
-        // ---- Board dialog helpers ----
-        function openBoardDialog() { $("#dlgBoard").showModal(); updateBoardDialog(); buildDurationChips(); }
-        function buildDurationChips() {
-            const box = $("#chipsDuration"); box.innerHTML = "";
-            (window.RATES || []).forEach(r => {
-                const btn = document.createElement('button'); btn.className = 'chip'; btn.dataset.rid = r.id; btn.textContent = `${r.label} • ${fmtTHB(r.price)}/คน`; btn.onclick = () => { state.board.rateId = r.id; updateBoardDialog(); }; box.appendChild(btn);
-            });
-        }
-        function updateBoardDialog() {
-            $("#ppInput").value = getPeople();
-            document.querySelectorAll('#chipsDuration .chip').forEach(ch => ch.classList.toggle('active', ch.dataset.rid === state.board.rateId));
-            $("#boardTotal").textContent = fmtTHB(calcBoardTotal());
-            updateBoardBrief();
-        }
-        function updateBoardBrief() {
-            const brief = $("#boardBrief");
-            if (state.board.people > 0 && state.board.rateId) { const rate = window.RATES.find(r => r.id === state.board.rateId); brief.textContent = `${state.board.people} คน • ${rate ? rate.label : "-"} = ${fmtTHB(calcBoardTotal())}`; }
-            else { brief.textContent = "ยังไม่ตั้งค่า"; }
-        }
-        function setPeople(n) { state.board.people = n; updateBoardDialog(); renderCartBar(); }
-        function getPeople() { return Math.max(1, state.board.people || 1); }
-        function calcBoardTotal() { const r = window.RATES.find(x => x.id === state.board.rateId); return r ? (state.board.people || 0) * r.price : 0; }
-
-        // ---- Drink edit ----
-        function openDrinkDialog(d) { state._editDrinkId = d.id; $("#drinkTitle").textContent = d.name; $("#dqInput").value = state.drinks[d.id] || 0; $("#dlgDrink").showModal(); }
-        function closeDrinkDialog() { state._editDrinkId = null; $("#dlgDrink").close(); }
-
-        // ---- Confirm ----
-        function openConfirm() {
-            if (!state.table) { openTableDialog(); return; }
-            const listDrinks = Object.entries(state.drinks).filter(([, q]) => q > 0).map(([id, q]) => { const d = window.DRINKS.find(x => x.id === id); if (!d) return ""; return `<div class="row" style="gap:10px"><div style="display:flex;align-items:center;gap:8px"><div style="width:34px;height:34px;border-radius:10px;overflow:hidden;border:1px solid var(--border);display:grid;place-items:center;background:#fff">${d.img ? `<img src="${d.img}" alt="" style="width:100%;height:100%;object-fit:cover"/>` : `<span style="font-size:18px">${escapeHtml(d.emoji || '🥤')}</span>`}</div><div>${escapeHtml(d.name || '')}</div></div><strong>× ${q}</strong></div>`; }).join("");
-            const board = (state.board.people > 0 && state.board.rateId) ? (() => { const r = window.RATES.find(x => x.id === state.board.rateId); return `<div class="row"><div>🎲 บอร์ดเกม • ${state.board.people} คน • ${r ? r.label : '-'}</div><strong>${fmtTHB(calcBoardTotal())}</strong></div>`; })() : `<div class="muted">ยังไม่ได้เลือกบอร์ดเกม</div>`;
-            const html = `<div class="row" style="margin-bottom:8px"><div class="muted">โต๊ะ</div><div><strong>${escapeHtml(state.table || '')}</strong></div></div><div style="margin:8px 0 4px"><strong>เครื่องดื่ม</strong></div>${listDrinks || `<div class=\"muted\">— ไม่มี —</div>`}<div style="margin:10px 0 4px"><strong>บอร์ดเกม</strong></div>${board}<hr class="sep"/><div class="row"><div class="muted">ยอดรวม (เฉพาะบอร์ดเกม)</div><div style="font-weight:900">${fmtTHB(calcBoardTotal())}</div></div>`;
-            $("#confirmBody").innerHTML = html; $("#dlgConfirm").showModal();
-        }
-
-        async function confirmSendOrder() {
-            try {
-                const now = new Date();
-                const payload = {
-                    table: state.table,
-                    ts_iso: now.toISOString(),
-                    ts_local: now.toLocaleString("th-TH"),
-                    drinks: window.DRINKS.map(d => ({ id: d.id, name: d.name, price: d.price ?? null, qty: state.drinks[d.id] || 0 })).filter(x => x.qty > 0),
-                    boardgame: state.board.people > 0 && state.board.rateId ? (() => { const r = window.RATES.find(x => x.id === state.board.rateId); return { people: state.board.people, rate_id: r.id, label: r.label, minutes: r.minutes, rate_per_person: r.price, total: calcBoardTotal() }; })() : null,
-                    grand_total_boardgame_only: calcBoardTotal()
-                };
-                $("#confirmSend").disabled = true; toast("กำลังส่งออเดอร์…");
-                await window.sendOrderToDB(payload);
-                $("#dlgConfirm").close(); toast("ส่งออเดอร์แล้ว ขอบคุณครับ 🙏");
-                // Optionally clear
-                // state.drinks = Object.fromEntries(window.DRINKS.map(d=>[d.id,0])); state.board={people:0,rateId:null}; renderCartBar();
-            } catch (err) { console.error(err); alert("ส่งออเดอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"); }
-            finally { $("#confirmSend").disabled = false; }
-        }
-
-        // ---- Table helpers ----
-        function getParamTable() { const sp = new URLSearchParams(location.search); return sp.get('table') || sp.get('t') || null; }
-        function openTableDialog() { $("#dlgTable").showModal(); }
-        function confirmTableDialog() { const v = ($("#tableInput").value || "").trim(); if (!v) { alert("กรุณากรอกเลขโต๊ะ"); return; } state.table = v; updateTableLabel(); const url = new URL(location.href); url.searchParams.set('t', state.table); history.replaceState(null, '', url); $("#dlgTable").close(); }
-        function updateTableLabel() { $("#tableLabel").textContent = `โต๊ะ: ${state.table}`; }
-
-        // ---- Animations & UX ----
-        function flyToCart(imgEl) { try { const rectStart = imgEl.getBoundingClientRect(); const cart = $("#cartTrack"); const rectEnd = cart.getBoundingClientRect(); const clone = imgEl.cloneNode(true); clone.classList.add("fly-clone"); clone.style.left = rectStart.left + "px"; clone.style.top = rectStart.top + "px"; clone.style.width = rectStart.width + "px"; clone.style.height = rectStart.height + "px"; document.body.appendChild(clone); const dx = (rectEnd.left + rectEnd.width * 0.85) - (rectStart.left + rectStart.width / 2); const dy = (rectEnd.top + rectEnd.height / 2) - (rectStart.top + rectStart.height / 2); requestAnimationFrame(() => { clone.style.transform = `translate(${dx}px, ${dy}px) scale(.15)`; clone.style.opacity = ".15"; }); clone.addEventListener("transitionend", () => clone.remove(), { once: true }); } catch (e) { } }
-        function toast(msg) { const el = $("#toast"); el.textContent = msg; el.classList.add('show'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 1500); }
-        function escapeHtml(s) { return (s || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c])); }
-    </script>
-
-    <!-- ===== Firebase (module) =====
-       1) แทนค่าด้านล่างด้วย config จริงจาก Console (Project settings → Your apps)
-       2) เปิด Authentication: Anonymous = Enabled
-       3) Rules ตามที่ตั้งไว้ก่อนหน้า
-  -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
-        import { getDatabase, ref, onValue, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyBFHZdxp_67xx66vNGKvU26uc-ZxBbqYBU",
-            authDomain: "sharespace-329ec.firebaseapp.com",
-            databaseURL: "https://sharespace-329ec-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "sharespace-329ec",
-            storageBucket: "sharespace-329ec.firebasestorage.app",
-            messagingSenderId: "539897344128",
-            appId: "1:539897344128:web:7b9d081d262b2a504a7665",
-            measurementId: "G-8GDPPJG6CR"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-        const auth = getAuth(app);
-        const analytics = getAnalytics(app);
-
-        // รับ reference ของปุ่มส่งออเดอร์
-        const sendOrderBtn = document.getElementById('sendOrderBtn');
-
-        // พยายามลงชื่อเข้าใช้แบบไม่ระบุตัวตน
-        // หากล้มเหลวให้แสดง error ใน console และปุ่มจะถูกปิดการใช้งานไว้
-        signInAnonymously(auth)
-            .catch(error => {
-                console.error("Anonymous sign-in failed:", error);
-                // แสดงข้อความบน UI ว่าไม่สามารถเข้าระบบได้
-                if (window.toast) toast("ไม่สามารถเข้าระบบได้ โปรดลองอีกครั้ง");
-                sendOrderBtn.disabled = true; // ให้แน่ใจว่าปุ่มถูกปิดการใช้งาน
-            });
-        // Listener สำหรับตรวจสอบสถานะการลงชื่อเข้าใช้
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                // ผู้ใช้ลงชื่อเข้าใช้แล้ว (รวมถึงแบบไม่ระบุตัวตน)
-                console.log('User signed in with UID:', user.uid);
-                sendOrderBtn.disabled = false; // เปิดใช้งานปุ่มส่งออเดอร์
-            } else {
-                // ผู้ใช้ยังไม่ได้ลงชื่อเข้าใช้ (หรือออกจากระบบแล้ว)
-                console.log('User is signed out.');
-                sendOrderBtn.disabled = true; // ปิดใช้งานปุ่มส่งออเดอร์
-                // คุณอาจจะแสดงข้อความให้ผู้ใช้ทราบที่นี่ก็ได้ เช่น "กรุณาเข้าระบบเพื่อส่งออเดอร์"
-            }
+    // ---- Writes ----
+    const writeDrinkDraft = async (drink, n)=>{
+      if(!table) return;
+      const db=firebase.database();
+      const base = `orders/${todayKey()}/${table}/items/${drink.id}`;
+      if(n>0){
+        await db.ref(base).set({
+          id: drink.id,
+          type: 'drink',
+          name: drink.name || '',
+          price: drink.price ?? null,
+          qty: n,
+          status: 'draft',
+          updated_at: firebase.database.ServerValue.TIMESTAMP
         });
+      } else {
+        // remove only if draft (do not touch confirmed lines with same id — use separate keying if needed)
+        const snap = await db.ref(base).get();
+        const cur = snap.val();
+        if(!cur || cur.status==='draft') await db.ref(base).remove();
+      }
+    };
 
-        // Subscribe drinks
-        const drinksRef = ref(db, 'menus/drinks');
-        onValue(drinksRef, (snap) => {
-            const val = snap.val() || {};
-            const arr = Object.entries(val).map(([id, v]) => ({ id, ...v }))
-                .filter(x => x.available !== false)
-                .sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || (a.name || '').localeCompare(b.name || '', 'th'));
-            window.DRINKS = arr;
-            // sync state.drinks keys
-            if (window.state) { arr.forEach(d => { if (!(d.id in state.drinks)) state.drinks[d.id] = 0; }); Object.keys(state.drinks).forEach(id => { if (!arr.find(d => d.id === id)) delete state.drinks[id]; }); }
-            if (window.renderProducts) renderProducts();
-            if (window.renderCartBar) renderCartBar();
-            state._menusLoaded = true;
-        });
+    const writeBoardDraft = async ()=>{
+      if(!table) return;
+      const db=firebase.database();
+      const r = rates.find(x=>x.id===boardDraft.rateId);
+      const obj = (boardDraft.people>0 && r) ? {
+        id: 'boardgame',
+        type: 'boardgame',
+        status: 'draft',
+        people: boardDraft.people,
+        rate_id: r.id,
+        label: r.label,
+        minutes: r.minutes,
+        rate_per_person: r.price,
+        total: (boardDraft.people||0)*(r?.price||0),
+        updated_at: firebase.database.ServerValue.TIMESTAMP
+      } : null;
+      if(obj) await db.ref(`orders/${todayKey()}/${table}/items/boardgame`).set(obj);
+      else await db.ref(`orders/${todayKey()}/${table}/items/boardgame`).remove();
+    };
 
-        // Subscribe rates
-        const ratesRef = ref(db, 'settings/boardgame/rates');
-        onValue(ratesRef, (snap) => {
-            const val = snap.val() || {};
-            const arr = Object.entries(val).map(([id, v]) => ({ id, ...v }))
-                .sort((a, b) => (a.minutes || 0) - (b.minutes || 0));
-            window.RATES = arr;
-            if (window.updateBoardDialog) updateBoardDialog();
-            if (window.updateBoardBrief) updateBoardBrief();
-            if (window.renderCartBar) renderCartBar();
-            state._ratesLoaded = true;
-        });
-
-        // Send order
-        window.sendOrderToDB = async function sendOrderToDB(payload) {
-            const date = (new Date()).toISOString().slice(0, 10);
-            const table = String(payload.table || 'UNKNOWN');
-            const listRef = ref(db, `orders/${date}/${table}`);
-            // เนื่องจากตอนนี้ปุ่มจะทำงานได้เมื่อมี auth.currentUser แล้ว
-            // จึงไม่จำเป็นต้องตรวจสอบ auth.currentUser ซ้ำในฟังก์ชันนี้
-            await push(listRef, { ...payload, ts_server: serverTimestamp() });
+    const confirmSendOrder = async ()=>{
+      if(!table || !hasDraft){ toast('ยังไม่มีรายการแบบร่าง','warning'); return; }
+      const db=firebase.database();
+      const base = `orders/${todayKey()}/${table}/items`;
+      const snap = await db.ref(base).get();
+      const val = snap.val()||{};
+      const updates = {};
+      Object.entries(val).forEach(([k,v])=>{
+        if((v||{}).status==='draft'){
+          updates[`${k}/status`] = 'confirmed';
+          updates[`${k}/confirmed_at`] = firebase.database.ServerValue.TIMESTAMP;
+          updates[`${k}/updated_at`] = firebase.database.ServerValue.TIMESTAMP;
         }
-    </script>
-</body>
+      });
+      if(Object.keys(updates).length){
+        await db.ref(base).update(updates);
+        toast('ยืนยันออเดอร์แล้ว ✅','success');
+      }
+    };
+
+    // ---- UI helpers ----
+    const addDrink = async (d)=>{
+      if(!table){ dlgTableRef.current?.show(); return; }
+      const next = (qtyDraft[d.id]||0) + 1;
+      setQtyDraft(q=> ({...q, [d.id]: next}));
+      await writeDrinkDraft(d, next);
+      const imgEl = imgRefs.current[d.id]; if(imgEl) flyToCart(imgEl, cartTrackRef.current);
+    };
+
+    const openEditQty = (id)=>{ setEditId(id); setEditQty(Math.max(0, qtyDraft[id]||0)); dlgQtyRef.current?.show(); };
+    const applyEditQty = async ()=>{
+      if(!editId) return;
+      const d = drinks.find(x=> x.id===editId);
+      const n = Math.max(0, parseInt(editQty||0, 10));
+      await writeDrinkDraft(d, n);
+      setQtyDraft(q=> ({...q, [editId]: n}));
+      setEditId(null);
+      dlgQtyRef.current?.hide();
+    };
+
+    const flyToCart = (imgEl, cartEl)=>{ try{ const rs=imgEl.getBoundingClientRect(); const re=cartEl.getBoundingClientRect(); const clone=imgEl.cloneNode(true); clone.classList.add('fly-clone'); Object.assign(clone.style,{ position:'fixed', left:rs.left+'px', top:rs.top+'px', width:rs.width+'px', height:rs.height+'px', zIndex:9999, borderRadius:'14px', overflow:'hidden', transition:'transform .6s cubic-bezier(.22,1,.36,1),opacity .6s ease', boxShadow:'0 8px 20px rgba(2,6,23,.18)'}); document.body.appendChild(clone); const dx=(re.left+re.width*0.85)-(rs.left+rs.width/2); const dy=(re.top+re.height/2)-(rs.top+rs.height/2); requestAnimationFrame(()=>{ clone.style.transform=`translate(${dx}px, ${dy}px) scale(.15)`; clone.style.opacity='.15'; }); clone.addEventListener('transitionend', ()=> clone.remove(), {once:true}); }catch(e){} };
+
+    const ProductCard = ({ d })=>{
+      const setImgRef = el => { if(el) imgRefs.current[d.id]=el; };
+      return h('article', { className: 'card' },
+        h('div', { className: 'imgbox', 'data-drink': d.id, ref: setImgRef, onClick: ()=> addDrink(d) },
+          d.img ? h('img', { src: d.img, alt: d.name||'' }) : h('div', { className: 'emoji', 'aria-hidden': 'true' }, d.emoji||'🥤')
+        ),
+        h('div', { className: 'content' },
+          h('div', { className: 'title' }, d.name||''),
+          h('div', { className: 'row' },
+            h('sl-button', { size: 'small', onClick: ()=> addDrink(d) }, '+1 แก้ว'),
+            h('div', { className: 'muted' }, d.price!=null?fmtTHB(d.price):'—')
+          )
+        )
+      );
+    };
+
+    const CartIcon = ({ item, badge, smallBadge, onClick })=> (
+      h('button', { className: 'cart-icon', title: 'แก้ไข', onClick: onClick },
+        h('div', { className: 'thumb' },
+          item.img ? h('img', { src: item.img, alt: item.name||'', style: {width:'100%',height:'100%',objectFit:'cover'} }) : h('div', { className: 'emoji' }, item.emoji||'🥤')
+        ),
+        h('div', { className: 'badge' }, badge),
+        smallBadge ? h('div', { className: 'badge gray', style: {left:'-6px',right:'auto',top:'auto',bottom:'-6px'} }, smallBadge) : null
+      )
+    );
+
+    const listDrinksConfirmHTML = useMemo(()=>{
+      const entries = Object.entries(qtyDraft).filter(([,q])=>q>0);
+      if(!entries.length) return `<div class=\"muted\">— ไม่มี —</div>`;
+      return entries.map(([id,q])=>{ const d=drinks.find(x=>x.id===id); if(!d) return ''; return `<div class=\"row\" style=\"gap:10px\"><div style=\"display:flex;align-items:center;gap:8px\"><div style=\"width:34px;height:34px;border-radius:10px;overflow:hidden;border:1px solid var(--border);display:grid;place-items:center;background:#fff\">${d.img?`<img src=\\"${d.img}\\" alt=\\"\\" style=\\"width:100%;height:100%;object-fit:cover\\"/>`:`<span style=\\"font-size:18px\\">${escapeHtml(d.emoji||'🥤')}</span>`}</div><div>${escapeHtml(d.name||'')}</div></div><strong>× ${q}</strong></div>`; }).join('');
+    },[qtyDraft,drinks]);
+
+    const calcBoardTotal = useMemo(()=>{ const r=rates.find(x=>x.id===boardDraft.rateId); return r ? (boardDraft.people||0)*r.price : 0; }, [rates, boardDraft]);
+
+    const confirmHTML = useMemo(()=>{
+      const rate = rates.find(r=> r.id===boardDraft.rateId);
+      const boardHtml = (boardDraft.people>0 && boardDraft.rateId) ? `<div class=\"row\"><div>🎲 บอร์ดเกม • ${boardDraft.people} คน • ${rate?rate.label:'-'}</div><strong>${fmtTHB(calcBoardTotal)}</strong></div>` : `<div class=\"muted\">ยังไม่ได้เลือกบอร์ดเกม</div>`;
+      return `<div class=\"row\" style=\"margin-bottom:8px\"><div class=\"muted\">โต๊ะ</div><div><strong>${escapeHtml(table||'')}</strong></div></div><div style=\"margin:8px 0 4px\"><strong>เครื่องดื่ม (ร่าง)</strong></div>${listDrinksConfirmHTML}<div style=\"margin:10px 0 4px\"><strong>บอร์ดเกม</strong></div>${boardHtml}<hr style=\"margin:12px 0;border:none;border-top:1px solid var(--border)\"/><div class=\"row\"><div class=\"muted\">ยอดรวม (เฉพาะบอร์ดเกม)</div><div style=\"font-weight:900\">${fmtTHB(calcBoardTotal)}</div></div>`;
+    },[listDrinksConfirmHTML, table, boardDraft, rates, calcBoardTotal]);
+
+    // ---- Render ----
+    return h('div', null,
+      h('header', { className: 'cartbar' },
+        h('div', { className: 'table-pill' }, 'โต๊ะ: ', table || '—'),
+        // แสดงเฉพาะ draft items ในแถบด้านบนเพื่อแก้จำนวนได้ง่าย ๆ
+        h('div', { className: 'cart-track', ref: cartTrackRef, 'aria-label': 'ตะกร้ารายการ (เลื่อนซ้าย-ขวา)' },
+          Object.entries(qtyDraft).filter(([,n])=>n>0).map(([id,n])=>{
+            const d=drinks.find(x=>x.id===id); if(!d) return null;
+            return h(CartIcon, { key: id, item: d, badge: n, onClick: ()=> openEditQty(id) });
+          }),
+          (boardDraft.people>0) && h(CartIcon, { item: {emoji:'🎲',name:'บอร์ดเกม'}, badge: boardDraft.people, smallBadge: (rates.find(r=> r.id===boardDraft.rateId)? shortDur(rates.find(r=> r.id===boardDraft.rateId).minutes):''), onClick: ()=> dlgBoardRef.current?.show() })
+        ),
+        h('sl-button', {
+  variant: 'primary',
+  size: 'large',
+  onClick: ()=> {
+    // ถ้ามีรายการร่าง -> ยืนยันส่ง
+    if (hasDraft) dlgConfirmRef.current?.show();
+    // ถ้ายังไม่มีรายการ -> เปิด dialog เลือก/เปลี่ยนโต๊ะ
+    else dlgTableRef.current?.show();
+  }
+}, 'ส่งออเดอร์')
+      ),
+
+      h('main', { className: 'wrap' },
+        h('section', { className: 'muted', style: {margin:'6px 0 10px'} },
+          drinks.length? 'แตะการ์ดเพื่อเพิ่มรายการ • รายการร่างอยู่บนแถบด้านบน' : 'กำลังโหลดเมนูจากระบบ…'
+        ),
+        h('section', { className: 'grid' },
+          drinks.length
+            ? drinks.map(d=> h(ProductCard, { key: d.id, d: d }))
+            : new Array(6).fill(0).map((_,i)=>
+                h('article', { key: i, className: 'card' },
+                  h('div', { className: 'imgbox sk' }),
+                  h('div', { className: 'content' },
+                    h('div', { className: 'title sk', style: {height:18,borderRadius:8} }),
+                    h('div', { className: 'muted sk', style: {height:14,borderRadius:8,marginTop:8,width:'60%'} })
+                  )
+                )
+              ),
+          h('article', { className: 'card' },
+            h('div', { className: 'imgbox' }, h('div', { className: 'emoji', 'aria-hidden': 'true' }, '🎲')),
+            h('div', { className: 'content' },
+              h('div', { className: 'title' }, 'เล่นบอร์ดเกม'),
+              h('div', { className: 'row' },
+                h('sl-button', { variant: 'primary', onClick: ()=> dlgBoardRef.current?.show() }, 'ตั้งค่าบอร์ดเกม'),
+                h('div', { className: 'muted' },
+                  (boardDraft.people>0 && boardDraft.rateId)
+                    ? `${boardDraft.people} คน • ${(rates.find(r=> r.id===boardDraft.rateId)?.label)||'-'} = ${fmtTHB(calcBoardTotal)}`
+                    : 'ยังไม่ตั้งค่า'
+                )
+              )
+            )
+          )
+        )
+      ),
+
+      h('sl-button', { className: 'fab', circle: true, size: 'large', variant: 'primary', title: 'ดูบิลค้างชำระ', onClick: ()=> dlgBillsRef.current?.show() }, '🧾'),
+
+      // Dialogs
+      h('sl-dialog', { label: 'เลือกเลขโต๊ะ', ref: dlgTableRef },
+        h('div', { className: 'dlg-body' },
+          h('div', { style: {display:'grid',gridTemplateColumns:'120px 1fr',gap:10,alignItems:'center'} },
+            h('label', { htmlFor: 'tableInput' }, 'โต๊ะหมายเลข'),
+            h('sl-input', { id: 'tableInput', type: 'number', placeholder: 'เช่น 1, 2, 3' })
+          ),
+          h('div', { style: {height:10} }),
+          h('div', { style: {display:'flex',alignItems:'center',justifyContent:'space-between',gap:10} },
+            h('div', { style: {display:'flex',gap:6,flexWrap:'wrap'} },
+              [1,2,3,4,5,6,7,8,9,10].map(n=> h('sl-button', { key: n, size: 'small', pill: true, onClick: ()=>{ const el=document.getElementById('tableInput'); if(el) el.value=String(n); } }, n))
+            ),
+            h('sl-button', { variant: 'primary', onClick: ()=>{ const el=document.getElementById('tableInput'); const v=(el?.value||'').trim(); if(!v){ toast('กรุณากรอกเลขโต๊ะ','warning'); return; } setTable(v); const url=new URL(location.href); url.searchParams.set('t', v); history.replaceState(null,'',url); dlgTableRef.current?.hide(); } }, 'เริ่มสั่ง')
+          )
+        )
+      ),
+
+      h('sl-dialog', { label: 'ตั้งค่าบอร์ดเกม', ref: dlgBoardRef },
+        h('div', { className: 'dlg-body' },
+          h('div', { style: {display:'grid',gridTemplateColumns:'120px 1fr',gap:10,alignItems:'center'} },
+            h('label', null, 'จำนวนคน'),
+            h('div', { className: 'qty' },
+              h('button', { onClick: ()=> setBoardDraft(b=> ({...b, people: Math.max(1,(b.people||1)-1)})) }, '−'),
+              h('input', { type: 'number', min: '1', step: '1', value: boardDraft.people||1, onChange: e=> setBoardDraft(b=> ({...b, people: Math.max(1, parseInt(e.target.value||'1',10))})) }),
+              h('button', { onClick: ()=> setBoardDraft(b=> ({...b, people: (b.people||1)+1})) }, '+')
+            )
+          ),
+          h('div', { style: {height:10} }),
+          h('div', { className: 'muted', style: {marginBottom:6} }, 'เลือกระยะเวลา (คิดราคาต่อคน)'),
+          h('div', { style: {display:'flex',gap:6,flexWrap:'wrap'} },
+            rates.map(r=> h('sl-button', { key: r.id, size: 'small', variant: boardDraft.rateId===r.id?'primary':'default', onClick: ()=> setBoardDraft(b=> ({...b, rateId:r.id})) }, `${r.label} • ${fmtTHB(r.price)}/คน`))
+          ),
+          h('hr', { style: {margin:'12px 0',border:'none',borderTop:'1px solid var(--border)'} }),
+          h('div', { className: 'row' }, h('div', { className: 'muted' }, 'ยอดรวม (เฉพาะบอร์ดเกม)'), h('div', { style: {fontWeight:900} }, fmtTHB(calcBoardTotal))),
+          h('div', { style: {marginTop:12}, className: 'row' },
+            h('sl-button', { variant: 'danger', onClick: ()=> setBoardDraft({people:0, rateId:null}) }, 'ล้างบอร์ดเกม'),
+            h('sl-button', { variant: 'primary', onClick: ()=> { writeBoardDraft(); dlgBoardRef.current?.hide(); } }, 'บันทึก')
+          )
+        )
+      ),
+
+      h('sl-dialog', { label: 'ยืนยันออเดอร์', ref: dlgConfirmRef },
+        h('div', { className: 'dlg-body', dangerouslySetInnerHTML: { __html: confirmHTML } }),
+        h('div', { slot: 'footer', style: {display:'flex',justifyContent:'flex-end',gap:8} },
+          h('sl-button', { onClick: ()=> dlgConfirmRef.current?.hide() }, 'แก้ไขต่อ'),
+          h('sl-button', { variant: 'primary', onClick: async ()=>{ await confirmSendOrder(); dlgConfirmRef.current?.hide(); } }, 'ยืนยันส่งครัว')
+        )
+      ),
+
+      h('sl-dialog', { label: 'บิล (ยืนยันแล้วขึ้นไปที่นี่)', ref: dlgBillsRef },
+        h('div', { className: 'dlg-body' },
+          confirmedOrMore.length===0 ? h('div', { className: 'muted' }, 'ยังไม่มีบิล') : confirmedOrMore.map(it=>{
+            if(it.type==='drink'){
+              return h('div', { key: it.lineId||it.id, style: {border:'1px solid var(--border)',borderRadius:12,padding:10,marginBottom:10} },
+                h('div', { className: 'row' }, h('div', null, `${it.name} × ${it.qty}`), h('strong', null, it.price!=null?fmtTHB(it.price*it.qty):'')),
+                h('div', { className: 'muted' }, `สถานะ: ${it.status}`)
+              );
+            } else if(it.type==='boardgame'){
+              return h('div', { key: 'bg-'+(it.lineId||'x'), style: {border:'1px solid var(--border)',borderRadius:12,padding:10,marginBottom:10} },
+                h('div', { className: 'row' }, h('div', null, `🎲 ${it.label} • ${it.people} คน`), h('strong', null, fmtTHB(it.total||0))),
+                h('div', { className: 'muted' }, `สถานะ: ${it.status}`)
+              );
+            }
+          })
+        ),
+        h('div', { slot: 'footer', style: {display:'flex',justifyContent:'space-between',gap:8,alignItems:'center'} },
+          h('div', { className: 'muted' }, isAdmin ? 'โหมดแอดมิน' : 'โหมดลูกค้า'),
+          isAdmin && confirmedOrMore.length>0 ? h('sl-button', { variant: 'danger', onClick: async ()=>{
+            try{
+              const db=firebase.database();
+              const base = `orders/${todayKey()}/${table}/items`;
+              const updates = {};
+              confirmedOrMore.forEach(it=>{ updates[`${it.lineId||it.id}/status`] = 'closed'; updates[`${it.lineId||it.id}/updated_at`] = firebase.database.ServerValue.TIMESTAMP; updates[`${it.lineId||it.id}/closed_at`] = firebase.database.ServerValue.TIMESTAMP; });
+              await db.ref(base).update(updates);
+              toast('ปิดบิลแล้ว','success');
+              dlgBillsRef.current?.hide();
+            }catch(e){ console.error(e); toast('ปิดบิลไม่สำเร็จ','danger'); }
+          } }, '🧹 เคลียร์/ปิดบิลทั้งหมด') : null
+        )
+      ),
+
+      h('sl-dialog', { label: 'แก้จำนวน (draft เท่านั้น)', ref: dlgQtyRef },
+        h('div', { className: 'dlg-body' },
+          h('div', { className: 'row', style: {gap:12} },
+            h('div', { className: 'qty' },
+              h('button', { onClick: ()=> setEditQty(n=> Math.max(0,(parseInt(n||0,10)-1))) }, '−'),
+              h('input', { type: 'number', min: '0', step: '1', value: editQty, onChange: e=> setEditQty(e.target.value) }),
+              h('button', { onClick: ()=> setEditQty(n=> (parseInt(n||0,10)+1)) }, '+')
+            ),
+            h('sl-button', { variant: 'danger', onClick: ()=> setEditQty(0) }, 'ลบออก')
+          ),
+          h('div', { style: {height:6} }),
+          h('div', { className: 'muted' }, 'กด “บันทึก” เพื่ออัปเดตจำนวน (เฉพาะรายการร่าง)'),
+          h('div', { style: {height:10} }),
+          h('div', { className: 'row' },
+            h('sl-button', { onClick: ()=> { setEditId(null); dlgQtyRef.current?.hide(); } }, 'ยกเลิก'),
+            h('sl-button', { variant: 'primary', onClick: applyEditQty }, 'บันทึก')
+          )
+        )
+      )
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+  </script>
+
+  </body>
 </html>
