@@ -8,6 +8,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#6c8cff" />
 
+  <link rel="prefetch" href="./pages/notify/Index.js" as="script">
+<link rel="prefetch" href="./pages/notify/Appointment.js" as="script">
+<link rel="prefetch" href="./pages/notify/General.js" as="script">
+
+
   <!-- React 17 + Router v5 (UMD, no npm) -->
   <script src="https://unpkg.com/react@17/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js" crossorigin></script>
@@ -109,6 +114,38 @@
     @media (prefers-reduced-motion: reduce){
       *{scroll-behavior:auto; transition:none !important; animation:none !important;}
     }
+
+    /* ===== Skeleton Loader ===== */
+.skeleton-wrap{ padding: 8px 6px 96px; }
+.skeleton{ border-radius: 12px; background: #e8edf7; position: relative; overflow: hidden; }
+.shimmer::after{
+  content:""; position:absolute; inset:0;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%,
+                                      rgba(255,255,255,.6) 50%,
+                                      rgba(255,255,255,0) 100%);
+  transform: translateX(-100%);
+  animation: shimmer 1.25s infinite;
+}
+@keyframes shimmer{
+  100%{ transform: translateX(100%); }
+}
+.sk-title{ height: 24px; width: 55%; margin: 14px 6px; }
+.sk-bubble{ height: 48px; margin: 10px 6px; }
+.sk-card{ height: 140px; margin: 12px 6px; }
+.sk-grid{
+  margin: 12px 6px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+}
+.sk-tile{ height: 60px; border-radius: 14px; }
+
+@media (min-width: 680px){
+  .sk-grid{ grid-template-columns: repeat(5, 1fr); }
+}
+@media (orientation: landscape) and (max-height: 520px){
+  .sk-grid{ grid-template-columns: repeat(6, 1fr); }
+}
+
+
   </style>
 </head>
 <body>
