@@ -21,12 +21,12 @@ export function PhoneFrame({ children, dock }) {
     /* Bottom Nav */
     h("nav", { className: "nav", role: "navigation", "aria-label": "Main" },
       h(Link, { to: "/", className: "btn", "aria-label":"หน้าแรก" }, "🏠", " หน้าแรก"),
-      h(Link, { to: "/notify", className: "btn", "aria-label":"แจ้งเตือน" }, "🔔", " แจ้งเตือน"),
+      h(Link, { to: "/notify", className: "btn", "aria-label":"แจ้งเตือน" }, "📅", " แจ้งเตือน"),
       h("button", {
         className: "btn ghost",
         "aria-label":"ปฏิทิน (ยังไม่เปิดใช้)",
         onClick: () => alert("ปฏิทินยังไม่ทำ 🙂")
-      }, "📅", " 17")
+      }, "🔔", " SOS")
     )
   );
 }

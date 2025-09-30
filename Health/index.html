@@ -214,6 +214,24 @@ a.notify-item, .notify-item{ text-decoration:none; color:inherit; display:flex; 
 /* ปุ่มเพิ่มเล็กลง */
 .btn-sm{ padding:8px 12px; min-height:36px; font-weight:700; font-size:14px; }
 
+:root{
+  --topbar-h: 48px;
+  --topbar-side: 56px; /* เว้นพื้นที่ซ้าย/ขวาให้เท่าปุ่ม back */
+}
+
+/* TopBar กลางเป๊ะ ไม่ว่า back จะมีหรือไม่ */
+.topbar{ position:relative; height:var(--topbar-h); display:flex; align-items:center; margin:4px 6px 8px; }
+.topbar .back{
+  position:absolute; left:6px; top:50%; transform:translateY(-50%);
+  font-size:22px; line-height:1; padding:6px 12px; text-decoration:none;
+}
+.topbar h1{
+  position:absolute; left:var(--topbar-side); right:var(--topbar-side);
+  margin:0; text-align:center; color:#fff; font-weight:800; font-size:18px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+
+
   </style>
 </head>
 <body>
