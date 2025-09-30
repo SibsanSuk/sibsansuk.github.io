@@ -1,16 +1,28 @@
+// pages/notify/Appointment.js
 const h = window.React.createElement;
-const { Link } = window.ReactRouterDOM;
 import { PhoneFrame } from "../../components/PhoneFrame.js";
+import { TopBar } from "../../components/TopBar.js";
+const { Link } = window.ReactRouterDOM;
 
 export function NotifyAppointment() {
   return h(PhoneFrame, null,
-    h(Link, { to: "/#/notify", className: "back" }, "← การแจ้งเตือนนัด"),
-    h("div", { className: "list" },
-      h("div", { className: "pill" }, "👨‍⚕️  การพบแพทย์"),
-      h("div", { className: "pill" }, "🦷  การพบทันตแพทย์"),
-      h("div", { className: "pill" }, "🕺  การนัดอบรมรุ่น"),
+    h(TopBar, { title: "การแจ้งเตือนนัด", backTo: "/notify" }),
+
+    h("div", { className: "notify-list" },
+      h("div", { className: "notify-item" },
+        h("span", { className: "notify-emoji" }, "👨‍⚕️"),
+        h("span", { className: "notify-chip" }, "การพบแพทย์")
+      ),
+      h("div", { className: "notify-item" },
+        h("span", { className: "notify-emoji" }, "🦷"),
+        h("span", { className: "notify-chip" }, "การพบทันตแพทย์")
+      ),
+      h("div", { className: "notify-item" },
+        h("span", { className: "notify-emoji" }, "🕺"),
+        h("span", { className: "notify-chip" }, "การนัดรวมรุ่น")
+      ),
       h("div", { className: "center" },
-        h("button", { className: "btn", onClick: () => alert("เพิ่มรายการนัด") }, "+ เพิ่ม")
+        h("button", { className: "btn btn-sm", onClick: () => alert("เพิ่มรายการนัด") }, "+ เพิ่ม")
       )
     )
   );

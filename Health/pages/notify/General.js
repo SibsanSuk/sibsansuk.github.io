@@ -1,16 +1,27 @@
+// pages/notify/General.js
 const h = window.React.createElement;
-const { Link } = window.ReactRouterDOM;
 import { PhoneFrame } from "../../components/PhoneFrame.js";
+import { TopBar } from "../../components/TopBar.js";
 
 export function NotifyGeneral() {
   return h(PhoneFrame, null,
-    h(Link, { to: "/#/notify", className: "back" }, "← การแจ้งเตือนทั่วไป"),
-    h("div", { className: "list" },
-      h("div", { className: "pill" }, "🎈  การทานยา"),
-      h("div", { className: "pill" }, "🔥  การออกกำลังกาย"),
-      h("div", { className: "pill" }, "🍱  การทําอาหารเย็น"),
+    h(TopBar, { title: "การแจ้งเตือนทั่วไป", backTo: "/notify" }),
+
+    h("div", { className: "notify-list" },
+      h("div", { className: "notify-item" },
+        h("span", { className: "notify-emoji" }, "🎈"),
+        h("span", { className: "notify-chip" }, "การทานยา")
+      ),
+      h("div", { className: "notify-item" },
+        h("span", { className: "notify-emoji" }, "🏃‍♀️"),
+        h("span", { className: "notify-chip" }, "การออกกำลังกาย")
+      ),
+      h("div", { className: "notify-item" },
+        h("span", { className: "notify-emoji" }, "🍱"),
+        h("span", { className: "notify-chip" }, "การทำอาหารเย็น")
+      ),
       h("div", { className: "center" },
-        h("button", { className: "btn", onClick: () => alert("เพิ่มรายการทั่วไป") }, "+ เพิ่ม")
+        h("button", { className: "btn btn-sm", onClick: () => alert("เพิ่มรายการทั่วไป") }, "+ เพิ่ม")
       )
     )
   );

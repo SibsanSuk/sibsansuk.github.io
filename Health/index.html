@@ -199,6 +199,21 @@
     @media (prefers-reduced-motion: reduce){
       *{scroll-behavior:auto; transition:none !important; animation:none !important;}
     }
+
+    /* TopBar */
+.topbar{ display:flex; align-items:center; gap:8px; }
+.topbar .back{ font-size:22px; line-height:1; padding:4px 10px; }
+
+/* รายการการแจ้งเตือน: ไอคอนซ้าย + ชิปขวา */
+.notify-list{ display:flex; flex-direction:column; gap:16px; margin:12px 10px 0; }
+a.notify-item, .notify-item{ text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px;
+  background:#cfe3ff; border-radius:18px; padding:10px; box-shadow:var(--shadow); }
+.notify-emoji{ font-size:34px; width:42px; text-align:center; }
+.notify-chip{ flex:1; background:#fff; border-radius:14px; padding:10px 16px; font-weight:800; box-shadow:var(--shadow); }
+
+/* ปุ่มเพิ่มเล็กลง */
+.btn-sm{ padding:8px 12px; min-height:36px; font-weight:700; font-size:14px; }
+
   </style>
 </head>
 <body>
