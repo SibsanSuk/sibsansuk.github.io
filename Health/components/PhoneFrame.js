@@ -1,10 +1,24 @@
 const h = window.React.createElement;
 const { Link } = window.ReactRouterDOM;
 
-/** Shell เหมือนแอปมือถือ: .page คือคอนเทนต์ที่เลื่อนจริง */
-export function PhoneFrame({ children }) {
+export function PhoneFrame({ children, dock }) {
+  // ใส่/เอาออกคลาส has-dock บน <html> เพื่อเผื่อพื้นที่ด้านล่างเวลา dock โผล่
+  React.useEffect(() => {
+    const root = document.documentElement;
+    if (dock) root.classList.add('has-dock');
+    else root.classList.remove('has-dock');
+    return () => root.classList.remove('has-dock');
+  }, [!!dock]);
+
   return h(React.Fragment, null,
     h("main", { className: "page", id: "page", role: "main" }, children),
+
+    /* Dock: ลอยเหนือ nav */
+    dock ? h("div", { className: "dock", role:"complementary", "aria-label":"แผงกิจกรรมลัด" },
+            h("div", { className: "dock-inner" }, dock)
+          ) : null,
+
+    /* Bottom Nav */
     h("nav", { className: "nav", role: "navigation", "aria-label": "Main" },
       h(Link, { to: "/", className: "btn", "aria-label":"หน้าแรก" }, "🏠", " หน้าแรก"),
       h(Link, { to: "/notify", className: "btn", "aria-label":"แจ้งเตือน" }, "🔔", " แจ้งเตือน"),

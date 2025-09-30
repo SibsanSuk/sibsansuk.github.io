@@ -249,6 +249,44 @@ html, body { height:100%; overflow:hidden; }
   overscroll-behavior-y: contain;     /* กัน chain scroll (บราวเซอร์ที่รองรับ) */
   padding-bottom: 1px; /* กันบางเครื่องสรุปว่าความสูงพอดีเป๊ะ */
 }
+:root{
+  /* ...ตัวเดิม... */
+  --nav-h: 64px; /* ความสูงแถบล่างโดยประมาณ (ปุ่มสูง 48px + padding) */
+}
+
+/* ใช้ nav-h แทนตัวเลข fix */
+.app{
+  /* เดิม: padding-bottom: calc(var(--safe-bottom) + 84px); */
+  padding-bottom: calc(var(--safe-bottom) + var(--nav-h));
+}
+
+/* พื้นที่คอนเทนต์หลักเลื่อนภายใน */
+.page{
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* ===== Dock ติดก้นจอ เหนือ nav ===== */
+.dock{
+  position: fixed;
+  left: 0; right: 0;
+  bottom: calc(var(--safe-bottom) + var(--nav-h) + 8px); /* เว้นจาก nav */
+  pointer-events: none; /* ปล่อยโคลนเตอร์ให้ลูกรับแทน */
+}
+.dock-inner{
+  max-width: 520px; margin: 0 auto; padding: 0 12px;
+  pointer-events: auto;
+}
+
+/* เวลามี dock ให้เผื่อที่ด้านล่างใน .page ไม่ให้เนื้อหาโดนบัง */
+.has-dock .page{
+  padding-bottom: calc(var(--nav-h) + 180px);
+}
+
+/* ให้การ์ดกิจกรรมใน dock ดูเป็นแผงลอย */
+.dock .card{ margin: 0; }
 
   </style>
 </head>
