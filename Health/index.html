@@ -4,14 +4,17 @@
   <meta charset="UTF-8" />
   <title>Personalised Wellness</title>
 
-  <!-- สำคัญ: ให้กินเต็มจอ, รองรับ iPhone notch -->
+  <!-- เต็มจอ / รองรับ iPhone notch -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#6c8cff" />
+  <!-- (เสริม) เปิดแบบเต็มจอเมื่อ Add to Home Screen บน iOS -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
+  <!-- Prefetch หน้ารอง -->
   <link rel="prefetch" href="./pages/notify/Index.js" as="script">
-<link rel="prefetch" href="./pages/notify/Appointment.js" as="script">
-<link rel="prefetch" href="./pages/notify/General.js" as="script">
-
+  <link rel="prefetch" href="./pages/notify/Appointment.js" as="script">
+  <link rel="prefetch" href="./pages/notify/General.js" as="script">
 
   <!-- React 17 + Router v5 (UMD, no npm) -->
   <script src="https://unpkg.com/react@17/umd/react.production.min.js" crossorigin></script>
@@ -25,33 +28,48 @@
       --card:#fff; --bubble:#eaf2ff; --text:#20314f;
       --shadow:0 10px 24px rgba(23,62,139,.15); --radius:18px;
 
-      /* ขนาดตัวอักษรฐาน (มือถือเล็ก) */
+      /* ตัวอักษร */
       --fz-1:14px; --fz-2:16px; --fz-3:18px;
 
-      /* viewport height fix (กำหนดในสคริปต์ด้านล่าง) */
+      /* viewport & safe-area */
       --vh: 1vh;
-      /* safe area สำหรับ iOS notch */
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
       --safe-left: env(safe-area-inset-left, 0px);
       --safe-right: env(safe-area-inset-right, 0px);
+
+      /* ความสูงแถบล่าง */
+      --nav-h: 64px;
     }
 
-    *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
-    html,body{height:100%; margin:0; background:var(--bg); color:var(--text);
+    *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+    html,body{
+      height:100%; margin:0; overflow:hidden; /* กัน PTR ของ Safari โดยให้เลื่อนใน .page แทน */
+      background:var(--bg); color:var(--text);
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Prompt, Inter, sans-serif;
       font-size: var(--fz-2); line-height:1.35;
+      overscroll-behavior: none;
     }
 
-    /* ====== App Shell ====== */
-    .app {
-      min-height: calc(var(--vh) * 100);
+    /* ===== App Shell ===== */
+    .app{
+      height: calc(var(--vh) * 100);
       display:flex; flex-direction:column;
-      /* โมบาย: เต็มจอ, พื้นหลังไล่สี */
       background: linear-gradient(180deg, var(--grad1), var(--grad2));
-      padding: calc(var(--safe-top) + 10px) max(10px, calc(var(--safe-left) + 10px)) calc(var(--safe-bottom) + 84px) max(10px, calc(var(--safe-right) + 10px));
-      /* บนจอใหญ่ (PC/แท็บเล็ต) จำกัดความกว้างให้อ่านง่าย */
+      padding: calc(var(--safe-top) + 10px)
+               max(10px, calc(var(--safe-left) + 10px))
+               calc(var(--safe-bottom) + var(--nav-h))
+               max(10px, calc(var(--safe-right) + 10px));
       margin: 0 auto; max-width: 520px;
+      overflow:hidden; /* ห้ามทะลุไปเลื่อน body */
+    }
+
+    .page{
+      flex:1 1 auto;
+      overflow-y:auto;
+      -webkit-overflow-scrolling:touch; /* inertia iOS */
+      overscroll-behavior-y: contain;
+      padding-bottom:1px;
     }
 
     /* การ์ด/บับเบิล/หัวข้อ */
@@ -60,7 +78,7 @@
     .card{background:var(--card); border-radius:var(--radius); padding:14px; margin:12px 6px; box-shadow:var(--shadow)}
     .section-title{font-weight:800; color:#2b4b88; background:#d9e8ff; display:inline-block; padding:6px 10px; border-radius:14px; margin-bottom:8px}
 
-    /* ไอคอนกิจกรรม */
+    /* Grid (อาจใช้ในบางหน้า) */
     .grid{display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; margin-top:10px}
     .tile{background:var(--card); border-radius:14px; padding:10px; text-align:center; font-size:12px; box-shadow:var(--shadow); user-select:none; cursor:pointer}
     .tile .emoji{font-size:24px; display:block; margin-bottom:4px}
@@ -69,291 +87,170 @@
     .list{display:flex; flex-direction:column; gap:12px; margin:6px}
     .pill{background:#e2efff; border-radius:14px; padding:12px 14px; display:flex; align-items:center; gap:10px; font-weight:700; box-shadow:var(--shadow)}
 
-    /* ====== Bottom Nav (เหมือนแอป) ====== */
-    .nav {
+    /* Bottom Nav */
+    .nav{
       position: fixed; left:0; right:0; bottom:0;
       display:flex; justify-content:center; gap:14px;
       padding: 10px calc(12px + var(--safe-right)) calc(12px + var(--safe-bottom)) calc(12px + var(--safe-left));
       background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.15) 38%, rgba(255,255,255,.25) 100%);
       backdrop-filter: blur(6px);
     }
-    .btn {
+    .btn{
       appearance:none; border:none; text-decoration:none; color:inherit; cursor:pointer;
       background:var(--card); box-shadow:var(--shadow);
-      border-radius:999px; padding:12px 18px; min-height:48px; /* ทัช target >=44px */
+      border-radius:999px; padding:12px 18px; min-height:48px;
       display:flex; align-items:center; gap:8px; font-weight:800;
+      touch-action: manipulation;
     }
+    .btn:active{ transform: translateY(1px) scale(0.98); transition: transform 120ms ease; }
     .back{ display:inline-flex; align-items:center; gap:8px; color:#fff; font-weight:800; margin:4px 6px; text-decoration:none }
-
     .center{text-align:center}
     .ghost{opacity:.6}
 
-    /* ====== Responsive ====== */
-    /* จอเล็กมาก → ลดคอลัมน์เหลือ 3 เพื่อปุ่มใหญ่แตะง่าย */
-    @media (max-width: 360px){
+    /* ===== Dock เหนือ nav (ใช้เฉพาะบางหน้า เช่น Home) ===== */
+    .dock{
+      position: fixed; left:0; right:0;
+      bottom: calc(var(--safe-bottom) + var(--nav-h) + 8px);
+      pointer-events:none;
+    }
+    .dock-inner{
+      max-width:520px; margin:0 auto; padding:0 12px;
+      pointer-events:auto;
+    }
+    .dock .card{ margin:0; }
+    .has-dock .page{ padding-bottom: calc(var(--nav-h) + 180px); }
+
+    /* ===== Skeleton Loader ===== */
+    .skeleton-wrap{ padding: 8px 6px 96px; }
+    .skeleton{ border-radius: 12px; background: #e8edf7; position: relative; overflow: hidden; }
+    .shimmer::after{
+      content:""; position:absolute; inset:0;
+      background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.6) 50%, rgba(255,255,255,0) 100%);
+      transform: translateX(-100%); animation: shimmer 1.25s infinite;
+    }
+    @keyframes shimmer{ 100%{ transform: translateX(100%); } }
+    .sk-title{ height:24px; width:55%; margin:14px 6px; }
+    .sk-bubble{ height:48px; margin:10px 6px; }
+    .sk-card{ height:140px; margin:12px 6px; }
+    .sk-grid{ margin:12px 6px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+    .sk-tile{ height:60px; border-radius:14px; }
+
+    /* ===== Native feel: ปิด select/callout ยกเว้นจุดที่อนุญาต ===== */
+    html, body, .app, .card, .bubble, .pill, .tile, .btn, nav, header, footer {
+      -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+    }
+    input, textarea, [contenteditable], .selectable {
+      -webkit-user-select: text; user-select: text; -webkit-touch-callout: default;
+    }
+    img, svg { -webkit-user-drag: none; user-drag: none; }
+
+    /* ===== Activities Carousel ===== */
+    .carousel-wrap{ position:relative; margin:8px 6px 2px; }
+    .carousel{
+      display:flex; gap:10px; padding:4px 6px 8px;
+      overflow-x:auto; overscroll-behavior-x: contain;
+      -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+    }
+    .carousel::-webkit-scrollbar{ display:none }
+    .carousel .tile{
+      flex: 0 0 auto; width:96px; scroll-snap-align:start; scroll-snap-stop:always;
+      text-align:center; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;
+      -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+    }
+    .carousel, .carousel * { touch-action: pan-x; }
+    /* เงาบอกทิศ */
+    .carousel-wrap::before, .carousel-wrap::after{
+      content:""; position:absolute; top:0; bottom:0; width:28px; pointer-events:none; opacity:0; transition:opacity .2s ease;
+    }
+    .carousel-wrap::before{ left:0;  background:linear-gradient(90deg, #fff 0%, rgba(255,255,255,0) 100%) }
+    .carousel-wrap::after { right:0; background:linear-gradient(270deg,#fff 0%, rgba(255,255,255,0) 100%) }
+    .carousel-wrap.shadow-left::before{ opacity:1 }
+    .carousel-wrap.shadow-right::after{ opacity:1 }
+    /* ปุ่มเลื่อน (เดสก์ท็อปเท่านั้น) */
+    .carousel-nav{ position:absolute; inset:0; display:flex; align-items:center; justify-content:space-between; pointer-events:none }
+    .nav-ctl{
+      pointer-events:auto; display:none; width:36px; height:36px; border-radius:999px; border:none; cursor:pointer;
+      background:rgba(255,255,255,.9); box-shadow:var(--shadow); font-size:20px; font-weight:800;
+    }
+    .nav-ctl:disabled{ opacity:.4; cursor:default }
+    /* ซ่อนปุ่มเมื่อเป็นอุปกรณ์สัมผัส */
+    .touch .nav-ctl{ display:none !important; }
+
+    /* ===== Responsive ===== */
+    @media (max-width:360px){
       .grid{ grid-template-columns: repeat(3, 1fr); }
       .tile .emoji{ font-size:22px }
       .btn{ padding:12px 16px }
     }
-
-    /* จอใหญ่/PC หรือแนวนอน → เพิ่มคอลัมน์/ขยายตัวอักษรเล็กน้อย */
-    @media (min-width: 680px){
+    @media (min-width:680px){
       :root{ --fz-1:15px; --fz-2:17px; --fz-3:19px; }
       .grid{ grid-template-columns: repeat(5, 1fr); }
-      .app{ border-radius:24px; margin: 14px auto calc(14px + 84px); }
+      .app{ border-radius:24px; margin:14px auto calc(14px + var(--nav-h)); }
+      .carousel .tile{ width:110px }
+      .nav-ctl{ display:inline-flex; align-items:center; justify-content:center }
     }
-
-    /* แนวนอนบนมือถือ: กดง่ายขึ้น, แยก padding */
-    @media (orientation: landscape) and (max-height: 520px){
+    @media (orientation:landscape) and (max-height:520px){
       .app{ padding-bottom: calc(var(--safe-bottom) + 72px); }
       .grid{ grid-template-columns: repeat(6, 1fr); }
       .btn{ min-height:44px; padding:10px 14px; }
+      .carousel .tile{ width:120px }
     }
-
-    /* ลดแอนิเมชันสำหรับผู้ใช้ที่ไม่ต้องการ */
     @media (prefers-reduced-motion: reduce){
       *{scroll-behavior:auto; transition:none !important; animation:none !important;}
     }
-
-    /* ===== Skeleton Loader ===== */
-.skeleton-wrap{ padding: 8px 6px 96px; }
-.skeleton{ border-radius: 12px; background: #e8edf7; position: relative; overflow: hidden; }
-.shimmer::after{
-  content:""; position:absolute; inset:0;
-  background: linear-gradient(90deg, rgba(255,255,255,0) 0%,
-                                      rgba(255,255,255,.6) 50%,
-                                      rgba(255,255,255,0) 100%);
-  transform: translateX(-100%);
-  animation: shimmer 1.25s infinite;
-}
-@keyframes shimmer{
-  100%{ transform: translateX(100%); }
-}
-.sk-title{ height: 24px; width: 55%; margin: 14px 6px; }
-.sk-bubble{ height: 48px; margin: 10px 6px; }
-.sk-card{ height: 140px; margin: 12px 6px; }
-.sk-grid{
-  margin: 12px 6px;
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
-}
-.sk-tile{ height: 60px; border-radius: 14px; }
-
-@media (min-width: 680px){
-  .sk-grid{ grid-template-columns: repeat(5, 1fr); }
-}
-@media (orientation: landscape) and (max-height: 520px){
-  .sk-grid{ grid-template-columns: repeat(6, 1fr); }
-}
-
-/* ===== Native-feel: disable long-press selection/callout ===== */
-html, body, .app, .card, .bubble, .pill, .tile, .btn, nav, header, footer {
-  -webkit-user-select: none;  /* iOS Safari */
-  user-select: none;
-  -webkit-touch-callout: none; /* ปิดเมนูค้าง (Copy/Lookup/Save Image) เท่าที่ทำได้ */
-}
-
-/* อนุญาตเลือกข้อความเฉพาะจุดที่ต้องใช้จริง */
-input, textarea, [contenteditable], .selectable {
-  -webkit-user-select: text;
-  user-select: text;
-  -webkit-touch-callout: default;
-}
-
-/* ป้องกันลากรูป/ไอคอน (ghost drag) */
-img, svg { -webkit-user-drag: none; user-drag: none; }
-
-/* ลด delay การคลิก และตัด highlight */
-a, button {
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* ปุ่มกดให้มี feeling แบบ native */
-.btn:active { transform: translateY(1px) scale(0.98); transition: transform 120ms ease; }
-
-/* ลดการสะบัด/ลากหน้าเว็บเกินความจำเป็น */
-body { overscroll-behavior: none; }
-
-/* ===== Horizontal Activities Carousel ===== */
-.carousel-wrap{ position:relative; margin:8px 6px 2px; }
-.carousel{
-  display:flex; gap:10px; padding:4px 6px 8px;
-  overflow-x:auto; overscroll-behavior-x: contain;
-  -webkit-overflow-scrolling: touch; /* momentum iOS */
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none; /* Firefox hide */
-  touch-action: pan-x; /* ลื่นบนมือถือ */
-}
-.carousel::-webkit-scrollbar{ display:none } /* Chrome/Safari hide */
-
-.carousel .tile{
-  flex: 0 0 auto; width: 96px; /* กว้างการ์ดต่อใบ */
-  scroll-snap-align: start;
-  text-align:center; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;
-}
-@media (min-width:680px){ .carousel .tile{ width:110px } }
-@media (orientation:landscape) and (max-height:520px){ .carousel .tile{ width:120px } }
-
-/* บอกผู้ใช้ว่าเลื่อนได้ด้วยเงาขอบ (fade) */
-.carousel-wrap::before, .carousel-wrap::after{
-  content:""; position:absolute; top:0; bottom:0; width:28px; pointer-events:none; opacity:0; transition:opacity .2s ease;
-  /* พื้นหลังไล่จางเข้ากับการ์ดสีขาว */
-}
-.carousel-wrap::before{ left:0;  background:linear-gradient(90deg, #fff 0%, rgba(255,255,255,0) 100%) }
-.carousel-wrap::after { right:0; background:linear-gradient(270deg,#fff 0%, rgba(255,255,255,0) 100%) }
-.carousel-wrap.shadow-left::before{ opacity:1 }
-.carousel-wrap.shadow-right::after{ opacity:1 }
-
-/* ปุ่มเลื่อนซ้าย/ขวา (โชว์เฉพาะจอใหญ่/เมาส์) */
-.carousel-nav{ position:absolute; inset:0; display:flex; align-items:center; justify-content:space-between; pointer-events:none }
-.nav-ctl{
-  pointer-events:auto; display:none; /* mobile ซ่อนไว้ */
-  width:36px; height:36px; border-radius:999px; border:none; cursor:pointer;
-  background:rgba(255,255,255,.9); box-shadow:var(--shadow); font-size:20px; line-height:1; font-weight:800;
-}
-.nav-ctl:disabled{ opacity:.4; cursor:default }
-@media (min-width:680px){ .nav-ctl{ display:inline-flex; align-items:center; justify-content:center } }
-
-/* กดปุ่ม/การ์ดแล้วมีฟีล native */
-.carousel .tile:active, .nav-ctl:active{ transform:translateY(1px) scale(.98); transition:transform 120ms ease }
-
-/* ซ่อนปุ่มลูกศรบนอุปกรณ์ทัช */
-.touch .nav-ctl { display: none !important; }
-
-/* ให้ปัดได้จากในการ์ดเองด้วย */
-.carousel, .carousel * { touch-action: pan-x; }
-.carousel .tile{
-  -webkit-user-select:none; user-select:none;
-  -webkit-touch-callout:none;
-}
-
-/* เพิ่มความแน่นของสแน็ปเวลาเลื่อน */
-.carousel{ scroll-snap-type: x mandatory; }
-.carousel .tile{ scroll-snap-align: start; scroll-snap-stop: always; }
-
-/* Root ไม่เลื่อน เพื่อกัน Pull-to-Refresh ของ Safari */
-html, body { height:100%; overflow:hidden; }
-
-/* แอปเป็นกรอบภาพรวม (พื้นหลัง/ระยะปลอดภัย) */
-.app {
-  height: calc(var(--vh) * 100);
-  display: flex; flex-direction: column;
-  overflow: hidden; /* กันหลุดไปเลื่อน body */
-}
-
-/* พื้นที่คอนเทนต์ที่เลื่อนจริง (เหมือนหน้าจอแอป) */
-.page {
-  flex: 1 1 auto;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch; /* inertia iOS */
-  overscroll-behavior-y: contain;     /* กัน chain scroll (บราวเซอร์ที่รองรับ) */
-  padding-bottom: 1px; /* กันบางเครื่องสรุปว่าความสูงพอดีเป๊ะ */
-}
-:root{
-  /* ...ตัวเดิม... */
-  --nav-h: 64px; /* ความสูงแถบล่างโดยประมาณ (ปุ่มสูง 48px + padding) */
-}
-
-/* ใช้ nav-h แทนตัวเลข fix */
-.app{
-  /* เดิม: padding-bottom: calc(var(--safe-bottom) + 84px); */
-  padding-bottom: calc(var(--safe-bottom) + var(--nav-h));
-}
-
-/* พื้นที่คอนเทนต์หลักเลื่อนภายใน */
-.page{
-  flex: 1 1 auto;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
-}
-
-/* ===== Dock ติดก้นจอ เหนือ nav ===== */
-.dock{
-  position: fixed;
-  left: 0; right: 0;
-  bottom: calc(var(--safe-bottom) + var(--nav-h) + 8px); /* เว้นจาก nav */
-  pointer-events: none; /* ปล่อยโคลนเตอร์ให้ลูกรับแทน */
-}
-.dock-inner{
-  max-width: 520px; margin: 0 auto; padding: 0 12px;
-  pointer-events: auto;
-}
-
-/* เวลามี dock ให้เผื่อที่ด้านล่างใน .page ไม่ให้เนื้อหาโดนบัง */
-.has-dock .page{
-  padding-bottom: calc(var(--nav-h) + 180px);
-}
-
-/* ให้การ์ดกิจกรรมใน dock ดูเป็นแผงลอย */
-.dock .card{ margin: 0; }
-
   </style>
 </head>
 <body>
-  <!-- App container -->
   <div id="root" class="app"></div>
 
-  <!-- main module ของเรา (โค้ดเดิม) -->
-  <script type="module" src="./main.js"></script>
-<script>
-  // กัน Pull-to-Refresh บน iOS: ถ้าดึงลงจากขอบบนของ .page ให้ยกเลิก default
-  (function preventPTR(){
-    let startY = 0, targetEl = null;
-
-    document.addEventListener('touchstart', (e) => {
-      if (e.touches.length !== 1) { targetEl = null; return; }
-      startY = e.touches[0].clientY;
-      // หา scroll container ที่เราใช้
-      targetEl = e.target.closest('.page');
-    }, { passive: true });
-
-    document.addEventListener('touchmove', (e) => {
-      if (!targetEl) return;
-      // ถ้าดึงลง (deltaY > 0) ขณะอยู่บนสุดของคอนเทนต์ → กันไม่ให้ Safari PTR
-      const dy = e.touches[0].clientY - startY;
-      if (dy > 0 && targetEl.scrollTop <= 0) {
-        e.preventDefault();
-      }
-    }, { passive: false });
-  })();
-</script>
-
-  <!-- Fix 100vh บน iOS/Android + อัปเดตเมื่อ resize / orientation change -->
+  <!-- ตั้งค่า --vh และใส่คลาส .touch ให้เร็วที่สุด -->
   <script>
     (function setVH(){
-      const set = () => {
-        const vh = window.innerHeight * 0.01;
-        document.documentElement.style.setProperty('--vh', `${vh}px`);
-      };
-      set(); window.addEventListener('resize', set); window.addEventListener('orientationchange', set);
-      // ใส่ class เพื่อ styling เพิ่มเติมตามแพลตฟอร์มได้ภายหลัง
+      const set = () => document.documentElement.style.setProperty('--vh', (innerHeight * 0.01) + 'px');
+      set(); addEventListener('resize', set); addEventListener('orientationchange', set);
       const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
       document.documentElement.classList.toggle('touch', !!isTouch);
     })();
   </script>
+
+  <!-- โหลด main.js พร้อม cache-busting -->
   <script>
-  // อนุญาตเฉพาะใน elements เหล่านี้
-  const allowSelector = 'input, textarea, [contenteditable], .selectable';
+    (function(){
+      window.APP_VER = Date.now(); // เปลี่ยนทุกครั้งที่รีเฟรช
+      const s = document.createElement('script');
+      s.type = 'module';
+      s.src = './main.js?v=' + window.APP_VER;
+      document.body.appendChild(s);
+    })();
+  </script>
 
-  // กันเมนูคลิกขวา/กดค้าง
-  document.addEventListener('contextmenu', (e) => {
-    if (!e.target.closest(allowSelector)) e.preventDefault();
-  }, { passive: false });
+  <!-- กัน Pull-to-Refresh บน iOS: ดึงลงจากขอบบนของ .page -->
+  <script>
+    (function preventPTR(){
+      let startY = 0, targetEl = null;
+      document.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) { targetEl = null; return; }
+        startY = e.touches[0].clientY;
+        targetEl = e.target.closest('.page');
+      }, { passive: true });
+      document.addEventListener('touchmove', (e) => {
+        if (!targetEl) return;
+        const dy = e.touches[0].clientY - startY;
+        if (dy > 0 && targetEl.scrollTop <= 0) e.preventDefault();
+      }, { passive: false });
+    })();
+  </script>
 
-  // กันเริ่ม select ข้อความ
-  document.addEventListener('selectstart', (e) => {
-    if (!e.target.closest(allowSelector)) e.preventDefault();
-  }, { passive: false });
-
-  // กันลาก (เช่น ลากรูป/ข้อความ)
-  document.addEventListener('dragstart', (e) => {
-    if (!e.target.closest(allowSelector)) e.preventDefault();
-  }, { passive: false });
-
-  // กันลาก tag ทั่วไป
-  document.querySelectorAll('a, img').forEach(el => el.setAttribute('draggable', 'false'));
-</script>
-
+  <!-- ปิด context menu / select / drag ยกเว้นจุดที่อนุญาต -->
+  <script>
+    (function(){
+      const allow = 'input, textarea, [contenteditable], .selectable';
+      addEventListener('contextmenu', e => { if (!e.target.closest(allow)) e.preventDefault(); }, { passive:false });
+      addEventListener('selectstart', e => { if (!e.target.closest(allow)) e.preventDefault(); }, { passive:false });
+      addEventListener('dragstart',  e => { if (!e.target.closest(allow)) e.preventDefault(); }, { passive:false });
+      document.querySelectorAll('a, img').forEach(el => el.setAttribute('draggable','false'));
+    })();
+  </script>
 </body>
 </html>

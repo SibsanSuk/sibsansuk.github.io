@@ -17,10 +17,10 @@ export function Activities({ items }) {
   ];
 
   const ref = useRef(null);
-  const press = useRef({ x:0, moved:false });
+  const press = useRef({ active:false, startX:0, moved:false });
   const [canL, setCanL] = useState(false);
   const [canR, setCanR] = useState(true);
-  const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  const supportsPointer = 'PointerEvent' in window;
 
   function updateShadows() {
     const el = ref.current; if (!el) return;
@@ -59,17 +59,34 @@ export function Activities({ items }) {
     el.scrollBy({ left: dir * amount, behavior: 'smooth' });
   };
 
-  // จับ tap vs swipe (ทั้ง pointer และ touch)
-  const onStart = (e) => {
-    const x = (e.touches && e.touches[0]?.clientX) ?? e.clientX ?? 0;
-    press.current = { x, moved:false };
+  // --- Gesture helpers (ไม่ยิง action ที่นี่) ---
+  const start = (x) => { press.current = { active:true, startX:x, moved:false }; };
+  const move  = (x) => {
+    if (!press.current.active) return;
+    if (Math.abs(x - press.current.startX) > 8) press.current.moved = true;
   };
-  const onMove = (e) => {
-    const x = (e.touches && e.touches[0]?.clientX) ?? e.clientX ?? 0;
-    if (Math.abs(x - press.current.x) > 8) press.current.moved = true;
-  };
-  const onEnd = (label) => (e) => {
-    if (!press.current.moved) alert(label); // tap จริง → ยิงคลิก
+  const end   = () => { press.current.active = false; /* รอ onClick ตัดสิน */ };
+
+  // Pointer (ถ้ามี)
+  const onPointerDown = (e) => { if (e.pointerType) start(e.clientX); };
+  const onPointerMove = (e)  => { if (e.pointerType) move(e.clientX); };
+  const onPointerUp   = (e)  => { if (e.pointerType) end(); };
+
+  // Touch fallback (ถ้าไม่มี Pointer Events)
+  const onTouchStart = (e) => start(e.touches[0].clientX);
+  const onTouchMove  = (e) => move(e.touches[0].clientX);
+  const onTouchEnd   = ()  => end();
+
+  // ยิง action แค่ครั้งเดียวที่นี่
+  const onClick = (label) => (e) => {
+    // ถ้าเพิ่งมีการปัด/เลื่อน ให้บล็อคคลิกครั้งนี้
+    if (press.current.moved) {
+      press.current.moved = false;
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    alert(label); // ← แทนด้วยฟังก์ชันจริงของคุณได้เลย
   };
 
   const wrapProps = { className: "carousel-wrap" + (canL ? " shadow-left" : "") + (canR ? " shadow-right" : "") };
@@ -86,23 +103,18 @@ export function Activities({ items }) {
         data.map((it, i) =>
           h("button", {
             key:i, type:"button", className:"tile", role:"option",
-            // รองรับ pointer events (เดสก์ท็อปใหม่ ๆ)
-            onPointerDown: onStart,
-            onPointerMove: onMove,
-            onPointerUp: onEnd(it.label),
-            // fallback ทัช (iOS/Safari)
-            onTouchStart: onStart,
-            onTouchMove: onMove,
-            onTouchEnd: onEnd(it.label),
-            // เมาส์/คีย์บอร์ดเดสก์ท็อป → คลิกได้ตามปกติ
-            onClick: (e) => { if (isTouch) return; alert(it.label); }
+            ...(supportsPointer ? {
+              onPointerDown, onPointerMove, onPointerUp
+            } : {
+              onTouchStart, onTouchMove, onTouchEnd
+            }),
+            onClick: onClick(it.label)
           },
             h("span", { className:"emoji" }, it.icon),
             h("span", null, it.label)
           )
         )
       ),
-      // ปุ่มเลื่อนซ้าย/ขวา แสดงเฉพาะ non-touch (มือถือจะถูกซ่อนไว้ด้วย CSS .touch .nav-ctl)
       h("div", { className:"carousel-nav", "aria-hidden":"true" },
         h("button", { className:"nav-ctl prev", disabled:!canL, onClick:()=>scrollByAmount(-1) }, "‹"),
         h("button", { className:"nav-ctl next", disabled:!canR, onClick:()=>scrollByAmount(1) }, "›")
