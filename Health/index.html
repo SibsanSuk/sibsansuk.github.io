@@ -40,6 +40,10 @@
 
       /* ความสูงแถบล่าง */
       --nav-h: 64px;
+
+      /* TopBar */
+      --topbar-h: 56px;     /* สูงขึ้น แตะง่าย */
+      --topbar-side: 72px;  /* เว้นพื้นที่ซ้าย/ขวาให้เท่าปุ่ม back */
     }
 
     *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
@@ -177,6 +181,35 @@
     /* ซ่อนปุ่มเมื่อเป็นอุปกรณ์สัมผัส */
     .touch .nav-ctl{ display:none !important; }
 
+    /* ===== TopBar: หัวข้อกึ่งกลางคงที่ + ปุ่มย้อนกลับใหญ่แตะง่าย ===== */
+    .topbar{
+      position:relative; height:var(--topbar-h);
+      display:flex; align-items:center; margin:6px 6px 8px;
+    }
+    .topbar h1{
+      position:absolute; left:var(--topbar-side); right:var(--topbar-side);
+      margin:0; text-align:center; color:#fff; font-weight:800; font-size:18px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .topbar .back{
+      position:absolute; left:6px; top:50%; transform:translateY(-50%);
+      display:inline-flex; align-items:center; justify-content:center;
+      min-width:48px; min-height:48px; padding:10px 14px;
+      border-radius:999px; text-decoration:none; font-weight:800;
+      background:rgba(255,255,255,.92); color:#2b4b88; box-shadow:var(--shadow);
+      -webkit-tap-highlight-color: transparent;
+      font-size:26px; line-height:1;
+    }
+    /* โชว์คำว่า “ย้อนกลับ” อัตโนมัติบนจอใหญ่ โดยไม่ต้องแก้ JS */
+    @media (min-width:680px){
+      :root{ --topbar-side: 128px; }
+      .topbar .back::after{
+        content:"ย้อนกลับ"; display:inline-block; margin-left:8px; font-size:16px; font-weight:800;
+      }
+    }
+    /* กดแล้วเด้งนิด ๆ แบบ native */
+    .topbar .back:active{ transform:translateY(calc(-50% + 1px)) scale(.98); transition:transform 120ms ease; }
+
     /* ===== Responsive ===== */
     @media (max-width:360px){
       .grid{ grid-template-columns: repeat(3, 1fr); }
@@ -200,73 +233,48 @@
       *{scroll-behavior:auto; transition:none !important; animation:none !important;}
     }
 
-    /* TopBar */
-.topbar{ display:flex; align-items:center; gap:8px; }
-.topbar .back{ font-size:22px; line-height:1; padding:4px 10px; }
+    /* Login page */
+    .login-wrap{ display:flex; flex-direction:column; justify-content:center; padding:24px 12px 96px; }
+    .brand{ color:#fff; font-weight:800; text-align:center; margin:6px 0 12px; }
+    .login-card{ background:var(--card); border-radius:18px; box-shadow:var(--shadow); padding:16px; margin:0 6px;
+      display:flex; flex-direction:column; gap:12px; }
+    .login-card h2{ margin:0 0 4px; font-size:18px; color:#2b4b88; }
+    .input-row{ display:flex; flex-direction:column; gap:6px; font-weight:600; }
+    .input{ font-size:16px; padding:12px 14px; border-radius:12px; border:1px solid #d9e3ff; outline:none; }
+    .input:focus{ border-color:#6c8cff; box-shadow:0 0 0 3px rgba(108,140,255,.2); }
+    .checkbox-row{ display:flex; align-items:center; gap:8px; font-size:14px; }
+    .login-btn{ width:100%; justify-content:center; margin-top:4px; }
 
-/* รายการการแจ้งเตือน: ไอคอนซ้าย + ชิปขวา */
-.notify-list{ display:flex; flex-direction:column; gap:16px; margin:12px 10px 0; }
-a.notify-item, .notify-item{ text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px;
-  background:#cfe3ff; border-radius:18px; padding:10px; box-shadow:var(--shadow); }
-.notify-emoji{ font-size:34px; width:42px; text-align:center; }
-.notify-chip{ flex:1; background:#fff; border-radius:14px; padding:10px 16px; font-weight:800; box-shadow:var(--shadow); }
+    /* User bar บนหน้าแรก */
+    .userbar{ display:flex; align-items:center; justify-content:space-between; margin:4px 6px 4px; }
+    .userbar-name{ color:#fff; font-weight:800; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:8px; }
+    .avatar{
+      width:40px; height:40px; border-radius:50%;
+      background:#fff; color:#2b4b88; font-weight:800;
+      display:flex; align-items:center; justify-content:center;
+      text-decoration:none; box-shadow:var(--shadow);
+    }
+    .avatar:active{ transform: translateY(1px) scale(.98); }
 
-/* ปุ่มเพิ่มเล็กลง */
-.btn-sm{ padding:8px 12px; min-height:36px; font-weight:700; font-size:14px; }
+    /* โปรไฟล์ */
+    .avatar-lg{
+      width:88px; height:88px; border-radius:50%; background:#fff; color:#2b4b88;
+      display:flex; align-items:center; justify-content:center; font-weight:900; font-size:28px; margin:4px auto 6px;
+      box-shadow:var(--shadow);
+    }
+    .profile-card{ padding-top:18px; padding-bottom:18px; }
+    .profile-name{ font-weight:900; color:#2b4b88; font-size:18px; margin-top:4px; }
+    .profile-username{ opacity:.7; font-size:14px; }
 
-:root{
-  --topbar-h: 48px;
-  --topbar-side: 56px; /* เว้นพื้นที่ซ้าย/ขวาให้เท่าปุ่ม back */
-}
+    .logout-btn{ background:#ffe8e8; color:#b42323; font-weight:800; }
 
-/* TopBar กลางเป๊ะ ไม่ว่า back จะมีหรือไม่ */
-.topbar{ position:relative; height:var(--topbar-h); display:flex; align-items:center; margin:4px 6px 8px; }
-.topbar .back{
-  position:absolute; left:6px; top:50%; transform:translateY(-50%);
-  font-size:22px; line-height:1; padding:6px 12px; text-decoration:none;
-}
-.topbar h1{
-  position:absolute; left:var(--topbar-side); right:var(--topbar-side);
-  margin:0; text-align:center; color:#fff; font-weight:800; font-size:18px;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
-
-/* Login page */
-.login-wrap{ display:flex; flex-direction:column; justify-content:center; padding:24px 12px 96px; }
-.brand{ color:#fff; font-weight:800; text-align:center; margin:6px 0 12px; }
-.login-card{ background:var(--card); border-radius:18px; box-shadow:var(--shadow); padding:16px; margin:0 6px;
-  display:flex; flex-direction:column; gap:12px; }
-.login-card h2{ margin:0 0 4px; font-size:18px; color:#2b4b88; }
-.input-row{ display:flex; flex-direction:column; gap:6px; font-weight:600; }
-.input{ font-size:16px; padding:12px 14px; border-radius:12px; border:1px solid #d9e3ff; outline:none; }
-.input:focus{ border-color:#6c8cff; box-shadow:0 0 0 3px rgba(108,140,255,.2); }
-.checkbox-row{ display:flex; align-items:center; gap:8px; font-size:14px; }
-.login-btn{ width:100%; justify-content:center; margin-top:4px; }
-
-/* User bar บนหน้าแรก */
-.userbar{ display:flex; align-items:center; justify-content:space-between; margin:4px 6px 4px; }
-.userbar-name{ color:#fff; font-weight:800; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:8px; }
-.avatar{
-  width:40px; height:40px; border-radius:50%;
-  background:#fff; color:#2b4b88; font-weight:800;
-  display:flex; align-items:center; justify-content:center;
-  text-decoration:none; box-shadow:var(--shadow);
-}
-.avatar:active{ transform: translateY(1px) scale(.98); }
-
-/* โปรไฟล์ */
-.avatar-lg{
-  width:88px; height:88px; border-radius:50%; background:#fff; color:#2b4b88;
-  display:flex; align-items:center; justify-content:center; font-weight:900; font-size:28px; margin:4px auto 6px;
-  box-shadow:var(--shadow);
-}
-.profile-card{ padding-top:18px; padding-bottom:18px; }
-.profile-name{ font-weight:900; color:#2b4b88; font-size:18px; margin-top:4px; }
-.profile-username{ opacity:.7; font-size:14px; }
-
-.logout-btn{ background:#ffe8e8; color:#b42323; font-weight:800; }
-
-
+    /* รายการการแจ้งเตือน */
+    .notify-list{ display:flex; flex-direction:column; gap:16px; margin:12px 10px 0; }
+    a.notify-item, .notify-item{ text-decoration:none; color:inherit; display:flex; align-items:center; gap:12px;
+      background:#cfe3ff; border-radius:18px; padding:10px; box-shadow:var(--shadow); }
+    .notify-emoji{ font-size:34px; width:42px; text-align:center; }
+    .notify-chip{ flex:1; background:#fff; border-radius:14px; padding:10px 16px; font-weight:800; box-shadow:var(--shadow); }
+    .btn-sm{ padding:8px 12px; min-height:36px; font-weight:700; font-size:14px; }
   </style>
 </head>
 <body>
