@@ -3,7 +3,6 @@ const h = window.React.createElement;
 const { useRef, useEffect, useState } = window.React;
 
 export function Activities({ items }) {
-  // รายการเริ่มต้น (ใส่เพิ่มได้ตามต้องการ)
   const data = items || [
     { icon:"🧘‍♂️", label:"กิจกรรม" },
     { icon:"❤️",   label:"บันทึกสุขภาพ" },
@@ -18,8 +17,10 @@ export function Activities({ items }) {
   ];
 
   const ref = useRef(null);
+  const press = useRef({ x:0, moved:false });
   const [canL, setCanL] = useState(false);
   const [canR, setCanR] = useState(true);
+  const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
 
   function updateShadows() {
     const el = ref.current; if (!el) return;
@@ -32,12 +33,11 @@ export function Activities({ items }) {
     const el = ref.current; if (!el) return;
     updateShadows();
 
-    // อัปเดตเงาขอบเมื่อเลื่อน/รีไซส์
     const onScroll = () => updateShadows();
     el.addEventListener('scroll', onScroll, { passive:true });
     window.addEventListener('resize', updateShadows);
 
-    // รองรับเมาส์/ล้อเลื่อนแนวตั้ง -> เลื่อนแนวนอน
+    // เดสก์ท็อป: หมุนล้อแนวตั้งให้เลื่อนแนวนอน
     const onWheel = (e) => {
       if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
         el.scrollLeft += e.deltaY;
@@ -59,7 +59,19 @@ export function Activities({ items }) {
     el.scrollBy({ left: dir * amount, behavior: 'smooth' });
   };
 
-  // อัปเดตคลาสเงาขอบบน wrapper
+  // จับ tap vs swipe (ทั้ง pointer และ touch)
+  const onStart = (e) => {
+    const x = (e.touches && e.touches[0]?.clientX) ?? e.clientX ?? 0;
+    press.current = { x, moved:false };
+  };
+  const onMove = (e) => {
+    const x = (e.touches && e.touches[0]?.clientX) ?? e.clientX ?? 0;
+    if (Math.abs(x - press.current.x) > 8) press.current.moved = true;
+  };
+  const onEnd = (label) => (e) => {
+    if (!press.current.moved) alert(label); // tap จริง → ยิงคลิก
+  };
+
   const wrapProps = { className: "carousel-wrap" + (canL ? " shadow-left" : "") + (canR ? " shadow-right" : "") };
 
   return h("div", { className:"card", role:"region", "aria-label":"กิจกรรมในวันนี้" },
@@ -73,16 +85,24 @@ export function Activities({ items }) {
       },
         data.map((it, i) =>
           h("button", {
-            key:i, type:"button", className:"tile",
-            role:"option",
-            "aria-label": it.label,
-            onClick: () => alert(it.label)
+            key:i, type:"button", className:"tile", role:"option",
+            // รองรับ pointer events (เดสก์ท็อปใหม่ ๆ)
+            onPointerDown: onStart,
+            onPointerMove: onMove,
+            onPointerUp: onEnd(it.label),
+            // fallback ทัช (iOS/Safari)
+            onTouchStart: onStart,
+            onTouchMove: onMove,
+            onTouchEnd: onEnd(it.label),
+            // เมาส์/คีย์บอร์ดเดสก์ท็อป → คลิกได้ตามปกติ
+            onClick: (e) => { if (isTouch) return; alert(it.label); }
           },
             h("span", { className:"emoji" }, it.icon),
             h("span", null, it.label)
           )
         )
       ),
+      // ปุ่มเลื่อนซ้าย/ขวา แสดงเฉพาะ non-touch (มือถือจะถูกซ่อนไว้ด้วย CSS .touch .nav-ctl)
       h("div", { className:"carousel-nav", "aria-hidden":"true" },
         h("button", { className:"nav-ctl prev", disabled:!canL, onClick:()=>scrollByAmount(-1) }, "‹"),
         h("button", { className:"nav-ctl next", disabled:!canR, onClick:()=>scrollByAmount(1) }, "›")

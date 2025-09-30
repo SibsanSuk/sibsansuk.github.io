@@ -217,6 +217,19 @@ body { overscroll-behavior: none; }
 /* กดปุ่ม/การ์ดแล้วมีฟีล native */
 .carousel .tile:active, .nav-ctl:active{ transform:translateY(1px) scale(.98); transition:transform 120ms ease }
 
+/* ซ่อนปุ่มลูกศรบนอุปกรณ์ทัช */
+.touch .nav-ctl { display: none !important; }
+
+/* ให้ปัดได้จากในการ์ดเองด้วย */
+.carousel, .carousel * { touch-action: pan-x; }
+.carousel .tile{
+  -webkit-user-select:none; user-select:none;
+  -webkit-touch-callout:none;
+}
+
+/* เพิ่มความแน่นของสแน็ปเวลาเลื่อน */
+.carousel{ scroll-snap-type: x mandatory; }
+.carousel .tile{ scroll-snap-align: start; scroll-snap-stop: always; }
 
   </style>
 </head>
