@@ -275,6 +275,38 @@
     .notify-emoji{ font-size:34px; width:42px; text-align:center; }
     .notify-chip{ flex:1; background:#fff; border-radius:14px; padding:10px 16px; font-weight:800; box-shadow:var(--shadow); }
     .btn-sm{ padding:8px 12px; min-height:36px; font-weight:700; font-size:14px; }
+  
+  
+    /* ===== Bottom Nav: Active state ===== */
+.nav .tab{
+  position: relative;
+  font-weight: 800;
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease, color .15s ease;
+}
+.nav .tab .dot{
+  display:none;
+  position:absolute; top:4px; left:50%; transform:translateX(-50%);
+  width:6px; height:6px; border-radius:50%; background:#2b4b88;
+}
+.nav .tab.active{
+  background:#2b4b88; color:#fff;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(14,41,97,.28);
+}
+.nav .tab.active .dot{ display:block; background:#fff; }
+
+/* ปรับ contrast สำหรับธีมพื้นหลังฟ้า */
+@media (prefers-contrast: more){
+  .nav .tab.active{ box-shadow: 0 0 0 3px rgba(18, 46, 123, 0.75), 0 6px 16px rgba(220, 231, 255, 0.4); }
+}
+
+/* เดสก์ท็อป/จอใหญ่: ขยายไฮไลต์นิดหน่อย */
+@media (min-width:680px){
+  .nav .tab.active{ transform: translateY(-3px); }
+}
+
+  
+  
   </style>
 </head>
 <body>
