@@ -1,0 +1,196 @@
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sentiment (Joblib → Browser via Pyodide)</title>
+  <style>
+    :root { --bg: #111; --fg:#f5f5f5; --muted:#9aa0a6; }
+    html,body{height:100%;margin:0}
+    body{
+      background: var(--bg);
+      color: var(--fg);
+      font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, 'Noto Sans Thai', sans-serif;
+      display:flex; align-items:center; justify-content:center; padding:24px;
+      transition: background-color .25s ease;
+    }
+    .card{
+      width:min(900px, 100%);
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      padding: 20px;
+    }
+    h1{font-size:22px;margin:0 0 8px 0}
+    p.caption{margin:4px 0 16px 0; color: var(--muted)}
+    textarea{
+      width:100%; height: 140px; padding:14px; font-size:16px; border-radius:12px;
+      border:1px solid rgba(255,255,255,.2); background:rgba(0,0,0,.25); color:var(--fg);
+      resize: vertical; outline: none;
+    }
+    .row{display:flex; gap:12px; margin-top:12px; flex-wrap: wrap;}
+    button{
+      padding:10px 16px; border-radius:12px; border:1px solid rgba(255,255,255,.2);
+      background: rgba(255,255,255,.08); color: var(--fg); font-weight:600; cursor:pointer;
+      transition: transform .05s ease;
+    }
+    button:active{ transform: translateY(1px); }
+    .status{
+      font-size:14px; color: var(--muted);
+      display:flex; align-items:center; gap:8px;
+    }
+    .dot{width:10px;height:10px;border-radius:50%;background:#f44336;display:inline-block}
+    .badge{font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.2)}
+    .model-select{margin-left:auto}
+    .footer{margin-top:14px;font-size:12px;color:var(--muted)}
+    .help{font-size:13px;margin-top:8px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>ทดสอบ Sentiment จากไฟล์ <code>.joblib</code> (โลจิสติก)</h1>
+    <p class="caption">วางไฟล์ <b>sentiment_vectorizer.joblib</b> และ <b>sentiment_logreg.joblib</b> ไว้โฟลเดอร์เดียวกับไฟล์นี้ แล้วเปิดในเบราว์เซอร์</p>
+
+    <textarea id="text" placeholder="พิมพ์ประโยคภาษาไทยหรืออังกฤษที่นี่..."></textarea>
+
+    <div class="row">
+      <button id="predictBtn">ทำนาย</button>
+      <span class="status" id="status"><span class="dot" id="dot"></span><span id="statusText">ยังไม่ได้โหลดโมเดล</span></span>
+      <span class="badge" id="labelBadge">label: —</span>
+      <span class="badge" id="scoreBadge">score: —</span>
+    </div>
+
+    <p class="help">สีพื้นหลัง: <b>เขียว</b> = 1 (บวก), <b>แดง</b> = -1 (ลบ), <b>เทา</b> = อื่น ๆ/กลาง</p>
+    <div class="footer">⚠️ ต้องใช้โมเดลที่ train ด้วย scikit‑learn: <code>TfidfVectorizer</code> + <code>LogisticRegression</code> และ label เป็น -1,0,1</div>
+  </div>
+
+  <!-- Pyodide -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script>
+  <script>
+    const ui = {
+      text: document.getElementById('text'),
+      predictBtn: document.getElementById('predictBtn'),
+      status: document.getElementById('status'),
+      statusText: document.getElementById('statusText'),
+      dot: document.getElementById('dot'),
+      labelBadge: document.getElementById('labelBadge'),
+      scoreBadge: document.getElementById('scoreBadge')
+    };
+
+    let pyodide = null;
+    let ready = false;
+
+    function setReady(v){
+      ready = v;
+      if(v){
+        ui.statusText.textContent = "โหลดโมเดลเรียบร้อย";
+        ui.dot.style.background = "#4caf50";
+      }else{
+        ui.statusText.textContent = "กำลังโหลดไลบรารี/โมเดล...";
+        ui.dot.style.background = "#ff9800";
+      }
+    }
+
+    function setBgByLabel(label){
+      // 1 -> green, -1 -> red, else -> gray
+      let color = "#111"; // default
+      if(label === 1) color = "#0f3d1b";
+      else if(label === -1) color = "#421212";
+      document.body.style.backgroundColor = color;
+    }
+
+    async function loadAll(){
+      try{
+        setReady(false);
+        pyodide = await loadPyodide({indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/"});
+        await pyodide.loadPackage(['micropip','numpy','scipy','scikit-learn','joblib']);
+
+        // fetch joblib files from same folder
+        async function fetchToFS(url, dst){
+          const r = await fetch(url);
+          if(!r.ok) throw new Error("โหลดไฟล์ไม่สำเร็จ: " + url);
+          const buf = new Uint8Array(await r.arrayBuffer());
+          pyodide.FS.writeFile(dst, buf);
+        }
+        await fetchToFS('sentiment_vectorizer.joblib', 'sentiment_vectorizer.joblib');
+        await fetchToFS('sentiment_logreg.joblib', 'sentiment_logreg.joblib');
+
+        const py = `
+import joblib, numpy as np
+from sklearn.linear_model import LogisticRegression
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+VEC_PATH = "sentiment_vectorizer.joblib"
+MODEL_PATH = "sentiment_logreg.joblib"
+
+vectorizer = joblib.load(VEC_PATH)
+model = joblib.load(MODEL_PATH)
+
+def predict_one(text: str):
+    X = vectorizer.transform([text])
+    # ให้คืนทั้ง label และ decision score (prob หรือ decision_function)
+    try:
+        # ถ้าเป็นโลจิสติก ใช้ proba ของ class 1 - class -1 เป็นสัญญาณ
+        proba = None
+        if hasattr(model, "predict_proba"):
+            # หา index ของคลาส -1, 0, 1
+            classes = list(model.classes_)
+            # สร้างสัญญาณคะแนนง่าย ๆ: p(1) - p(-1)
+            proba = model.predict_proba(X)[0]
+            score = 0.0
+            if -1 in classes and 1 in classes:
+                p_neg = proba[classes.index(-1)]
+                p_pos = proba[classes.index(1)]
+                score = float(p_pos - p_neg)
+            else:
+                score = float(proba.max())
+        else:
+            # สำหรับ SVM (ถ้าใช้) อาจมี decision_function
+            if hasattr(model, "decision_function"):
+                d = model.decision_function(X)
+                # รองรับทั้ง binary/ovr
+                try:
+                    score = float(d[0])
+                except Exception:
+                    score = float(np.max(d[0]))
+            else:
+                score = 0.0
+        y = int(model.predict(X)[0])
+        return y, float(score)
+    except Exception as e:
+        return 0, 0.0
+`;
+        pyodide.runPython(py);
+        setReady(true);
+      }catch(err){
+        console.error(err);
+        ui.statusText.textContent = "ผิดพลาด: " + err.message;
+        ui.dot.style.background = "#e53935";
+      }
+    }
+
+    async function predict(){
+      const text = ui.text.value.trim();
+      if(!ready || !text) return;
+      try{
+        const [label, score] = pyodide.runPython(`predict_one(${JSON.stringify(text)})`);
+        ui.labelBadge.textContent = "label: " + label;
+        ui.scoreBadge.textContent = "score: " + score.toFixed(4);
+        setBgByLabel(label);
+      }catch(err){
+        console.error(err);
+        ui.statusText.textContent = "ทำนายไม่สำเร็จ: " + err.message;
+        ui.dot.style.background = "#e53935";
+      }
+    }
+
+    ui.predictBtn.addEventListener('click', predict);
+    // Enter = predict
+    ui.text.addEventListener('keydown', (e)=>{ if(e.key === 'Enter' && (e.ctrlKey||e.metaKey)) { e.preventDefault(); predict(); }});
+
+    loadAll();
+  </script>
+</body>
+</html>
