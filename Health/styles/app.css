@@ -21,6 +21,10 @@
       /* TopBar */
       --topbar-h: 56px;     /* สูงขึ้น แตะง่าย */
       --topbar-side: 72px;  /* เว้นพื้นที่ซ้าย/ขวาให้เท่าปุ่ม back */
+
+        --tile-w: 64px;        /* กว้างมาตรฐานมือถือ */
+        --tile-h: 64px;        /* สูงเท่ากันทุกใบ (สี่เหลี่ยมจัตุรัส) */
+        --tile-gap: 8px;
     }
 
     *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
@@ -127,13 +131,24 @@
 
     /* ===== Activities Carousel ===== */
     .carousel-wrap{ position:relative; margin:8px 6px 2px; }
-    .carousel{
-  display:flex; gap:10px; padding:4px 6px 8px;
+.carousel{
+  display:flex; gap: var(--tile-gap); padding:4px 6px 8px;
   overflow-x:auto; overscroll-behavior-x: contain;
-  -webkit-overflow-scrolling: touch; /* inertia iOS */
-  /* ลบ 3 บรรทัดนี้ทิ้งเพื่อไม่ให้ snap เป็นบล็อก
-  scroll-snap-type: x mandatory;
-  */
+  -webkit-overflow-scrolling: touch;
+  align-items: stretch;                   /* สูงเท่ากันทั้งแถว */
+}
+
+.carousel .tile{
+  flex: 0 0 var(--tile-w);                /* กว้างคงที่ */
+  inline-size: var(--tile-w);
+  block-size: var(--tile-h);              /* สูงคงที่ */
+  display:flex; flex-direction:column;    /* จัดวางแนวตั้ง */
+  align-items:center; justify-content:center;
+  padding:8px; gap:4px;
+  background:var(--card);
+  border-radius:14px; box-shadow:var(--shadow);
+  user-select:none; cursor:pointer;
+  text-align:center;
 }
     .carousel::-webkit-scrollbar{ display:none }
 
@@ -177,10 +192,14 @@
     }
     /* โชว์คำว่า “ย้อนกลับ” อัตโนมัติบนจอใหญ่ โดยไม่ต้องแก้ JS */
     @media (min-width:680px){
-      :root{ --topbar-side: 128px; }
+
       .topbar .back::after{
         content:"ย้อนกลับ"; display:inline-block; margin-left:8px; font-size:16px; font-weight:800;
       }
+      :root{
+    --tile-w: 110px;     /* จอใหญ่ขยายเล็กน้อย */
+    --tile-h: 110px;
+  }
     }
     /* กดแล้วเด้งนิด ๆ แบบ native */
     .topbar .back:active{ transform:translateY(calc(-50% + 1px)) scale(.98); transition:transform 120ms ease; }
