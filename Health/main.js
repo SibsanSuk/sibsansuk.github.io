@@ -24,6 +24,9 @@ const NotifyGeneral = React.lazy(() =>
 const Profile = React.lazy(() =>
   import("./pages/Profile.js").then((m) => ({ default: m.Profile }))
 );
+const SOS = React.lazy(() =>
+  import("./pages/SOS.js").then((m) => ({ default: m.SOS }))
+);
 
 // Shell: แยกโครงหน้า + คุมการแสดง NavBar
 function Shell() {
@@ -48,6 +51,7 @@ function Shell() {
         h(PrivateRoute, { exact: true, path: "/notify/appointment", component: NotifyAppointment }),
         h(PrivateRoute, { exact: true, path: "/notify/general", component: NotifyGeneral }),
         h(PrivateRoute, { exact: true, path: "/profile", component: Profile }),
+        h(PrivateRoute, { exact: true, path: "/sos", component: SOS }),
 
         // fallback
         h(PrivateRoute, { component: Home })

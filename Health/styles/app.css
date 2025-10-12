@@ -315,84 +315,43 @@ a.notify-item, .notify-item {
 .notify-chip { flex: 1; background: #fff; border-radius: 14px; padding: 10px 16px; font-weight: 800; box-shadow: var(--shadow); }
 .btn-sm { padding: 8px 12px; min-height: 36px; font-weight: 700; font-size: 14px; }
 
-
-/* ===== Bottom Floating Navbar ===== */
-.navbar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: calc(var(--safe-bottom) + 8px);
-  z-index: 50;
-  display: flex;
-  justify-content: center;
-  pointer-events: none; /* ให้กดได้เฉพาะข้างใน */
-}
-
-.navbar-inner {
-  pointer-events: auto;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  width: min(420px, 90%);
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 20px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  padding: 8px 12px calc(8px + var(--safe-bottom));
-  backdrop-filter: blur(8px);
-}
-
-.nav-item {
-  flex: 1;
-  text-align: center;
-  color: #2b4b88;
-  text-decoration: none;
-  font-weight: 700;
-  font-size: 13px;
+/* ให้คอนเทนเนอร์หลักสูงเท่า viewport และยอมให้ลูกเลื่อน */
+.app {
+  min-height: calc(var(--vh) * 100);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  transition: transform 0.15s ease, color 0.15s ease;
+  /* อย่าตั้ง overflow:hidden ใน .app ถ้าต้องการให้ภายในเลื่อน */
+  overflow: visible; /* ถ้ามีอยู่เป็น hidden ให้เปลี่ยนเป็น visible */
 }
 
-.nav-item .icon {
-  font-size: 22px;
-  line-height: 1;
+/* ให้ .page เป็นตัวที่เลื่อนจริง ๆ */
+.page {
+  flex: 1 1 auto;
+  min-height: 0;                 /* สำคัญมากสำหรับ flex-child เพื่อให้เลื่อน */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;  /* inertia บน iOS */
+  overscroll-behavior-y: contain;     /* กัน PTR ไปโดน body */
+  padding-bottom: 1px;                /* กัน clamp ขอบล่าง */
 }
 
-.nav-item.active {
-  color: #fff;
-  background: #6c8cff;
-  border-radius: 14px;
-  box-shadow: 0 6px 16px rgba(108, 140, 255, 0.4);
-  transform: translateY(-3px);
-  padding: 6px 0;
+/* เผื่อพื้นที่ให้ NavBar ลอย (แนวตั้ง) */
+@media (orientation: portrait) {
+  .page {
+    padding-bottom: calc(var(--nav-h) + 16px + var(--safe-bottom));
+  }
 }
 
-.nav-item.active .icon {
-  transform: scale(1.1);
-}
-
-/* Landscape: ย้ายเป็น left rail */
+/* แนวนอน: ใช้ left rail แล้วไม่ต้องเผื่อ bottom nav */
 @media (orientation: landscape) {
-  .navbar {
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: auto;
-    justify-content: flex-start;
-    align-items: center;
-  }
-  .navbar-inner {
-    flex-direction: column;
-    width: calc(var(--rail-w) + var(--safe-left));
-    height: auto;
-    border-radius: 20px;
-    padding: calc(12px + var(--safe-top)) 8px calc(12px + var(--safe-bottom)) 8px;
-  }
-  .nav-item {
-    font-size: 12px;
-    padding: 8px 0;
+  .page {
+    padding-bottom: 12px;
   }
 }
+
+/* ถ้าใช้แผง dock เหนือ NavBar ให้เผื่อเพิ่ม */
+.has-dock .page {
+  padding-bottom: calc(var(--nav-h) + 180px);
+}
+
+
+

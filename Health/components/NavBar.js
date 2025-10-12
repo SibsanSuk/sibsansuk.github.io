@@ -2,7 +2,6 @@
 const h = window.React.createElement;
 const { Link, useLocation } = window.ReactRouterDOM;
 
-/** Floating Navbar (portrait) / Left rail (landscape) */
 export function NavBar() {
   const loc = useLocation();
   const path = loc.pathname || "/";
@@ -41,14 +40,14 @@ export function NavBar() {
       h(
         Link,
         {
-          to: "/profile",
-          className: `nav-item ${isActive("/profile") ? "active" : ""}`,
+          to: "/sos",
+          className: `nav-item ${isActive("/sos") ? "active" : ""}`,
           role: "tab",
-          "aria-current": isActive("/profile") ? "page" : undefined,
-          "aria-label": "โปรไฟล์",
+          "aria-current": isActive("/sos") ? "page" : undefined,
+          "aria-label": "ช่วยเหลือ (SOS)",
         },
-        h("div", { className: "icon", "aria-hidden": "true" }, "👤"),
-        h("span", null, "โปรไฟล์")
+        h("div", { className: "icon", "aria-hidden": "true" }, "🆘"),
+        h("span", null, "ช่วยเหลือ")
       )
     )
   );
