@@ -91,8 +91,8 @@ export function ExerciseVideos({ data }) {
       ),
       h("div", { style: { marginTop: "8px", display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" } },
         current.duration ? h("span", { className: "pill", style: { padding: "6px 10px" } }, `⏱ ${current.duration}`) : null,
-        current.level ? h("span", { className: "pill", style: { padding: "6px 10px" } }, `🏷 ${current.level}`) : null,
-        h("span", { style: { opacity: .75, fontSize: "13px" } }, current.src)
+        current.level ? h("span", { className: "pill", style: { padding: "6px 10px" } }, `🏷 ${current.level}`) : null
+        //h("span", { style: { opacity: .75, fontSize: "13px" } }, current.src)
       )
     );
   };

@@ -25,7 +25,9 @@ export function Home() {
     ],
   };
 
-  const { pinnedAppointments, tips } = data;
+  // ★ CHANGED: ใช้ state สำหรับ pinned appointments
+  const [pins, setPins] = React.useState(() => data.pinnedAppointments);
+  const tips = data.tips;
 
   // ===== Fade edges controller (ซ้าย/ขวา) =====
   const wrapRef = React.useRef(null);
@@ -56,7 +58,8 @@ export function Home() {
       sc.removeEventListener("scroll", updateShadow);
       window.removeEventListener("resize", updateShadow);
     };
-  }, [updateShadow, pinnedAppointments.length]);
+    // ★ CHANGED: ผูกกับจำนวน pins ปัจจุบัน
+  }, [updateShadow, pins.length]);
 
   // ===== Dialog ประเมินกิจกรรม =====
   const [activePin, setActivePin] = React.useState(null);
@@ -87,6 +90,11 @@ export function Home() {
       done, rate, note
     });
 
+    // ★ CHANGED: ถ้าเลือกทำกิจกรรมแล้ว ให้ลบ item ออกจาก state
+    if (done && activePin) {
+      setPins(prev => prev.filter(p => p.id !== activePin.id));
+    }
+
     // ปิด dialog
     setActivePin(null);
 
@@ -110,10 +118,10 @@ export function Home() {
     h("h1", null, "Personalised Wellness"),
 
     // ====== บล็อก: เตือนการนัด (Post-it แถวแนวนอน + เงาเฟด) ======
-    pinnedAppointments.length > 0 &&
+    pins.length > 0 &&
       h("section", { ref: wrapRef, className: "pin-hwrap", "aria-label":"การนัดที่ปักหมุด" },
         h("div", { ref: scrollRef, className: "pin-hscroll", role: "list" },
-          pinnedAppointments.map((ap, idx) =>
+          pins.map((ap, idx) =>
             h("button", {
                 key: ap.id,
                 type: "button",
