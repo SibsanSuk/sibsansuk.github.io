@@ -6,10 +6,7 @@ const { useNavigate } = (window.ReactRouterDOM || {});
 export function Mood() {
   const navigate = (typeof useNavigate === "function") ? useNavigate() : null;
 
-  // ตั้งชื่อหน้า
-  useEffect(() => {
-    if (typeof document !== "undefined") document.title = "ประเมินอารมณ์";
-  }, []);
+  useEffect(() => { if (typeof document !== "undefined") document.title = "ประเมินอารมณ์"; }, []);
 
   // ตัวเลือกอารมณ์ 5 ระดับ (ซ้าย = แย่ → ขวา = ดี)
   const moods = [
@@ -23,33 +20,17 @@ export function Mood() {
   const [value, setValue] = useState(null);
   const [note, setNote]   = useState("");
 
-  const back = (e) => {
-    e?.preventDefault?.();
-    if (navigate) navigate(-1);
-    else history.back();
-  };
+  const back = (e) => { e?.preventDefault?.(); if (navigate) navigate(-1); else history.back(); };
 
   const save = async (e) => {
     e?.preventDefault?.();
-    if (!value) {
-      alert("กรุณาเลือกอารมณ์อย่างน้อย 1 รายการ");
-      return;
-    }
-    // TODO: เชื่อม API จริงที่นี่
-    // ตัวอย่าง payload
-    const payload = {
-      mood: value,              // 1..5
-      note: note?.trim() || "",
-      at: new Date().toISOString(),
-    };
+    if (!value) { alert("กรุณาเลือกอารมณ์อย่างน้อย 1 รายการ"); return; }
+    const payload = { mood: value, note: note?.trim() || "", at: new Date().toISOString() };
     console.log("Save mood payload:", payload);
-
-    // ตัวอย่าง: แสดงผลลัพธ์ แล้วกลับหน้าเดิม
     alert("บันทึกสำเร็จ");
     back();
   };
 
-  // ปุ่มอีโมจิ (ใช้สไตล์ tile/btn เดิม)
   const MoodButton = ({ m }) =>
     h("button", {
       type: "button",
@@ -63,20 +44,33 @@ export function Mood() {
     );
 
   return h(React.Fragment, null,
+    // สไตล์เฉพาะหน้า (ทำกริดให้ไม่ต้องเลื่อน)
+    h("style", { dangerouslySetInnerHTML: { __html: `
+      .mood-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+        margin-top: 8px;
+        overflow: visible;           /* ไม่ให้เกิดแถบเลื่อนในกริด */
+      }
+      @media (max-width: 360px) {
+        .mood-grid { grid-template-columns: repeat(3, 1fr); }
+      }
+      .mood-grid .tile { padding: 10px; }
+      .mood-grid .tile .emoji { font-size: 28px; margin-bottom: 6px; }
+    `}}),
+
     // TopBar + Back
     h("div", { className: "topbar" },
       h("a", { href: "#", className: "back", onClick: back, "aria-label": "ย้อนกลับ" }, "‹"),
       h("h1", null, "ประเมินอารมณ์")
     ),
 
-    // การ์ดเลือกอารมณ์
+    // การ์ดเลือกอารมณ์ — เปลี่ยนจาก carousel เป็นกริดคงที่
     h("div", { className: "card" },
       h("div", { className: "section-title" }, "เลือกอารมณ์ของคุณตอนนี้"),
-      // ใช้แถวเลื่อนแนวนอนแบบ carousel เดิม เพื่อให้กดง่ายบนมือถือ
-      h("div", { className: "carousel-wrap shadow-left shadow-right" },
-        h("div", { className: "carousel", role: "listbox", "aria-label": "ตัวเลือกอารมณ์ 5 ระดับ" },
-          moods.map((m) => h(MoodButton, { key: m.key, m }))
-        )
+      h("div", { className: "mood-grid", role: "listbox", "aria-label": "ตัวเลือกอารมณ์ 5 ระดับ" },
+        moods.map((m) => h(MoodButton, { key: m.key, m }))
       )
     ),
 

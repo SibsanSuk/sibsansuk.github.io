@@ -11,7 +11,7 @@ export function ExerciseVideos({ data }) {
 
   const sampleData = {
     title: "เรียนออกกำลังกายด้วย VDO",
-    description: "เลือกคลิปเพื่อเล่นด้านบน (ปรับชื่อไฟล์/รายละเอียดใน JSON ได้ภายหลัง)",
+    description: "ท่าออกกำลังกายทั่วไป",
     items: [
       { id: "STCU1", title: "Squat (STCU1)", src: "https://sibsansuk.github.io/Health/videos/STCU1.mp4", emoji: "🦵", duration: "00:45", level: "Beginner" },
       { id: "STCU2", title: "ท่าออกกำลังกาย STCU2", src: "https://sibsansuk.github.io/Health/videos/STCU2.mp4", emoji: "🎬", duration: "00:45" },
