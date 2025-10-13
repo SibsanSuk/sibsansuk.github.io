@@ -65,7 +65,6 @@ export function Login(){
       }, "เข้าสู่ระบบ")
     ),
     // เคล็ดลับ: บอกบัญชีทดสอบสำหรับการเดโม (ลบได้ภายหลัง)
-    h("p", { className:"center", style:{color:"#fff", opacity:.7, marginTop:"10px"} },
-      "ทดสอบ: ผู้ใช้ ", h("b", null, "nectec"), " / รหัสผ่าน ", h("b", null, "nectec"))
+    h("p", { className:"center", style:{color:"#fff", opacity:.7, marginTop:"10px"} })
   );
 }
