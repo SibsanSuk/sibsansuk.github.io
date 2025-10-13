@@ -28,6 +28,22 @@ const SOS = React.lazy(() =>
   import("./pages/SOS.js").then((m) => ({ default: m.SOS }))
 );
 
+const Exercise = React.lazy(() =>
+  import("./pages/Exercise.js").then((m) => ({ default: m.Exercise }))
+);
+
+const ExerciseVideos = React.lazy(() =>
+  import("./pages/exercise/Videos.js").then((m) => ({ default: m.ExerciseVideos }))
+);
+
+const Mood = React.lazy(() =>
+  import("./pages/Mood.js").then((m) => ({ default: m.Mood }))
+);
+
+const Assessment = React.lazy(() =>
+  import("./pages/Assessment.js").then((m) => ({ default: m.Assessment }))
+);
+
 // Shell: แยกโครงหน้า + คุมการแสดง NavBar
 function Shell() {
   const loc = useLocation();
@@ -52,7 +68,10 @@ function Shell() {
         h(PrivateRoute, { exact: true, path: "/notify/general", component: NotifyGeneral }),
         h(PrivateRoute, { exact: true, path: "/profile", component: Profile }),
         h(PrivateRoute, { exact: true, path: "/sos", component: SOS }),
-
+        h(PrivateRoute, { exact: true, path: "/exercise", component: Exercise }),
+        h(PrivateRoute, { exact: true, path: "/exercise/videos", component: ExerciseVideos }),
+        h(PrivateRoute, { exact: true, path: "/mood", component: Mood }),
+        h(PrivateRoute, { exact: true, path: "/assessment", component: Assessment }),
         // fallback
         h(PrivateRoute, { component: Home })
       )

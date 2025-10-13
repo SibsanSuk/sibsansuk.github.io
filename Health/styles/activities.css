@@ -1,0 +1,68 @@
+/* ========== Activities (scoped) ========== */
+.activities .section-title { /* ใช้สี/ฟอนต์เดิมได้ ถ้าต้องแยกก็ใส่ไว้ */
+  /* ถ้าต้องการ override เพิ่ม เติมตรงนี้ได้ */
+}
+
+/* Wrap + gradient edges */
+.activities .carousel-wrap {
+  position: relative;
+  margin: 8px 6px 2px;
+}
+.activities .carousel-wrap::before,
+.activities .carousel-wrap::after {
+  content: "";
+  position: absolute; top: 0; bottom: 0; width: 28px;
+  pointer-events: none; opacity: 0; transition: opacity .2s ease;
+}
+.activities .carousel-wrap::before {
+  left: 0;
+  background: linear-gradient(90deg, #fff 0%, rgba(255,255,255,0) 100%);
+}
+.activities .carousel-wrap::after {
+  right: 0;
+  background: linear-gradient(270deg, #fff 0%, rgba(255,255,255,0) 100%);
+}
+.activities .carousel-wrap.shadow-left::before { opacity: 1; }
+.activities .carousel-wrap.shadow-right::after { opacity: 1; }
+
+/* Horizontal carousel */
+.activities .carousel {
+  display: flex; gap: var(--tile-gap); padding: 4px 6px 8px;
+  overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch;
+  align-items: stretch;
+}
+.activities .carousel::-webkit-scrollbar { display: none; }
+.activities .carousel, .activities .carousel * { touch-action: pan-x; }
+
+/* Tiles inside carousel */
+.activities .carousel .tile {
+  flex: 0 0 var(--tile-w);
+  inline-size: var(--tile-w); block-size: var(--tile-h);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 8px; gap: 4px;
+  background: var(--card); border-radius: 14px; box-shadow: var(--shadow);
+  user-select: none; cursor: pointer; text-align: center; border: none;
+}
+.activities .carousel .tile:active {
+  transform: translateY(1px) scale(.98); transition: transform 120ms ease;
+}
+.activities .carousel .tile .emoji { font-size: 24px; display: block; margin-bottom: 4px; }
+
+/* Desktop-only nav buttons */
+.activities .carousel-nav {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between;
+  pointer-events: none;
+}
+.activities .nav-ctl {
+  pointer-events: auto; display: none; width: 36px; height: 36px; border-radius: 999px; border: none; cursor: pointer;
+  background: rgba(255,255,255,.9); box-shadow: var(--shadow); font-size: 20px; font-weight: 800;
+}
+.touch .activities .nav-ctl { display: none !important; }
+@media (min-width: 680px) {
+  .activities .nav-ctl { display: inline-flex; align-items: center; justify-content: center; }
+}
+
+/* Responsive tweaks */
+@media (max-width: 360px) {
+  .activities .carousel .tile .emoji { font-size: 22px; }
+}
