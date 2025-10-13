@@ -36,6 +36,10 @@ const ExerciseVideos = React.lazy(() =>
   import("./pages/exercise/Videos.js").then((m) => ({ default: m.ExerciseVideos }))
 );
 
+const YoungFit = React.lazy(() =>
+  import("./pages/exercise/YoungFit.js").then((m) => ({ default: m.YoungFit }))
+);
+
 const Mood = React.lazy(() =>
   import("./pages/Mood.js").then((m) => ({ default: m.Mood }))
 );
@@ -70,6 +74,7 @@ function Shell() {
         h(PrivateRoute, { exact: true, path: "/sos", component: SOS }),
         h(PrivateRoute, { exact: true, path: "/exercise", component: Exercise }),
         h(PrivateRoute, { exact: true, path: "/exercise/videos", component: ExerciseVideos }),
+        h(PrivateRoute, { exact: true, path: "/exercise/youngfit", component: YoungFit }),
         h(PrivateRoute, { exact: true, path: "/mood", component: Mood }),
         h(PrivateRoute, { exact: true, path: "/assessment", component: Assessment }),
         // fallback
