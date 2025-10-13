@@ -13,10 +13,10 @@
   color: #1f2d4a;
 
   background: #fffbe5;            /* เหลือง Post-it */
-  border-radius: 8px 8px 3px 8px;
-  padding: 16px 14px 14px;
+  border-radius: 8px 8px 8px 8px;
+  padding: 20px 16px 16px;
 
-  box-shadow: 0 3px 6px rgba(0,0,0,.08), inset 0 -1px 0 rgba(0,0,0,.05);
+  box-shadow: 0 4px 6px rgba(0,0,0,.08), inset 0 -1px 0 rgba(0,0,0,.05);
   transform: rotate(-1.2deg);
   transition: transform .12s ease, box-shadow .12s ease;
 }
@@ -52,7 +52,7 @@
   color: #2b4b88;
   font-size: 22px;
   line-height: 1.25;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
 }
 
 .pin-time {
@@ -61,7 +61,7 @@
   opacity: .95;
 }
 
-.pin-body { margin-left: 2px; }
+.pin-body { margin-left: 16px; }
 
 .pin-item:nth-child(3n+1) { background: #fff09e; } /* เหลือง */
 .pin-item:nth-child(3n+2) { background: #9affbc; } /* เขียวมินต์ */
@@ -71,6 +71,43 @@
   .pin-item { transition: none; transform: none; }
   .pin-item:hover, .pin-item:active { transform: none; }
 }
+
+/* ===== Fade edges สำหรับ Post-it Carousel ===== */
+.pin-hwrap::before,
+.pin-hwrap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 20px;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;                    /* เริ่มต้นไม่แสดง */
+  transition: opacity 0.25s ease;
+}
+
+/* fade ซ้าย */
+.pin-hwrap::before {
+  left: 0;
+  background: linear-gradient(90deg, var(--grad1) 0%, transparent 100%);
+}
+
+/* fade ขวา */
+.pin-hwrap::after {
+  right: 0;
+  background: linear-gradient(270deg, var(--grad1) 0%, transparent 100%);
+}
+
+/* แสดง fade เสมอ (ถ้าต้องการคงไว้ทั้งสองข้าง) */
+.pin-hwrap.fade::before,
+.pin-hwrap.fade::after {
+  opacity: 1;
+}
+
+/* ถ้าอยากโชว์เฉพาะเมื่อเลื่อนไม่สุด — ใช้ JS เพิ่มคลาส shadow-left/right ก็ได้ */
+.pin-hwrap.shadow-left::before { opacity: 1; }
+.pin-hwrap.shadow-right::after { opacity: 1; }
+
 
 /* ===== Chat-like Tips (บอลลูนแชตจากผู้เชี่ยวชาญ) ===== */
 .chat {
@@ -279,3 +316,96 @@
   .pin-card { transition: none; transform: none; }
   .pin-card:hover, .pin-card:active { transform: none; }
 }
+
+
+/* ===== Dialog สำหรับ Post-it ===== */
+.pin-dialog {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0,0,0,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn .15s ease;
+}
+.pin-dialog-box {
+  background: #fff;
+  width: min(520px, 92%);
+  border-radius: 18px;
+  box-shadow: 0 10px 24px rgba(0,0,0,.18);
+  padding: 16px;
+  animation: zoomIn .2s ease;
+}
+.pin-dialog-head { margin-bottom: 8px; }
+.pin-dialog-title {
+  font-weight: 900;
+  color: #2b4b88;
+  font-size: 18px;
+}
+.pin-dialog-sub {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #5f7bb2;
+}
+
+/* แถวฟอร์ม */
+.pin-row { margin-top: 12px; }
+.pin-label { font-weight: 800; color: #20314f; margin-bottom: 6px; display: block; }
+
+/* เช็กบ็อกซ์ */
+.pin-check {
+  display: flex; align-items: center; gap: 10px;
+  background: #f4f7ff;
+  padding: 10px 12px; border-radius: 12px;
+  box-shadow: inset 0 0 0 1px #e2ebff;
+}
+
+/* ปุ่มอีโมจิให้คะแนน */
+.pin-rate { display: flex; gap: 8px; }
+.pin-face {
+  width: 44px; height: 44px; border-radius: 12px;
+  border: 1px solid #dfe7ff;
+  background: #fff;
+  font-size: 22px; line-height: 1;
+  display: grid; place-items: center;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+.pin-face:active { transform: translateY(1px) scale(.98); }
+.pin-face.active {
+  border-color: #6c8cff;
+  box-shadow: 0 6px 16px rgba(108,140,255,.28);
+}
+
+/* กล่องข้อความ */
+.pin-note {
+  width: 100%;
+  resize: vertical;
+  border-radius: 12px;
+  border: 1px solid #d9e3ff;
+  padding: 10px 12px;
+  font-size: 15px;
+  outline: none;
+}
+.pin-note:focus {
+  border-color: #6c8cff;
+  box-shadow: 0 0 0 3px rgba(108,140,255,.18);
+}
+
+/* ปุ่ม action */
+.pin-dialog-actions {
+  display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px;
+}
+.pin-cancel { background: #f2f2f2; color: #333; font-weight: 700; }
+.pin-save   { background: #6c8cff; color: #fff; font-weight: 800; }
+
+/* ล็อกการเลื่อนพื้นหลังเมื่อเปิด dialog */
+.html-lock .page { overflow: hidden; }
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes zoomIn { from { transform: scale(.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* ทำให้ .pin-card คลิกได้ (cursor) */
+.pin-card { cursor: pointer; }
