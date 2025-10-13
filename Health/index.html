@@ -24,8 +24,9 @@
 
 
   <link id="app-css" rel="stylesheet" href="./styles/app.css">
-  <link rel="stylesheet" href="./styles/navbar.css">
-  <link rel="stylesheet" href="./styles/sos.css">
+  <link id="navbar-css" rel="stylesheet" href="./styles/navbar.css">
+  <link id="sos-css" rel="stylesheet" href="./styles/sos.css">
+  <link id="home-css" rel="stylesheet" href="./styles/home.css">
 
 </head>
 <body>
@@ -41,21 +42,29 @@
     })();
   </script>
 
-  <!-- โหลด main.js พร้อม cache-busting -->
-  <script>
-    (function(){
-      window.APP_VER = Date.now(); // เปลี่ยนทุกครั้งที่รีเฟรช
+<script>
+  (function () {
+    // มีในไฟล์คุณอยู่แล้ว
+    window.APP_VER = Date.now();
 
-    // ใส่ cache-busting ให้ CSS ด้วย
-    const css = document.getElementById('app-css');
-    if (css) css.href = css.href + '?v=' + window.APP_VER;
+    // ใส่ cache-busting ให้ CSS เพิ่มเติม (navbar.css, sos.css)
+    const bump = (id) => {
+      const el = document.getElementById(id);
+      if (el && !el.href.includes('?v=')) el.href = el.href + '?v=' + window.APP_VER;
+    };
+    bump('app-css');
+    bump('navbar-css');
+    bump('sos-css');
+    bump('home-css');
 
-      const s = document.createElement('script');
-      s.type = 'module';
-      s.src = './main.js?v=' + window.APP_VER;
-      document.body.appendChild(s);
-    })();
-  </script>
+    // main.js (มีอยู่แล้ว)
+    const s = document.createElement('script');
+    s.type = 'module';
+    s.src = './main.js?v=' + window.APP_VER;
+    document.body.appendChild(s);
+  })();
+</script>
+
 
   <!-- กัน Pull-to-Refresh บน iOS: ดึงลงจากขอบบนของ .page -->
   <script>

@@ -22,7 +22,7 @@
   --safe-right: env(safe-area-inset-right, 0px);
 
   /* Navigation sizes */
-  --nav-h: 64px;   /* bottom nav height (portrait) */
+  --nav-h: 68px;   /* bottom nav height (portrait) */
   --rail-w: 84px;  /* left rail width (landscape) */
 
   /* TopBar */

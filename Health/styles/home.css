@@ -1,0 +1,152 @@
+
+/* ===== Pinned Appointments — Post-it style ===== */
+.pin-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 10px 6px 18px;
+}
+
+/* กระดาษ Post-it แปะด้วยหมุด */
+.pin-item {
+  position: relative;
+  display: block;                 /* ไม่ต้องใช้ grid ก็ได้ */
+  text-decoration: none;
+  color: #1f2d4a;
+
+  /* กระดาษ */
+  background: #fffbe5;            /* เหลือง Post-it มาตรฐาน */
+  border-radius: 8px 8px 3px 8px; /* มุมขวาล่างแบนนิดให้เหมือนกระดาษ */
+  padding: 16px 14px 14px 14px;
+
+  /* เงา + ขอบกระดาษ */
+  box-shadow:
+    0 3px 6px rgba(0,0,0,.08),
+    inset 0 -1px 0 rgba(0,0,0,.05);
+  transform: rotate(-1.2deg);     /* ดูเป็นแผ่นที่แปะอยู่จริง */
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+
+/* วาดรอยพับกระดาษตรงมุมล่างขวา */
+.pin-item::after {
+  content: "";
+  position: absolute;
+  right: 0; bottom: 0;
+  width: 42px; height: 22px;
+  background: rgba(0,0,0,.04);
+  clip-path: polygon(100% 0, 0 100%, 100% 100%);
+  border-bottom-right-radius: 2px;
+  pointer-events: none;
+}
+
+/* hover/แตะแล้วขยับเบาๆ */
+.pin-item:hover,
+.pin-item:active {
+  transform: rotate(0deg) scale(1.015);
+  box-shadow: 0 6px 16px rgba(0,0,0,.10), inset 0 -1px 0 rgba(0,0,0,.06);
+}
+
+/* หมุดปัก (ใช้ element เดิม) */
+.pin-ico {
+  position: absolute;
+  top: -12px; left: 14px;
+  font-size: 22px;
+  transform: rotate(-14deg);
+  text-shadow: 0 1px 0 rgba(0,0,0,.20);
+  z-index: 2;
+}
+
+/* เนื้อหาบนกระดาษ */
+.pin-title {
+  font-weight: 900;
+  color: #2b4b88;
+  font-size: 15px;
+  line-height: 1.25;
+  margin-bottom: 4px;
+}
+.pin-time {
+  font-size: 13px;
+  color: #4f5f88;
+  opacity: .95;
+}
+
+/* ถ้าใช้ .pin-body ให้ margin เผื่อช่องหมุดเล็กน้อย (ไม่มีก็ไม่เป็นไร) */
+.pin-body { margin-left: 2px; }
+
+/* สลับสี Post-it ให้หลากหลาย (พาสเทลสบายตา) */
+.pin-item:nth-child(3n+1) { background: #fffbe5; } /* เหลือง */
+.pin-item:nth-child(3n+2) { background: #e7ffef; } /* เขียวมินต์ */
+.pin-item:nth-child(3n+3) { background: #ffeef8; } /* ชมพูอ่อน */
+
+/* ลดแอนิเมชันถ้าผู้ใช้ตั้งค่า */
+@media (prefers-reduced-motion: reduce) {
+  .pin-item { transition: none; transform: none; }
+  .pin-item:hover, .pin-item:active { transform: none; }
+}
+
+
+/* ===== Chat-like Tips (บอลลูนแชตจากผู้เชี่ยวชาญ) ===== */
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 8px 6px 12px;
+}
+.msg {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  align-items: start;
+  gap: 8px;
+}
+.msg-avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: #fff; color: #2b4b88; font-weight: 900;
+  display: grid; place-items: center;
+  box-shadow: var(--shadow);
+}
+.msg-bubble {
+  position: relative;
+  background: var(--bubble);
+  border-radius: 16px;
+  padding: 12px 14px;
+  box-shadow: inset 0 0 0 1px #d7e6ff;
+  font-weight: 700;
+  color: #20314f;
+  line-height: 1.35;
+}
+
+/* จงอยทางซ้าย (ของหมอ) */
+.msg--doctor .msg-bubble::before {
+  content: "";
+  position: absolute;
+  left: -8px; /* ระยะห่างจากขอบบอลลูน */
+  bottom: 8px; /* ระดับแนวดิ่งของจงอย */
+  width: 0;
+  height: 0;
+  border: 8px solid transparent;
+  border-right-color: var(--bubble);
+  /* เส้นขอบอ่อนเหมือนบอลลูนหลัก */
+  filter: drop-shadow(0 0 0 #d7e6ff);
+}
+
+/* ถ้าเป็นฝั่งผู้ใช้ (ขวา) ให้จงอยกลับด้าน */
+.msg--me .msg-bubble::before {
+  content: "";
+  position: absolute;
+  right: -8px;
+  bottom: 8px;
+  width: 0;
+  height: 0;
+  border: 8px solid transparent;
+  border-left-color: #ffffff; /* สีพื้นหลังของฝั่งผู้ใช้ */
+  filter: drop-shadow(0 0 0 #d7e6ff);
+}
+
+/* ถ้าภายหลังมีข้อความจากผู้ใช้เอง สามารถสลับแนวได้ */
+.msg--me {
+  grid-template-columns: 1fr 40px;
+}
+.msg--me .msg-avatar { order: 2; background: #e7f0ff; }
+.msg--me .msg-bubble {
+  order: 1; background: #ffffff; box-shadow: var(--shadow);
+}
