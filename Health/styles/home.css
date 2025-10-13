@@ -1,4 +1,3 @@
-
 /* ===== Pinned Appointments — Post-it style ===== */
 .pin-wrap {
   display: flex;
@@ -7,27 +6,21 @@
   margin: 10px 6px 18px;
 }
 
-/* กระดาษ Post-it แปะด้วยหมุด */
 .pin-item {
   position: relative;
-  display: block;                 /* ไม่ต้องใช้ grid ก็ได้ */
+  display: block;
   text-decoration: none;
   color: #1f2d4a;
 
-  /* กระดาษ */
-  background: #fffbe5;            /* เหลือง Post-it มาตรฐาน */
-  border-radius: 8px 8px 3px 8px; /* มุมขวาล่างแบนนิดให้เหมือนกระดาษ */
-  padding: 16px 14px 14px 14px;
+  background: #fffbe5;            /* เหลือง Post-it */
+  border-radius: 8px 8px 3px 8px;
+  padding: 16px 14px 14px;
 
-  /* เงา + ขอบกระดาษ */
-  box-shadow:
-    0 3px 6px rgba(0,0,0,.08),
-    inset 0 -1px 0 rgba(0,0,0,.05);
-  transform: rotate(-1.2deg);     /* ดูเป็นแผ่นที่แปะอยู่จริง */
+  box-shadow: 0 3px 6px rgba(0,0,0,.08), inset 0 -1px 0 rgba(0,0,0,.05);
+  transform: rotate(-1.2deg);
   transition: transform .12s ease, box-shadow .12s ease;
 }
 
-/* วาดรอยพับกระดาษตรงมุมล่างขวา */
 .pin-item::after {
   content: "";
   position: absolute;
@@ -39,14 +32,12 @@
   pointer-events: none;
 }
 
-/* hover/แตะแล้วขยับเบาๆ */
 .pin-item:hover,
 .pin-item:active {
   transform: rotate(0deg) scale(1.015);
   box-shadow: 0 6px 16px rgba(0,0,0,.10), inset 0 -1px 0 rgba(0,0,0,.06);
 }
 
-/* หมุดปัก (ใช้ element เดิม) */
 .pin-ico {
   position: absolute;
   top: -12px; left: 14px;
@@ -56,7 +47,6 @@
   z-index: 2;
 }
 
-/* เนื้อหาบนกระดาษ */
 .pin-title {
   font-weight: 900;
   color: #2b4b88;
@@ -64,26 +54,23 @@
   line-height: 1.25;
   margin-bottom: 4px;
 }
+
 .pin-time {
   font-size: 13px;
   color: #4f5f88;
   opacity: .95;
 }
 
-/* ถ้าใช้ .pin-body ให้ margin เผื่อช่องหมุดเล็กน้อย (ไม่มีก็ไม่เป็นไร) */
 .pin-body { margin-left: 2px; }
 
-/* สลับสี Post-it ให้หลากหลาย (พาสเทลสบายตา) */
 .pin-item:nth-child(3n+1) { background: #fffbe5; } /* เหลือง */
 .pin-item:nth-child(3n+2) { background: #e7ffef; } /* เขียวมินต์ */
 .pin-item:nth-child(3n+3) { background: #ffeef8; } /* ชมพูอ่อน */
 
-/* ลดแอนิเมชันถ้าผู้ใช้ตั้งค่า */
 @media (prefers-reduced-motion: reduce) {
   .pin-item { transition: none; transform: none; }
   .pin-item:hover, .pin-item:active { transform: none; }
 }
-
 
 /* ===== Chat-like Tips (บอลลูนแชตจากผู้เชี่ยวชาญ) ===== */
 .chat {
@@ -92,61 +79,101 @@
   gap: 10px;
   margin: 8px 6px 12px;
 }
+
 .msg {
   display: grid;
   grid-template-columns: 40px 1fr;
   align-items: start;
   gap: 8px;
 }
+
 .msg-avatar {
   width: 40px; height: 40px; border-radius: 50%;
   background: #fff; color: #2b4b88; font-weight: 900;
   display: grid; place-items: center;
   box-shadow: var(--shadow);
 }
+
+/* ใช้สีตรง ๆ เพื่อให้จงอยแมตช์ 100% */
+:root {
+  --bubble-fixed: #eaf2ff;    /* เทียบเท่า var(--bubble) */
+  --bubble-border: #d7e6ff;   /* สีเส้นขอบอ่อน */
+}
+
 .msg-bubble {
   position: relative;
-  background: var(--bubble);
+  background: var(--bubble-fixed);
   border-radius: 16px;
   padding: 12px 14px;
-  box-shadow: inset 0 0 0 1px #d7e6ff;
+  box-shadow: inset 0 0 0 1px var(--bubble-border);
   font-weight: 700;
   color: #20314f;
   line-height: 1.35;
 }
 
-/* จงอยทางซ้าย (ของหมอ) */
-.msg--doctor .msg-bubble::before {
+/* จงอยซ้าย (หมอ) — สองชั้น: ชั้นล่างเป็นเส้นขอบ, ชั้นบนเป็นตัวบอลลูน */
+.msg--doctor .msg-bubble::before,
+.msg--doctor .msg-bubble::after {
   content: "";
   position: absolute;
-  left: -8px; /* ระยะห่างจากขอบบอลลูน */
-  bottom: 8px; /* ระดับแนวดิ่งของจงอย */
-  width: 0;
-  height: 0;
-  border: 8px solid transparent;
-  border-right-color: var(--bubble);
-  /* เส้นขอบอ่อนเหมือนบอลลูนหลัก */
-  filter: drop-shadow(0 0 0 #d7e6ff);
+  bottom: 10px;
+  width: 0; height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
 }
 
-/* ถ้าเป็นฝั่งผู้ใช้ (ขวา) ให้จงอยกลับด้าน */
-.msg--me .msg-bubble::before {
-  content: "";
-  position: absolute;
-  right: -8px;
-  bottom: 8px;
-  width: 0;
-  height: 0;
-  border: 8px solid transparent;
-  border-left-color: #ffffff; /* สีพื้นหลังของฝั่งผู้ใช้ */
-  filter: drop-shadow(0 0 0 #d7e6ff);
+.msg--doctor .msg-bubble::before {           /* ขอบจงอย */
+  left: -7px;
+  border-right: 9px solid var(--bubble-border);
+  z-index: 0;
+}
+.msg--doctor .msg-bubble::after {            /* ตัวจงอย */
+  left: -6px;
+  border-right: 8px solid var(--bubble-fixed);
+  z-index: 1;
 }
 
-/* ถ้าภายหลังมีข้อความจากผู้ใช้เอง สามารถสลับแนวได้ */
+/* ฝั่งผู้ใช้ (ขวา) */
 .msg--me {
   grid-template-columns: 1fr 40px;
 }
 .msg--me .msg-avatar { order: 2; background: #e7f0ff; }
+
 .msg--me .msg-bubble {
-  order: 1; background: #ffffff; box-shadow: var(--shadow);
+  order: 1;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+}
+
+/* จงอยขวา (ผู้ใช้) — สองชั้นให้มีขอบบางๆ เช่นกัน */
+.msg--me .msg-bubble::before,
+.msg--me .msg-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: 10px;
+  width: 0; height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+}
+
+.msg--me .msg-bubble::before {               /* ขอบ */
+  right: -7px;
+  border-left: 9px solid rgba(0,0,0,0.06);   /* เงาอ่อน ๆ แทนเส้นขอบ */
+  z-index: 0;
+}
+.msg--me .msg-bubble::after {                /* ตัวจงอย */
+  right: -6px;
+  border-left: 8px solid #ffffff;
+  z-index: 1;
+}
+
+/* ให้รูป doctor.png พอดีในวงกลม */
+.msg-avatar {
+  overflow: hidden;
+}
+.msg-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
