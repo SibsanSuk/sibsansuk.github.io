@@ -14,7 +14,7 @@ export function ExerciseVideos({ data }) {
     description: "เลือกคลิปเพื่อเล่นด้านบน (ปรับชื่อไฟล์/รายละเอียดใน JSON ได้ภายหลัง)",
     items: [
       { id: "STCU1", title: "Squat (STCU1)", src: "/videos/STCU1.mp4", emoji: "🦵", duration: "00:45", level: "Beginner" },
-      { id: "STCU2", title: "ท่าออกกำลังกาย STCU2", src: "/videos/STCU2.mp4", emoji: "🎬", duration: "00:45" },
+      { id: "STCU2", title: "ท่าออกกำลังกาย STCU2", src: "https://sibsansuk.github.io/Health/videos/STCU1.mp4", emoji: "🎬", duration: "00:45" },
       { id: "STCU3", title: "ท่าออกกำลังกาย STCU3", src: "/videos/STCU3.mp4", emoji: "🎬" },
       { id: "STCU4", title: "ท่าออกกำลังกาย STCU4", src: "/videos/STCU4.mp4", emoji: "🎬" },
       { id: "STCU5", title: "ท่าออกกำลังกาย STCU5", src: "/videos/STCU5.mp4", emoji: "🎬" },
