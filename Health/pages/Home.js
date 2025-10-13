@@ -15,7 +15,9 @@ export function Home() {
   const data = {
     pinnedAppointments: [
       { id: "ap1", title: "พบแพทย์อายุรกรรม", time: "วันนี้ 14:30", to: "/notify/appointment" },
-      { id: "ap2", title: "ตรวจเลือด", time: "พรุ่งนี้ 09:00", to: "/notify/appointment" },
+      { id: "ap2", title: "ตรวจเลือด", time: "พรุ่งนี้ 07:00", to: "/notify/appointment" },
+      { id: "ap3", title: "กินโต๊ะแชร์ ม.ปลาย", time: "พรุ่งนี้ 11:30", to: "/notify/appointment" },
+      { id: "ap4", title: "กายภาพ", time: "พรุ่งนี้ 09:00", to: "/notify/appointment" },
     ],
     tips: [
       { id: "m1", author: "doctor", text: "วันนี้ดื่มน้ำไปแล้ว 4 แก้ว ดื่มให้ครบ 8 แก้วนะครับ 💧" },
@@ -39,22 +41,23 @@ export function Home() {
 
     // ====== บล็อก: เตือนการนัด (ปักหมุด) ======
     pinnedAppointments.length > 0 &&
-      h("section", { className: "pin-wrap", "aria-label": "การนัดที่ปักหมุด" },
-        pinnedAppointments.map(ap =>
-          h(Link, {
+     h("section", { className: "pin-hwrap", "aria-label":"การนัดที่ปักหมุด" },
+    h("div", { className: "pin-hscroll", role: "list" },
+      pinnedAppointments.map((ap, idx) =>
+        h(Link, {
             key: ap.id,
             to: ap.to,
-            className: "pin-item",
+            className: `pin-card pin-color-${(idx % 3) + 1}`,
+            role: "listitem",
             "aria-label": `${ap.title} เวลา ${ap.time}`
           },
-            h("div", { className: "pin-ico", "aria-hidden": "true" }, "📌"),
-            h("div", { className: "pin-body" },
-              h("div", { className: "pin-title" }, ap.title),
-              h("div", { className: "pin-time" }, ap.time)
-            )
-          )
+          h("div", { className: "pin-ico", "aria-hidden":"true" }, "📌"),
+          h("div", { className: "pin-title" }, ap.title),
+          h("div", { className: "pin-time"  }, ap.time)
         )
-      ),
+      )
+    )
+  ),
 
     // ====== บล็อก: คำแนะนำจากผู้เชี่ยวชาญ (บอลลูนแชต) ======
     h("section", { className: "chat", "aria-label": "คำแนะนำจากผู้เชี่ยวชาญ" },

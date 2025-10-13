@@ -50,22 +50,22 @@
 .pin-title {
   font-weight: 900;
   color: #2b4b88;
-  font-size: 15px;
+  font-size: 22px;
   line-height: 1.25;
   margin-bottom: 4px;
 }
 
 .pin-time {
-  font-size: 13px;
+  font-size: 14px;
   color: #4f5f88;
   opacity: .95;
 }
 
 .pin-body { margin-left: 2px; }
 
-.pin-item:nth-child(3n+1) { background: #fffbe5; } /* เหลือง */
-.pin-item:nth-child(3n+2) { background: #e7ffef; } /* เขียวมินต์ */
-.pin-item:nth-child(3n+3) { background: #ffeef8; } /* ชมพูอ่อน */
+.pin-item:nth-child(3n+1) { background: #fff09e; } /* เหลือง */
+.pin-item:nth-child(3n+2) { background: #9affbc; } /* เขียวมินต์ */
+.pin-item:nth-child(3n+3) { background: #ffaadc; } /* ชมพูอ่อน */
 
 @media (prefers-reduced-motion: reduce) {
   .pin-item { transition: none; transform: none; }
@@ -76,8 +76,8 @@
 .chat {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin: 8px 6px 12px;
+  gap: 12px;
+  margin: 12px 6px 12px;
 }
 
 .msg {
@@ -176,4 +176,106 @@
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+/* ===== Horizontal Post-it Carousel (Pinned) ===== */
+:root {
+  --pin-w: 128px;   /* ความกว้างโพสต์อิท */
+  --pin-h: 128px;   /* ความสูงโพสต์อิท */
+}
+
+.pin-hwrap {
+  position: relative;
+  margin: 12px 8px 16px;
+}
+
+.pin-hscroll {
+  display: flex;
+  gap: 16px;
+  padding: 4px 6px 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+}
+.pin-hscroll::-webkit-scrollbar { display: none; }
+
+/* กระดาษ Post-it เป็นสี่เหลี่ยม */
+.pin-card {
+  position: relative;
+  flex: 0 0 var(--pin-w);
+  inline-size: var(--pin-w);
+  block-size: var(--pin-h);
+
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+
+  text-decoration: none;
+  color: #1f2d4a;
+
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 4px 6px rgba(0,0,0,.2), inset 0 -1px 0 rgba(0,0,0,.05);
+  transform: rotate(-2deg);
+  transition: transform .12s ease, box-shadow .12s ease;
+
+  scroll-snap-align: start;
+}
+
+/* สี Post-it (พาสเทล) */
+.pin-color-1 { background: #ffea76; } /* เหลือง */
+.pin-color-2 { background: #85ffae; } /* เขียวมินต์ */
+.pin-color-3 { background: #ff83cb; } /* ชมพูอ่อน */
+
+/* มุมพับล่างขวา */
+.pin-card::after {
+  content: "";
+  position: absolute;
+  right: 0; bottom: 0;
+  width: 40px; height: 40px;
+  background: rgba(0,0,0,.04);
+  clip-path: polygon(100% 0, 0 100%, 100% 100%);
+  border-bottom-right-radius: 2px;
+  pointer-events: none;
+}
+
+.pin-card:hover,
+.pin-card:active {
+  transform: rotate(0deg) scale(1.02);
+  box-shadow: 0 6px 16px rgba(0,0,0,.60), inset 0 -1px 0 rgba(0,0,0,.4);
+}
+
+/* หมุดปัก */
+.pin-ico {
+  position: absolute;
+  top: -8px; left: 10px;
+  font-size: 20px;
+  transform: rotate(-12deg);
+  text-shadow: 0 1px 0 rgba(0,0,0,.20);
+  z-index: 2;
+}
+
+/* ข้อความบนโพสต์อิท */
+.pin-title {
+  font-weight: 900;
+  color: #2b4b88;
+  font-size: 14px;
+  line-height: 1.25;
+  margin-bottom: 4px;
+  display: -webkit-box;          /* ตัดบรรทัดสูงสุด 2 บรรทัด */
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pin-time {
+  font-size: 12px;
+  color: #4f5f88;
+  opacity: .95;
+}
+
+/* ลด motion */
+@media (prefers-reduced-motion: reduce) {
+  .pin-card { transition: none; transform: none; }
+  .pin-card:hover, .pin-card:active { transform: none; }
 }
