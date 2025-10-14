@@ -1,0 +1,114 @@
+/* =========================================
+   HOME-PINS.CSS — pins + pin feedback dialog
+   ======================================= */
+
+/* ---- Tokens เฉพาะส่วนนี้ ---- */
+:root{
+  --pin-w: 128px;
+  --pin-h: 128px;
+  --bubble-fixed: #eaf2ff;
+  --bubble-border: #d7e6ff;
+}
+
+/* ========== Post-it (single) ========== */
+.pin-wrap{ display:flex; flex-direction:column; gap:14px; margin:10px 6px 18px; }
+
+.pin-item{
+  position:relative; display:block; text-decoration:none; color:#1f2d4a;
+  background:#fffbe5; border-radius:8px; padding:20px 16px 16px;
+  transform:rotate(-1.2deg); box-shadow:0 4px 10px rgba(0,0,0,.08);
+  border:none; /* ← ไม่มีขอบ */
+  outline:none;
+}
+.pin-item::after{
+  content:""; position:absolute; right:0; bottom:0; width:42px; height:22px;
+  background:rgba(0,0,0,.04);
+  clip-path:polygon(100% 0, 0 100%, 100% 100%); border-bottom-right-radius:2px;
+}
+.pin-ico{ position:absolute; top:-12px; left:14px; font-size:22px; transform:rotate(-14deg); text-shadow:0 1px 0 rgba(0,0,0,.2); z-index:2; }
+.pin-title{ font-weight:900; color:#2b4b88; font-size:22px; line-height:1.25; margin-bottom:8px; }
+.pin-time{ font-size:14px; color:#4f5f88; opacity:.95; }
+.pin-body{ margin-left:16px; }
+.pin-item:nth-child(3n+1){ background:#fff09e; }
+.pin-item:nth-child(3n+2){ background:#9affbc; }
+.pin-item:nth-child(3n+3){ background:#ffaadc; }
+@media (prefers-reduced-motion:reduce){ .pin-item{ transform:rotate(-1.2deg); } }
+
+/* ========== Post-it Carousel (horizontal) ========== */
+.pin-hwrap{ position:relative; margin:12px 8px 16px; }
+.pin-hscroll{
+  display:flex; gap:16px; padding:4px 14px 8px;
+  overflow-x:auto; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain;
+  scroll-snap-type:x proximity;
+}
+.pin-hscroll::-webkit-scrollbar{ display:none; }
+
+.pin-card{
+  position:relative; flex:0 0 var(--pin-w);
+  inline-size:var(--pin-w); block-size:var(--pin-h);
+  display:flex; flex-direction:column; justify-content:flex-end;
+  text-decoration:none; color:#1f2d4a;
+  border-radius:16px; padding:16px;
+  box-shadow:0 4px 10px rgba(0,0,0,.10); transform:rotate(-2deg); scroll-snap-align:start;
+  cursor:pointer;
+  border:none;   /* ← ไม่มีขอบ */
+  outline:none;  /* ไม่มีเส้นโฟกัส */
+}
+.pin-color-1{ background:#ffea76; }
+.pin-color-2{ background:#85ffae; }
+.pin-color-3{ background:#ff83cb; }
+
+.pin-card::after{
+  content:""; position:absolute; right:0; bottom:0; width:40px; height:40px;
+  background:linear-gradient(135deg, rgba(0,0,0,.06), rgba(0,0,0,0));
+  border-bottom-right-radius:16px; pointer-events:none;
+}
+.pin-title{
+  font-weight:900; color:#2b4b88; font-size:14px; line-height:1.25; margin-bottom:4px;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
+.pin-time{ font-size:12px; color:#4f5f88; opacity:.95; }
+.pin-ico{ position:absolute; top:-8px; left:10px; font-size:20px; transform:rotate(-12deg); text-shadow:0 1px 0 rgba(0,0,0,.2); z-index:2; }
+
+/* fade edges */
+.pin-hwrap::before,.pin-hwrap::after{
+  content:""; position:absolute; top:0; bottom:0; width:24px; pointer-events:none; z-index:2;
+  opacity:0; transition:opacity .25s ease;
+}
+.pin-hwrap::before{ left:0;  margin-left:-2px;  background:linear-gradient(90deg, var(--grad1) 0%, transparent 100%); }
+.pin-hwrap::after { right:0; margin-right:-2px; background:linear-gradient(270deg, var(--grad1) 0%, transparent 100%); }
+.pin-hwrap.shadow-left::before{ opacity:1; }
+.pin-hwrap.shadow-right::after{ opacity:1; }
+
+/* ========== Pin Feedback Dialog ========== */
+.pin-dialog{ position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; animation:fadeIn .15s ease; }
+.pin-dialog-box{ background:#fff; width:min(520px,92%); border-radius:18px; box-shadow:0 10px 24px rgba(0,0,0,.18); padding:16px; animation:zoomIn .2s ease; }
+.pin-dialog-head{ margin-bottom:8px; }
+.pin-dialog-title{ font-weight:900; color:#2b4b88; font-size:18px; }
+.pin-dialog-sub{ margin-top:4px; font-size:13px; color:#5f7bb2; }
+
+.pin-row{ margin-top:12px; }
+.pin-label{ font-weight:800; color:#20314f; margin-bottom:6px; display:block; }
+
+.pin-check{ display:flex; align-items:center; gap:10px; background:#f4f7ff; padding:10px 12px; border-radius:12px; }
+.pin-rate{ display:flex; gap:8px; }
+.pin-face{
+  width:44px; height:44px; border-radius:12px; border:1px solid #dfe7ff; background:#fff;
+  font-size:22px; display:grid; place-items:center; cursor:pointer; transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+.pin-face:active{ transform:translateY(1px) scale(.98); }
+.pin-face.active{ border-color:#6c8cff; box-shadow:0 6px 16px rgba(108,140,255,.28); }
+
+.pin-note{ width:100%; resize:vertical; border-radius:12px; border:1px solid #d9e3ff; padding:10px 12px; font-size:15px; outline:none; }
+.pin-note:focus{ border-color:#6c8cff; box-shadow:0 0 0 3px rgba(108,140,255,.18); }
+
+.pin-dialog-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:14px; }
+.pin-cancel{ background:#f2f2f2; color:#333; font-weight:700; }
+.pin-save{   background:#6c8cff; color:#fff; font-weight:800; }
+
+.html-lock .page{ overflow:hidden; }
+
+@keyframes fadeIn{ from{opacity:0;} to{opacity:1;} }
+@keyframes zoomIn{ from{transform:scale(.96); opacity:0;} to{transform:scale(1); opacity:1;} }
+
+/* จบไฟล์ */

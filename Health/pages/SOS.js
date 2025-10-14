@@ -7,9 +7,6 @@ export function SOS() {
   const calls = [
     { label: "1669 ฉุกเฉินการแพทย์ (EMS)", tel: "1669" },
     { label: "191 ตำรวจ", tel: "191" },
-    { label: "199 ดับเพลิง / กู้ภัย", tel: "199" },
-    { label: "1155 ตำรวจท่องเที่ยว", tel: "1155" },
-    { label: "1300 พม. สังคมสงเคราะห์", tel: "1300" },
     { label: "1667 สายด่วนสุขภาพ (สธ.)", tel: "1667" },
   ];
 
@@ -34,7 +31,7 @@ export function SOS() {
 
       h(
         "div",
-        { className: "card profile-card" },
+        { className: "card" },
         h("div", { className: "section-title" }, "เบอร์โทรฉุกเฉิน"),
         h(
           "div",

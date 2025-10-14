@@ -1,8 +1,14 @@
+/* =========================================================
+   app.css — Base tokens + full-screen shell + common UI
+   (portrait = landscape; no layout switching)
+   ========================================================= */
+
+/* ---------- TOKENS ---------- */
 :root {
   /* Colors & Shadow */
   --bg: #f6f8ff;
   --grad1: #7db4ff;
-  --grad2: #6c8cff;
+  --grad2: #4e8ee7;
   --card: #fff;
   --bubble: #eaf2ff;
   --text: #20314f;
@@ -22,8 +28,7 @@
   --safe-right: env(safe-area-inset-right, 0px);
 
   /* Navigation sizes */
-  --nav-h: 68px;   /* bottom nav height (portrait) */
-  --rail-w: 84px;  /* left rail width (landscape) */
+  --nav-h: 68px;   /* bottom nav height (always used) */
 
   /* TopBar */
   --topbar-h: 56px;
@@ -35,78 +40,87 @@
   --tile-gap: 8px;
 }
 
-/* ========== Base ========== */
+/* ---------- BASE ---------- */
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 html, body {
-  height: 100%; margin: 0; overflow: hidden;
-  background: var(--bg); color: var(--text);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Prompt, Inter, sans-serif;
-  font-size: var(--fz-2); line-height: 1.35;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;                       /* inner .page scrolls */
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui,-apple-system,Segoe UI,Roboto,Prompt,Inter,sans-serif;
+  font-size: var(--fz-2);
+  line-height: 1.35;
   overscroll-behavior: none;
 }
 
-/* ========== App Shell ========== */
+/* ---------- APP SHELL (FULL SCREEN) ---------- */
 .app {
-  height: calc(var(--vh) * 100);
+  width: 100vw !important;
+  height: 100dvh !important;              /* modern viewport */
+  min-height: calc(var(--vh) * 100);      /* iOS fallback */
   display: flex; flex-direction: column;
+
+  margin: 0 !important;
+  max-width: none !important;
+  border-radius: 0 !important;
+
   background: linear-gradient(180deg, var(--grad1), var(--grad2));
-  /* Portrait: pad bottom for bottom nav */
-  padding: calc(var(--safe-top) + 10px)
-           max(10px, calc(var(--safe-left) + 10px))
-           calc(var(--safe-bottom) + var(--nav-h))
-           max(10px, calc(var(--safe-right) + 10px));
-  margin: 0 auto; max-width: 520px; overflow: hidden;
+  overflow: visible !important;
+
+  /* Always pad for bottom nav */
+  padding:
+    calc(var(--safe-top) + 10px)
+    max(10px, calc(var(--safe-left) + 10px))
+    calc(var(--safe-bottom) + var(--nav-h))
+    max(10px, calc(var(--safe-right) + 10px));
 }
 
+/* The scroller */
 .page {
-  flex: 1 1 auto; overflow-y: auto; -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain; padding-bottom: 1px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  padding-bottom: 1px;                    /* avoid clamp bottom */
 }
 
-/* Headings / Cards / Bubbles */
+/* ---------- COMMON UI ---------- */
 h1 { font-size: 18px; margin: 2px 6px 10px; color: #fff; font-weight: 800; }
 
 .bubble {
-  background: var(--bubble); padding: 12px 14px; border-radius: 14px;
-  margin: 10px 6px; display: flex; gap: 10px; align-items: center;
+  background: var(--bubble);
+  padding: 12px 14px;
+  border-radius: 14px;
+  margin: 10px 6px;
+  display: flex; gap: 10px; align-items: center;
   box-shadow: inset 0 0 0 1px #d7e6ff;
 }
 
-.card {
-  background: var(--card); border-radius: var(--radius);
-  padding: 14px; margin: 12px 6px; box-shadow: var(--shadow);
-}
+.card { background: var(--card); border-radius: var(--radius); padding: 14px; margin: 12px 6px; box-shadow: var(--shadow); }
 
 .section-title {
   font-weight: 800; color: #2b4b88; background: #d9e8ff;
   display: inline-block; padding: 6px 10px; border-radius: 14px; margin-bottom: 8px;
 }
 
-/* Grid (optional) */
 .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
-
-.tile {
-  background: var(--card); border-radius: 14px; padding: 10px; text-align: center;
-  font-size: 12px; box-shadow: var(--shadow); user-select: none; cursor: pointer;
-}
+.tile { background: var(--card); border-radius: 14px; padding: 10px; text-align: center; font-size: 12px; box-shadow: var(--shadow); user-select: none; cursor: pointer; }
 .tile .emoji { font-size: 24px; display: block; margin-bottom: 4px; }
 
-/* List (pill style) */
 .list { display: flex; flex-direction: column; gap: 12px; margin: 6px; }
-.pill {
-  background: #e2efff; border-radius: 14px; padding: 12px 14px;
-  display: flex; align-items: center; gap: 10px; font-weight: 700; box-shadow: var(--shadow);
-}
+.pill { background: #e2efff; border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; font-weight: 700; box-shadow: var(--shadow); }
 
-/* ========== Bottom Nav (portrait) / Left Rail (landscape) ========== */
+/* ---------- BOTTOM NAV (ALWAYS AT BOTTOM) ---------- */
 .nav {
   position: fixed; left: 0; right: 0; bottom: 0;
   display: flex; justify-content: center; gap: 14px;
   padding: 10px calc(12px + var(--safe-right)) calc(12px + var(--safe-bottom)) calc(12px + var(--safe-left));
   background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.15) 38%, rgba(255,255,255,.25) 100%);
   backdrop-filter: blur(6px);
-  z-index: 10;
+  z-index: 20;
 }
 
 .btn, .tab {
@@ -117,69 +131,17 @@ h1 { font-size: 18px; margin: 2px 6px 10px; color: #fff; font-weight: 800; }
 }
 .btn:active, .tab:active { transform: translateY(1px) scale(.98); transition: transform 120ms ease; }
 
-.nav .tab {
-  position: relative; transition: transform .15s ease, box-shadow .15s ease, background .15s ease, color .15s ease;
-}
-.nav .tab .dot {
-  display: none; position: absolute; top: 4px; left: 50%; transform: translateX(-50%);
-  width: 6px; height: 6px; border-radius: 50%; background: #2b4b88;
-}
-.nav .tab.active {
-  background: #2b4b88; color: #fff; transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(14, 41, 97, .28);
-}
+.nav .tab { position: relative; transition: transform .15s, box-shadow .15s, background .15s, color .15s; }
+.nav .tab .dot { display: none; position: absolute; top: 4px; left: 50%; transform: translateX(-50%); width: 6px; height: 6px; border-radius: 50%; background: #2b4b88; }
+.nav .tab.active { background: #2b4b88; color: #fff; transform: translateY(-2px); box-shadow: 0 10px 24px rgba(14,41,97,.28); }
 .nav .tab.active .dot { display: block; background: #fff; }
 
 @media (prefers-contrast: more) {
   .nav .tab.active { box-shadow: 0 0 0 3px rgba(18,46,123,.75), 0 6px 16px rgba(220,231,255,.4); }
 }
 
-/* ===== “Rail mode” when landscape ===== */
-@media (orientation: landscape) {
-  /* App padding switches to reserve left rail instead of bottom nav */
-  .app {
-    padding:
-      calc(var(--safe-top) + 10px)
-      max(10px, calc(var(--safe-left) + var(--rail-w) + 16px))
-      calc(var(--safe-bottom) + 10px)
-      max(10px, calc(var(--safe-right) + 10px));
-    margin: 0 auto;
-  }
 
-  .nav {
-    top: 0; bottom: 0; left: 0; right: auto;
-    width: calc(var(--rail-w) + var(--safe-left));
-    height: auto;
-    padding: calc(12px + var(--safe-top)) 10px calc(12px + var(--safe-bottom)) calc(10px + var(--safe-left));
-    flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 10px;
-    background: linear-gradient(90deg, rgba(255,255,255,.25) 0%, rgba(255,255,255,.15) 62%, rgba(255,255,255,0) 100%);
-  }
-
-  .nav .tab { min-height: 44px; }
-}
-
-/* Desktop tweak */
-@media (min-width: 680px) {
-  :root {
-    --fz-1: 15px; --fz-2: 17px; --fz-3: 19px;
-    --tile-w: 110px; --tile-h: 110px;
-  }
-  .app { border-radius: 24px; margin: 14px auto calc(14px + var(--nav-h)); }
-  .nav .tab.active { transform: translateY(-3px); }
-}
-
-/* Short landscape heights */
-@media (orientation:landscape) and (max-height: 520px) {
-  .btn, .tab { min-height: 44px; padding: 10px 14px; }
-}
-
-/* ========== Dock above nav (optional on some pages) ========== */
-.dock { position: fixed; left: 0; right: 0; bottom: calc(var(--safe-bottom) + var(--nav-h) + 8px); pointer-events: none; }
-.dock-inner { max-width: 520px; margin: 0 auto; padding: 0 12px; pointer-events: auto; }
-.dock .card { margin: 0; }
-.has-dock .page { padding-bottom: calc(var(--nav-h) + 180px); }
-
-/* ========== Skeleton Loader ========== */
+/* ---------- SKELETON ---------- */
 .skeleton-wrap { padding: 8px 6px 96px; }
 .skeleton { border-radius: 12px; background: #e8edf7; position: relative; overflow: hidden; }
 .shimmer::after {
@@ -194,7 +156,7 @@ h1 { font-size: 18px; margin: 2px 6px 10px; color: #fff; font-weight: 800; }
 .sk-grid { margin: 12px 6px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .sk-tile { height: 60px; border-radius: 14px; }
 
-/* ========== Native feel: disable selection (except allowed) ========== */
+/* ---------- NATIVE FEEL ---------- */
 html, body, .app, .card, .bubble, .pill, .tile, .btn, .tab, nav, header, footer {
   -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
 }
@@ -203,11 +165,11 @@ input, textarea, [contenteditable], .selectable {
 }
 img, svg { -webkit-user-drag: none; user-drag: none; }
 
-/* ========== Carousel ========== */
+/* ---------- GENERIC HORIZONTAL CAROUSEL ---------- */
 .carousel-wrap { position: relative; margin: 8px 6px 2px; }
 .carousel {
-  display: flex; gap: var(--tile-gap); padding: 4px 6px 8px; overflow-x: auto;
-  overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; align-items: stretch;
+  display: flex; gap: var(--tile-gap); padding: 4px 6px 8px;
+  overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; align-items: stretch;
 }
 .carousel .tile {
   flex: 0 0 var(--tile-w); inline-size: var(--tile-w); block-size: var(--tile-h);
@@ -217,35 +179,26 @@ img, svg { -webkit-user-drag: none; user-drag: none; }
 }
 .carousel::-webkit-scrollbar { display: none; }
 .carousel, .carousel * { touch-action: pan-x; }
-
-/* Gradient edges */
 .carousel-wrap::before, .carousel-wrap::after {
-  content: ""; position: absolute; top: 0; bottom: 0; width: 28px; pointer-events: none;
-  opacity: 0; transition: opacity .2s ease;
+  content: ""; position: absolute; top: 0; bottom: 0; width: 28px; pointer-events: none; opacity: 0; transition: opacity .2s ease;
 }
 .carousel-wrap::before { left: 0; background: linear-gradient(90deg, #fff 0%, rgba(255,255,255,0) 100%); }
 .carousel-wrap::after  { right: 0; background: linear-gradient(270deg, #fff 0%, rgba(255,255,255,0) 100%); }
 .carousel-wrap.shadow-left::before { opacity: 1; }
 .carousel-wrap.shadow-right::after { opacity: 1; }
 
-/* Desktop-only carousel nav buttons */
-.carousel-nav {
-  position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; pointer-events: none;
-}
+.carousel-nav { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; pointer-events: none; }
 .nav-ctl {
   pointer-events: auto; display: none; width: 36px; height: 36px; border-radius: 999px; border: none; cursor: pointer;
   background: rgba(255,255,255,.9); box-shadow: var(--shadow); font-size: 20px; font-weight: 800;
 }
-.touch .nav-ctl { display: none !important; } /* hide on touch devices */
+.touch .nav-ctl { display: none !important; }
 @media (min-width: 680px) {
   .nav-ctl { display: inline-flex; align-items: center; justify-content: center; }
 }
 
-/* ========== TopBar ========== */
-.topbar {
-  position: relative; height: var(--topbar-h);
-  display: flex; align-items: center; margin: 6px 6px 8px;
-}
+/* ---------- TOPBAR ---------- */
+.topbar { position: relative; height: var(--topbar-h); display: flex; align-items: center; margin: 6px 6px 8px; }
 .topbar h1 {
   position: absolute; left: var(--topbar-side); right: var(--topbar-side);
   margin: 0; text-align: center; color: #fff; font-weight: 800; font-size: 18px;
@@ -260,25 +213,11 @@ img, svg { -webkit-user-drag: none; user-drag: none; }
   font-size: 26px; line-height: 1;
 }
 .topbar .back:active { transform: translateY(calc(-50% + 1px)) scale(.98); transition: transform 120ms ease; }
-
-/* Show “ย้อนกลับ” on wide screens */
 @media (min-width: 680px) {
-  .topbar .back::after {
-    content: "ย้อนกลับ"; display: inline-block; margin-left: 8px; font-size: 16px; font-weight: 800;
-  }
+  .topbar .back::after { content: "ย้อนกลับ"; display: inline-block; margin-left: 8px; font-size: 16px; font-weight: 800; }
 }
 
-/* ========== Responsive tweaks ========== */
-@media (max-width: 360px) {
-  .grid { grid-template-columns: repeat(3, 1fr); }
-  .tile .emoji { font-size: 22px; }
-  .btn, .tab { padding: 12px 16px; }
-}
-@media (orientation: landscape) and (max-height: 520px) {
-  .grid { grid-template-columns: repeat(6, 1fr); }
-}
-
-/* ========== Login ========== */
+/* ---------- AUTH / PROFILE / NOTIFY ---------- */
 .login-wrap { display: flex; flex-direction: column; justify-content: center; padding: 24px 12px 96px; }
 .brand { color: #fff; font-weight: 800; text-align: center; margin: 6px 0 12px; }
 .login-card { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 16px; margin: 0 6px; display: flex; flex-direction: column; gap: 12px; }
@@ -289,23 +228,17 @@ img, svg { -webkit-user-drag: none; user-drag: none; }
 .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .login-btn { width: 100%; justify-content: center; margin-top: 4px; }
 
-/* ========== Profile ========== */
 .userbar { display: flex; align-items: center; justify-content: space-between; margin: 4px 6px 4px; }
 .userbar-name { color: #fff; font-weight: 800; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 8px; }
 .avatar { width: 40px; height: 40px; border-radius: 50%; background: #fff; color: #2b4b88; font-weight: 800; display: flex; align-items: center; justify-content: center; text-decoration: none; box-shadow: var(--shadow); }
 .avatar:active { transform: translateY(1px) scale(.98); }
 
-.avatar-lg {
-  width: 88px; height: 88px; border-radius: 50%; background: #fff; color: #2b4b88;
-  display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 28px;
-  margin: 4px auto 6px; box-shadow: var(--shadow);
-}
+.avatar-lg { width: 88px; height: 88px; border-radius: 50%; background: #fff; color: #2b4b88; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 28px; margin: 4px auto 6px; box-shadow: var(--shadow); }
 .profile-card { padding-top: 18px; padding-bottom: 18px; }
 .profile-name { font-weight: 900; color: #2b4b88; font-size: 18px; margin-top: 4px; }
 .profile-username { opacity: .7; font-size: 14px; }
 .logout-btn { background: #ffe8e8; color: #b42323; font-weight: 800; }
 
-/* ========== Notifications ========== */
 .notify-list { display: flex; flex-direction: column; gap: 16px; margin: 12px 10px 0; }
 a.notify-item, .notify-item {
   text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px;
@@ -315,43 +248,33 @@ a.notify-item, .notify-item {
 .notify-chip { flex: 1; background: #fff; border-radius: 14px; padding: 10px 16px; font-weight: 800; box-shadow: var(--shadow); }
 .btn-sm { padding: 8px 12px; min-height: 36px; font-weight: 700; font-size: 14px; }
 
-/* ให้คอนเทนเนอร์หลักสูงเท่า viewport และยอมให้ลูกเลื่อน */
-.app {
-  min-height: calc(var(--vh) * 100);
-  display: flex;
-  flex-direction: column;
-  /* อย่าตั้ง overflow:hidden ใน .app ถ้าต้องการให้ภายในเลื่อน */
-  overflow: visible; /* ถ้ามีอยู่เป็น hidden ให้เปลี่ยนเป็น visible */
+/* ---------- HELPERS ---------- */
+.center { display: flex; align-items: center; justify-content: center; }
+.hidden { display: none !important; }
+/* Profile card layout: avatar ซ้าย, ชื่อ + @ ขวา (ขึ้นบรรทัดใหม่) */
+.profile-card {
+  display: grid !important;
+  grid-template-columns: 96px 1fr;  /* รูป 96px + พื้นที่ข้อความ */
+  gap: 12px 18px;
+  align-items: center;
+  justify-items: start;
+  padding: 18px;
 }
 
-/* ให้ .page เป็นตัวที่เลื่อนจริง ๆ */
-.page {
-  flex: 1 1 auto;
-  min-height: 0;                 /* สำคัญมากสำหรับ flex-child เพื่อให้เลื่อน */
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;  /* inertia บน iOS */
-  overscroll-behavior-y: contain;     /* กัน PTR ไปโดน body */
-  padding-bottom: 1px;                /* กัน clamp ขอบล่าง */
+/* ไม่ต้องให้ .center ไปบังคับจัดกลาง */
+.profile-card.center { justify-content: flex-start; }
+
+/* จัดตำแหน่ง avatar + ข้อความ */
+.profile-card .avatar-lg {
+
+  margin: 0;              /* ลบ margin auto เดิม */
 }
 
-/* เผื่อพื้นที่ให้ NavBar ลอย (แนวตั้ง) */
-@media (orientation: portrait) {
-  .page {
-    padding-bottom: calc(var(--nav-h) + 16px + var(--safe-bottom));
-  }
+.profile-name,
+.profile-username {
+  white-space: normal;     /* อนุญาตให้ขึ้นบรรทัดใหม่ */
+  word-break: break-word;  /* กันชื่อยาว ๆ ทะลุกรอบ */
+  margin: 0;
 }
 
-/* แนวนอน: ใช้ left rail แล้วไม่ต้องเผื่อ bottom nav */
-@media (orientation: landscape) {
-  .page {
-    padding-bottom: 12px;
-  }
-}
-
-/* ถ้าใช้แผง dock เหนือ NavBar ให้เผื่อเพิ่ม */
-.has-dock .page {
-  padding-bottom: calc(var(--nav-h) + 180px);
-}
-
-
-
+.profile-username { margin-top: 4px; opacity: .7; }
