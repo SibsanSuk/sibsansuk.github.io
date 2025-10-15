@@ -1,7 +1,6 @@
 // /components/AppointmentList.js
 const h = window.React.createElement;
 
-function pad2(n){ return String(n).padStart(2,"0"); }
 function shortThaiDate(ymd){
   const [y,m,d] = ymd.split("-").map(Number);
   const months = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
@@ -60,15 +59,15 @@ export function AppointmentList({
   }
 
   return h("section", { className:"apt-list-section" },
-    header ? h("div", { className:"section-title big" }, header) : null,
+
+    // หัวข้อ + ปุ่มเพิ่ม (แสดงเสมอ)
+    h("div", { className:"apt-header-row" },
+      header ? h("div", { className:"section-title big", role:"heading", "aria-level":2 }, header) : h("div"),
+      h("button", { className:"btn add-btn", onClick:onAdd, "aria-label":"เพิ่มการนัด" }, "เพิ่มการนัด")
+    ),
 
     items.length === 0
-      ? h("div", { className:"empty big" },
-          "ยังไม่มีนัดหมาย",
-          h("div", { style:{ marginTop:8 } },
-            h("button", { className:"btn big", onClick:onAdd }, "เพิ่มการนัด")
-          )
-        )
+      ? h("div", { className:"empty big" }, "ยังไม่มีนัดหมาย")
       : h(React.Fragment, null,
           groups.map(g => h(React.Fragment, { key:g.key },
             g.label ? h("div", { className:"apt-date-head" }, g.label) : null,

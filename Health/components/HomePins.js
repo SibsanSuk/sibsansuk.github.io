@@ -1,227 +1,177 @@
-// components/HomePins.js
+// /components/HomePins.js
 const h = window.React.createElement;
-const { useRef, useEffect, useCallback, useMemo, useState } = window.React;
+const { useRef, useEffect, useCallback, useState } = window.React;
 
-/**
- * แถว Post-it ที่เลื่อนซ้าย-ขวา + เงา fade ซ้าย/ขวา และ **มี dialog feedback ในตัว**
- *
- * Props:
- * - pins: Array<{ id, title, time, to? }>
- * - onPinsChange?(nextPins): callback เมื่อมีการลบ/เปลี่ยนลิสต์ (ถ้าให้มาจะทำงานแบบ controlled)
- * - onSubmitFeedback?(payload): callback ตอนกดบันทึกฟีดแบ็ก (ส่ง payload ให้)
- * - ariaLabel?: string
- * - className?: string
- *
- * หมายเหตุ:
- * - ถ้า **ไม่** ส่ง onPinsChange มา คอมโพเนนต์จะดูแล state pins ภายในเอง (uncontrolled)
- * - ถ้าส่ง onPinsChange มา ให้ถือเป็น controlled: ค่าแสดงผลจะตาม props.pins เท่านั้น
- */
+const STORAGE_KEY = "appointments_v1";
+
+function parseYMD(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y, m-1, d); }
+function pad2(n){ return String(n).padStart(2,"0"); }
+
+/** อ่าน/เขียน localStorage แบบปลอดภัย */
+function readAppointments(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  }catch(e){
+    console.warn("อ่าน appointments_v1 ไม่ได้:", e);
+    return [];
+  }
+}
+function writeAppointments(list){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list || []));
+  }catch(e){
+    console.warn("บันทึก appointments_v1 ไม่ได้:", e);
+  }
+}
+
+/** ===== HomePins: Post-it ของนัดหมายที่ใกล้ถึง (วันนี้→14วัน) ===== */
 export function HomePins({
-  pins = [],
-  onPinsChange,
   onSubmitFeedback,
   ariaLabel = "การนัดที่ปักหมุด",
   className = ""
 }) {
-  // ===== Controlled / Uncontrolled =====
-  const controlled = typeof onPinsChange === "function";
-  const [innerPins, setInnerPins] = useState(pins);
+  const [pins, setPins] = useState([]);
 
-  // sync เมื่อ props.pins เปลี่ยน (รองรับกรณีที่ parent อัปเดต)
+  /** โหลดข้อมูลจาก localStorage เฉพาะนัดหมายในอีก 14 วัน */
   useEffect(() => {
-    if (!controlled) setInnerPins(pins);
-  }, [pins, controlled]);
+    const list = readAppointments();
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const twoWeeks = new Date(today); twoWeeks.setDate(today.getDate() + 14);
 
-  const list = controlled ? pins : innerPins;
+    const upcoming = list
+      .filter(it => {
+        if (!it?.date) return false;
+        const d = parseYMD(it.date);
+        return d >= today && d <= twoWeeks;
+      })
+      .sort((a,b)=> (a.date+(a.timeStart||"")).localeCompare(b.date+(b.timeStart||"")));
 
-  const setPins = useCallback((next) => {
-    if (controlled) onPinsChange(next);
-    else setInnerPins(next);
-  }, [controlled, onPinsChange]);
+    const mapped = upcoming.map(it => ({
+      id: it.id,
+      title: it.title || "นัดหมาย",
+      time: `${it.date} ${it.timeStart || ""}`,
+    }));
+    setPins(mapped);
+  }, []);
 
-  // ===== Fade edges controller (ซ้าย/ขวา) =====
+  // ===== Scroll shadow effect =====
   const wrapRef = useRef(null);
   const scrollRef = useRef(null);
-
   const updateShadow = useCallback(() => {
     const wrap = wrapRef.current;
     const sc = scrollRef.current;
     if (!wrap || !sc) return;
-
     const EPS = 2;
     const left  = sc.scrollLeft > EPS;
     const right = (sc.scrollWidth - sc.clientWidth - sc.scrollLeft) > EPS;
-
     wrap.classList.toggle("shadow-left", left);
     wrap.classList.toggle("shadow-right", right);
   }, []);
-
   useEffect(() => {
     const sc = scrollRef.current;
     if (!sc) return;
-
-    // เริ่มต้นให้ชิดซ้าย
-    if (sc.scrollLeft !== 0) sc.scrollTo({ left: 0, top: 0, behavior: "auto" });
-
     sc.addEventListener("scroll", updateShadow, { passive: true });
-
-    // เดสก์ทอป: หมุนล้อแนวตั้งให้เลื่อนแนวนอน
-    const onWheel = (e) => {
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-        sc.scrollLeft += e.deltaY;
-        e.preventDefault();
-      }
-    };
-    sc.addEventListener("wheel", onWheel, { passive: false });
-
-    window.addEventListener("resize", updateShadow);
     updateShadow();
+    return () => sc.removeEventListener("scroll", updateShadow);
+  }, [updateShadow, pins.length]);
 
-    return () => {
-      sc.removeEventListener("scroll", updateShadow);
-      sc.removeEventListener("wheel", onWheel);
-      window.removeEventListener("resize", updateShadow);
-    };
-  }, [updateShadow, list.length]);
-
-  // ===== Dialog + Feedback ภายในคอมโพเนนต์ =====
+  // ===== Dialog feedback =====
   const [activePin, setActivePin] = useState(null);
   const [done, setDone] = useState(false);
   const [rate, setRate] = useState(0);
   const [note, setNote] = useState("");
-
-  // ล็อกพื้นหลังไม่ให้เลื่อนขณะเปิด dialog
   useEffect(() => {
-    const html = document.documentElement;
-    if (activePin) html.classList.add("html-lock"); else html.classList.remove("html-lock");
-    return () => html.classList.remove("html-lock");
+    document.documentElement.classList.toggle("html-lock", !!activePin);
+    return () => document.documentElement.classList.remove("html-lock");
   }, [activePin]);
 
-  const openPinDialog = useCallback((pin) => {
-    setActivePin(pin);
-    setDone(false);
-    setRate(0);
-    setNote("");
-  }, []);
+  const openPinDialog = (pin) => { setActivePin(pin); setDone(false); setRate(0); setNote(""); };
+  const closePinDialog = () => setActivePin(null);
 
-  const closePinDialog = useCallback(() => {
-    setActivePin(null);
-  }, []);
+  const submitPinDialog = () => {
+    const payload = { id: activePin?.id, title: activePin?.title, time: activePin?.time, done, rate, note };
+    try { onSubmitFeedback?.(payload); } catch(e){ console.warn(e); }
 
-  const submitPinDialog = useCallback(() => {
-    const payload = {
-      id: activePin?.id,
-      title: activePin?.title,
-      time: activePin?.time,
-      done,
-      rate,
-      note
-    };
-    try {
-      onSubmitFeedback?.(payload);
-    } catch (e) {
-      // ป้องกันไม่ให้ throw หลุด
-      console.warn("onSubmitFeedback error:", e);
-    }
+    // ถ้าผู้ใช้ติ๊กว่า "ทำเรียบร้อยแล้ว" → ลบทั้งใน UI และใน localStorage
+    if (done && activePin?.id) {
+      // 1) ลบจาก state ปัจจุบัน
+      setPins(p => p.filter(x => x.id !== activePin.id));
 
-    // ถ้าทำกิจกรรมแล้ว → ลบออกจากลิสต์
-    if (done && activePin) {
-      const next = (list || []).filter(p => p.id !== activePin.id);
-      setPins(next);
+      // 2) ลบจาก localStorage appointments_v1
+      const current = readAppointments();
+      const next = current.filter(it => it.id !== activePin.id);
+
+      // เผื่อกรณีข้อมูลเก่าบาง record ไม่มี id ให้ลองจับคู่แบบ fallback
+      if (current.length === next.length && activePin.time) {
+        const [dStr, tStr=""] = activePin.time.split(" ");
+        const title = activePin.title;
+        const fallback = current.filter(it => !(it.title===title && it.date===dStr && (it.timeStart||"")===tStr));
+        writeAppointments(fallback);
+      } else {
+        writeAppointments(next);
+      }
     }
 
     setActivePin(null);
-  }, [activePin, done, rate, note, list, setPins, onSubmitFeedback]);
-
-  const onClick = (pin) => (e) => {
-    e.preventDefault();
-    openPinDialog(pin);
   };
 
-  if (!list || list.length === 0) return null;
+  if (!pins || pins.length === 0) return null;
 
-  // emoji กรณีอยากใช้ต่อใน dialog (ตอนนี้ยังไม่ใช้)
-  // const faces = ["😞","🙁","😐","🙂","😄"];
-
-  return h(
-    React.Fragment,
-    null,
-    // แถว Post-it เลื่อนซ้าย-ขวา
-    h("section", {
-      ref: wrapRef,
-      className: `pin-hwrap ${className}`.trim(),
-      "aria-label": ariaLabel
-    },
-      h("div", { ref: scrollRef, className: "pin-hscroll", role: "list" },
-        list.map((ap, idx) =>
+  return h(React.Fragment, null,
+    // ===== แถว post-it =====
+    h("section", { ref: wrapRef, className:`pin-hwrap ${className}`.trim(), "aria-label":ariaLabel },
+      h("div", { ref:scrollRef, className:"pin-hscroll", role:"list" },
+        pins.map((p, i) =>
           h("button", {
-              key: ap.id,
-              type: "button",
-              onClick: onClick(ap),
-              className: `pin-card pin-color-${(idx % 3) + 1}`,
-              role: "listitem",
-              "aria-label": `${ap.title} เวลา ${ap.time}`
+              key:p.id || `${p.time}-${i}`, type:"button",
+              onClick:()=>openPinDialog(p),
+              className:`pin-card pin-color-${(i%3)+1}`, role:"listitem",
+              "aria-label":`${p.title} ${p.time}`
             },
-            h("div", { className: "pin-ico", "aria-hidden":"true" }, "📌"),
-            h("div", { className: "pin-title" }, ap.title),
-            h("div", { className: "pin-time"  }, ap.time)
+            h("div", { className:"pin-ico" }, "📌"),
+            h("div", { className:"pin-title" }, p.title),
+            h("div", { className:"pin-time" }, p.time)
           )
         )
       )
     ),
 
-    // Dialog ภายใน (ใช้สไตล์จาก home.css ที่คุณมีอยู่แล้ว)
-    activePin && h("div", { className: "pin-dialog", role:"dialog", "aria-modal":"true", "aria-labelledby":"pinDlgTitle" },
-      h("div", { className: "pin-dialog-box" },
-        h("div", { className: "pin-dialog-head" },
-          h("div", { id: "pinDlgTitle", className: "pin-dialog-title" }, "บันทึกผลกิจกรรม"),
-          h("div", { className: "pin-dialog-sub" }, `${activePin.title} • ${activePin.time}`)
+    // ===== Dialog =====
+    activePin && h("div", { className:"pin-dialog", role:"dialog", "aria-modal":"true" },
+      h("div", { className:"pin-dialog-box" },
+        h("div", { className:"pin-dialog-head" },
+          h("div", { className:"pin-dialog-title" }, "บันทึกผลกิจกรรม"),
+          h("div", { className:"pin-dialog-sub" }, `${activePin.title} • ${activePin.time}`)
         ),
-
-        h("label", { className: "pin-row pin-check" },
-          h("input", {
-            type: "checkbox",
-            checked: done,
-            onChange: (e) => setDone(e.target.checked)
-          }),
+        h("label", { className:"pin-row pin-check" },
+          h("input", { type:"checkbox", checked:done, onChange:(e)=>setDone(e.target.checked) }),
           h("span", null, "ทำเรียบร้อยแล้ว")
         ),
-
-        h("div", { className: "pin-row" },
-          h("div", { className: "pin-label" }, "ให้คะแนนความรู้สึก"),
-          h("div", { className: "pin-rate" },
-            [1,2,3,4,5].map((n) =>
-              h("button", {
-                key: n,
-                type: "button",
-                className: `pin-face ${rate === n ? "active" : ""}`,
-                onClick: () => setRate(n),
-                "aria-label": `ให้คะแนน ${n}`
-              }, ["😞","🙁","😐","🙂","😄"][n-1])
+        h("div", { className:"pin-row" },
+          h("div", { className:"pin-label" }, "ให้คะแนนความรู้สึก"),
+          h("div", { className:"pin-rate" },
+            [1,2,3,4,5].map((n)=>
+              h("button",{key:n,type:"button",
+                className:`pin-face ${rate===n?"active":""}`,
+                onClick:()=>setRate(n)
+              },["😞","🙁","😐","🙂","😄"][n-1])
             )
           )
         ),
-
-        h("div", { className: "pin-row" },
-          h("label", { className: "pin-label", htmlFor: "pinNote" }, "ความเห็น/ความรู้สึกเพิ่มเติม"),
-          h("textarea", {
-            id: "pinNote",
-            className: "pin-note",
-            rows: 3,
-            placeholder: "พิมพ์ประเมินความรู้สึกของกิจกรรม…",
-            value: note,
-            onChange: (e) => setNote(e.target.value)
-          })
+        h("div", { className:"pin-row" },
+          h("label",{className:"pin-label",htmlFor:"pinNote"},"ความเห็น/ความรู้สึกเพิ่มเติม"),
+          h("textarea",{id:"pinNote",className:"pin-note",rows:3,
+            placeholder:"พิมพ์ประเมินความรู้สึกของกิจกรรม…",
+            value:note,onChange:(e)=>setNote(e.target.value)})
         ),
-
-        h("div", { className: "pin-dialog-actions" },
-          h("button", { className: "btn pin-cancel", type:"button", onClick: closePinDialog }, "ยกเลิก"),
-          h("button", {
-              className: "btn pin-save",
-              type:"button",
-              onClick: submitPinDialog,
-              disabled: rate === 0 && !done && note.trim() === ""
-            }, "บันทึก")
+        h("div",{className:"pin-dialog-actions"},
+          h("button",{className:"btn pin-cancel",type:"button",onClick:closePinDialog},"ยกเลิก"),
+          h("button",{className:"btn pin-save",type:"button",onClick:submitPinDialog,
+            disabled:rate===0&&!done&&note.trim()===""
+          },"บันทึก")
         )
       )
     )

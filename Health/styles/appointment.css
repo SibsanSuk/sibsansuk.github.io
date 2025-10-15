@@ -209,3 +209,15 @@
   cursor:pointer;
 }
 .apt-btn:hover { background:#d9e3ff; }
+
+
+/* แถวหัวข้อ + ปุ่มเพิ่ม */
+.apt-header-row{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; padding: 0 2px; margin-bottom: 8px;
+}
+.add-btn{
+  font-size:16px; padding:8px 12px; border-radius:12px; border:0;
+  background:#6c8cff; color:#fff; font-weight:700; cursor:pointer;
+}
+.add-btn:hover{ filter:brightness(1.03); }
