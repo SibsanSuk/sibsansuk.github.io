@@ -67,3 +67,14 @@
   .activities .carousel .tile .emoji { font-size: 22px; }
 }
 
+.activities {
+  --accent: #007aff; /* สีน้ำเงินเดียวกับเมนู */
+}
+
+.activities .tile .icon {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}  
+
+
