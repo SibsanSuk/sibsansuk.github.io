@@ -17,10 +17,12 @@ export function Exercise() {
 
   const back = (e) => { e.preventDefault(); if (navigate) navigate(-1); else history.back(); };
 
-  // โครงข้อมูล: แต่ละหัวข้อหลักมีลิสต์ย่อยเรียงแนวตั้ง
+  const iconBase = "./images/icons";
+
+  // ใช้ "icon" (รูปภาพ) แทน "emoji"
   const items = [
     {
-      emoji: "🎬",
+      icon: `${iconBase}/ico_video.png`,
       title: "ออกกำลังกายด้วย VDO",
       path: "/exercise/videos",
       children: [
@@ -30,7 +32,7 @@ export function Exercise() {
       ]
     },
     {
-      emoji: "💪",
+      icon: `${iconBase}/ico_youngfit.png`,
       title: "ออกกำลังกายด้วย เรา Young Fit",
       path: "/exercise/youngfit",
       children: [
@@ -41,7 +43,7 @@ export function Exercise() {
     },
   ];
 
-  // สไตล์ย่อย: ลิสต์ย่อยแนวตั้ง + อินเดนต์
+  // สไตล์ย่อย: เพิ่ม .notify-icon แทน .notify-emoji
   const LocalStyle = () => h("style", { dangerouslySetInnerHTML: { __html: `
     .sublist {
       display: flex; flex-direction: column; gap: 8px; margin-top: 10px;
@@ -55,22 +57,30 @@ export function Exercise() {
     .subitem .label { font-weight: 800; }
     .subitem .arrow { margin-left: auto; font-weight: 900; }
     .subitem:active { transform: translateY(1px) scale(.98); transition: transform 120ms ease; }
+
+    /* ไอคอนหัวข้อหลัก */
+    .notify-icon {
+      width: 96px; height: 96px; margin-right: 12px; flex: 0 0 auto;
+      object-fit: contain;
+    }
+
+    /* เดิมมี .notify-emoji อยู่ใน layout — เผื่อยังมีหน้าอื่นใช้ */
+    .notify-emoji { display:none; }
   `}});
 
   return h(React.Fragment, null,
     h(LocalStyle),
 
-    // TopBar + Back
     h("div", { className: "topbar" },
       h("a", { href: "#", className: "back", onClick: back, "aria-label": "ย้อนกลับ" }, "‹"),
       h("h1", null, "ออกกำลังกาย")
     ),
 
-    // ลิสต์หลัก + ลิสต์ย่อยแนวตั้ง (ไม่มีปุ่มด้านขวาแล้ว)
     h("div", { className: "notify-list", role: "list", "aria-label": "เลือกประเภทการออกกำลังกาย" },
       items.map((it, i) =>
         h("div", { key: i, className: "notify-item", role: "listitem" },
-          h("div", { className: "notify-emoji" }, it.emoji),
+          // ใช้รูปแทน
+          h("img", { src: it.icon, alt: "", className: "notify-icon", "aria-hidden": "true" }),
           h("div", { className: "notify-chip" },
             h("div", { style: { fontWeight: 800 } }, it.title),
             h("div", { className: "sublist", role: "group", "aria-label": `หมวดย่อยของ ${it.title}` },
