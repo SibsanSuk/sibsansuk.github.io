@@ -70,3 +70,22 @@
   }
 }
 
+.navbar .icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  margin-bottom: 4px;
+}
+
+.navbar .nav-item.active .icon {
+  filter: brightness(1.1);
+}
+
+/* icon */
+.nav-item .icon {
+  width: 24px;
+  height: 24px;
+  margin-bottom: 4px;
+  filter: brightness(0) invert(0.6); /* เทา */
+  transition: filter 0.2s ease;
+}

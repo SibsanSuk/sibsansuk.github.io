@@ -7,12 +7,16 @@ export function NavBar() {
   const path = loc.pathname || "/";
   const isActive = (p) => path === p || path.startsWith(p + "/");
 
+  const iconBase = "./images/icons"; // เส้นทางไปยังโฟลเดอร์ icon
+
   return h(
     "nav",
     { className: "navbar", role: "navigation", "aria-label": "Main" },
     h(
       "div",
       { className: "navbar-inner" },
+
+      // หน้าแรก
       h(
         Link,
         {
@@ -22,9 +26,16 @@ export function NavBar() {
           "aria-current": isActive("/") ? "page" : undefined,
           "aria-label": "หน้าหลัก",
         },
-        h("div", { className: "icon", "aria-hidden": "true" }, "🏠"),
+        h("img", {
+          src: `${iconBase}/ico_home.png`,
+          alt: "",
+          className: "icon",
+          "aria-hidden": "true",
+        }),
         h("span", null, "หน้าหลัก")
       ),
+
+      // การนัด
       h(
         Link,
         {
@@ -34,9 +45,16 @@ export function NavBar() {
           "aria-current": isActive("/notify") ? "page" : undefined,
           "aria-label": "การนัด",
         },
-        h("div", { className: "icon", "aria-hidden": "true" }, "📅"),
+        h("img", {
+          src: `${iconBase}/ico_calenda.png`,
+          alt: "",
+          className: "icon",
+          "aria-hidden": "true",
+        }),
         h("span", null, "การนัด")
       ),
+
+      // SOS
       h(
         Link,
         {
@@ -46,7 +64,12 @@ export function NavBar() {
           "aria-current": isActive("/sos") ? "page" : undefined,
           "aria-label": "ช่วยเหลือ (SOS)",
         },
-        h("div", { className: "icon", "aria-hidden": "true" }, "🆘"),
+        h("img", {
+          src: `${iconBase}/ico_sos.png`,
+          alt: "",
+          className: "icon",
+          "aria-hidden": "true",
+        }),
         h("span", null, "ช่วยเหลือ")
       )
     )
