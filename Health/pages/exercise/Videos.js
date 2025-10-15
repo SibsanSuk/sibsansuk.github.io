@@ -13,7 +13,7 @@ export function ExerciseVideos({ data }) {
     title: "เรียนออกกำลังกายด้วย VDO",
     description: "ท่าออกกำลังกายทั่วไป",
     items: [
-      { id: "STCU1", title: "Squat (STCU1)", src: "https://sibsansuk.github.io/Health/videos/STCU1.mp4", emoji: "🦵", duration: "00:45", level: "Beginner" },
+      { id: "STCU1", title: "Squat (STCU1)", src: "https://sibsansuk.github.io/Health/videos/STCU1.mp4", emoji: "🎬", duration: "00:45", level: "Beginner" },
       { id: "STCU2", title: "ท่าออกกำลังกาย STCU2", src: "https://sibsansuk.github.io/Health/videos/STCU2.mp4", emoji: "🎬", duration: "00:45" },
       { id: "STCU3", title: "ท่าออกกำลังกาย STCU3", src: "/videos/STCU3.mp4", emoji: "🎬" },
       { id: "STCU4", title: "ท่าออกกำลังกาย STCU4", src: "/videos/STCU4.mp4", emoji: "🎬" },

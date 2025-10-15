@@ -49,7 +49,7 @@ export function Exercise() {
       display: flex; flex-direction: column; gap: 8px; margin-top: 10px;
     }
     .subitem {
-      display: flex; align-items: center; gap: 10px;
+      display: flex; align-items: center; gap: 4px;
       background: #eaf2ff; border-radius: 12px; padding: 10px 12px;
       box-shadow: var(--shadow); text-decoration: none; color: inherit;
     }
@@ -60,7 +60,7 @@ export function Exercise() {
 
     /* ไอคอนหัวข้อหลัก */
     .notify-icon {
-      width: 96px; height: 96px; margin-right: 12px; flex: 0 0 auto;
+      width: 92px; height: 92px; margin-right: 4px; flex: 0 0 auto;
       object-fit: contain;
     }
 

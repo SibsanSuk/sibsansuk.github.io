@@ -29,6 +29,8 @@
   <link id="home-css" rel="stylesheet" href="./styles/home.css">
   <link id="activities-css" rel="stylesheet" href="./styles/activities.css">
   <link id="pin-css" rel="stylesheet" href="./styles/pin.css">
+  <link id="appointment-css" rel="stylesheet" href="./styles/appointment.css">
+
 </head>
 <body>
   <div id="root" class="app"></div>
@@ -59,7 +61,9 @@
     bump('home-css');
     bump('activities-css');
     bump('pin-css');
-    // main.js (มีอยู่แล้ว)
+    bump('appointment-css');
+
+    // main.js
     const s = document.createElement('script');
     s.type = 'module';
     s.src = './main.js?v=' + window.APP_VER;
