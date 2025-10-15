@@ -15,6 +15,8 @@ const SAMPLE_APTS = [
   { id:"apt-004", date:"2025-10-22", timeStart:"16:00", title:"รับยา", type:"general", location:"รพ. เขต", note:"" },
 ];
 
+const STORAGE_KEY = "appointments_v1";
+
 // -------------------- helpers --------------------
 function parseYMD(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y, m-1, d); }
 function groupByDate(items){
@@ -27,39 +29,49 @@ function groupByDate(items){
 }
 function genId(){ return "apt-" + Math.random().toString(36).slice(2,8) + "-" + Date.now().toString(36); }
 
-// -------------------- data hook --------------------
-function useAppointments(jsonUrl){
-  const [items, setItems] = useState(SAMPLE_APTS);
-  const [loading, setLoading] = useState(!!jsonUrl);
-  const [error, setError] = useState(null);
+// -------------------- data hook (ใช้ localStorage) --------------------
+function useAppointments() {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
 
+  // โหลดข้อมูลจาก localStorage
   useEffect(() => {
-    if (!jsonUrl) return;
-    let ok = true;
-    (async () => {
-      try {
-        const res = await fetch(jsonUrl, { cache:"no-store" });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        if (ok && Array.isArray(data)) setItems(data);
-      } catch (e) {
-        console.warn("Load appointments failed, fallback to sample:", e);
-        if (ok) setError(e);
-      } finally {
-        if (ok) setLoading(false);
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) {
+          setItems(arr);
+        } else {
+          setItems(SAMPLE_APTS);
+        }
+      } else {
+        setItems(SAMPLE_APTS);
       }
-    })();
-    return () => { ok = false; };
-  }, [jsonUrl]);
+    } catch (e) {
+      console.warn("อ่าน localStorage ไม่ได้:", e);
+      setItems(SAMPLE_APTS);
+    }
+    setLoading(false);
+  }, []);
 
-  return { items, setItems, loading, error };
+  // ทุกครั้งที่ items เปลี่ยน → เขียนกลับ localStorage
+  useEffect(() => {
+    if (!loading) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      } catch (e) {
+        console.warn("บันทึก localStorage ไม่ได้:", e);
+      }
+    }
+  }, [items, loading]);
+
+  return { items, setItems, loading };
 }
 
 // -------------------- หน้า NotifyIndex --------------------
 export function NotifyIndex() {
-  const APPOINTMENTS_URL = null;
-
-  const { items, setItems, loading } = useAppointments(APPOINTMENTS_URL);
+  const { items, setItems, loading } = useAppointments();
   const eventsByDate = useMemo(()=> groupByDate(items), [items]);
 
   const [monthRef, setMonthRef] = useState(() => {
@@ -96,7 +108,7 @@ export function NotifyIndex() {
   // handlers
   function openNewForSelected(){
     const dateKey = ymdLocal(selectedDate || new Date());
-    setEditing({ id:null, date:dateKey, timeStart:"", title:"", type:"appointment", location:"", note:"" });
+    setEditing({ id:null, date:dateKey, timeStart:"12:00", title:"", type:"appointment", location:"", note:"" });
     setDlgOpen(true);
   }
   function openEdit(apt){ setEditing({ ...apt }); setDlgOpen(true); }
@@ -129,11 +141,11 @@ export function NotifyIndex() {
           buddhistYear: true,
         }),
         h("div", { className:"calendar-actions" },
-          h("button", { className:"btn", onClick: openNewForSelected }, "เพิ่มการนัด")
+          
         )
       ),
 
-      // รายการนัดหมาย (คอมโพเนนต์แยก)
+      // รายการนัดหมาย
       loading
         ? h("div", { className:"loading", style:{ padding:"12px 10px 16px" } }, "กำลังโหลด…")
         : h(AppointmentList, {
@@ -141,7 +153,7 @@ export function NotifyIndex() {
             items: visibleList,
             onOpen: openEdit,
             onAdd: openNewForSelected,
-            groupByDate: !selectedDate, // ถ้าเลือกวันแล้ว ไม่ต้องกรุ๊ปซ้ำ
+            groupByDate: !selectedDate,
           })
     ),
 
