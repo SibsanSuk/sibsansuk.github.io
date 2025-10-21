@@ -248,3 +248,34 @@
     padding-left: calc(var(--safe-left) + 220px);
   }
 }
+
+@media (orientation: landscape) and (min-width: 800px) and (max-width: 1023px) {
+  .navbar-activity {
+    left: calc(var(--safe-left) + 12px);
+    top: calc(var(--safe-top) + 16px);
+  }
+
+  .navbar-activity-inner {
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .navbar-activity-scroll {
+    max-height: calc(100vh - 90px);
+    gap: 8px;
+  }
+
+  .nav-act-item {
+    width: 140px;
+    padding: 12px;
+  }
+
+  .nav-act-item .icon {
+    width: 26px;
+    height: 26px;
+  }
+
+  .has-nav-activity .app {
+    padding-left: calc(var(--safe-left) + 190px);
+  }
+}
