@@ -56,19 +56,9 @@
   padding: 10px 16px;   /* ปรับระยะรอบตัวหนังสือให้สมดุล */
 }
 
-.sos-cancel {
-  background: #f2f2f2;
-  color: #333;
-  font-weight: 700;
-  font-size: 18px;      /* ขนาดมาตรฐาน */
-}
-
+.sos-cancel,
 .sos-confirm {
-  background: #6c8cff;
-  color: #fff;
-  font-weight: 800;
-  font-size: 18px;      /* ขนาดมาตรฐาน */
-  box-shadow: 0 4px 12px rgba(108, 140, 255, .4);
+  /* ปล่อยปุ่มใช้สไตล์ฐานจาก .btn ใน app.css */
 }
 
 /* Animations */

@@ -89,3 +89,94 @@
   filter: brightness(0) invert(0.6); /* เทา */
   transition: filter 0.2s ease;
 }
+
+/* =========================================================
+   NavBarActivity — ใช้ Activity bar เป็น Nav
+   ========================================================= */
+.navbar-activity {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--safe-bottom) + 8px);
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  padding: 0 12px;
+}
+
+.navbar-activity-inner {
+  pointer-events: auto;
+  width: min(720px, 100%);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 24px;
+  box-shadow: 0 8px 28px rgba(23, 62, 139, 0.22);
+  outline: 1px solid rgba(215, 230, 255, 0.9);
+  padding: 8px 12px;
+  overflow: hidden;
+}
+
+.navbar-activity-scroll {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+  padding: 2px;
+}
+.navbar-activity-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.nav-act-item {
+  flex: 0 0 auto;
+  min-width: 88px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 18px;
+  text-decoration: none;
+  color: #2b4b88;
+  font-weight: 800;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 4px 12px rgba(23, 62, 139, 0.12);
+  scroll-snap-align: center;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease,
+    color 0.16s ease;
+}
+
+.nav-act-item .icon {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  filter: brightness(0) invert(0.6);
+  transition: filter 0.2s ease;
+}
+
+.nav-act-item .emoji {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.nav-act-item.active {
+  background: #6c8cff;
+  color: #ffffff;
+  box-shadow: 0 10px 22px rgba(108, 140, 255, 0.35);
+  transform: translateY(-2px);
+}
+
+.nav-act-item.active .icon {
+  filter: brightness(1.1);
+}
+
+@media (min-width: 680px) {
+  .navbar-activity-inner {
+    width: min(640px, 80%);
+  }
+}

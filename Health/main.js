@@ -6,7 +6,7 @@ const { HashRouter, Switch, Route, useLocation } = window.ReactRouterDOM;
 import { LoaderSkeleton } from "./components/Loader.js";
 import { AuthProvider, PrivateRoute } from "./auth.js";
 import { Login } from "./pages/Login.js";
-import { NavBar } from "./components/NavBar.js";
+import { NavBarActivity } from "./components/NavBarActivity.js";
 
 // lazy pages
 const Home = React.lazy(() =>
@@ -81,7 +81,7 @@ function Shell() {
         h(PrivateRoute, { component: Home })
       )
     ),
-    onLogin ? null : h(NavBar)
+    onLogin ? null : h(NavBarActivity)
   );
 }
 

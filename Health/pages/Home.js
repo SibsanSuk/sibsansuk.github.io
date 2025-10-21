@@ -2,7 +2,7 @@
 const h = window.React.createElement;
 const { Link } = window.ReactRouterDOM;
 
-import { Activities } from "../components/Activities.js";
+// import { Activities } from "../components/Activities.js";
 import { HomePins } from "../components/HomePins.js";
 import { HomeChat } from "../components/HomeChat.js";
 import { useAuth } from "../auth.js";
@@ -30,6 +30,7 @@ export function Home() {
     tips: [
       { id: "m1", author: "doctor", text: "วันนี้ดื่มน้ำไปแล้ว 4 แก้ว ดื่มให้ครบ 8 แก้วนะครับ 💧" },
       { id: "m2", author: "doctor", text: "เช้านี้เรายืนแกว่งแขนกันสัก 30 รอบนะครับ 🏃‍♂️" },
+      { id: "m3", author: "doctor", text: "วันนี้อากาศสดใส" },
     ],
   };
 
@@ -111,19 +112,19 @@ export function Home() {
                 stepMs: 650,
                 ariaLabel: "คำแนะนำจากผู้เชี่ยวชาญ"
               })
-            ),
+            )
             
-              h("div", { className: "activities" }, h(Activities, null))
+              // h("div", { className: "activities" }, h(Activities, null))
             
           )
         )
     ),
 
     // แนวตั้งเท่านั้น: กรอบ Activities เป็น dock (ของหน้า Home เอง)
-    isPortrait && h("div", { className: "activities-dock", role: "complementary", "aria-label": "แผงกิจกรรมลัด" },
-      h("div", { className: "inner" },
-        h("div", { className: "activities" }, h(Activities, null))
-      )
-    )
+    // isPortrait && h("div", { className: "activities-dock", role: "complementary", "aria-label": "แผงกิจกรรมลัด" },
+    //   h("div", { className: "inner" },
+    //     h("div", { className: "activities" }, h(Activities, null))
+    //   )
+    // )
   );
 }

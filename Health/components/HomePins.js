@@ -69,6 +69,8 @@ export function HomePins({
     const right = (sc.scrollWidth - sc.clientWidth - sc.scrollLeft) > EPS;
     wrap.classList.toggle("shadow-left", left);
     wrap.classList.toggle("shadow-right", right);
+    const canScroll = (sc.scrollWidth - sc.clientWidth) > EPS;
+    wrap.classList.toggle("pin-centered", !canScroll);
   }, []);
   useEffect(() => {
     const sc = scrollRef.current;
@@ -77,6 +79,11 @@ export function HomePins({
     updateShadow();
     return () => sc.removeEventListener("scroll", updateShadow);
   }, [updateShadow, pins.length]);
+
+  useEffect(() => {
+    window.addEventListener("resize", updateShadow);
+    return () => window.removeEventListener("resize", updateShadow);
+  }, [updateShadow]);
 
   // ===== Dialog feedback =====
   const [activePin, setActivePin] = useState(null);

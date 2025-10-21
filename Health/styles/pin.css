@@ -41,6 +41,9 @@
   overflow-x:auto; -webkit-overflow-scrolling:touch; overscroll-behavior-x:contain;
   scroll-snap-type:x proximity;
 }
+.pin-hwrap.pin-centered .pin-hscroll{
+  justify-content:center;
+}
 .pin-hscroll::-webkit-scrollbar{ display:none; }
 
 .pin-card{

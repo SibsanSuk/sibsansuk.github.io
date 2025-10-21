@@ -1,15 +1,28 @@
 /* ===== CHAT ===== */
 .chat{ display:flex; flex-direction:column; gap:12px; margin:12px 6px; }
-.msg{ display:grid; grid-template-columns:40px 1fr; align-items:start; gap:8px; }
+.msg{ display:grid; grid-template-columns:40px auto; align-items:start; gap:8px; }
 .msg-avatar{ width:40px; height:40px; border-radius:50%; background:#fff; color:#2b4b88; font-weight:900; display:grid; place-items:center; box-shadow:var(--shadow); overflow:hidden; }
 .msg-avatar img{ width:100%; height:100%; object-fit:cover; display:block; }
-.msg-bubble{ position:relative; background:#eaf2ff; border-radius:16px; padding:12px 14px; box-shadow:inset 0 0 0 1px #d7e6ff; font-weight:700; color:#20314f; line-height:1.35; }
+.msg-bubble{
+  position:relative;
+  background:#eaf2ff;
+  border-radius:16px;
+  padding:12px 14px;
+  box-shadow:inset 0 0 0 1px #d7e6ff;
+  font-weight:700;
+  color:#20314f;
+  line-height:1.35;
+  width:fit-content;
+  max-width:min(320px, calc(100% - 32px));
+  justify-self:start;
+  display:inline-block;
+}
 .msg--doctor .msg-bubble::before,.msg--doctor .msg-bubble::after{ content:""; position:absolute; bottom:10px; width:0; height:0; border-top:8px solid transparent; border-bottom:8px solid transparent; }
 .msg--doctor .msg-bubble::before{ left:-7px; border-right:9px solid #d7e6ff; }
 .msg--doctor .msg-bubble::after { left:-6px; border-right:8px solid #eaf2ff; }
 .msg--me{ grid-template-columns:1fr 40px; }
 .msg--me .msg-avatar{ order:2; background:#e7f0ff; }
-.msg--me .msg-bubble{ order:1; background:#fff; box-shadow:var(--shadow); }
+.msg--me .msg-bubble{ order:1; background:#fff; box-shadow:var(--shadow); justify-self:end; }
 .msg--me .msg-bubble::before,.msg--me .msg-bubble::after{ content:""; position:absolute; bottom:10px; width:0; height:0; border-top:8px solid transparent; border-bottom:8px solid transparent; }
 .msg--me .msg-bubble::before{ right:-7px; border-left:9px solid rgba(0,0,0,.06); }
 .msg--me .msg-bubble::after { right:-6px; border-left:8px solid #fff; }
