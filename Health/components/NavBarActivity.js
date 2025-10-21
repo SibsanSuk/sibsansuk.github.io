@@ -1,5 +1,6 @@
 // components/NavBarActivity.js
 const h = window.React.createElement;
+const { useEffect } = window.React;
 const { Link, useLocation } = window.ReactRouterDOM || {};
 
 const DEFAULT_ITEMS = [
@@ -21,6 +22,12 @@ export function NavBarActivity({
   ariaLabel = "เมนูหลัก",
   className = ""
 } = {}) {
+  useEffect(() => {
+    const root = document.documentElement;
+    root?.classList.add("has-nav-activity");
+    return () => root?.classList.remove("has-nav-activity");
+  }, []);
+
   if (!Link || !useLocation) {
     console.warn("NavBarActivity: React Router DOM not detected");
     return null;

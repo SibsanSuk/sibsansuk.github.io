@@ -17,6 +17,69 @@
 
 
 
+/* ===== Appointment Layout ===== */
+.notify-page {
+  display: flex;
+  flex-direction: column;
+}
+
+.notify-page .apt-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.notify-page .apt-list-pane {
+  min-height: 0;
+}
+
+.notify-page .apt-list-scroll {
+  display: flex;
+  flex-direction: column;
+}
+
+@media (orientation: landscape) and (min-width: 720px) {
+  .notify-page {
+    overflow: hidden;
+  }
+
+  .notify-page .apt-layout {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 16px;
+    flex: 1 1 auto;
+  }
+
+  .notify-page .notify-calendar-sec {
+    flex: 0 0 50%;
+    padding-right: 16px;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .notify-page .apt-list-pane {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+  }
+
+  .notify-page .apt-list-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 6px;
+  }
+}
+
+@media (orientation: landscape) and (min-width: 1024px) {
+  .notify-page .notify-calendar-sec {
+    flex-basis: 50%;
+  }
+}
+
+
 /* ========== Buttons / Utilities ========== */
 .btn { border:0; padding:10px 14px; border-radius:10px; background:#6c8cff; color:#fff; font-weight:600; cursor:pointer; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
 .btn:hover { filter: brightness(1.03); }

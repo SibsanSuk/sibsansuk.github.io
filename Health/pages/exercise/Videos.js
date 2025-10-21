@@ -4,7 +4,7 @@ const { useEffect, useState, useMemo, useCallback } = window.React;
 const { useNavigate } = (window.ReactRouterDOM || {});
 
 // ปรับค่าความสูงสูงสุดของวิดีโอจากตรงนี้ได้
-const VIDEO_MAX_PX = 240; // เช่น 240px บนมือถือ (จะไม่สูงเกินนี้)
+const VIDEO_MAX_PX = 420; // รองรับวิดีโอแนวตั้ง (สูงขึ้น)
 
 export function ExerciseVideos({ data }) {
   const navigate = (typeof useNavigate === "function") ? useNavigate() : null;
@@ -50,15 +50,7 @@ export function ExerciseVideos({ data }) {
 
   const VideoPlayer = () => {
     if (!current) return null;
-    return h("div", {
-      className: "card",
-      // sticky ด้านบนของ .page
-      style: {
-        position: "sticky",
-        top: "6px",          // ถ้ามี topbar แบบ fixed ค่อยชดเชยเพิ่มได้
-        zIndex: 2
-      }
-    },
+    return h("div", { className: "card video-player-card" },
       h("div", { className: "section-title" }, current.title || "วิดีโอ"),
       h("div", {
         // wrapper กัน layout shift และล็อกขนาด
@@ -120,7 +112,7 @@ export function ExerciseVideos({ data }) {
       }, current?.id === it.id ? "กำลังเล่น" : "เล่น")
     );
 
-  return h("main", { className: "page", role: "main" },
+  return h("main", { className: "page exercise-videos-page", role: "main" },
     h("div", { className: "topbar" },
       h("a", { href: "#", className: "back", onClick: back, "aria-label": "ย้อนกลับ" }, "‹"),
       h("h1", null, playlist.title || "VDO ออกกำลังกาย")
@@ -128,14 +120,13 @@ export function ExerciseVideos({ data }) {
 
     playlist.description ? h("div", { className: "bubble" }, playlist.description) : null,
 
-    // Player ติดบนสุด
-    h(VideoPlayer),
-
-    // เพลย์ลิสต์ที่เลื่อนได้
-    h("div", { className: "notify-list", role: "list", "aria-label": "รายการวิดีโอออกกำลังกาย" },
-      playlist.items.map((it) => h(ListItem, { key: it.id, it }))
-    ),
-
-    h("div", { style: { height: "12px" } })
+    h("div", { className: "video-layout" },
+      h("div", { className: "video-player-pane" }, h(VideoPlayer)),
+      h("div", { className: "video-list-pane" },
+        h("div", { className: "video-list-scroll", role: "list", "aria-label": "รายการวิดีโอออกกำลังกาย" },
+          playlist.items.map((it) => h(ListItem, { key: it.id, it }))
+        )
+      )
+    )
   );
 }

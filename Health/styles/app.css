@@ -113,6 +113,68 @@ h1 { font-size: 18px; margin: 2px 6px 10px; color: #fff; font-weight: 800; }
 .list { display: flex; flex-direction: column; gap: 12px; margin: 6px; }
 .pill { background: #e2efff; border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; font-weight: 700; box-shadow: var(--shadow); }
 
+/* ---------- Exercise Videos Layout ---------- */
+.exercise-videos-page .video-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 6px 12px;
+}
+
+.exercise-videos-page .video-player-pane,
+.exercise-videos-page .video-list-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.exercise-videos-page .video-player-card {
+  position: sticky;
+  top: 6px;
+  z-index: 2;
+}
+
+.exercise-videos-page .video-list-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.exercise-videos-page .video-list-scroll .notify-item {
+  margin: 0;
+}
+
+.exercise-videos-page .video-list-scroll .notify-item:last-child {
+  margin-bottom: 0;
+}
+
+@media (orientation: landscape) and (min-width: 720px) {
+  .exercise-videos-page .video-layout {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 18px;
+  }
+
+  .exercise-videos-page .video-player-pane {
+    flex: 1 1 50%;
+    min-width: 0;
+  }
+
+  .exercise-videos-page .video-list-pane {
+    flex: 1 1 50%;
+    min-height: 0;
+  }
+
+  .exercise-videos-page .video-list-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+}
+
 /* ---------- BOTTOM NAV (ALWAYS AT BOTTOM) ---------- */
 .nav {
   position: fixed; left: 0; right: 0; bottom: 0;

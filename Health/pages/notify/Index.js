@@ -124,37 +124,43 @@ export function NotifyIndex() {
   }
 
   return h(React.Fragment, null,
-    h("div", { className:"page", role:"main", "aria-label":"นัดหมาย" },
+    h("div", { className:"page notify-page", role:"main", "aria-label":"นัดหมาย" },
       h(TopBar, { title: "นัดหมาย" }),
 
-      // ปฏิทิน + ปุ่มเพิ่ม
-      h("section", { className:"notify-calendar-sec" },
-        h(CalendarMonth, {
-          value: monthRef,
-          eventsByDate,
-          onMonthChange: (firstOfMonth) => { setMonthRef(firstOfMonth); setSelectedDate(null); },
-          onSelectDate: (dt) => {
-            if (dt.getMonth() === monthRef.getMonth() && dt.getFullYear() === monthRef.getFullYear()) setSelectedDate(dt);
-            else { setMonthRef(new Date(dt.getFullYear(), dt.getMonth(), 1)); setSelectedDate(dt); }
-          },
-          startOnMonday: true,
-          buddhistYear: true,
-        }),
-        h("div", { className:"calendar-actions" },
-          
-        )
-      ),
+      h("div", { className:"apt-layout" },
+        // ปฏิทิน + ปุ่มเพิ่ม
+        h("section", { className:"notify-calendar-sec" },
+          h(CalendarMonth, {
+            value: monthRef,
+            eventsByDate,
+            onMonthChange: (firstOfMonth) => { setMonthRef(firstOfMonth); setSelectedDate(null); },
+            onSelectDate: (dt) => {
+              if (dt.getMonth() === monthRef.getMonth() && dt.getFullYear() === monthRef.getFullYear()) setSelectedDate(dt);
+              else { setMonthRef(new Date(dt.getFullYear(), dt.getMonth(), 1)); setSelectedDate(dt); }
+            },
+            startOnMonday: true,
+            buddhistYear: true,
+          }),
+          h("div", { className:"calendar-actions" },
+            
+          )
+        ),
 
-      // รายการนัดหมาย
-      loading
-        ? h("div", { className:"loading", style:{ padding:"12px 10px 16px" } }, "กำลังโหลด…")
-        : h(AppointmentList, {
-            header: headerNote,
-            items: visibleList,
-            onOpen: openEdit,
-            onAdd: openNewForSelected,
-            groupByDate: !selectedDate,
-          })
+        // รายการนัดหมาย
+        h("div", { className:"apt-list-pane" },
+          h("div", { className:"apt-list-scroll" },
+            loading
+              ? h("div", { className:"loading", style:{ padding:"12px 10px 16px" } }, "กำลังโหลด…")
+              : h(AppointmentList, {
+                  header: headerNote,
+                  items: visibleList,
+                  onOpen: openEdit,
+                  onAdd: openNewForSelected,
+                  groupByDate: !selectedDate,
+                })
+          )
+        )
+      )
     ),
 
     // Dialog เพิ่ม/แก้ไขนัดหมาย

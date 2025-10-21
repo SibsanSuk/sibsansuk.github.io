@@ -71,26 +71,28 @@ export function Exercise() {
   return h(React.Fragment, null,
     h(LocalStyle),
 
-    h("div", { className: "topbar" },
-      h("a", { href: "#", className: "back", onClick: back, "aria-label": "ย้อนกลับ" }, "‹"),
-      h("h1", null, "ออกกำลังกาย")
-    ),
+    h("main", { className: "page exercise-page", id: "page", role: "main" },
+      h("div", { className: "topbar" },
+        h("a", { href: "#", className: "back", onClick: back, "aria-label": "ย้อนกลับ" }, "‹"),
+        h("h1", null, "ออกกำลังกาย")
+      ),
 
-    h("div", { className: "notify-list", role: "list", "aria-label": "เลือกประเภทการออกกำลังกาย" },
-      items.map((it, i) =>
-        h("div", { key: i, className: "notify-item", role: "listitem" },
-          // ใช้รูปแทน
-          h("img", { src: it.icon, alt: "", className: "notify-icon", "aria-hidden": "true" }),
-          h("div", { className: "notify-chip" },
-            h("div", { style: { fontWeight: 800 } }, it.title),
-            h("div", { className: "sublist", role: "group", "aria-label": `หมวดย่อยของ ${it.title}` },
-              it.children.map((c, idx) =>
-                h(Link || "a", {
-                  key: idx, to: c.path, href: c.path, className: "subitem", onClick: go(c.path)
-                },
-                  h("span", { className: "bullet" }, idx + 1),
-                  h("span", { className: "label" }, c.label),
-                  h("span", { className: "arrow", "aria-hidden": "true" }, "›")
+      h("div", { className: "notify-list", role: "list", "aria-label": "เลือกประเภทการออกกำลังกาย" },
+        items.map((it, i) =>
+          h("div", { key: i, className: "notify-item", role: "listitem" },
+            // ใช้รูปแทน
+            h("img", { src: it.icon, alt: "", className: "notify-icon", "aria-hidden": "true" }),
+            h("div", { className: "notify-chip" },
+              h("div", { style: { fontWeight: 800 } }, it.title),
+              h("div", { className: "sublist", role: "group", "aria-label": `หมวดย่อยของ ${it.title}` },
+                it.children.map((c, idx) =>
+                  h(Link || "a", {
+                    key: idx, to: c.path, href: c.path, className: "subitem", onClick: go(c.path)
+                  },
+                    h("span", { className: "bullet" }, idx + 1),
+                    h("span", { className: "label" }, c.label),
+                    h("span", { className: "arrow", "aria-hidden": "true" }, "›")
+                  )
                 )
               )
             )

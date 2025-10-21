@@ -34,10 +34,9 @@ export function Mood() {
   const MoodButton = ({ m }) =>
     h("button", {
       type: "button",
-      className: "tile",
+      className: `tile mood-tile ${value === m.key ? "is-active" : ""}`.trim(),
       "aria-pressed": value === m.key ? "true" : "false",
-      onClick: () => setValue(m.key),
-      style: value === m.key ? { outline: "3px solid #6c8cff" } : null
+      onClick: () => setValue(m.key)
     },
       h("span", { className: "emoji", "aria-hidden": "true" }, m.emoji),
       h("span", null, m.label)
@@ -56,8 +55,30 @@ export function Mood() {
       @media (max-width: 360px) {
         .mood-grid { grid-template-columns: repeat(3, 1fr); }
       }
-      .mood-grid .tile { padding: 10px; }
-      .mood-grid .tile .emoji { font-size: 28px; margin-bottom: 6px; }
+      .mood-grid .mood-tile {
+        padding: 12px;
+        background: #f4f7ff;
+        border-radius: 18px;
+        box-shadow: none;
+        border: 1px solid transparent;
+        color: #20314f;
+        transition: transform .16s ease, box-shadow .16s ease, background .16s ease, border .16s ease;
+      }
+      .mood-grid .mood-tile .emoji { font-size: 28px; margin-bottom: 6px; }
+      .mood-grid .mood-tile.is-active {
+        background: #6c8cff;
+        color: #fff;
+        border-color: rgba(255,255,255,.45);
+        box-shadow: 0 10px 20px rgba(108, 140, 255, .35);
+        transform: translateY(-2px);
+      }
+      .mood-grid .mood-tile.is-active .emoji {
+        filter: drop-shadow(0 3px 6px rgba(0,0,0,.18));
+      }
+      .mood-grid .mood-tile:focus-visible {
+        outline: 2px solid #ffda6c;
+        outline-offset: 3px;
+      }
     `}}),
 
     // TopBar + Back
