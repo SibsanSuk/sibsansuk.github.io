@@ -150,11 +150,18 @@
     color 0.16s ease;
 }
 
+.nav-act-item .label {
+  text-align: center;
+  line-height: 1.2;
+  display: block;
+  white-space: normal;
+}
+
 .nav-act-item .icon {
   width: 24px;
   height: 24px;
   object-fit: contain;
-  filter: brightness(0) invert(0.6);
+  filter: grayscale(1) brightness(0.75);
   transition: filter 0.2s ease;
 }
 
@@ -171,7 +178,7 @@
 }
 
 .nav-act-item.active .icon {
-  filter: brightness(1.1);
+  filter: grayscale(0) brightness(1);
 }
 
 @media (min-width: 680px) {

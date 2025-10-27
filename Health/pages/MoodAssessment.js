@@ -1,6 +1,6 @@
 // pages/MoodAssessment.js
 const h = window.React.createElement;
-const { useEffect, useMemo, useState, useCallback } = window.React;
+const { useEffect, useMemo, useState, useCallback, useRef } = window.React;
 const { useNavigate } = window.ReactRouterDOM || {};
 
 export function MoodAssessment({ data }) {
@@ -60,10 +60,35 @@ export function MoodAssessment({ data }) {
     ]
   };
 
+  const adviceSample = {
+    overall: [
+      { min: 0, max: 15, rank: "ต้องดูแลอารมณ์", recommendation: "คะแนนค่อนข้างต่ำ แนะนำหากิจกรรมผ่อนคลายและพูดคุยกับคนที่คุณไว้ใจ" },
+      { min: 16, max: 30, rank: "ควรปรับสมดุล", recommendation: "ยังมีอารมณ์บางด้านที่ต้องดูแล ลองฝึกหายใจลึก ๆ หรือทำบันทึกอารมณ์" },
+      { min: 31, max: 45, rank: "อารมณ์ค่อนข้างดี", recommendation: "รักษากิจวัตรที่ช่วยให้อารมณ์ดีไว้ และสำรวจด้านที่คะแนนต่ำเพื่อปรับเพิ่ม" },
+      { min: 46, max: 60, rank: "สดใสยอดเยี่ยม", recommendation: "ยอดเยี่ยม! แบ่งปันพลังบวกกับคนรอบข้าง และรักษานิสัยที่ดีนี้" }
+    ],
+    perQuestion: {
+      m1: "ลองเริ่มวันด้วยการยืดเหยียดหรือออกกำลังสั้น ๆ เพื่อเพิ่มพลัง",
+      m2: "จดบันทึกเรื่องดี ๆ 3 อย่างในวันนี้เพื่อเติมความสุข",
+      m3: "ฝึกหายใจ 4-7-8 หรือฝึกสมาธิสั้น ๆ เมื่อตื่นเต้นกังวล",
+      m4: "สร้างพื้นที่สงบ เช่น ฟังเพลงเบา ๆ หรือพักสายตาเพื่อตั้งหลัก",
+      m5: "หยุดพักระหว่างงานเป็นช่วงสั้น ๆ เพื่อคลายความกดดัน",
+      m6: "หาเวลาพักผ่อนด้วยกิจกรรมที่ผ่อนคลาย เช่น อาบน้ำอุ่น หรืออ่านหนังสือ",
+      m7: "ผสานกิจกรรมที่ช่วยให้ผ่อนคลาย เช่น เดินเล่นหรือฟังเพลง",
+      m8: "ทบทวนความสำเร็จเล็ก ๆ ของตนเองเพื่อเสริมความมั่นใจ",
+      m9: "ทักทายหรือพูดคุยกับคนใกล้ชิดเพื่อรับพลังบวก",
+      m10: "ตั้งใจทำสิ่งเล็ก ๆ ที่ทำให้ภูมิใจ เพื่อเพิ่มความพอใจในตัวเอง"
+    }
+  };
+
   const form = (data && (data.items?.length || data.options?.length)) ? data : sampleData;
+  const adviceGuide = (data && data.advice) ? data.advice : adviceSample;
 
   const [answers, setAnswers] = useState({});
   const [note, setNote] = useState("");
+  const [resultAdvice, setResultAdvice] = useState(null);
+  const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef();
 
   useEffect(() => {
     if (typeof document !== "undefined") {
@@ -77,7 +102,25 @@ export function MoodAssessment({ data }) {
     else history.back();
   }, [navigate]);
 
-  const setAnswer = (id, value) => setAnswers((prev) => ({ ...prev, [id]: value }));
+  const clearToast = useCallback(() => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+  }, []);
+
+  const showToast = useCallback((text, type = "info") => {
+    clearToast();
+    setToast({ text, type });
+    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
+  }, [clearToast]);
+
+  useEffect(() => () => clearToast(), [clearToast]);
+
+  const setAnswer = useCallback((id, value) => {
+    setAnswers((prev) => ({ ...prev, [id]: Number(value) }));
+    setResultAdvice(null);
+  }, []);
 
   const total = useMemo(() => {
     return (form.items || []).reduce((sum, it) => sum + (Number(answers[it.id]) || 0), 0);
@@ -88,7 +131,7 @@ export function MoodAssessment({ data }) {
   const submit = async (e) => {
     e?.preventDefault?.();
     if (!completed) {
-      alert("กรุณาตอบให้ครบทุกข้อก่อนบันทึก");
+      showToast("กรุณาตอบให้ครบทุกข้อก่อนบันทึก", "error");
       return;
     }
     const payload = {
@@ -104,8 +147,33 @@ export function MoodAssessment({ data }) {
       version: "1.0-mood"
     };
     console.log("Mood assessment payload:", payload);
-    alert("บันทึกแบบประเมินอารมณ์แล้ว ขอบคุณค่ะ");
-    back();
+
+    const overallAdvice = (adviceGuide?.overall || []).find((rule) => {
+      const min = Number(rule.min ?? 0);
+      const max = Number(rule.max ?? Infinity);
+      return total >= min && total <= max;
+    }) || null;
+
+    const perQuestionAdvice = (form.items || []).map((item) => {
+      const opts = (item.options && item.options.length) ? item.options : (form.options || []);
+      if (!opts.length) return null;
+      const selected = Number(answers[item.id]);
+      const minValue = Math.min(...opts.map((o) => Number(o.value)));
+      if (selected !== minValue) return null;
+      const suggestion = adviceGuide?.perQuestion?.[item.id] || "ลองสำรวจสิ่งที่ทำให้คะแนนข้อนี้ต่ำ และหาวิธีเพิ่มสิ่งที่ช่วยให้อารมณ์ดีขึ้น";
+      return {
+        id: item.id,
+        text: item.text,
+        suggestion
+      };
+    }).filter(Boolean);
+
+    setResultAdvice({
+      submittedAt: new Date().toISOString(),
+      overall: overallAdvice,
+      perQuestions: perQuestionAdvice
+    });
+    showToast("บันทึกแบบประเมินอารมณ์แล้ว ระบบได้สร้างคำแนะนำให้คุณด้านล่าง", "success");
   };
 
   const QuestionRow = ({ item, index }) => {
@@ -169,54 +237,125 @@ export function MoodAssessment({ data }) {
       tabIndex: 0
     }, "‹");
 
-  return h("main", { className: "page", role: "main" },
-    h("div", { className: "topbar" },
-      h(BackButton),
-      h("h1", null, form.title || "ประเมินอารมณ์")
-    ),
+  const Toast = () => toast ? h("div", {
+    className: `toast-banner ${toast.type}`,
+    role: toast.type === "error" ? "alert" : "status",
+    style: {
+      position: "fixed",
+      bottom: "90px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      background: toast.type === "error" ? "#ff6b6b" : toast.type === "success" ? "#2b8a3e" : "#2b4b88",
+      color: "#fff",
+      padding: "12px 20px",
+      borderRadius: "999px",
+      boxShadow: "0 10px 30px rgba(25,40,75,.3)",
+      fontWeight: 600,
+      zIndex: 999,
+      transition: "opacity .2s ease"
+    }
+  }, toast.text) : null;
 
-    form.description ? h("div", { className: "bubble" }, form.description) : null,
+  const answerDetails = useMemo(() => {
+    return (form.items || []).map((item) => {
+      const opts = (item.options && item.options.length) ? item.options : (form.options || []);
+      const selected = opts.find((o) => Number(o.value) === Number(answers[item.id]));
+      if (!selected) return null;
+      return {
+        id: item.id,
+        text: item.text,
+        label: selected.label,
+        value: Number(selected.value)
+      };
+    }).filter(Boolean);
+  }, [answers, form.items, form.options]);
 
-    h("div", { className: "page-assessment", role: "list", "aria-label": "แบบประเมินอารมณ์" },
-      (form.items || []).map((it, idx) => h(QuestionRow, { key: it.id, item: it, index: idx }))
-    ),
-
-    h("div", { className: "card" },
-      h("div", { className: "section-title" }, "บันทึกเพิ่มเติม"),
-      h("div", { className: "input-row" },
-        h("textarea", {
-          className: "input",
-          rows: 3,
-          placeholder: "เช่น วันนี้มีเหตุการณ์อะไรที่ส่งผลต่ออารมณ์ของคุณ...",
-          value: note,
-          onChange: (e) => setNote(e.target.value)
-        })
-      )
-    ),
-
-    h("div", { className: "card", style: { marginBottom: "80px" } },
-      h("div", { className: "section-title" }, "สรุปคะแนน"),
-      h("div", {
-        style: {
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginTop: "8px"
-        }
-      },
-        h("div", null, `ตอบแล้ว ${Object.keys(answers).length}/${(form.items || []).length} ข้อ`),
-        h("div", { style: { fontWeight: 800, color: "#764ba2" } }, `รวม ${total} คะแนน`)
+  return h(React.Fragment, null,
+    h(Toast),
+    h("main", { className: "page", role: "main" },
+      h("div", { className: "topbar" },
+        h(BackButton),
+        h("h1", null, form.title || "ประเมินอารมณ์")
       ),
-      h("div", { style: { display: "flex", gap: "8px", marginTop: "12px" } },
-        h("button", { className: "btn", type: "button", onClick: back }, "ยกเลิก"),
-        h("button", {
-          className: "btn",
-          type: "button",
-          onClick: submit,
-          disabled: !completed,
-          style: { background: completed ? "#764ba2" : "#c9b5e8", color: "#fff" }
-        }, "บันทึกผล")
-      )
+
+      form.description ? h("div", { className: "bubble" }, form.description) : null,
+
+      h("div", { className: "page-assessment", role: "list", "aria-label": "แบบประเมินอารมณ์" },
+        (form.items || []).map((it, idx) => h(QuestionRow, { key: it.id, item: it, index: idx }))
+      ),
+
+      h("div", { className: "card" },
+        h("div", { className: "section-title" }, "บันทึกเพิ่มเติม"),
+        h("div", { className: "input-row" },
+          h("textarea", {
+            className: "input",
+            rows: 3,
+            placeholder: "เช่น วันนี้มีเหตุการณ์อะไรที่ส่งผลต่ออารมณ์ของคุณ...",
+            value: note,
+            onChange: (e) => setNote(e.target.value)
+          })
+        )
+      ),
+
+      h("div", { className: "card", style: { marginBottom: "80px" } },
+        h("div", { className: "section-title" }, "สรุปคะแนน"),
+        h("div", {
+          style: {
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginTop: "8px"
+          }
+        },
+          h("div", null, `ตอบแล้ว ${Object.keys(answers).length}/${(form.items || []).length} ข้อ`),
+          h("div", { style: { fontWeight: 800, color: "#764ba2" } }, `รวม ${total} คะแนน`)
+        ),
+        h("div", { style: { display: "flex", gap: "8px", marginTop: "12px" } },
+          h("button", { className: "btn", type: "button", onClick: back }, "ยกเลิก"),
+          h("button", {
+            className: "btn",
+            type: "button",
+            onClick: submit,
+            disabled: !completed,
+            style: { background: completed ? "#764ba2" : "#c9b5e8", color: "#fff" }
+          }, "บันทึกผล")
+        )
+      ),
+
+      resultAdvice ? h("div", { className: "card", style: { border: "2px solid #e5dafe", background: "#faf6ff" } },
+        h("div", { className: "section-title" }, "คำแนะนำจากผลการประเมินอารมณ์"),
+        resultAdvice.overall ? h("div", {
+          style: {
+            padding: "12px",
+            borderRadius: "12px",
+            background: "#ffffff",
+            border: "1px solid #eadcff",
+            marginBottom: "12px"
+          }
+        },
+          h("div", { style: { fontWeight: 800, color: "#5b3b99" } }, `${resultAdvice.overall.rank || "ผลรวม"}`),
+          h("p", { style: { marginTop: "4px", lineHeight: 1.5 } }, resultAdvice.overall.recommendation)
+        ) : null,
+        (resultAdvice.perQuestions && resultAdvice.perQuestions.length)
+          ? h("div", null,
+            h("div", { style: { fontWeight: 700, marginBottom: "6px" } }, "ข้อที่ควรให้ความสำคัญ"),
+            resultAdvice.perQuestions.map((item) =>
+              h("div", {
+                key: item.id,
+                style: {
+                  borderLeft: "3px solid #f58bf1",
+                  paddingLeft: "10px",
+                  margin: "8px 0",
+                  lineHeight: 1.5
+                }
+              },
+                h("div", { style: { fontWeight: 700 } }, item.text),
+                h("div", null, item.suggestion)
+              )
+            )
+          )
+          : h("p", { style: { margin: 0 } }, "ไม่มีข้อใดอยู่ในระดับต่ำสุด เยี่ยมมากค่ะ!")
+      ) : null
     )
   );
 }

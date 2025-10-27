@@ -6,6 +6,7 @@ const { Link } = window.ReactRouterDOM;
 import { HomePins } from "../components/HomePins.js";
 import { HomeChat } from "../components/HomeChat.js";
 import { useAuth } from "../auth.js";
+import { News } from "../components/News.js";
 
 export function Home() {
   const { user } = useAuth();
@@ -61,6 +62,7 @@ export function Home() {
     return () => root.classList.remove("home-has-act-dock");
   }, [isPortrait]);
 
+  const renderNews = () => h(News);
   return h(
     React.Fragment,
     null,
@@ -78,17 +80,17 @@ export function Home() {
 
       // Pins (กลางจอในแนวนอน, flow ปกติในแนวตั้ง)
       h("div", { className: "home-pins-wrap" },
-        h(HomePins, {
-          pins: data.pinnedAppointments,
-          onSubmitFeedback,
-          ariaLabel: "การนัดที่ปักหมุด"
-        })
-      ),
+      h(HomePins, {
+        pins: data.pinnedAppointments,
+        onSubmitFeedback,
+        ariaLabel: "การนัดที่ปักหมุด"
+      })
+    ),
+      renderNews(),
 
       // MAIN AREA
       isPortrait
         ? (
-          // แนวตั้ง: แชตอยู่ใน flow; Activities แสดงเป็น dock (วางด้านล่างใน overlay ของหน้า)
           h(HomeChat, {
             messages: data.tips,
             meAvatarText: initials,
