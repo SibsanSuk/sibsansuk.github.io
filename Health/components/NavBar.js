@@ -35,25 +35,6 @@ export function NavBar() {
         h("span", null, "หน้าหลัก")
       ),
 
-      // การนัด
-      h(
-        Link,
-        {
-          to: "/notify",
-          className: `nav-item ${isActive("/notify") ? "active" : ""}`,
-          role: "tab",
-          "aria-current": isActive("/notify") ? "page" : undefined,
-          "aria-label": "การนัด",
-        },
-        h("img", {
-          src: `${iconBase}/ico_calenda.png`,
-          alt: "",
-          className: "icon",
-          "aria-hidden": "true",
-        }),
-        h("span", null, "การนัด")
-      ),
-
       // SOS
       h(
         Link,

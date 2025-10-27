@@ -13,12 +13,12 @@ export function ExerciseVideos({ data }) {
     title: "เรียนออกกำลังกายด้วย VDO",
     description: "ท่าออกกำลังกายทั่วไป",
     items: [
-      { id: "STCU1", title: "Squat (STCU1)", src: "https://sibsansuk.github.io/Health/videos/STCU1.mp4", emoji: "🎬", duration: "00:45", level: "Beginner" },
-      { id: "STCU2", title: "ท่าออกกำลังกาย STCU2", src: "https://sibsansuk.github.io/Health/videos/STCU2.mp4", emoji: "🎬", duration: "00:45" },
-      { id: "STCU3", title: "ท่าออกกำลังกาย STCU3", src: "/videos/STCU3.mp4", emoji: "🎬" },
-      { id: "STCU4", title: "ท่าออกกำลังกาย STCU4", src: "/videos/STCU4.mp4", emoji: "🎬" },
-      { id: "STCU5", title: "ท่าออกกำลังกาย STCU5", src: "/videos/STCU5.mp4", emoji: "🎬" },
-      { id: "STCU6", title: "ท่าออกกำลังกาย STCU6", src: "/videos/STCU6.mp4", emoji: "🎬" },
+      { id: "STCU1", title: "ท่า Squat", src: "https://sibsansuk.github.io/Health/videos/STCU1.mp4", emoji: "🎬", duration: "00:45", level: "Beginner" },
+      { id: "STCU2", title: "ท่า Deadlift", src: "https://sibsansuk.github.io/Health/videos/STCU2.mp4", emoji: "🎬", duration: "00:45" },
+      { id: "STCU3", title: "ท่า Lunge", src: "/videos/STCU3.mp4", emoji: "🎬" },
+      { id: "STCU4", title: "ท่า Bent over roll", src: "/videos/STCU4.mp4", emoji: "🎬" },
+      { id: "STCU5", title: "ท่า Shoulder press", src: "/videos/STCU5.mp4", emoji: "🎬" },
+      { id: "STCU6", title: "ท่า Chess press", src: "/videos/STCU6.mp4", emoji: "🎬" },
     ]
   };
 

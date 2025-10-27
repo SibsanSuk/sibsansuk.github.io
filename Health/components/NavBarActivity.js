@@ -5,7 +5,6 @@ const { Link, useLocation } = window.ReactRouterDOM || {};
 
 const DEFAULT_ITEMS = [
   { path: "/", label: "หน้าหลัก", icon: "ico_home.png" },
-  { path: "/notify", label: "การนัด", icon: "ico_calenda.png" },
   { path: "/exercise", label: "ออกกำลังกาย", icon: "ico_exercise.png" },
   { path: "/mood", label: "อารมณ์", icon: "ico_mood.png" },
   { path: "/assessment", label: "ประเมินตนเอง", icon: "ico_assessment.png" },

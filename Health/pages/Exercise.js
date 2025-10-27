@@ -1,12 +1,19 @@
 // pages/Exercise.js
 const h = window.React.createElement;
-const { useEffect, useCallback } = window.React;
+const { useEffect, useCallback, useState } = window.React;
 const { useNavigate, Link } = window.ReactRouterDOM || {};
 
 export function Exercise() {
   const navigate = (typeof useNavigate === "function") ? useNavigate() : null;
+  const [feedback, setFeedback] = useState("");
+  const [feedbackAlert, setFeedbackAlert] = useState(null);
 
   useEffect(() => { if (typeof document !== "undefined") document.title = "ออกกำลังกาย"; }, []);
+  useEffect(() => {
+    if (!feedbackAlert || feedbackAlert.type !== "success") return;
+    const timer = setTimeout(() => setFeedbackAlert(null), 3500);
+    return () => clearTimeout(timer);
+  }, [feedbackAlert]);
 
   const go = useCallback((path) => (e) => {
     e.preventDefault();
@@ -16,6 +23,20 @@ export function Exercise() {
   }, [navigate]);
 
   const back = (e) => { e.preventDefault(); if (navigate) navigate(-1); else history.back(); };
+  const handleFeedbackChange = useCallback((e) => {
+    setFeedback(e.target.value);
+    if (feedbackAlert && feedbackAlert.type === "error") setFeedbackAlert(null);
+  }, [feedbackAlert]);
+  const handleFeedbackSubmit = useCallback((e) => {
+    e.preventDefault();
+    const text = feedback.trim();
+    if (!text) {
+      setFeedbackAlert({ type: "error", text: "กรุณากรอกความคิดเห็นก่อนส่ง" });
+      return;
+    }
+    setFeedback("");
+    setFeedbackAlert({ type: "success", text: "ส่งความคิดเห็นเรียบร้อยแล้ว ขอบคุณมากค่ะ!" });
+  }, [feedback]);
 
   const iconBase = "./images/icons";
 
@@ -25,22 +46,13 @@ export function Exercise() {
       icon: `${iconBase}/ico_video.png`,
       title: "ออกกำลังกายด้วย VDO",
       path: "/exercise/videos",
+      note: "ควรทำท่าละ 10 ครั้ง จำนวน 3 เซ็ต",
       children: [
         { label: "ทั่วไป",          path: "/exercise/videos" },
         { label: "ฝึกกล้ามเนื้อ",   path: "/exercise/videos" },
         { label: "ฝึกความยืดหยุ่น", path: "/exercise/videos" },
       ]
-    },
-    {
-      icon: `${iconBase}/ico_youngfit.png`,
-      title: "ออกกำลังกายด้วย เรา Young Fit",
-      path: "/exercise/youngfit",
-      children: [
-        { label: "ทั่วไป",          path: "/exercise/youngfit" },
-        { label: "ฝึกกล้ามเนื้อ",   path: "/exercise/youngfit" },
-        { label: "ฝึกความยืดหยุ่น", path: "/exercise/youngfit" },
-      ]
-    },
+    }
   ];
 
   // สไตล์ย่อย: เพิ่ม .notify-icon แทน .notify-emoji
@@ -66,6 +78,55 @@ export function Exercise() {
 
     /* เดิมมี .notify-emoji อยู่ใน layout — เผื่อยังมีหน้าอื่นใช้ */
     .notify-emoji { display:none; }
+
+    .feedback-card {
+      display: flex; flex-direction: column; gap: 8px; margin-top: 8px;
+    }
+    .feedback-label { font-weight: 700; color: #1c2756; }
+    .feedback-hint { font-size: 0.85rem; color: #5f6c94; }
+    .feedback-input {
+      width: 100%; border-radius: 16px; border: 1px solid #cfd7f2;
+      padding: 12px 14px; min-height: 96px; resize: vertical;
+      font-family: inherit; font-size: 0.95rem; color: #1c2756;
+      box-shadow: inset 0 1px 2px rgba(16, 24, 40, .06);
+      transition: border-color .2s ease, box-shadow .2s ease;
+    }
+    .feedback-input:focus {
+      outline: none;
+      border-color: #4c6ef5;
+      box-shadow: 0 0 0 3px rgba(76, 110, 245, .2);
+    }
+    .feedback-actions {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end;
+    }
+    .feedback-submit {
+      border: none; border-radius: 999px; padding: 9px 22px;
+      background: linear-gradient(135deg, #4c6ef5, #8394ff);
+      color: #fff; font-weight: 700; cursor: pointer;
+      box-shadow: 0 8px 18px rgba(76, 110, 245, .25);
+      transition: transform .15s ease, opacity .15s ease;
+    }
+    .feedback-submit:disabled {
+      opacity: .6; cursor: not-allowed; box-shadow: none;
+    }
+    .feedback-submit:not(:disabled):active {
+      transform: translateY(1px);
+    }
+    .feedback-message {
+      font-size: 0.9rem; font-weight: 600;
+    }
+    .feedback-message.success { color: #17813a; }
+    .feedback-message.error { color: #c13515; }
+
+    .exercise-tip {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: #334677;
+      background: #f6f8ff;
+      border-radius: 10px;
+      padding: 8px 10px;
+      border: 1px dashed #cfd8ff;
+    }
   `}});
 
   return h(React.Fragment, null,
@@ -94,6 +155,35 @@ export function Exercise() {
                     h("span", { className: "arrow", "aria-hidden": "true" }, "›")
                   )
                 )
+              ),
+              it.note ? h("div", { className: "exercise-tip" }, it.note) : null
+            )
+          )
+        ),
+        h("div", { className: "notify-item", role: "form" },
+          h("img", { src: `${iconBase}/ico_youngfit.png`, alt: "", className: "notify-icon", "aria-hidden": "true" }),
+          h("div", { className: "notify-chip" },
+            h("div", { style: { fontWeight: 800 } }, "ส่งความคิดเห็นเกี่ยวกับการออกกำลังกาย"),
+            h("form", { className: "feedback-card", onSubmit: handleFeedbackSubmit },
+              h("label", { htmlFor: "exercise-feedback", className: "feedback-label" }, "ความคิดเห็นของคุณ"),
+              h("textarea", {
+                id: "exercise-feedback",
+                className: "feedback-input",
+                placeholder: "แชร์ท่าออกกำลังกายที่อยากเห็น หรือปัญหาที่ต้องการความช่วยเหลือ...",
+                value: feedback,
+                onChange: handleFeedbackChange
+              }),
+              h("small", { className: "feedback-hint" }, "ทีมงานจะใช้ความคิดเห็นเพื่อเพิ่มคอนเทนต์ที่เหมาะกับคุณ"),
+              h("div", { className: "feedback-actions" },
+                h("button", {
+                  type: "submit",
+                  className: "feedback-submit",
+                  disabled: !feedback.trim()
+                }, "ส่งความคิดเห็น"),
+                feedbackAlert && h("div", {
+                  className: `feedback-message ${feedbackAlert.type}`,
+                  role: feedbackAlert.type === "error" ? "alert" : "status"
+                }, feedbackAlert.text)
               )
             )
           )

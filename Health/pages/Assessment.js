@@ -1,6 +1,6 @@
 // pages/Assessment.js
 const h = window.React.createElement;
-const { useEffect, useMemo, useState, useCallback } = window.React;
+const { useEffect, useMemo, useState, useCallback, useRef } = window.React;
 const { useNavigate } = (window.ReactRouterDOM || {});
 
 export function Assessment({ data }) {
@@ -38,7 +38,7 @@ export function Assessment({ data }) {
       },
       {
         id: "q3",
-        text: "อารมณ์โดยรวมของคุณวันนี้เป็นอย่างไร",
+        text: "อารมณ์โดยรวมของคุณวันนี้เป็นอย่างไร?",
         options: [
           { value: 1, label: "แย่มาก" },
           { value: 2, label: "แย่" },
@@ -49,7 +49,7 @@ export function Assessment({ data }) {
       },
       {
         id: "q4",
-        text: "คุณนอนหลับเพียงพอ",
+        text: "นอนหลับเพียงพอหรือไม่?",
         options: [
           { value: 1, label: "น้อยมาก" },
           { value: 2, label: "น้อย" },
@@ -59,7 +59,7 @@ export function Assessment({ data }) {
       },
       {
         id: "q5",
-        text: "ระดับความเครียดของวันนี้",
+        text: "ระดับความเครียดของวันนี้?",
         options: [
           { value: 1, label: "สูง" },
           { value: 2, label: "ปานกลาง" },
@@ -68,7 +68,7 @@ export function Assessment({ data }) {
       },
       {
         id: "q6",
-        text: "คุณรับประทานอาหารครบถ้วน (คุณภาพ/ปริมาณ)",
+        text: "รับประทานอาหารครบถ้วน? (คุณภาพ/ปริมาณ)",
         options: [
           { value: 1, label: "ไม่ครบ" },
           { value: 2, label: "ค่อนข้างครบ" },
@@ -78,7 +78,7 @@ export function Assessment({ data }) {
       },
       {
         id: "q7",
-        text: "เวลาอยู่หน้าจอ (มือถือ/คอม) อยู่ในระดับเหมาะสม",
+        text: "เวลาอยู่หน้าจอ (มือถือ/คอม) อยู่ในระดับเหมาะสม?",
         options: [
           { value: 1, label: "ไม่เหมาะสม" },
           { value: 2, label: "พอใช้" },
@@ -87,7 +87,7 @@ export function Assessment({ data }) {
       },
       {
         id: "q8",
-        text: "ปฏิสัมพันธ์ทางสังคม/การสื่อสารกับผู้อื่น",
+        text: "ปฏิสัมพันธ์ทางสังคม/การสื่อสารกับผู้อื่น?",
         options: [
           { value: 1, label: "น้อยมาก" },
           { value: 2, label: "น้อย" },
@@ -98,7 +98,7 @@ export function Assessment({ data }) {
       },
       {
         id: "q9",
-        text: "การดื่มน้ำเพียงพอ",
+        text: "การดื่มน้ำเพียงพอ?",
         options: [
           { value: 1, label: "ไม่พอ" },
           { value: 2, label: "พอใช้" },
@@ -113,15 +113,48 @@ export function Assessment({ data }) {
           { value: 1, label: "ไม่ได้ทำ" },
           { value: 2, label: "ได้ทำ" }
         ]
+      },
+      {
+        id: "q11",
+        text: "อ่านหนังสือแล้วหรือยัง",
+        options: [
+          { value: 1, label: "ไม่ได้ทำ" },
+          { value: 2, label: "ได้ทำ" }
+        ]
       }
     ]
   };
 
+  const adviceSample = {
+    overall: [
+      { min: 0, max: 15, rank: "ต้องดูแลด่วน", recommendation: "คะแนนค่อนข้างต่ำ ลองจัดการเวลาพักผ่อนและฝึกผ่อนคลายมากขึ้น รวมถึงปรึกษาแพทย์หากรู้สึกไม่ดีต่อเนื่อง" },
+      { min: 16, max: 30, rank: "ควรปรับพฤติกรรม", recommendation: "ยังมีบางด้านที่ควรเสริม เช่น การออกกำลังกายหรือการนอน ลองตั้งเป้าหมายเล็ก ๆ ในแต่ละวัน" },
+      { min: 31, max: 44, rank: "ค่อนข้างดี", recommendation: "คุณดูแลตัวเองได้ดี ควรรักษาไว้และสำรวจด้านที่ยังมีคะแนนต่ำเพื่อปรับเล็กน้อย" },
+      { min: 45, max: 60, rank: "ดีเยี่ยม", recommendation: "ยอดเยี่ยม! รักษาพฤติกรรมเหล่านี้ไว้ และแบ่งปันเคล็ดลับกับคนรอบข้างได้เลย" }
+    ],
+    perQuestion: {
+      q1: "ลองเพิ่มกิจกรรมที่ทำให้หัวใจเต้นแรง อย่างเดินเร็ว 20 นาที",
+      q2: "จัดตารางเตือนทานยาในมือถือเพื่อไม่ให้พลาด",
+      q3: "หายใจลึก ๆ หรือบันทึกความคิดเพื่อระบายความรู้สึก",
+      q4: "สร้างกิจวัตรก่อนนอน เช่น ปิดจออย่างน้อย 30 นาที",
+      q5: "พักสายตาและยืดเส้นทุก ๆ 1 ชั่วโมง ลดความเครียดสะสม",
+      q6: "เตรียมมื้ออาหารง่าย ๆ ล่วงหน้าเพื่อให้ครบ 3 มื้อ",
+      q7: "ตั้งเวลากำหนดการใช้อุปกรณ์ และออกไปเดินเล่นบ้าง",
+      q8: "ลองทักทายเพื่อน/ครอบครัวหรือเข้าร่วมกิจกรรมกลุ่ม",
+      q9: "ตั้งขวดน้ำไว้ใกล้ตัว เพื่อจิบให้ครบอย่างน้อย 6-8 แก้ว",
+      q10: "หาเวลาสั้น ๆ ทำกิจกรรมที่สนุก เช่น ฟังเพลง อ่านหนังสือ",
+      q11: "แบ่งเวลาอ่านวันละ 10 นาทีเพื่อเพิ่มสมาธิและผ่อนคลาย"
+    }
+  };
+
   const form = (data && (data.items?.length || data.options?.length)) ? data : sampleData;
+  const adviceGuide = (data && data.advice) ? data.advice : adviceSample;
 
   // ===== state =====
   const [answers, setAnswers] = useState({});
-  const [note, setNote] = useState("");
+  const [resultAdvice, setResultAdvice] = useState(null);
+  const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef();
 
   useEffect(() => {
     if (typeof document !== "undefined") document.title = form.title || "ประเมินตนเอง";
@@ -133,7 +166,25 @@ export function Assessment({ data }) {
     else history.back();
   }, [navigate]);
 
-  const setAnswer = (id, value) => setAnswers((prev) => ({ ...prev, [id]: value }));
+  const clearToast = useCallback(() => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+  }, []);
+
+  const showToast = useCallback((text, type = "info") => {
+    clearToast();
+    setToast({ text, type });
+    toastTimerRef.current = setTimeout(() => setToast(null), 3500);
+  }, [clearToast]);
+
+  useEffect(() => () => clearToast(), [clearToast]);
+
+  const setAnswer = useCallback((id, value) => {
+    setAnswers((prev) => ({ ...prev, [id]: Number(value) }));
+    setResultAdvice(null);
+  }, []);
 
   const total = useMemo(() => {
     return (form.items || []).reduce((sum, it) => sum + (Number(answers[it.id]) || 0), 0);
@@ -141,10 +192,24 @@ export function Assessment({ data }) {
 
   const completed = (form.items || []).every((it) => answers[it.id] !== undefined);
 
+  const answerDetails = useMemo(() => {
+    return (form.items || []).map((item) => {
+      const opts = (item.options && item.options.length) ? item.options : (form.options || []);
+      const selected = opts.find((o) => Number(o.value) === Number(answers[item.id]));
+      if (!selected) return null;
+      return {
+        id: item.id,
+        text: item.text,
+        label: selected.label,
+        value: Number(selected.value)
+      };
+    }).filter(Boolean);
+  }, [answers, form.items, form.options]);
+
   const submit = async (e) => {
     e?.preventDefault?.();
     if (!completed) {
-      alert("กรุณาตอบให้ครบทุกข้อก่อนบันทึก");
+      showToast("กรุณาตอบให้ครบทุกข้อก่อนบันทึก", "error");
       return;
     }
     const payload = {
@@ -156,13 +221,39 @@ export function Assessment({ data }) {
         score: Number(answers[it.id])
       })),
       total,
-      note: note?.trim() || "",
+      note: "",
       version: "1.1-per-item-options"
     };
     console.log("Assessment payload:", payload);
     // TODO: POST ไป API จริง
-    alert("บันทึกแบบประเมินแล้ว ขอบคุณครับ");
-    back();
+
+    const overallAdvice = (adviceGuide?.overall || []).find((rule) => {
+      const min = Number(rule.min ?? 0);
+      const max = Number(rule.max ?? Infinity);
+      return total >= min && total <= max;
+    }) || null;
+
+    const perQuestionAdvice = (form.items || []).map((item) => {
+      const opts = (item.options && item.options.length) ? item.options : (form.options || []);
+      if (!opts.length) return null;
+      const selected = Number(answers[item.id]);
+      const minValue = Math.min(...opts.map((o) => Number(o.value)));
+      if (selected !== minValue) return null;
+      const suggestion = adviceGuide?.perQuestion?.[item.id] ||
+        `พยายามปรับปรุง "${item.text}" ให้ดีขึ้นทีละน้อย เช่น เพิ่มกิจกรรมที่เกี่ยวข้อง`;
+      return {
+        id: item.id,
+        text: item.text,
+        suggestion
+      };
+    }).filter(Boolean);
+
+    setResultAdvice({
+      submittedAt: new Date().toISOString(),
+      overall: overallAdvice,
+      perQuestions: perQuestionAdvice
+    });
+    showToast("บันทึกแบบประเมินแล้ว ระบบได้สร้างคำแนะนำให้คุณด้านล่าง", "success");
   };
 
   // ===== คอมโพเนนต์แถวคำถาม =====
@@ -204,7 +295,7 @@ export function Assessment({ data }) {
               type: "radio",
               name,
               value: opt.value,
-              checked: current === opt.value,
+              checked: Number(current) === Number(opt.value),
               onChange: () => setAnswer(item.id, opt.value),
               style: { display: "none" },
               "aria-label": `เลือก "${opt.label}"`
@@ -229,7 +320,28 @@ export function Assessment({ data }) {
     }, "‹");
 
   // ===== RETURN: ห่อทั้งหมดใน .page เพื่อให้เลื่อน =====
-  return h("main", { className: "page", role: "main" },
+  const Toast = () => toast ? h("div", {
+    className: `toast-banner ${toast.type}`,
+    role: toast.type === "error" ? "alert" : "status",
+    style: {
+      position: "fixed",
+      bottom: "90px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      background: toast.type === "error" ? "#ff6b6b" : toast.type === "success" ? "#2b8a3e" : "#2b4b88",
+      color: "#fff",
+      padding: "12px 20px",
+      borderRadius: "999px",
+      boxShadow: "0 10px 30px rgba(25,40,75,.3)",
+      fontWeight: 600,
+      zIndex: 999,
+      transition: "opacity .2s ease"
+    }
+  }, toast.text) : null;
+
+  return h(React.Fragment, null,
+    h(Toast),
+    h("main", { className: "page", role: "main" },
     // TopBar + Back
     h("div", { className: "topbar" },
       h(BackButton),
@@ -244,25 +356,12 @@ export function Assessment({ data }) {
       (form.items || []).map((it, idx) => h(QuestionRow, { key: it.id, item: it, index: idx }))
     ),
 
-    // หมายเหตุเพิ่มเติม
-    h("div", { className: "card" },
-      h("div", { className: "section-title" }, "หมายเหตุ (ถ้ามี)"),
-      h("div", { className: "input-row" },
-        h("textarea", {
-          className: "input",
-          rows: 3,
-          placeholder: "เขียนเพิ่มเติมเกี่ยวกับสภาพวันนี้...",
-          value: note,
-          onChange: (e) => setNote(e.target.value)
-        })
-      )
-    ),
-
     // สรุปคะแนน + ปุ่มบันทึก
     h("div", { className: "card", style: { marginBottom: "80px" } },
       h("div", { className: "section-title" }, "สรุปคะแนน"),
       h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "8px" } },
-        h("div", null, `ตอบแล้ว ${Object.keys(answers).length}/${(form.items || []).length} ข้อ`)
+        h("div", null, `ตอบแล้ว ${Object.keys(answers).length}/${(form.items || []).length} ข้อ`),
+        h("div", { style: { fontWeight: 800, color: "#2b4b88" } }, `รวม ${total} คะแนน`)
 
       ),
       h("div", { style: { display: "flex", gap: "8px", marginTop: "12px" } },
@@ -275,6 +374,42 @@ export function Assessment({ data }) {
           style: { background: completed ? "#2b4b88" : "#a0b3dd", color: "#fff" }
         }, "บันทึกแบบประเมิน")
       )
-    )
+    ),
+
+    resultAdvice ? h("div", { className: "card", style: { border: "2px solid #d7dff7", background: "#f6f7ff" } },
+      h("div", { className: "section-title" }, "คำแนะนำจากผลการประเมิน"),
+      resultAdvice.overall ? h("div", {
+        style: {
+          padding: "12px",
+          borderRadius: "12px",
+          background: "#ffffff",
+          border: "1px solid #dee3ff",
+          marginBottom: "12px"
+        }
+      },
+        h("div", { style: { fontWeight: 800, color: "#2b4b88" } }, `${resultAdvice.overall.rank || "ผลรวม"}`),
+        h("p", { style: { marginTop: "4px", lineHeight: 1.5 } }, resultAdvice.overall.recommendation)
+      ) : null,
+      (resultAdvice.perQuestions && resultAdvice.perQuestions.length)
+        ? h("div", null,
+          h("div", { style: { fontWeight: 700, marginBottom: "6px" } }, "ข้อที่ควรให้ความสำคัญ"),
+          resultAdvice.perQuestions.map((item) =>
+            h("div", {
+              key: item.id,
+              style: {
+                borderLeft: "3px solid #fc9d6d",
+                paddingLeft: "10px",
+                margin: "8px 0",
+                lineHeight: 1.5
+              }
+            },
+              h("div", { style: { fontWeight: 700 } }, item.text),
+              h("div", null, item.suggestion)
+            )
+          )
+        )
+        : h("p", { style: { margin: 0 } }, "ไม่มีข้อใดอยู่ในระดับต่ำสุดในรอบนี้ เยี่ยมมาก!")
+    ) : null
+  )
   );
 }
