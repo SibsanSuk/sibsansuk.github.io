@@ -48,9 +48,7 @@ export function Exercise() {
       path: "/exercise/videos",
       note: "ควรทำท่าละ 10 ครั้ง จำนวน 3 เซ็ต",
       children: [
-        { label: "ทั่วไป",          path: "/exercise/videos" },
-        { label: "ฝึกกล้ามเนื้อ",   path: "/exercise/videos" },
-        { label: "ฝึกความยืดหยุ่น", path: "/exercise/videos" },
+        { label: "ฝึกกล้ามเนื้อ", path: "/exercise/videos" }
       ]
     }
   ];

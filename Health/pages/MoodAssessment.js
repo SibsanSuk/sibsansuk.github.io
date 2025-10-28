@@ -33,7 +33,7 @@ export function MoodAssessment({ data }) {
       { id: "m4", text: "วันนี้คุณสามารถควบคุมอารมณ์ได้ดีเพียงใด" },
       {
         id: "m5",
-        text: "ความรู้สึกกดดัน/เครียดในวันนี้",
+        text: "ความรู้สึกเครียดในวันนี้",
         options: [
           { value: 1, label: "สูงมาก" },
           { value: 2, label: "สูง" },
