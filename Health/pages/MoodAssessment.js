@@ -226,17 +226,6 @@ export function MoodAssessment({ data }) {
     );
   };
 
-  const BackButton = () =>
-    h("a", {
-      href: "#",
-      className: "back",
-      role: "button",
-      onClick: back,
-      onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); back(e); } },
-      "aria-label": "ย้อนกลับ",
-      tabIndex: 0
-    }, "‹");
-
   const Toast = () => toast ? h("div", {
     className: `toast-banner ${toast.type}`,
     role: toast.type === "error" ? "alert" : "status",
@@ -274,7 +263,6 @@ export function MoodAssessment({ data }) {
     h(Toast),
     h("main", { className: "page", role: "main" },
       h("div", { className: "topbar" },
-        h(BackButton),
         h("h1", null, form.title || "ประเมินอารมณ์")
       ),
 

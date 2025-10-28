@@ -132,7 +132,6 @@ export function Exercise() {
 
     h("main", { className: "page exercise-page", id: "page", role: "main" },
       h("div", { className: "topbar" },
-        h("a", { href: "#", className: "back", onClick: back, "aria-label": "ย้อนกลับ" }, "‹"),
         h("h1", null, "ออกกำลังกาย")
       ),
 

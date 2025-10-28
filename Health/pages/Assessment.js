@@ -308,17 +308,6 @@ export function Assessment({ data }) {
   };
 
   // ===== ปุ่มย้อนกลับ รองรับคีย์บอร์ด =====
-  const BackButton = () =>
-    h("a", {
-      href: "#",
-      className: "back",
-      role: "button",
-      onClick: back,
-      onKeyDown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); back(e); } },
-      "aria-label": "ย้อนกลับ",
-      tabIndex: 0
-    }, "‹");
-
   // ===== RETURN: ห่อทั้งหมดใน .page เพื่อให้เลื่อน =====
   const Toast = () => toast ? h("div", {
     className: `toast-banner ${toast.type}`,
@@ -342,9 +331,8 @@ export function Assessment({ data }) {
   return h(React.Fragment, null,
     h(Toast),
     h("main", { className: "page", role: "main" },
-    // TopBar + Back
+    // TopBar
     h("div", { className: "topbar" },
-      h(BackButton),
       h("h1", null, form.title || "ประเมินตนเอง")
     ),
 
