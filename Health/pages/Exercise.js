@@ -148,7 +148,7 @@ export function Exercise() {
                   h(Link || "a", {
                     key: idx, to: c.path, href: c.path, className: "subitem", onClick: go(c.path)
                   },
-                    h("span", { className: "bullet" }, idx + 1),
+
                     h("span", { className: "label" }, c.label),
                     h("span", { className: "arrow", "aria-hidden": "true" }, "›")
                   )
