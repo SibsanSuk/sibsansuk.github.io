@@ -1,0 +1,7 @@
+[
+  { "path": "/", "label": "หน้าหลัก", "icon": "ico_home.png" },
+  { "path": "/exercise", "label": "ออกกำลังกาย", "icon": "ico_exercise.png" },
+  { "path": "/mood", "label": "อารมณ์", "icon": "ico_mood.png" },
+  { "path": "/assessment", "label": "ประเมินตนเอง", "icon": "ico_assessment.png" },
+  { "path": "/sos", "label": "ช่วยเหลือ", "icon": "ico_sos.png" }
+]

@@ -1,0 +1,13 @@
+{
+  "categories": [
+    {
+      "id": "exercise-video",
+      "icon": "./images/icons/ico_video.png",
+      "title": "ออกกำลังกายด้วย VDO",
+      "note": "ควรทำท่าละ 10 ครั้ง จำนวน 3 เซ็ต",
+      "children": [
+        { "label": "ฝึกกล้ามเนื้อ", "path": "/exercise/videos" }
+      ]
+    }
+  ]
+}

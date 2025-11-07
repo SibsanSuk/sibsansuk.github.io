@@ -3,86 +3,52 @@ const h = window.React.createElement;
 const { useEffect, useMemo, useState, useCallback, useRef } = window.React;
 const { useNavigate } = window.ReactRouterDOM || {};
 
+const FORM_DATA_URL = "./apidata/mood-assessment-form.json";
+const ADVICE_DATA_URL = "./apidata/mood-advice.json";
+
 export function MoodAssessment({ data }) {
   const navigate = (typeof useNavigate === "function") ? useNavigate() : null;
 
-  const sampleData = {
-    title: "แบบประเมินอารมณ์รายวัน",
-    description: "ประเมินภาพรวมความรู้สึกของคุณในวันนี้เพื่อดูแนวโน้มด้านอารมณ์",
-    options: [
-      { value: 1, label: "น้อยมาก" },
-      { value: 2, label: "น้อย" },
-      { value: 3, label: "ปานกลาง" },
-      { value: 4, label: "มาก" },
-      { value: 5, label: "มากที่สุด" }
-    ],
-    items: [
-      { id: "m1", text: "วันนี้คุณรู้สึกมีพลังและกระฉับกระเฉงเพียงใด" },
-      { id: "m2", text: "ระดับความสุขหรือพึงพอใจในวันนี้" },
-      {
-        id: "m3",
-        text: "ระดับความวิตกกังวลหรือกังวลใจ",
-        options: [
-          { value: 1, label: "สูงมาก" },
-          { value: 2, label: "สูง" },
-          { value: 3, label: "ปานกลาง" },
-          { value: 4, label: "ต่ำ" },
-          { value: 5, label: "ต่ำมาก" }
-        ]
-      },
-      { id: "m4", text: "วันนี้คุณสามารถควบคุมอารมณ์ได้ดีเพียงใด" },
-      {
-        id: "m5",
-        text: "ความรู้สึกเครียดในวันนี้",
-        options: [
-          { value: 1, label: "สูงมาก" },
-          { value: 2, label: "สูง" },
-          { value: 3, label: "ปานกลาง" },
-          { value: 4, label: "ต่ำ" },
-          { value: 5, label: "ต่ำมาก" }
-        ]
-      },
-      { id: "m6", text: "การพักผ่อนหรือการฟื้นฟูอารมณ์ของคุณ" },
-      { id: "m7", text: "คุณรู้สึกผ่อนคลายแค่ไหนหลังจากทำกิจกรรมต่าง ๆ" },
-      { id: "m8", text: "ความมั่นใจในตัวเองวันนี้อยู่ในระดับใด" },
-      {
-        id: "m9",
-        text: "ความรู้สึกมีคนสนับสนุน/พร้อมรับฟังในวันนี้",
-        options: [
-          { value: 1, label: "ไม่ได้รับเลย" },
-          { value: 2, label: "ได้รับน้อย" },
-          { value: 3, label: "ได้รับบ้าง" },
-          { value: 4, label: "ได้รับมาก" },
-          { value: 5, label: "ได้รับมากที่สุด" }
-        ]
-      },
-      { id: "m10", text: "โดยรวมวันนี้คุณพึงพอใจกับตัวเองมากน้อยเพียงใด" }
-    ]
-  };
+  const hasPropData = !!(data && (data.items?.length || data.options?.length));
+  const [remoteForm, setRemoteForm] = useState(null);
+  const [remoteAdvice, setRemoteAdvice] = useState(null);
+  const [loadState, setLoadState] = useState({ status: "idle", error: null });
 
-  const adviceSample = {
-    overall: [
-      { min: 0, max: 15, rank: "ต้องดูแลอารมณ์", recommendation: "คะแนนค่อนข้างต่ำ แนะนำหากิจกรรมผ่อนคลายและพูดคุยกับคนที่คุณไว้ใจ" },
-      { min: 16, max: 30, rank: "ควรปรับสมดุล", recommendation: "ยังมีอารมณ์บางด้านที่ต้องดูแล ลองฝึกหายใจลึก ๆ หรือทำบันทึกอารมณ์" },
-      { min: 31, max: 45, rank: "อารมณ์ค่อนข้างดี", recommendation: "รักษากิจวัตรที่ช่วยให้อารมณ์ดีไว้ และสำรวจด้านที่คะแนนต่ำเพื่อปรับเพิ่ม" },
-      { min: 46, max: 60, rank: "สดใสยอดเยี่ยม", recommendation: "ยอดเยี่ยม! แบ่งปันพลังบวกกับคนรอบข้าง และรักษานิสัยที่ดีนี้" }
-    ],
-    perQuestion: {
-      m1: "ลองเริ่มวันด้วยการยืดเหยียดหรือออกกำลังสั้น ๆ เพื่อเพิ่มพลัง",
-      m2: "จดบันทึกเรื่องดี ๆ 3 อย่างในวันนี้เพื่อเติมความสุข",
-      m3: "ฝึกหายใจ 4-7-8 หรือฝึกสมาธิสั้น ๆ เมื่อตื่นเต้นกังวล",
-      m4: "สร้างพื้นที่สงบ เช่น ฟังเพลงเบา ๆ หรือพักสายตาเพื่อตั้งหลัก",
-      m5: "หยุดพักระหว่างงานเป็นช่วงสั้น ๆ เพื่อคลายความกดดัน",
-      m6: "หาเวลาพักผ่อนด้วยกิจกรรมที่ผ่อนคลาย เช่น อาบน้ำอุ่น หรืออ่านหนังสือ",
-      m7: "ผสานกิจกรรมที่ช่วยให้ผ่อนคลาย เช่น เดินเล่นหรือฟังเพลง",
-      m8: "ทบทวนความสำเร็จเล็ก ๆ ของตนเองเพื่อเสริมความมั่นใจ",
-      m9: "ทักทายหรือพูดคุยกับคนใกล้ชิดเพื่อรับพลังบวก",
-      m10: "ตั้งใจทำสิ่งเล็ก ๆ ที่ทำให้ภูมิใจ เพื่อเพิ่มความพอใจในตัวเอง"
+  useEffect(() => {
+    if (hasPropData) return;
+    if (typeof fetch !== "function") {
+      setLoadState({ status: "error", error: "บราวเซอร์นี้ไม่รองรับการโหลดข้อมูล" });
+      return;
     }
-  };
+    let cancelled = false;
+    setLoadState({ status: "loading", error: null });
+    Promise.all([
+      fetch(FORM_DATA_URL).then((res) => {
+        if (!res.ok) throw new Error("โหลดแบบประเมินไม่สำเร็จ");
+        return res.json();
+      }),
+      fetch(ADVICE_DATA_URL).then((res) => {
+        if (!res.ok) throw new Error("โหลดคำแนะนำไม่สำเร็จ");
+        return res.json();
+      }).catch(() => null)
+    ])
+      .then(([formJson, adviceJson]) => {
+        if (cancelled) return;
+        setRemoteForm(formJson || null);
+        setRemoteAdvice(adviceJson || null);
+        setLoadState({ status: "success", error: null });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setRemoteForm(null);
+        setRemoteAdvice(null);
+        setLoadState({ status: "error", error: err?.message || "โหลดข้อมูลไม่สำเร็จ" });
+      });
+    return () => { cancelled = true; };
+  }, [hasPropData]);
 
-  const form = (data && (data.items?.length || data.options?.length)) ? data : sampleData;
-  const adviceGuide = (data && data.advice) ? data.advice : adviceSample;
+  const form = hasPropData ? data : remoteForm;
+  const adviceGuide = (data && data.advice) ? data.advice : remoteAdvice;
 
   const [answers, setAnswers] = useState({});
   const [note, setNote] = useState("");
@@ -91,10 +57,16 @@ export function MoodAssessment({ data }) {
   const toastTimerRef = useRef();
 
   useEffect(() => {
+    if (!form) return;
     if (typeof document !== "undefined") {
       document.title = form.title || "ประเมินอารมณ์";
     }
-  }, [form.title]);
+  }, [form]);
+
+  useEffect(() => {
+    setAnswers({});
+    setResultAdvice(null);
+  }, [form]);
 
   const back = useCallback((e) => {
     e?.preventDefault?.();
@@ -123,10 +95,10 @@ export function MoodAssessment({ data }) {
   }, []);
 
   const total = useMemo(() => {
-    return (form.items || []).reduce((sum, it) => sum + (Number(answers[it.id]) || 0), 0);
-  }, [answers, form.items]);
+    return (form?.items || []).reduce((sum, it) => sum + (Number(answers[it.id]) || 0), 0);
+  }, [answers, form]);
 
-  const completed = (form.items || []).every((it) => answers[it.id] !== undefined);
+  const completed = (form?.items || []).every((it) => answers[it.id] !== undefined);
 
   const submit = async (e) => {
     e?.preventDefault?.();
@@ -134,10 +106,14 @@ export function MoodAssessment({ data }) {
       showToast("กรุณาตอบให้ครบทุกข้อก่อนบันทึก", "error");
       return;
     }
+    if (!form) {
+      showToast("ยังไม่มีข้อมูลแบบประเมิน", "error");
+      return;
+    }
     const payload = {
       type: "mood-assessment",
       at: new Date().toISOString(),
-      items: form.items.map((it) => ({
+      items: (form.items || []).map((it) => ({
         id: it.id,
         text: it.text,
         score: Number(answers[it.id])
@@ -246,6 +222,7 @@ export function MoodAssessment({ data }) {
   }, toast.text) : null;
 
   const answerDetails = useMemo(() => {
+    if (!form) return [];
     return (form.items || []).map((item) => {
       const opts = (item.options && item.options.length) ? item.options : (form.options || []);
       const selected = opts.find((o) => Number(o.value) === Number(answers[item.id]));
@@ -257,20 +234,33 @@ export function MoodAssessment({ data }) {
         value: Number(selected.value)
       };
     }).filter(Boolean);
-  }, [answers, form.items, form.options]);
+  }, [answers, form]);
+
+  const pageTitle = form?.title || "ประเมินอารมณ์";
 
   return h(React.Fragment, null,
     h(Toast),
     h("main", { className: "page", role: "main" },
       h("div", { className: "topbar" },
-        h("h1", null, form.title || "ประเมินอารมณ์")
+        h("h1", null, pageTitle)
       ),
 
-      form.description ? h("div", { className: "bubble" }, form.description) : null,
+      form?.description ? h("div", { className: "bubble" }, form.description) : null,
+      (!data && loadState.status === "loading")
+        ? h("div", { className: "bubble" }, "กำลังโหลดข้อมูลแบบประเมิน…")
+        : null,
+      loadState.error
+        ? h("div", {
+            className: "bubble",
+            style: { background: "#ffecec", color: "#c13515" }
+          }, loadState.error)
+        : null,
 
-      h("div", { className: "page-assessment", role: "list", "aria-label": "แบบประเมินอารมณ์" },
-        (form.items || []).map((it, idx) => h(QuestionRow, { key: it.id, item: it, index: idx }))
-      ),
+      form
+        ? h("div", { className: "page-assessment", role: "list", "aria-label": "แบบประเมินอารมณ์" },
+            (form.items || []).map((it, idx) => h(QuestionRow, { key: it.id, item: it, index: idx }))
+          )
+        : h("div", { className: "card empty" }, "ยังไม่มีข้อมูลแบบประเมิน"),
 
       h("div", { className: "card" },
         h("div", { className: "section-title" }, "บันทึกเพิ่มเติม"),
@@ -285,7 +275,7 @@ export function MoodAssessment({ data }) {
         )
       ),
 
-      h("div", { className: "card", style: { marginBottom: "80px" } },
+      form ? h("div", { className: "card", style: { marginBottom: "80px" } },
         h("div", { className: "section-title" }, "สรุปคะแนน"),
         h("div", {
           style: {
@@ -308,7 +298,7 @@ export function MoodAssessment({ data }) {
             style: { background: completed ? "#764ba2" : "#c9b5e8", color: "#fff" }
           }, "บันทึกผล")
         )
-      ),
+      ) : null,
 
       resultAdvice ? h("div", { className: "card", style: { border: "2px solid #e5dafe", background: "#faf6ff" } },
         h("div", { className: "section-title" }, "คำแนะนำจากผลการประเมินอารมณ์"),

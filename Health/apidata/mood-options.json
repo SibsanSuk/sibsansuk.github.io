@@ -1,0 +1,7 @@
+[
+  { "key": 1, "emoji": "😢", "label": "แย่มาก" },
+  { "key": 2, "emoji": "☹️", "label": "ไม่ค่อยดี" },
+  { "key": 3, "emoji": "😐", "label": "ปกติ" },
+  { "key": 4, "emoji": "🙂", "label": "ดี" },
+  { "key": 5, "emoji": "😄", "label": "ดีมาก" }
+]

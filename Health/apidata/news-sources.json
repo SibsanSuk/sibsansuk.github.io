@@ -1,0 +1,10 @@
+[
+  {
+    "id": "thaihealth",
+    "title": "ข่าวสุขภาพ ThaiHealth",
+    "description": "เนื้อหาจากกองทุนสนับสนุนการสร้างเสริมสุขภาพ",
+    "url": "https://www.thaihealth.or.th/wp-json/export-rss/category/208/?post_type=post&items=10",
+    "limit": 4,
+    "format": "rss"
+  }
+]

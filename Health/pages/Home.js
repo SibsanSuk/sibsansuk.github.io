@@ -2,6 +2,8 @@
 const h = window.React.createElement;
 const { Link } = window.ReactRouterDOM;
 
+const HOME_CHAT_URL = "./apidata/home-chat.json";
+
 // import { Activities } from "../components/Activities.js";
 import { HomePins } from "../components/HomePins.js";
 import { HomeChat } from "../components/HomeChat.js";
@@ -21,19 +23,49 @@ export function Home() {
     .toUpperCase();
 
   // mock data
+  const defaultTips = [
+    { id: "m1", author: "doctor", text: "วันนี้ดื่มน้ำไปแล้ว 4 แก้ว ดื่มให้ครบ 8 แก้วนะครับ 💧" },
+    { id: "m2", author: "doctor", text: "เช้านี้เรายืนแกว่งแขนกันสัก 30 รอบนะครับ 🏃‍♂️" },
+    { id: "m3", author: "doctor", text: "วันนี้อากาศสดใส" },
+  ];
   const data = {
     pinnedAppointments: [
       { id: "ap1", title: "พบแพทย์อายุรกรรม", time: "วันนี้ 14:30",  to: "/notify/appointment" },
       { id: "ap2", title: "ตรวจเลือด",         time: "พรุ่งนี้ 07:00", to: "/notify/appointment" },
       { id: "ap3", title: "กินโต๊ะแชร์ ม.ปลาย", time: "พรุ่งนี้ 11:30", to: "/notify/appointment" },
       { id: "ap4", title: "กายภาพ",             time: "พรุ่งนี้ 09:00", to: "/notify/appointment" },
-    ],
-    tips: [
-      { id: "m1", author: "doctor", text: "วันนี้ดื่มน้ำไปแล้ว 4 แก้ว ดื่มให้ครบ 8 แก้วนะครับ 💧" },
-      { id: "m2", author: "doctor", text: "เช้านี้เรายืนแกว่งแขนกันสัก 30 รอบนะครับ 🏃‍♂️" },
-      { id: "m3", author: "doctor", text: "วันนี้อากาศสดใส" },
-    ],
+    ]
   };
+  const [tips, setTips] = React.useState(defaultTips);
+  const [chatState, setChatState] = React.useState({ status: "idle", error: null });
+
+  React.useEffect(() => {
+    if (typeof fetch !== "function") {
+      setChatState({ status: "error", error: "บราวเซอร์ไม่รองรับการโหลดข้อมูล" });
+      return;
+    }
+    let cancelled = false;
+    setChatState({ status: "loading", error: null });
+    fetch(HOME_CHAT_URL)
+      .then((res) => {
+        if (!res.ok) throw new Error("โหลดบทสนทนาไม่สำเร็จ");
+        return res.json();
+      })
+      .then((json) => {
+        if (cancelled) return;
+        if (Array.isArray(json) && json.length) {
+          setTips(json);
+          setChatState({ status: "success", error: null });
+        } else {
+          setChatState({ status: "error", error: "ไม่มีข้อมูลบทสนทนา" });
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setChatState({ status: "error", error: err?.message || "โหลดข้อมูลไม่ได้" });
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   // ตรวจ orientation แบบ reactive
   const [isPortrait, setIsPortrait] = React.useState(() =>
@@ -89,10 +121,16 @@ export function Home() {
       renderNews(),
 
       // MAIN AREA
-      isPortrait
-        ? (
+      (() => {
+        const chatBlock = h(React.Fragment, null,
+          chatState.status === "loading"
+            ? h("div", { className: "bubble" }, "กำลังโหลดบทสนทนา…")
+            : null,
+          chatState.status === "error" && chatState.error
+            ? h("div", { className: "bubble", style: { background: "#ffecec", color: "#c13515" } }, chatState.error)
+            : null,
           h(HomeChat, {
-            messages: data.tips,
+            messages: tips,
             meAvatarText: initials,
             doctorAvatarSrc: "./images/doctor.png",
             animate: true,
@@ -100,26 +138,13 @@ export function Home() {
             stepMs: 650,
             ariaLabel: "คำแนะนำจากผู้เชี่ยวชาญ"
           })
-        )
-        : (
-          // แนวนอน: แบ่ง 2 ฝั่ง (ซ้ายแชต / ขวากิจกรรม)
-          h("div", { className: "home-main" },
-            h("div", { className: "home-left" },
-              h(HomeChat, {
-                messages: data.tips,
-                meAvatarText: initials,
-                doctorAvatarSrc: "./images/doctor.png",
-                animate: true,
-                startDelay: 200,
-                stepMs: 650,
-                ariaLabel: "คำแนะนำจากผู้เชี่ยวชาญ"
-              })
-            )
-            
-              // h("div", { className: "activities" }, h(Activities, null))
-            
-          )
-        )
+        );
+        return isPortrait
+          ? chatBlock
+          : h("div", { className: "home-main" },
+              h("div", { className: "home-left" }, chatBlock)
+            );
+      })()
     ),
 
     // แนวตั้งเท่านั้น: กรอบ Activities เป็น dock (ของหน้า Home เอง)

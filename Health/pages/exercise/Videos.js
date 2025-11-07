@@ -3,38 +3,66 @@ const h = window.React.createElement;
 const { useEffect, useState, useMemo, useCallback } = window.React;
 const { useNavigate } = (window.ReactRouterDOM || {});
 
+const EXERCISE_VIDEOS_URL = "./apidata/exercise-videos.json";
+
 // ปรับค่าความสูงสูงสุดของวิดีโอจากตรงนี้ได้
 const VIDEO_MAX_PX = 420; // รองรับวิดีโอแนวตั้ง (สูงขึ้น)
 
 export function ExerciseVideos({ data }) {
   const navigate = (typeof useNavigate === "function") ? useNavigate() : null;
 
-  const sampleData = {
-    title: "เรียนออกกำลังกายด้วย VDO",
-    description: "ท่าออกกำลังกายทั่วไป",
-    items: [
-      { id: "STCU1", title: "ท่า Squat", src: "https://sibsansuk.github.io/Health/videos/STCU1.mp4", emoji: "🎬", duration: "00:45", level: "Beginner" },
-      { id: "STCU2", title: "ท่า Deadlift", src: "https://sibsansuk.github.io/Health/videos/STCU2.mp4", emoji: "🎬", duration: "00:45" },
-      { id: "STCU3", title: "ท่า Lunge", src: "/videos/STCU3.mp4", emoji: "🎬" },
-      { id: "STCU4", title: "ท่า Bent over roll", src: "/videos/STCU4.mp4", emoji: "🎬" },
-      { id: "STCU5", title: "ท่า Shoulder press", src: "/videos/STCU5.mp4", emoji: "🎬" },
-      { id: "STCU6", title: "ท่า Chess press", src: "/videos/STCU6.mp4", emoji: "🎬" },
-    ]
-  };
+  const hasPropData = !!(data && Array.isArray(data.items) && data.items.length);
+  const [remotePlaylist, setRemotePlaylist] = useState(null);
+  const [loadState, setLoadState] = useState({ status: "idle", error: null });
 
-  const playlist = (data && Array.isArray(data.items) && data.items.length) ? data : sampleData;
+  useEffect(() => {
+    if (hasPropData) return;
+    if (typeof fetch !== "function") {
+      setLoadState({ status: "error", error: "อุปกรณ์ไม่รองรับการโหลดข้อมูล" });
+      return;
+    }
+    let cancelled = false;
+    setLoadState({ status: "loading", error: null });
+    fetch(EXERCISE_VIDEOS_URL)
+      .then((res) => {
+        if (!res.ok) throw new Error("โหลดรายการวิดีโอไม่สำเร็จ");
+        return res.json();
+      })
+      .then((json) => {
+        if (cancelled) return;
+        if (json && Array.isArray(json.items) && json.items.length) {
+          setRemotePlaylist(json);
+          setLoadState({ status: "success", error: null });
+        } else {
+          setRemotePlaylist(null);
+          setLoadState({ status: "error", error: "ไม่พบวิดีโอในไฟล์ข้อมูล" });
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setRemotePlaylist(null);
+        setLoadState({ status: "error", error: err?.message || "โหลดวิดีโอไม่ได้" });
+      });
+    return () => { cancelled = true; };
+  }, [hasPropData]);
 
-  const [currentId, setCurrentId] = useState(playlist.items[0]?.id);
-  const current = useMemo(
-    () => playlist.items.find(it => it.id === currentId) || playlist.items[0],
-    [playlist, currentId]
-  );
+  const playlist = hasPropData ? data : remotePlaylist;
+
+  const [currentId, setCurrentId] = useState(null);
+  useEffect(() => {
+    setCurrentId(playlist?.items?.[0]?.id || null);
+  }, [playlist]);
+
+  const current = useMemo(() => {
+    if (!playlist) return null;
+    return playlist.items.find(it => it.id === currentId) || playlist.items[0];
+  }, [playlist, currentId]);
 
   useEffect(() => {
     if (typeof document !== "undefined") {
-      document.title = playlist.title || "VDO ออกกำลังกาย";
+      document.title = (playlist?.title) || "VDO ออกกำลังกาย";
     }
-  }, [playlist.title]);
+  }, [playlist?.title]);
 
   const back = useCallback((e) => {
     e?.preventDefault?.();
@@ -115,17 +143,25 @@ export function ExerciseVideos({ data }) {
   return h("main", { className: "page exercise-videos-page", role: "main" },
     h("div", { className: "topbar" },
       h("a", { href: "#", className: "back", onClick: back, "aria-label": "ย้อนกลับ" }, "‹"),
-      h("h1", null, playlist.title || "VDO ออกกำลังกาย")
+      h("h1", null, (playlist?.title) || "VDO ออกกำลังกาย")
     ),
 
-    playlist.description ? h("div", { className: "bubble" }, playlist.description) : null,
+    playlist?.description ? h("div", { className: "bubble" }, playlist.description) : null,
+    (!data && loadState.status === "loading")
+      ? h("div", { className: "bubble" }, "กำลังโหลดรายการวิดีโอ…")
+      : null,
+    loadState.error
+      ? h("div", { className: "bubble", style: { background: "#ffecec", color: "#c13515" } }, loadState.error)
+      : null,
 
     h("div", { className: "video-layout" },
       h("div", { className: "video-player-pane" }, h(VideoPlayer)),
       h("div", { className: "video-list-pane" },
-        h("div", { className: "video-list-scroll", role: "list", "aria-label": "รายการวิดีโอออกกำลังกาย" },
-          playlist.items.map((it) => h(ListItem, { key: it.id, it }))
-        )
+        playlist
+          ? h("div", { className: "video-list-scroll", role: "list", "aria-label": "รายการวิดีโอออกกำลังกาย" },
+              playlist.items.map((it) => h(ListItem, { key: it.id, it }))
+            )
+          : h("div", { className: "video-list-scroll", style: { padding: "12px" } }, "ยังไม่มีรายการวิดีโอ")
       )
     )
   );
