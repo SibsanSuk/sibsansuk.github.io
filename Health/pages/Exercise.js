@@ -3,6 +3,8 @@ const h = window.React.createElement;
 const { useEffect, useCallback, useState } = window.React;
 const { useNavigate, Link } = window.ReactRouterDOM || {};
 
+const EXERCISE_MENU_URL = "./apidata/exercise-menu.json";
+
 export function Exercise() {
   const navigate = (typeof useNavigate === "function") ? useNavigate() : null;
   const [feedback, setFeedback] = useState("");
@@ -41,7 +43,7 @@ export function Exercise() {
   const iconBase = "./images/icons";
 
   // ใช้ "icon" (รูปภาพ) แทน "emoji"
-  const items = [
+  const defaultItems = [
     {
       icon: `${iconBase}/ico_video.png`,
       title: "ออกกำลังกายด้วย VDO",
@@ -52,6 +54,37 @@ export function Exercise() {
       ]
     }
   ];
+  const [items, setItems] = useState(defaultItems);
+  const [loadState, setLoadState] = useState({ status: "idle", error: null });
+
+  useEffect(() => {
+    if (typeof fetch !== "function") {
+      setLoadState({ status: "error", error: "อุปกรณ์ไม่รองรับการโหลดข้อมูล" });
+      return;
+    }
+    let cancelled = false;
+    setLoadState({ status: "loading", error: null });
+    fetch(EXERCISE_MENU_URL)
+      .then((res) => {
+        if (!res.ok) throw new Error("โหลดเมนูออกกำลังกายไม่สำเร็จ");
+        return res.json();
+      })
+      .then((json) => {
+        if (cancelled) return;
+        const list = Array.isArray(json?.categories) ? json.categories : [];
+        if (list.length) {
+          setItems(list);
+          setLoadState({ status: "success", error: null });
+        } else {
+          setLoadState({ status: "error", error: "ยังไม่มีรายการเมนูในไฟล์ข้อมูล" });
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setLoadState({ status: "error", error: err?.message || "โหลดข้อมูลไม่ได้" });
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   // สไตล์ย่อย: เพิ่ม .notify-icon แทน .notify-emoji
   const LocalStyle = () => h("style", { dangerouslySetInnerHTML: { __html: `
@@ -136,6 +169,15 @@ export function Exercise() {
       ),
 
       h("div", { className: "notify-list", role: "list", "aria-label": "เลือกประเภทการออกกำลังกาย" },
+        loadState.status === "loading"
+          ? h("div", { className: "bubble" }, "กำลังโหลดเมนูออกกำลังกาย…")
+          : null,
+        loadState.status === "error" && loadState.error
+          ? h("div", {
+              className: "bubble",
+              style: { background: "#ffecec", color: "#c13515" }
+            }, loadState.error)
+          : null,
         items.map((it, i) =>
           h("div", { key: i, className: "notify-item", role: "listitem" },
             // ใช้รูปแทน
