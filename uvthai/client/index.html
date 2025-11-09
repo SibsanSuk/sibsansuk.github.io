@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>UV Thai : ภาควิชาฟิสิกส์ คณะวิทยาศาสตร์ มหาวิทยาลัยศิลปากร</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" />
+  <style>
+    /* Light Theme */
+    html, body, #root { height: 100%; margin: 0; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", sans-serif; background: #f8fafc; color: #0f172a; }
+    .app { display: grid; grid-template-rows: 56px 1fr; height: 100%; }
+@media (min-width: 1024px){
+  .app { grid-template-rows: auto 1fr; }
+}
+    header { display: flex; align-items: center; gap: 10px; padding: 0 16px; background: #ffffff; border-bottom: 1px solid #e5e7eb; }
+    .logo { width: 28px; height: 28px; background: conic-gradient(from 120deg,#22d3ee,#0ea5e9,#8b5cf6); border-radius: 8px; }
+    .content.landscape { display: grid; grid-template-columns: 1fr 420px; }
+    .content.portrait { display: grid; grid-template-rows: 1fr auto; }
+    #map { width: 100%; height: 100%; position: relative; }
+    .panel { background: #ffffff; padding: 12px; border-left: 1px solid #e5e7eb; overflow:auto; }
+    .panel-top{display:flex;align-items:center;justify-content:space-between;padding:4px 2px 8px 2px;border-bottom:1px solid #eef2f7;margin-bottom:8px}
+    .panel-title{font-size:16px;font-weight:700}
+    .icon-btn{width:34px;height:34px;border-radius:999px;border:1px solid #e5e7eb;background:#ffffff;color:#0f172a;box-shadow:0 1px 2px rgba(0,0,0,.04);cursor:pointer;display:grid;place-items:center}
+    .icon-btn:active{transform:translateY(1px)}
+    .muted { color: #475569; }
+    .btn { margin: 4px 6px 0 0; padding: 8px 10px; border-radius: 10px; border: 1px solid #e5e7eb; background: #ffffff; color: #0f172a; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+    .btn:active { transform: translateY(1px); }
+    .btn-list button{margin-bottom:6px; text-align:left}
+    .key { display:grid; grid-template-columns:120px 1fr; gap:6px; padding:8px 0; border-top:1px dashed #e2e8f0; }
+    .key:first-of-type{border-top:none}
+
+    /* Legend & UVI chips (light theme) */
+    .legend{background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;padding:8px 10px;color:#0f172a;box-shadow:0 2px 10px rgba(15,23,42,.08)}
+    .legend h4{margin:0 0 6px 0;font-size:12px;color:#0f172a}
+    .legend .row{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:12px;color:#334155}
+    .swatch{width:14px;height:14px;border-radius:4px;border:1px solid #cbd5e1}
+    .icon-uvi{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:999px;font-size:12px;font-weight:800;color:#0f172a;border:1px solid rgba(0,0,0,.12);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+    .badge-uvi{display:inline-grid;place-items:center;min-width:28px;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:800;color:#0f172a;border:1px solid rgba(0,0,0,.12)}
+    .chart-wrap{margin-top:10px; padding:10px; border:1px solid #e5e7eb; border-radius:12px; background:#fff}
+    .content{min-height:0}
+    .content > #map, .content > .panel{min-height:0}
+    /* แสดงอย่างละครึ่งเมื่อแนวตั้ง และให้พาเนล scroll ได้ */
+    .content.portrait{grid-template-rows:1fr 1fr}
+    @media (max-height:700px){.content.portrait{grid-template-rows:55% 45%}}
+
+    /* Map top-center metric toggle */
+    .map-toggle{
+      position:relative;  top:8px; 
+      background:#ffffff; border:1px solid #e5e7eb; border-radius:999px;
+      box-shadow:0 6px 20px rgba(15,23,42,.15);
+      display:flex; padding:4px; gap:4px; z-index:1000;
+    }
+    .map-toggle button{
+      appearance:none; border:1px solid transparent; background:transparent;
+      padding:6px 10px; border-radius:999px; cursor:pointer; font-size:13px; color:#0f172a;
+    }
+    .map-toggle button.active{
+      background:#0ea5e9; color:#ffffff; border-color:#0ea5e9;
+      box-shadow:0 1px 2px rgba(14,165,233,.3) inset;
+    }
+
+    /* ===== Station list (แทนปุ่ม balloon) ===== */
+    .station-list {
+      list-style: none;
+      margin: 4px 0 0 0;
+      padding: 0;
+      font-size: 13px; /* ลดขนาดฟอนต์ลง */
+    }
+    .station-list li{display:flex;align-items:center;gap:8px;padding:8px 10px;margin-bottom:6px;border:1px solid #e5e7eb;border-radius:10px;background:#ffffff;box-shadow:0 1px 2px rgba(0,0,0,.04);cursor:pointer}
+    .station-list li:active{transform:translateY(1px)}
+    .station-list .dot{width:10px;height:10px;border-radius:999px;border:1px solid rgba(0,0,0,.1)}
+    .station-list .name{flex:1}
+    .station-list .value{font-weight:700;color:#0f172a}
+
+    
+    /* Header title styles */
+    .title-box{display:flex;flex-direction:column;line-height:1.1}
+    .title-top{font-weight:800;color:#fb923c;font-family:"Sarabun","Noto Sans Thai","Noto Sans",system-ui,Segoe UI,Arial,sans-serif;font-size:18px}
+    .title-sub{font-weight:600;color:#64748b;font-family:"Sarabun","Noto Sans Thai","Noto Sans",system-ui,Segoe UI,Arial,sans-serif;font-size:12px;opacity:.95}
+    header img.logo-img{width:48px;height:48px;border-radius:8px}
+    @media (min-width: 640px){
+      .title-top{font-size:20px}
+      .title-sub{font-size:13px}
+      header img.logo-img{width:56px;height:56px}
+    }
+    @media (min-width: 1024px){
+      header{padding:12px 20px}
+      .title-top{font-size:32px}
+      .title-sub{font-size:14px}
+      header img.logo-img{width:72px;height:72px}
+    }
+
+    /* ===== Loading spinner สำหรับโหลดรายชื่อสถานี ===== */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading { display:grid; place-items:center; padding:24px; color:#64748b; }
+    .loading .ring {
+      width:28px; height:28px; border:3px solid #e5e7eb;
+      border-top-color:#0ea5e9; border-radius:50%;
+      animation: spin 1s linear infinite; margin-bottom:8px;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <!-- libs -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <script>
+    const { useState, useEffect, useMemo, useRef } = React;
+
+  // API URLs
+  const API_URL = '';
+  // Local mock JSON (place stations.mock.json next to uvthai.html). If you open the file directly
+  // in some browsers, fetch of local files may be blocked — serve via HTTP when testing.
+  const LOCAL_JSON = './stations.mock.json';
+  const SERIES_API_URL = null; // ถ้ามี API จริงให้แทนที่ {id}
+
+    // ===== Helpers / Units =====
+    const METRIC_UVI = 'uvi';
+    const METRIC_ERY = 'ery'; // erythemal irradiance (mW/m²), 1 UVI ≈ 25 mW/m²
+
+    function useLandscape(){
+      const [land, setLand] = useState(window.innerWidth > window.innerHeight);
+      useEffect(function(){
+        const onResize = function(){ setLand(window.innerWidth > window.innerHeight); };
+        window.addEventListener('resize', onResize);
+        return function(){ window.removeEventListener('resize', onResize); };
+      },[]);
+      return land;
+    }
+
+    function getUviInfo(uvi){
+      const n = Number(uvi);
+      if (!Number.isFinite(n)) return { label:'-', color:'#94a3b8', range:'-', level:'ไม่ทราบ' };
+      if (n <= 2)  return { label:String(n), color:'#22c55e', range:'0–2',  level:'ต่ำ' };
+      if (n <= 5)  return { label:String(n), color:'#facc15', range:'3–5',  level:'ปานกลาง' };
+      if (n <= 7)  return { label:String(n), color:'#fb923c', range:'6–7',  level:'สูง' };
+      if (n <= 10) return { label:String(n), color:'#ef4444', range:'8–10', level:'สูงมาก' };
+      return { label:String(n), color:'#a855f7', range:'11+', level:'รุนแรงมาก' };
+    }
+
+    function convertFromUvi(uvi, metric){
+      const n = Number(uvi);
+      if (!Number.isFinite(n)) return null;
+      if (metric === METRIC_UVI) return n;
+      if (metric === METRIC_ERY) return Math.round(n * 25); // mW/m²
+      return n;
+    }
+
+    function formatValue(val, metric){
+      if (val == null) return '-';
+      if (metric === METRIC_UVI) return String(val);
+      if (metric === METRIC_ERY) return String(val); // จะใส่หน่วยที่ตำแหน่งแสดงผล
+      return String(val);
+    }
+
+    function unitLabel(metric){
+      return metric === METRIC_UVI ? 'UV Index' : 'mW/m² (Erythemal)';
+    }
+    function unitShort(metric){
+      return metric === METRIC_UVI ? 'UV Index' : 'mW/m²';
+    }
+    function measurementTitle(metric){
+      return metric === METRIC_UVI ? 'UV Index' : 'Erythemal UV irradiance';
+    }
+
+    function legendHTML(metric){
+      if (metric === METRIC_UVI){
+        return '<h4>UV Index</h4>'+
+          '<div class="row"><span class="swatch" style="background:#22c55e"></span> 0–2 ต่ำ</div>'+
+          '<div class="row"><span class="swatch" style="background:#facc15"></span> 3–5 ปานกลาง</div>'+
+          '<div class="row"><span class="swatch" style="background:#fb923c"></span> 6–7 สูง</div>'+
+          '<div class="row"><span class="swatch" style="background:#ef4444"></span> 8–10 สูงมาก</div>'+
+          '<div class="row"><span class="swatch" style="background:#a855f7"></span> 11+ รุนแรงมาก</div>';
+      } else {
+        // คูณช่วง UVI ด้วย 25 ตามนิยาม
+        return '<h4>Erythemal UV</h4>'+
+          '<div class="row"><span class="swatch" style="background:#22c55e"></span> 0–50 ต่ำ</div>'+
+          '<div class="row"><span class="swatch" style="background:#facc15"></span> 75–125 ปานกลาง</div>'+
+          '<div class="row"><span class="swatch" style="background:#fb923c"></span> 150–175 สูง</div>'+
+          '<div class="row"><span class="swatch" style="background:#ef4444"></span> 200–250 สูงมาก</div>'+
+          '<div class="row"><span class="swatch" style="background:#a855f7"></span> 275+ รุนแรงมาก</div>';
+      }
+    }
+
+    // ===== Fixed half-hour labels 04:00–20:00 =====
+    function buildDayLabels(){
+      const labels = [];
+      let h = 4, m = 0;
+      while (h < 20 || (h === 20 && m === 0)){
+        const hh = String(h).padStart(2,'0');
+        const mm = String(m).padStart(2,'0');
+        labels.push(hh+':'+mm);
+        m += 30;
+        if (m === 60){ h += 1; m = 0; }
+      }
+      return labels; // 33 จุด
+    }
+    const DAY_LABELS = buildDayLabels();
+
+    // Mock series (time, uvi) ครอบคลุม 04:00–20:00 ทุก 30 นาที
+    function buildMockSeriesFor(id){
+      const seed = (parseInt(String(id), 10) || 1) * 7; // แตกต่างกันตามสถานี
+      const peakHour = 13 + ((seed % 3) - 1) * 0.5; // 12.5–13.5
+      const amplitude = 10 + (seed % 4); // พีคประมาณ 10–13 UVI
+      const arr = [];
+      for (const t of DAY_LABELS){
+        const h = parseInt(t.slice(0,2),10) + parseInt(t.slice(3,5),10)/60;
+        // รูปคลื่น: sunrise ~6h, peak ใกล้เที่ยง-บ่ายต้น, sunset ~18h
+        const daylightFactor = Math.max(0, Math.min(1, (h-6)/ (peakHour-6))) * Math.max(0, Math.min(1, (18-h)/ (18-peakHour)));
+        let uvi = Math.max(0, Math.sin(Math.PI * Math.max(0, Math.min(1, (h-6)/12))) * amplitude * (0.8 + (seed%5)*0.05));
+        // เพิ่ม variation เล็กน้อยตาม seed และเวลา
+        uvi = uvi * (0.9 + ((seed % 7) * 0.01)) * (0.95 + (Math.sin(h*1.3 + seed)*0.05));
+        uvi = Math.round(uvi * 10) / 10;
+        if (h < 6 || h > 18) uvi = 0; // กลางคืน/เช้ามืดเป็นศูนย์
+        arr.push({ time: t, uvi });
+      }
+      return arr;
+    }
+
+    async function loadSeries(stationId){
+      if (SERIES_API_URL){
+        const url = SERIES_API_URL.replace('{id}', encodeURIComponent(stationId));
+        const r = await fetch(url);
+        if (!r.ok) throw new Error('series api failed');
+        const json = await r.json();
+        const raw = Array.isArray(json)? json : (json.data || []);
+        // ทำให้สอดคล้องกับ DAY_LABELS: หาก API ให้มาบางช่วง ก็ map ลงไป
+        const map = new Map(raw.map(p => [String(p.time).slice(0,5), Number(p.uvi)]));
+        return DAY_LABELS.map(t => ({ time:t, uvi: (map.has(t)? Number(map.get(t)) : null) }));
+      }
+      return buildMockSeriesFor(stationId);
+    }
+
+    // ===== Map component =====
+    function ThailandMap(props){
+      const { sites, onSelect, selectedId, fitAllTick, metric, onMetricChange } = props;
+      const mapRef = useRef(null);
+      const markersRef = useRef({});
+      const circleRef = useRef(null);
+      const legendRef = useRef(null);
+      const toggleRef = useRef(null);
+      const borderDataRef = useRef(null);
+
+      if (!window.L) {
+        return React.createElement('div', { id: 'map', style: {display:'grid',placeItems:'center',color:'#94a3b8'} }, 'แผนที่ไม่พร้อมใช้งาน (Leaflet โหลดไม่สำเร็จ)');
+      }
+
+      const makeIcon = function(uvi, metric){
+        // สีอิงระดับตาม UVI เสมอ เพื่อความสอดคล้องกับ WHO
+        const info = getUviInfo(uvi);
+        const shown = convertFromUvi(uvi, metric);
+        const html = '<div class="icon-uvi" style="background:'+info.color+'">'+
+          (shown!=null ? String(shown) : '-') +'</div>';
+        return L.divIcon({ html: html, className:'', iconSize:[28,28], iconAnchor:[14,14] });
+      };
+
+      useEffect(function(){
+        if (!mapRef.current){
+          const map = L.map('map').setView([15.87, 100.99], 6);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+          mapRef.current = map;
+          // Resize observer
+          var mapEl = document.getElementById('map');
+          if (window.ResizeObserver && mapEl){
+            var ro = new ResizeObserver(function(){ map.invalidateSize(); });
+            ro.observe(mapEl);
+            mapRef.current.__ro = ro;
+          }
+          // Legend control
+          const legend = L.control({ position:'bottomleft' });
+          legend.onAdd = function(){
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = legendHTML(metric);
+            legendRef.current = div;
+            return div;
+          };
+          legend.addTo(map);
+
+          // วาดเส้นขอบประเทศไทยจาก GeoJSON ความละเอียดสูง (WGS84)
+          const attachBorderLayer = function(geojson){
+            if (!mapRef.current || !geojson) return;
+            if (mapRef.current.__thBorder){
+              mapRef.current.removeLayer(mapRef.current.__thBorder);
+            }
+            mapRef.current.__thBorder = L.geoJSON(geojson, {
+              style: function(){ return { color: '#0ea5e9', weight: 2.2, opacity: 0.95, fill: false }; }
+            }).addTo(mapRef.current);
+          };
+          if (borderDataRef.current){
+            attachBorderLayer(borderDataRef.current);
+          } else {
+            fetch('./thailand-border.geojson')
+              .then(function(res){
+                if (!res.ok) throw new Error('HTTP '+res.status);
+                return res.json();
+              })
+              .then(function(data){
+                borderDataRef.current = data;
+                attachBorderLayer(data);
+              })
+              .catch(function(err){
+                console.warn('Could not add Thailand border overlay', err);
+              });
+          }
+
+          // Top-center metric toggle (custom control)
+          const ctrl = L.Control.extend({
+            onAdd: function(){
+              const wrap = L.DomUtil.create('div', 'map-toggle');
+              wrap.innerHTML =
+                '<button type="button" data-m="uvi" class="'+(metric===METRIC_UVI?'active':'')+'">UV Index</button>'+
+                '<button type="button" data-m="ery" class="'+(metric===METRIC_ERY?'active':'')+'">Erythemal UV</button>';
+              // ป้องกันการแพน/ซูมเมื่อแตะ toggle
+              L.DomEvent.disableClickPropagation(wrap);
+              L.DomEvent.disableScrollPropagation(wrap);
+              wrap.addEventListener('click', function(e){
+                if (e.target && e.target.dataset && e.target.dataset.m){
+                  onMetricChange(e.target.dataset.m);
+                }
+              });
+              toggleRef.current = wrap;
+              return wrap;
+            },
+            onRemove: function(){}
+          });
+          map.addControl(new ctrl({ position:'topright' })); // วางที่ corner แล้วจัดกลางด้วย CSS
+        }
+
+        const map = mapRef.current;
+        // สร้าง/อัปเดต markers
+        (sites||[]).forEach(function(s){
+          const id = s.id;
+          const icon = makeIcon(s.uvi, metric);
+          if (!markersRef.current[id]){
+            const mk = L.marker([s.lat, s.lng], { icon: icon }).addTo(map).on('click', function(){ onSelect(id); });
+            const shown = convertFromUvi(s.uvi, metric);
+            mk.bindTooltip(
+              s.name+'<br/>'+unitLabel(metric)+': '+(shown!=null? shown : '-'),
+              {direction:'top'}
+            );
+            markersRef.current[id] = mk;
+          } else {
+            const mk = markersRef.current[id];
+            mk.setLatLng([s.lat, s.lng]);
+            mk.setIcon(icon);
+            const shown = convertFromUvi(s.uvi, metric);
+            if (mk.getTooltip()) {
+              mk.setTooltipContent(s.name+'<br/>'+unitLabel(metric)+': '+(shown!=null? shown : '-'));
+            } else {
+              mk.bindTooltip(s.name+'<br/>'+unitLabel(metric)+': '+(shown!=null? shown : '-'), {direction:'top'});
+            }
+          }
+        });
+      }, [sites, onSelect, metric]);
+
+      // อัปเดตวงกลมไฮไลต์สถานีที่เลือก
+      useEffect(function(){
+        if (!mapRef.current) return;
+        if (circleRef.current){ circleRef.current.remove(); circleRef.current = null; }
+        const site = (sites||[]).find(function(s){ return s.id === selectedId; });
+        if (site){
+          const info = getUviInfo(site.uvi);
+          circleRef.current = L.circleMarker([site.lat, site.lng], { radius: 20, color: info.color, weight:2, fillOpacity:0.15, fillColor:info.color }).addTo(mapRef.current);
+          mapRef.current.flyTo([site.lat, site.lng], 8);
+        }
+      }, [selectedId, sites]);
+
+      // Fit to all
+      useEffect(function(){
+        if (!mapRef.current) return;
+        const map = mapRef.current;
+        const pts = (sites||[]).map(function(s){ return [s.lat, s.lng]; });
+        if (pts.length){
+          const b = L.latLngBounds(pts).pad(0.2);
+          map.fitBounds(b);
+        } else {
+          const b = L.latLngBounds([ [5.5,97.3], [20.5,105.9] ]).pad(0.05);
+          map.fitBounds(b);
+        }
+      }, [fitAllTick, sites]);
+
+      // อัปเดตข้อความ Legend และปุ่ม active เมื่อ metric เปลี่ยน
+      useEffect(function(){
+        if (legendRef.current){
+          legendRef.current.innerHTML = legendHTML(metric);
+        }
+        if (toggleRef.current){
+          Array.from(toggleRef.current.querySelectorAll('button')).forEach(function(btn){
+            btn.classList.toggle('active', btn.dataset.m === metric);
+          });
+        }
+        // อัปเดต tooltip ของ marker ให้สะท้อนหน่วยใหม่
+        Object.values(markersRef.current).forEach(function(mk){
+          const s = (sites||[]).find(function(t){ return mk.getLatLng().lat===t.lat && mk.getLatLng().lng===t.lng; });
+          if (s){
+            const shown = convertFromUvi(s.uvi, metric);
+            mk.setTooltipContent(s.name+'<br/>'+unitLabel(metric)+': '+(shown!=null? shown : '-'));
+          }
+        });
+      }, [metric, sites]);
+
+      return React.createElement('div', { id: 'map' });
+    }
+
+    // ===== Chart component =====
+    function UviChart(props){
+      const { series, metric } = props;
+      const canvasRef = useRef(null);
+      const chartRef = useRef(null);
+
+      // เตรียมข้อมูลให้ครบทุกเวลาใน DAY_LABELS
+      function buildDataArrays(){
+        const lookup = new Map((series||[]).map(p => [String(p.time).slice(0,5), (p.uvi==null? null : Number(p.uvi))]));
+        const uviArr = DAY_LABELS.map(t => (lookup.has(t) ? lookup.get(t) : null));
+        const dataArr = uviArr.map(v => (v==null ? null : (metric===METRIC_UVI ? v : Math.round(v*25))));
+        return { labels: DAY_LABELS, uviArr, dataArr };
+      }
+
+      useEffect(function(){
+        if (!window.Chart || !canvasRef.current) return;
+        const ctx = canvasRef.current.getContext('2d');
+        const { labels, uviArr, dataArr } = buildDataArrays();
+        if (chartRef.current){ chartRef.current.destroy(); }
+        chartRef.current = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: metric===METRIC_UVI ? 'UV Index' : 'mW/m² (Erythemal)',
+                data: dataArr,
+                tension: 0.3,
+                pointRadius: 2,
+                spanGaps: true, // ให้เส้นขาดช่วงหากเป็น null
+                borderWidth: 2,
+                // สีของเส้นและจุด ตามค่า UVI ของแต่ละช่วง/จุด
+                segment: {
+                  borderColor: ctx => {
+                    const i = ctx.p0DataIndex;
+                    const base = (uviArr[i] != null ? uviArr[i] : uviArr[i+1]);
+                    const u = Number.isFinite(base) ? base : 0;
+                    return getUviInfo(u).color;
+                  }
+                },
+                pointBackgroundColor: ctx => {
+                  const u = uviArr[ctx.dataIndex];
+                  return getUviInfo(u).color;
+                },
+                pointBorderColor: ctx => {
+                  const u = uviArr[ctx.dataIndex];
+                  return getUviInfo(u).color;
+                }
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { intersect:false, mode:'index' } },
+            scales: {
+              x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
+              y: { beginAtZero: true, min: 0, max: metric===METRIC_ERY ? 400 : 12 }
+            }
+          }
+        });
+        return function(){ if (chartRef.current){ chartRef.current.destroy(); chartRef.current = null; } };
+      }, [series, metric]);
+
+      return React.createElement('div', { className:'chart-wrap', style:{height:220} },
+        React.createElement('canvas', { ref: canvasRef, height: 200 })
+      );
+    }
+
+    // ===== Panel =====
+    function Panel(props){
+      const { site, sites, onClear, series, loadingSeries, seriesError, metric, loadingStations } = props;
+      return React.createElement('div', { className: 'panel' },
+        site ? (
+          React.createElement('div', null,
+            React.createElement('div', { className:'panel-top' },
+              React.createElement('div', { className:'panel-title' }, 'รายละเอียดสถานี'),
+              React.createElement('button', { className:'icon-btn', title:'ย้อนกลับ', 'aria-label':'ย้อนกลับ', onClick:onClear }, '←')
+            ),
+            React.createElement('h2', null, site.name),
+            // 1) พิกัด
+            React.createElement('div', { className:'key' },
+              React.createElement('div', { className:'muted' }, 'พิกัด'),
+              React.createElement('div', null, (Number.isFinite(site.lat)?site.lat.toFixed(4):'?')+', '+(Number.isFinite(site.lng)?site.lng.toFixed(4):'?'))
+            ),
+            // 2) ปริมาณ
+            React.createElement('div', { className:'key' },
+              React.createElement('div', { className:'muted' }, 'ปริมาณ'),
+              React.createElement('div', null, measurementTitle(metric))
+            ),
+            // 3) ค่าปัจจุบัน
+            (function(){
+              const shown = convertFromUvi(site.uvi, metric);
+              const info = getUviInfo(site.uvi);
+              const unit = unitShort(metric);
+              return React.createElement('div', { className:'key' },
+                React.createElement('div', { className:'muted' }, 'ค่าปัจจุบัน'),
+                React.createElement('div', null,
+                  React.createElement('span', { className:'badge-uvi', style:{background:info.color, marginRight:8}}, formatValue(shown, metric)),
+                  unit
+                )
+              );
+            })(),
+            // 4) ระดับ
+            (function(){
+              const info = getUviInfo(site.uvi);
+              return React.createElement('div', { className:'key' },
+                React.createElement('div', { className:'muted' }, 'ระดับ'),
+                React.createElement('div', null, info.level)
+              );
+            })(),
+            // 5) อัปเดต
+            React.createElement('div', { className:'key' },
+              React.createElement('div', { className:'muted' }, 'อัปเดต'),
+              React.createElement('div', null, site.update_time || '-')
+            ),
+            loadingSeries ? React.createElement('div', { className:'muted', style:{marginTop:8}}, 'กำลังโหลดกราฟ…') : null,
+            seriesError ? React.createElement('div', { style:{color:'#b91c1c', marginTop:8} }, 'โหลดกราฟไม่สำเร็จ: '+seriesError) : null,
+            // แสดงกราฟเสมอ (แม้กำลังโหลด) โดยมีแกนเวลา 04:00–20:00
+            React.createElement(UviChart, { series: series, metric })
+          )
+        ) : (
+          React.createElement('div', null,
+            React.createElement('div', { className:'panel-top' },
+              React.createElement('div', { className:'panel-title' }, 'เลือกสถานี'),
+              null
+            ),
+            loadingStations
+              ? React.createElement('div', { className:'loading', role:'status', 'aria-live':'polite' },
+                  React.createElement('div', { className:'ring', 'aria-hidden':'true' }),
+                  'กำลังโหลดสถานี…'
+                )
+              : React.createElement('ul', { className:'station-list' },
+                  (sites||[]).map(function(s){
+                    var info = getUviInfo(s.uvi);
+                    var shown = convertFromUvi(s.uvi, metric);
+                    return React.createElement('li', {
+                      key: s.id,
+                      onClick: function(){ onClear(); window.dispatchEvent(new CustomEvent('pick-site',{detail:s.id})); }
+                    },
+                      React.createElement('span', { className:'dot', style:{ background: info.color } }),
+                      React.createElement('span', { className:'name' }, s.name),
+                      React.createElement('span', { className:'value' }, (shown!=null? shown : '-') + ' ' + unitLabel(metric).replace(' (Erythemal)',''))
+                    );
+                  })
+                ),
+            React.createElement('div', { 
+              style: {
+                marginTop: 10,
+                padding: '12px 14px',
+                border: '1px solid #e5e7eb',
+                borderRadius: '12px',
+                background: '#f9fafb',
+                fontFamily: '"Noto Sans Thai", "Noto Sans", "Segoe UI", Arial, sans-serif',
+                fontSize: '13px',
+                lineHeight: '1.7',
+                whiteSpace: 'pre-line',
+                color: '#64748b',
+                boxShadow: '0 2px 8px rgba(100,116,139,0.06)'
+              }
+            },
+              'โครงการ การพัฒนาแบบจำลองพยากรณ์รังสีอัลตราไวโอเลต\
+              (Development of UV forecasting models)\
+              \nได้รับทุนอุดหนุนการวิจัยจากสำนักงานคณะกรรมการส่งเสริมวิทยาศาสตร์ วิจัยและนวัตกรรม (สกสว.) กองทุนส่งเสริม วิทยาศาสตร์ วิจัยและนวัตกรรม (ววน.) ประจำปีงบประมาณ พ.ศ. 2567\n\nสอบถามเพิ่มเติมติดต่อ ภาควิชาฟิสิกส์ คณะวิทยาศาสตร์ มหาวิทยาลัยศิลปากร โทร.0861613292'
+            )
+          )
+        )
+      );
+    }
+
+    // ===== App =====
+    function App(){
+      const [stations, setStations] = useState([]);
+      const [selectedId, setSelectedId] = useState(null);
+      const [error, setError] = useState(null);
+      const [series, setSeries] = useState([]);
+      const [loadingSeries, setLoadingSeries] = useState(false);
+      const [seriesError, setSeriesError] = useState(null);
+      const [fitAllTick, setFitAllTick] = useState(0);
+      const [metric, setMetric] = useState(METRIC_UVI); // <-- หน่วยที่เลือก
+      const [loadingStations, setLoadingStations] = useState(true); // <-- ใหม่
+      const isLandscape = useLandscape();
+
+      useEffect(function(){
+        let alive = true;
+        setLoadingStations(true); // เริ่มโหลดรายชื่อสถานี
+        // พยายามโหลดจาก API ระยะไกลก่อน ถ้าไม่สำเร็จให้โหลดจากไฟล์ local mock
+        (async function(){
+          let json = null;
+          try {
+            const res = await fetch(API_URL);
+            if (!res.ok) throw new Error('remote api error: ' + res.status);
+            json = await res.json();
+          } catch (err){
+            console.warn('Remote API failed, trying local mock:', err);
+            try {
+              const r2 = await fetch(LOCAL_JSON);
+              if (!r2.ok) throw new Error('local mock not found: ' + r2.status);
+              json = await r2.json();
+            } catch (err2){
+              console.error('Local mock load failed', err2);
+              if (alive) setError(err2.message || 'โหลดข้อมูลไม่สำเร็จ');
+              if (alive) setLoadingStations(false);
+              return;
+            }
+          }
+          if (!alive) return;
+          const rows = Array.isArray(json) ? json : (json.data || []);
+          const parsed = rows.map(function(d){
+            const parts = String(d.lat_long || '').split(',');
+            const lat = parseFloat(parts[0]);
+            const lng = parseFloat(parts[1]);
+            return { id: String(d.id), name: d.name || '', lat: lat, lng: lng, uvi: d.uvi!==undefined? Number(d.uvi): null, update_time: d.update_time || null };
+          }).filter(function(s){ return Number.isFinite(s.lat) && Number.isFinite(s.lng); });
+          setStations(parsed);
+          setFitAllTick(function(t){ return t+1; }); // zoom to all on first load
+          if (alive) setLoadingStations(false);
+        })();
+        const h = function(e){ setSelectedId(e.detail); };
+        window.addEventListener('pick-site', h);
+        return function(){ alive = false; window.removeEventListener('pick-site', h); };
+      },[]);
+
+      // load series when selected station changes
+      useEffect(function(){
+        if (!selectedId) { setSeries([]); return; }
+        let alive = true;
+        setLoadingSeries(true); setSeriesError(null);
+        loadSeries(selectedId)
+          .then(function(ser){ if (!alive) return; setSeries(ser); })
+          .catch(function(err){ if (!alive) return; setSeriesError(err.message || 'error'); setSeries([]); })
+          .finally(function(){ if (alive) setLoadingSeries(false); });
+        return function(){ alive = false; };
+      }, [selectedId]);
+
+      // Tests
+      useEffect(function(){
+        if (stations.length){
+          console.assert(typeof stations[0].id === 'string', 'station.id should be string');
+          console.assert(Number.isFinite(stations[0].lat) && Number.isFinite(stations[0].lng), 'lat/lng should be numbers');
+        }
+        if (series){
+          console.assert(Array.isArray(series), 'series should be array');
+        }
+      }, [stations, series]);
+
+      const selectedSite = useMemo(function(){ return stations.find(function(s){ return s.id === selectedId; }) || null; }, [stations, selectedId]);
+
+      return React.createElement('div', { className: 'app' },
+        React.createElement('header', null,
+            React.createElement('img', { className:'logo-img', src: 'https://phy.sc.su.ac.th/image66/bg/logo_physicsSU.jpg', alt: 'Physics Logo' }),
+            React.createElement('div', { className:'title-box' },
+              React.createElement('div', { className:'title-top' }, 'UV Radiation in Thailand'),
+              React.createElement('div', { className:'title-sub' }, 'From ground-based measurement')
+            ),
+            React.createElement('div', { style: { display: 'flex', gap: '8px', marginLeft: 'auto' } },
+            ),
+            error ? React.createElement('div', { className:'muted', style:{marginLeft:'auto'} }, 'Error: ', error) : null
+        ),
+        
+        React.createElement('main', { className: 'content '+(isLandscape ? 'landscape' : 'portrait') },
+          React.createElement(ThailandMap, {
+            sites: stations,
+            selectedId: selectedId,
+            onSelect: setSelectedId,
+            fitAllTick: fitAllTick,
+            metric: metric,
+            onMetricChange: setMetric
+          }),
+          React.createElement(Panel, {
+            site: selectedSite,
+            sites: stations,
+            onClear: function(){ setSelectedId(null); setFitAllTick(function(t){ return t+1; }); },
+            series: series,
+            loadingSeries: loadingSeries,
+            seriesError: seriesError,
+            metric: metric,
+            loadingStations: loadingStations
+          })
+        )
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+  </script>
+</body>
+</html>
