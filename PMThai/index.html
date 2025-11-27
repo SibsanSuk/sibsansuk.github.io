@@ -106,7 +106,7 @@
           <input
             type="range"
             id="font-scale"
-            min="0.7"
+            min="0"
             max="1.5"
             step="0.1"
             value="1"
@@ -126,6 +126,24 @@
             style="vertical-align:middle;"
           />
           <span id="sub-minzoom-value">10.5</span>
+        </label>
+        <div style="margin-top:6px; font-size:12px;">
+          <div style="margin-bottom:2px;">สีค่า PM ต่ำสุด / สูงสุด:</div>
+          <input type="color" id="color-min" value="#021002" aria-label="สีค่าต่ำสุด" />
+          <input type="color" id="color-max" value="#7fff00" aria-label="สีค่าสูงสุด" style="margin-left:6px;" />
+        </div>
+        <label style="display:block; margin-top:6px; font-size:12px;">
+          สเกลความสูง:
+          <input
+            type="range"
+            id="height-scale"
+            min="0"
+            max="3"
+            step="0.1"
+            value="1"
+            style="vertical-align:middle;"
+          />
+          <span id="height-scale-value">100%</span>
         </label>
         <div style="margin-top:4px; font-size:11px; opacity:0.85;">
           Zoom: <span id="zoom-value">-</span>
@@ -867,7 +885,8 @@ const chiangRaiSubdistrictCubes = {
           const fontScaleValue = document.getElementById("font-scale-value");
           if (fontScaleInput) {
             const applyFontScale = () => {
-              const scale = parseFloat(fontScaleInput.value) || 1;
+              const rawScale = parseFloat(fontScaleInput.value);
+              const scale = Number.isFinite(rawScale) ? rawScale : 1; // รองรับค่า 0 โดยไม่เด้งกลับเป็น 1
               if (fontScaleValue) {
                 fontScaleValue.textContent = Math.round(scale * 100) + "%";
               }
@@ -907,6 +926,83 @@ const chiangRaiSubdistrictCubes = {
             };
             fontScaleInput.addEventListener("input", applyFontScale);
             applyFontScale();
+          }
+
+          // ---------- 2.7) ปรับสีค่าน้อย/มาก ----------
+          const colorMinInput = document.getElementById("color-min");
+          const colorMaxInput = document.getElementById("color-max");
+          const defaultMin = "#021002";
+          const defaultMax = "#7fff00";
+
+          function getColor(value, fallback) {
+            if (typeof value !== "string") return fallback;
+            const v = value.trim();
+            return /^#([0-9a-f]{6}|[0-9a-f]{3})$/i.test(v) ? v : fallback;
+          }
+
+          function colorExpr(field, minColor, maxColor) {
+            return [
+              "interpolate",
+              ["linear"],
+              ["coalesce", ["get", field], 0],
+              0, minColor,
+              100, maxColor
+            ];
+          }
+
+          function applyColorScale() {
+            const minColor = getColor(colorMinInput?.value, defaultMin);
+            const maxColor = getColor(colorMaxInput?.value, defaultMax);
+
+            const districtExpr = colorExpr("pm25", minColor, maxColor);
+            const subExpr = colorExpr("tam_pm25", minColor, maxColor);
+
+            const paintTargets = [
+              ["chiang-rai-district-bars", "fill-extrusion-color", districtExpr],
+              ["chiang-rai-district-cubes-3d", "fill-extrusion-color", districtExpr],
+              ["chiang-rai-subdistrict-bars", "fill-extrusion-color", subExpr],
+              ["chiang-rai-subdistrict-cubes-3d", "fill-extrusion-color", subExpr],
+              ["chiang-rai-subdistricts-outline", "line-color", subExpr]
+            ];
+            paintTargets.forEach(([layer, prop, expr]) => {
+              if (map.getLayer(layer)) {
+                map.setPaintProperty(layer, prop, expr);
+              }
+            });
+          }
+
+          if (colorMinInput && colorMaxInput) {
+            colorMinInput.addEventListener("input", applyColorScale);
+            colorMaxInput.addEventListener("input", applyColorScale);
+            applyColorScale();
+          }
+
+          // ---------- 2.8) สไลเดอร์ปรับสเกลความสูง ----------
+          const heightScaleInput = document.getElementById("height-scale");
+          const heightScaleValue = document.getElementById("height-scale-value");
+          if (heightScaleInput) {
+            const applyHeightScale = () => {
+              const raw = parseFloat(heightScaleInput.value);
+              const scale = Number.isFinite(raw) ? raw : 1;
+              if (heightScaleValue) {
+                heightScaleValue.textContent = Math.round(scale * 100) + "%";
+              }
+              const districtHeight = ["*", ["get", "pm25_height"], scale];
+              const subHeight = ["*", ["coalesce", ["get", "tam_pm25_height"], 0], scale];
+              const targets = [
+                ["chiang-rai-district-bars", districtHeight],
+                ["chiang-rai-district-cubes-3d", districtHeight],
+                ["chiang-rai-subdistrict-bars", subHeight],
+                ["chiang-rai-subdistrict-cubes-3d", subHeight]
+              ];
+              targets.forEach(([layer, expr]) => {
+                if (map.getLayer(layer)) {
+                  map.setPaintProperty(layer, "fill-extrusion-height", expr);
+                }
+              });
+            };
+            heightScaleInput.addEventListener("input", applyHeightScale);
+            applyHeightScale();
           }
 
           // ---------- 2.7) ปรับระดับซูมที่เริ่มแสดงข้อมูลตำบล ----------
