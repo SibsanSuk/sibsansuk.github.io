@@ -20,6 +20,15 @@
       overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
+    #app {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+    #map-container {
+      position: relative;
+      flex: 1 1 auto;
+    }
     #map {
       position: absolute;
       top: 0;
@@ -39,16 +48,70 @@
       border-radius: 4px;
       line-height: 1.4;
     }
+    #sidebar {
+      width: 320px;
+      max-width: 40%;
+      height: 100%;
+      box-sizing: border-box;
+      border-left: 1px solid #444;
+      background: #111;
+      color: #eee;
+      padding: 8px;
+      font-size: 12px;
+      overflow: auto;
+    }
+    #pm25-editor {
+      width: 100%;
+      height: calc(100% - 60px);
+      box-sizing: border-box;
+      resize: vertical;
+      font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 11px;
+      background: #000;
+      color: #0f0;
+      border: 1px solid #333;
+      border-radius: 4px;
+      padding: 6px;
+    }
   </style>
 </head>
 <body>
-  <div id="info">
-    แผนที่ประเทศไทย (Satellite) มุมมอง 3D – MapLibre<br />
-    - ลากเมาส์: แพน<br />
-    - Shift + ลากเมาส์: หมุนมุมมอง 3D<br />
-    - สกรอลล์: ซูมเข้า/ออก
+  <div id="app">
+    <div id="map-container">
+      <div id="map"></div>
+      <div id="info">
+        <label style="display:block; margin-top:2px; font-size:12px;">
+          <input type="checkbox" id="toggle-3d" checked />
+          แสดง 3D mesh รายอำเภอ
+        </label>
+        <label style="display:block; margin-top:4px; font-size:12px;">
+          <input type="checkbox" id="toggle-cube" />
+          แสดง 3D cube ตามค่า PM2.5
+        </label>
+        <label style="display:block; margin-top:6px; font-size:12px;">
+          ขนาดตัวอักษร:
+          <input
+            type="range"
+            id="font-scale"
+            min="0.7"
+            max="1.5"
+            step="0.1"
+            value="1"
+            style="vertical-align:middle;"
+          />
+          <span id="font-scale-value">100%</span>
+        </label>
+      </div>
+    </div>
+    <aside id="sidebar">
+      <h3 style="margin:4px 0 6px;">ข้อมูล PM2.5 รายอำเภอ (CSV)</h3>
+      <textarea id="pm25-editor" spellcheck="false"></textarea>
+      <p style="margin:6px 0 0; font-size:11px; color:#ccc;">
+        รูปแบบ: <code>amp_en,pm25</code> หนึ่งแถวต่อหนึ่งอำเภอ<br />
+        เมื่อแก้ค่าที่นี่ แผนที่จะอัปเดตทันที
+      </p>
+    </aside>
   </div>
-  <div id="map"></div>
 
   <!-- MapLibre GL JS -->
   <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
@@ -164,41 +227,151 @@
           };
 
           // ตัวอย่างข้อมูล PM2.5 ต่ออำเภอ (สมมติค่า)
-// key = amp_en จาก districts.geojson
-const pm25ByDistrict = {
-  "Mueang Chiang Rai": 45,
-  "Chiang Saen": 38,
-  "Chiang Khong": 52,
-  "Mae Sai": 60,
-  "Mae Chan": 55,
-  "Wiang Chai": 35,
-  "Thoeng": 48,
-  "Phan": 40,
-  "Pa Daet": 30,
-  "Mae Lao": 42,
-  "Wiang Chiang Rung": 37,
-  "Doi Luang": 50,
-  // ถ้ามีอำเภออื่นในเชียงรายแต่ไม่ได้ใส่ไว้ จะ fallback เป็นค่า default
+          // key = amp_en จาก districts.geojson
+          const pm25ByDistrict = {
+            "Mueang Chiang Rai": 45,
+            "Chiang Saen": 38,
+            "Chiang Khong": 52,
+            "Mae Sai": 60,
+            "Mae Chan": 55,
+            "Wiang Chai": 35,
+            "Thoeng": 48,
+            "Phan": 40,
+            "Pa Daet": 10,
+            "Mae Lao": 12,
+            "Wiang Chiang Rung": 37,
+            "Doi Luang": 50
+          };
+          const defaultPmCsv =
+            "Mueang Chiang Rai,45\n" +
+            "Chiang Saen,38\n" +
+            "Chiang Khong,52\n" +
+            "Mae Sai,60\n" +
+            "Mae Chan,55\n" +
+            "Wiang Chai,35\n" +
+            "Thoeng,48\n" +
+            "Phan,40\n" +
+            "Pa Daet,10\n" +
+            "Mae Lao,12\n" +
+            "Wiang Chiang Rung,37\n" +
+            "Doi Luang,50\n";
+
+          function parsePmCsv(text) {
+            const map = {};
+            if (!text) return map;
+            text.split(/\r?\n/).forEach((line) => {
+              const trimmed = line.trim();
+              if (!trimmed || trimmed.startsWith("#")) return;
+              const parts = trimmed.split(",");
+              if (parts.length < 2) return;
+              const name = parts[0].trim();
+              const value = parseFloat(parts[1]);
+              if (!name || Number.isNaN(value)) return;
+              map[name] = value;
+            });
+            return map;
+          }
+
+          // ผูกค่า PM + คำนวณความสูงเก็บไว้ใน properties (ใช้ csv ถ้ามี)
+          function applyPmFromEditor() {
+            const editor = document.getElementById("pm25-editor");
+            const csvText = editor && editor.value ? editor.value : defaultPmCsv;
+            const csvMap = parsePmCsv(csvText);
+
+            chiangRaiDistricts.features.forEach((f) => {
+              const props = f.properties || {};
+              const nameEn = props.amp_en;
+              const pm = (csvMap[nameEn] ?? pm25ByDistrict[nameEn]) ?? 25;
+              props.pm25 = pm;
+              // scale ความสูง (ย่อ mesh ลงเล็กน้อยเพื่อไม่ให้ชนกันเกินไป)
+              props.pm25_height = pm * 200;
+              f.properties = props;
+            });
+
+            chiangRaiDistrictCubes.features.forEach((f) => {
+              const props = f.properties || {};
+              const nameEn = props.amp_en;
+              const pm = (csvMap[nameEn] ?? pm25ByDistrict[nameEn]) ?? 25;
+              props.pm25 = pm;
+              props.pm25_height = pm * 200;
+              f.properties = props;
+            });
+
+            const distSrc = map.getSource("chiang-rai-districts");
+            if (distSrc) distSrc.setData(chiangRaiDistricts);
+            const cubeSrc = map.getSource("chiang-rai-district-cubes");
+            if (cubeSrc) cubeSrc.setData(chiangRaiDistrictCubes);
+          }
+
+// สร้าง GeoJSON ใหม่สำหรับ 3D cube (สี่เหลี่ยมเล็ก ๆ ที่จุดกึ่งกลางอำเภอ)
+const chiangRaiDistrictCubes = {
+  type: "FeatureCollection",
+  features: chiangRaiDistricts.features.map((f) => {
+    const geom = f.geometry;
+    const bbox = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+
+    function collectCoords(coords) {
+      coords.forEach((c) => {
+        if (Array.isArray(c[0])) {
+          collectCoords(c);
+        } else {
+          const [lng, lat] = c;
+          if (lng < bbox.minX) bbox.minX = lng;
+          if (lng > bbox.maxX) bbox.maxX = lng;
+          if (lat < bbox.minY) bbox.minY = lat;
+          if (lat > bbox.maxY) bbox.maxY = lat;
+        }
+      });
+    }
+
+    if (geom && geom.coordinates) {
+      collectCoords(geom.coordinates);
+    }
+
+    const centerLng = (bbox.minX + bbox.maxX) / 2;
+    const centerLat = (bbox.minY + bbox.maxY) / 2;
+    const width = (bbox.maxX - bbox.minX) * 0.25 || 0.05;
+    const height = (bbox.maxY - bbox.minY) * 0.25 || 0.05;
+    const halfW = width / 2;
+    const halfH = height / 2;
+
+    const square = [
+      [centerLng - halfW, centerLat - halfH],
+      [centerLng + halfW, centerLat - halfH],
+      [centerLng + halfW, centerLat + halfH],
+      [centerLng - halfW, centerLat + halfH],
+      [centerLng - halfW, centerLat - halfH]
+    ];
+
+    return {
+      type: "Feature",
+      properties: { ...f.properties },
+      geometry: {
+        type: "Polygon",
+        coordinates: [square]
+      }
+    };
+  })
 };
-
-// ผูกค่า PM + คำนวณความสูงเก็บไว้ใน properties
-chiangRaiDistricts.features.forEach((f) => {
-  const props = f.properties || {};
-  const nameEn = props.amp_en;
-  const pm = pm25ByDistrict[nameEn] ?? 5; // default 25 ถ้าไม่เจอใน map
-  props.pm25 = pm;
-
-  // scale ความสูง (เพิ่ม factor ให้ต่างกันชัดขึ้น)
-  props.pm25_height = pm * 300; // 45 → 13500 ฯลฯ
-
-  f.properties = props;
-});
 
 
           map.addSource("chiang-rai-districts", {
             type: "geojson",
             data: chiangRaiDistricts
           });
+
+          // source สำหรับ cube 3D
+          map.addSource("chiang-rai-district-cubes", {
+            type: "geojson",
+            data: chiangRaiDistrictCubes
+          });
+
+          // เติมค่าจาก CSV (หรือค่า default) ครั้งแรก
+          const pmEditor = document.getElementById("pm25-editor");
+          if (pmEditor && !pmEditor.value) {
+            pmEditor.value = defaultPmCsv;
+          }
+          applyPmFromEditor();
 
           // วาดเส้นอำเภอ (บางกว่าและคนละสี เพื่อแยกกับเส้นจังหวัด)
           map.addLayer({
@@ -234,18 +407,56 @@ chiangRaiDistricts.features.forEach((f) => {
             }
           });
 
+          // ---------- 2.2b) 3D cube ตามค่า PM2.5 ----------
+          map.addLayer({
+            id: "chiang-rai-district-cubes-3d",
+            type: "fill-extrusion",
+            source: "chiang-rai-district-cubes",
+            layout: {
+              visibility: "none" // เริ่มต้นปิดไว้ รอให้ user ติ๊กเปิด
+            },
+            paint: {
+              "fill-extrusion-color": [
+                "interpolate",
+                ["linear"],
+                ["get", "pm25"],
+                0,   "#021002",
+                30,  "#145a32",
+                60,  "#32cd32",
+                100, "#7fff00"
+              ],
+              "fill-extrusion-height": ["get", "pm25_height"],
+              "fill-extrusion-base": 0,
+              "fill-extrusion-opacity": 0.9
+            }
+          });
+
           // ---------- 2.3) ชื่ออำเภอ (label) ลอยเหนือแท่ง 3D ----------
           map.addLayer({
             id: "chiang-rai-district-labels",
             type: "symbol",
             source: "chiang-rai-districts",
-            minzoom: 6,
+            minzoom: 5,
             layout: {
-              "text-field": ["get", "amp_en"],
-              "text-size": 12,
+              // แสดงชื่ออำเภอ + ค่า PM เช่น "Mueang Chiang Rai\nPM 45"
+              "text-field": [
+                "concat",
+                ["get", "amp_en"],
+                "\n",
+                ["to-string", ["get", "pm25"]]
+              ],
+              "text-size": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                5, 11,
+                8, 13,
+                11, 15
+              ],
               "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"],
               "text-anchor": "bottom",
-              "text-allow-overlap": false,
+              "text-allow-overlap": true,
+              "text-ignore-placement": true,
               // ยกตัวหนังสือขึ้นมาก-น้อยตามค่า PM2.5
               "text-offset": [
                 "interpolate",
@@ -265,6 +476,127 @@ chiangRaiDistricts.features.forEach((f) => {
               "text-halo-width": 1.5
             }
           });
+
+          // ---------- 2.3b) ชื่ออำเภอบนยอด 3D cube ----------
+          map.addLayer({
+            id: "chiang-rai-district-cube-labels",
+            type: "symbol",
+            source: "chiang-rai-district-cubes",
+            layout: {
+              // แสดงชื่ออำเภอ + ค่า PM เช่น "Mueang Chiang Rai\nPM 45"
+              "text-field": [
+                "concat",
+                ["get", "amp_en"],
+                "\n",
+                ["to-string", ["get", "pm25"]]
+              ],
+              "text-size": [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                5, 10,
+                8, 12,
+                11, 14
+              ],
+              "text-font": ["Open Sans Regular", "Arial Unicode MS Regular"],
+              "text-anchor": "bottom",
+              "text-allow-overlap": true,
+              "text-ignore-placement": true,
+              // ยกตัวหนังสือขึ้นตามค่า PM2.5 ให้ลอยเหนือ cube
+              "text-offset": [
+                "interpolate",
+                ["linear"],
+                ["get", "pm25"],
+                0,   ["literal", [0, 0.4]],
+                30,  ["literal", [0, 1.0]],
+                60,  ["literal", [0, 1.7]],
+                100, ["literal", [0, 2.4]]
+              ],
+              "text-pitch-alignment": "viewport",
+              "text-rotation-alignment": "viewport"
+            },
+            paint: {
+              "text-color": "#ffffff",
+              "text-halo-color": "#000000",
+              "text-halo-width": 1.5
+            }
+          });
+
+          // ---------- 2.4) ผูก checkbox ให้เปิด/ปิด 3D mesh รายอำเภอ ----------
+          const toggle3d = document.getElementById("toggle-3d");
+          if (toggle3d) {
+            const applyVisibility = () => {
+              const vis = toggle3d.checked ? "visible" : "none";
+              if (map.getLayer("chiang-rai-district-bars")) {
+                map.setLayoutProperty("chiang-rai-district-bars", "visibility", vis);
+              }
+              if (map.getLayer("chiang-rai-district-labels")) {
+                map.setLayoutProperty("chiang-rai-district-labels", "visibility", vis);
+              }
+            };
+            toggle3d.addEventListener("change", applyVisibility);
+            // ตั้งค่าครั้งแรกตามสถานะ checkbox
+            applyVisibility();
+          }
+
+          // ---------- 2.5) ผูก checkbox 3D cube รายอำเภอ ----------
+          const toggleCube = document.getElementById("toggle-cube");
+          if (toggleCube) {
+            const applyCubeVisibility = () => {
+              const vis = toggleCube.checked ? "visible" : "none";
+              if (map.getLayer("chiang-rai-district-cubes-3d")) {
+                map.setLayoutProperty("chiang-rai-district-cubes-3d", "visibility", vis);
+              }
+              if (map.getLayer("chiang-rai-district-cube-labels")) {
+                map.setLayoutProperty("chiang-rai-district-cube-labels", "visibility", vis);
+              }
+            };
+            toggleCube.addEventListener("change", applyCubeVisibility);
+            applyCubeVisibility();
+          }
+
+          // ---------- 2.6) สไลเดอร์ปรับขนาดตัวอักษร ----------
+          const fontScaleInput = document.getElementById("font-scale");
+          const fontScaleValue = document.getElementById("font-scale-value");
+          if (fontScaleInput) {
+            const applyFontScale = () => {
+              const scale = parseFloat(fontScaleInput.value) || 1;
+              if (fontScaleValue) {
+                fontScaleValue.textContent = Math.round(scale * 100) + "%";
+              }
+              const districtSize = [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                5, 11 * scale,
+                8, 13 * scale,
+                11, 15 * scale
+              ];
+              const cubeSize = [
+                "interpolate",
+                ["linear"],
+                ["zoom"],
+                5, 10 * scale,
+                8, 12 * scale,
+                11, 14 * scale
+              ];
+              if (map.getLayer("chiang-rai-district-labels")) {
+                map.setLayoutProperty("chiang-rai-district-labels", "text-size", districtSize);
+              }
+              if (map.getLayer("chiang-rai-district-cube-labels")) {
+                map.setLayoutProperty("chiang-rai-district-cube-labels", "text-size", cubeSize);
+              }
+            };
+            fontScaleInput.addEventListener("input", applyFontScale);
+            applyFontScale();
+          }
+
+          // เมื่อแก้ CSV ให้อัปเดตค่า PM บนแผนที่ทันที
+          if (pmEditor) {
+            pmEditor.addEventListener("input", () => {
+              applyPmFromEditor();
+            });
+          }
 
 
 
