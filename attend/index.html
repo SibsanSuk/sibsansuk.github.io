@@ -102,6 +102,10 @@
             <div>Target: <span class="muted" id="targetText">-</span></div>
           </div>
           <div class="row" style="margin-top:6px">
+            <div>QR อาจารย์: <span id="qrStatus" class="muted">ยังไม่เริ่มสแกน</span></div>
+            <div>ค่าที่พบ: <span id="qrValue" class="muted">-</span></div>
+          </div>
+          <div class="row" style="margin-top:6px">
             <div>รหัสนิสิต: <span id="showStudentId" class="muted">-</span></div>
             <div>ชื่อ: <span id="showFirstName" class="muted">-</span></div>
             <div>สกุล: <span id="showLastName" class="muted">-</span></div>
@@ -143,6 +147,8 @@
   const targetText = el("targetText");
   const radiusInput = el("radiusM");
   const hint = el("hint");
+  const qrStatus = el("qrStatus");
+  const qrValue = el("qrValue");
 
   const studentIdInput = el("studentId");
   const firstNameInput = el("firstName");
@@ -161,6 +167,10 @@
 
   let watchId = null;
   let stream = null;
+  let qrTimer = null;
+  let qrDetector = null;
+  const qrCanvas = document.createElement("canvas");
+  const qrCtx = qrCanvas.getContext("2d", { willReadFrequently: true });
 
   const supportsFacing = !!navigator.mediaDevices?.getSupportedConstraints?.().facingMode;
 
@@ -264,6 +274,7 @@
       stream = nextStream;
       video.srcObject = stream;
       await video.play().catch(() => {});
+      startQrScan();
 
       // ให้ภาพ mirror เฉพาะกล้องหน้า (user)
       // (ถ้า browser บางตัวไม่ honor facingMode, จะลองเดาจาก device label)
@@ -310,6 +321,79 @@
       navigator.geolocation.clearWatch(watchId);
       watchId = null;
     }
+  }
+
+  function stopQrScan() {
+    if (qrTimer) {
+      clearInterval(qrTimer);
+      qrTimer = null;
+    }
+  }
+
+  function formatTodayVariants() {
+    const now = new Date();
+    const yyyy = String(now.getFullYear());
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    return new Set([
+      `${yyyy}${mm}${dd}`,
+      `${yyyy}-${mm}-${dd}`,
+      `${yyyy}/${mm}/${dd}`,
+      `${dd}/${mm}/${yyyy}`
+    ]);
+  }
+
+  function startQrScan() {
+    stopQrScan();
+    if (!("BarcodeDetector" in window)) {
+      qrStatus.textContent = "เบราว์เซอร์นี้ยังไม่รองรับสแกน QR";
+      qrValue.textContent = "-";
+      return;
+    }
+    if (!qrDetector) {
+      try {
+        qrDetector = new BarcodeDetector({ formats: ["qr_code"] });
+      } catch (err) {
+        console.error(err);
+        qrStatus.textContent = "เปิดตัวสแกน QR ไม่สำเร็จ";
+        qrValue.textContent = "-";
+        return;
+      }
+    }
+    qrStatus.textContent = "กำลังสแกน…";
+    qrValue.textContent = "-";
+
+    const expected = formatTodayVariants();
+    let lastText = "";
+    let lastHitAt = 0;
+
+    qrTimer = setInterval(async () => {
+      if (!video.videoWidth || !video.videoHeight) return;
+      qrCanvas.width = video.videoWidth;
+      qrCanvas.height = video.videoHeight;
+      qrCtx.drawImage(video, 0, 0, qrCanvas.width, qrCanvas.height);
+      try {
+        const codes = await qrDetector.detect(qrCanvas);
+        if (!codes.length) {
+          if (Date.now() - lastHitAt > 1500) {
+            qrStatus.textContent = "ยังไม่พบ QR";
+            qrValue.textContent = "-";
+          }
+          return;
+        }
+        const text = (codes[0].rawValue || "").trim();
+        if (!text) return;
+        if (text !== lastText) lastText = text;
+        qrValue.textContent = text;
+        lastHitAt = Date.now();
+        qrStatus.textContent = expected.has(text)
+          ? "พบ QR อาจารย์แล้ว ✅"
+          : "พบ QR แต่ไม่ตรงวัน";
+      } catch (err) {
+        console.error(err);
+        qrStatus.textContent = "สแกน QR ไม่สำเร็จ";
+      }
+    }, 600);
   }
 
   function startLocation() {
@@ -450,6 +534,7 @@
 
   window.addEventListener("beforeunload", () => {
     stopLocationWatch();
+    stopQrScan();
     if (stream) stream.getTracks().forEach(t => t.stop());
   });
 })();
