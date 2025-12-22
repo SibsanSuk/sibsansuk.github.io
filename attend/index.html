@@ -130,6 +130,7 @@
     </footer>
   </div>
 
+<script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
 <script>
 (() => {
   // ====== ตั้งค่าเป้าหมาย (จากลิงก์ที่คุณให้) ======
@@ -171,6 +172,8 @@
   let qrDetector = null;
   const qrCanvas = document.createElement("canvas");
   const qrCtx = qrCanvas.getContext("2d", { willReadFrequently: true });
+  let qrMatched = false;
+  let lastDistance = null;
 
   const supportsFacing = !!navigator.mediaDevices?.getSupportedConstraints?.().facingMode;
 
@@ -180,9 +183,23 @@
   let deviceId = null; // ถ้าระบุ จะบังคับใช้ตัวนั้น
   const preferredByFacing = { user: null, environment: null };
 
-  function setBorder(ok) {
+  function updateBorder() {
+    if (lastDistance === null) {
+      stage.style.borderColor = "#b00020";
+      statusText.textContent = "กำลังตรวจเงื่อนไข…";
+      return;
+    }
+    const radius = Math.max(10, Number(radiusInput.value) || 200);
+    const inArea = lastDistance <= radius;
+    const ok = inArea && qrMatched;
     stage.style.borderColor = ok ? "#00c853" : "#b00020";
-    statusText.textContent = ok ? "อยู่ในพื้นที่ ✅ (กรอบเขียว)" : "อยู่นอกพื้นที่ ❌ (กรอบแดง)";
+    if (ok) {
+      statusText.textContent = "อยู่ในพื้นที่ + พบ QR ✅ (กรอบเขียว)";
+    } else if (!inArea) {
+      statusText.textContent = "อยู่นอกพื้นที่ ❌ (กรอบแดง)";
+    } else {
+      statusText.textContent = "ยังไม่พบ QR อาจารย์ ❌ (กรอบแดง)";
+    }
   }
   function setStatus(msg) { statusText.textContent = msg; }
 
@@ -345,23 +362,30 @@
 
   function startQrScan() {
     stopQrScan();
-    if (!("BarcodeDetector" in window)) {
+    const hasBarcodeDetector = "BarcodeDetector" in window;
+    const hasJsQr = typeof window.jsQR === "function";
+    if (!hasBarcodeDetector && !hasJsQr) {
       qrStatus.textContent = "เบราว์เซอร์นี้ยังไม่รองรับสแกน QR";
       qrValue.textContent = "-";
       return;
     }
-    if (!qrDetector) {
+    if (hasBarcodeDetector && !qrDetector) {
       try {
         qrDetector = new BarcodeDetector({ formats: ["qr_code"] });
       } catch (err) {
         console.error(err);
-        qrStatus.textContent = "เปิดตัวสแกน QR ไม่สำเร็จ";
-        qrValue.textContent = "-";
-        return;
+        qrDetector = null;
       }
+    }
+    if (hasBarcodeDetector && !qrDetector && !hasJsQr) {
+      qrStatus.textContent = "เปิดตัวสแกน QR ไม่สำเร็จ";
+      qrValue.textContent = "-";
+      return;
     }
     qrStatus.textContent = "กำลังสแกน…";
     qrValue.textContent = "-";
+    qrMatched = false;
+    updateBorder();
 
     const expected = formatTodayVariants();
     let lastText = "";
@@ -373,22 +397,32 @@
       qrCanvas.height = video.videoHeight;
       qrCtx.drawImage(video, 0, 0, qrCanvas.width, qrCanvas.height);
       try {
-        const codes = await qrDetector.detect(qrCanvas);
-        if (!codes.length) {
+        let text = "";
+        if (qrDetector) {
+          const codes = await qrDetector.detect(qrCanvas);
+          text = (codes[0]?.rawValue || "").trim();
+        } else if (hasJsQr) {
+          const imageData = qrCtx.getImageData(0, 0, qrCanvas.width, qrCanvas.height);
+          const code = window.jsQR(imageData.data, qrCanvas.width, qrCanvas.height);
+          text = (code?.data || "").trim();
+        }
+        if (!text) {
           if (Date.now() - lastHitAt > 1500) {
             qrStatus.textContent = "ยังไม่พบ QR";
             qrValue.textContent = "-";
+            qrMatched = false;
+            updateBorder();
           }
           return;
         }
-        const text = (codes[0].rawValue || "").trim();
-        if (!text) return;
         if (text !== lastText) lastText = text;
         qrValue.textContent = text;
         lastHitAt = Date.now();
-        qrStatus.textContent = expected.has(text)
+        qrMatched = expected.has(text);
+        qrStatus.textContent = qrMatched
           ? "พบ QR อาจารย์แล้ว ✅"
           : "พบ QR แต่ไม่ตรงวัน";
+        updateBorder();
       } catch (err) {
         console.error(err);
         qrStatus.textContent = "สแกน QR ไม่สำเร็จ";
@@ -428,8 +462,8 @@
       const d = distanceMeters(latitude, longitude, TARGET.lat, TARGET.lng);
       distEl.textContent = `${Math.round(d)} m`;
 
-      const radius = Math.max(10, Number(radiusInput.value) || 200);
-      setBorder(d <= radius);
+      lastDistance = d;
+      updateBorder();
 
       hint.textContent = (accuracy > 80)
         ? "ตำแหน่งยังไม่ค่อยแม่น (accuracy สูง) ลองออกไปที่โล่ง/เปิด GPS"
@@ -509,8 +543,7 @@
     const distText = distEl.textContent;
     const d = Number((distText.match(/\d+/) || [])[0]);
     if (Number.isFinite(d)) {
-      const radius = Math.max(10, Number(radiusInput.value) || 200);
-      setBorder(d <= radius);
+      updateBorder();
     }
   });
 
