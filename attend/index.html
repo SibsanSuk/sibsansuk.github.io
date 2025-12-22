@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Camera + Location Check</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    .wrap { min-height: 100vh; display: grid; grid-template-rows: auto 1fr auto; gap: 12px; padding: 12px; box-sizing: border-box; }
+    header { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+    .pill { padding: 8px 10px; border-radius: 999px; border: 1px solid rgba(127,127,127,.35); font-size: 14px; }
+    .status { font-weight: 700; }
+    .stage {
+      position: relative;
+      border-radius: 18px;
+      overflow: hidden;
+      background: #000;
+      min-height: 55vh;
+      border: 8px solid #b00020; /* default red */
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transform: scaleX(-1); /* front cam feel; remove if you prefer */
+    }
+    .overlay {
+      position: absolute; inset: 0;
+      pointer-events: none;
+      display: grid;
+      place-items: end center;
+      padding: 12px;
+      box-sizing: border-box;
+      background: linear-gradient(to top, rgba(0,0,0,.55), rgba(0,0,0,0) 55%);
+    }
+    .card {
+      width: min(720px, 100%);
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: rgba(0,0,0,.55);
+      border: 1px solid rgba(255,255,255,.18);
+      backdrop-filter: blur(8px);
+      color: #fff;
+      font-size: 14px;
+      line-height: 1.35;
+    }
+    .row { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+    .row > div { opacity: .95; }
+    .muted { opacity: .8; }
+    button {
+      border: 1px solid rgba(127,127,127,.4);
+      background: rgba(127,127,127,.12);
+      color: inherit;
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button:hover { background: rgba(127,127,127,.18); }
+    footer { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
+    .small { font-size: 12px; opacity: .8; }
+    input[type="number"]{
+      width: 90px; padding: 8px 10px; border-radius: 10px;
+      border: 1px solid rgba(127,127,127,.35);
+      background: rgba(127,127,127,.10); color: inherit;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="pill status" id="statusText">กำลังเริ่มต้น…</div>
+      <div class="pill">เป้าหมาย: ม.เกษตรฯ กำแพงแสน</div>
+      <div class="pill">
+        รัศมี (เมตร):
+        <input id="radiusM" type="number" min="10" step="10" value="200" />
+      </div>
+    </header>
+
+    <div class="stage" id="stage">
+      <video id="video" playsinline autoplay muted></video>
+      <div class="overlay">
+        <div class="card">
+          <div class="row">
+            <div>Lat: <span id="lat" class="muted">-</span></div>
+            <div>Lng: <span id="lng" class="muted">-</span></div>
+            <div>Accuracy: <span id="acc" class="muted">-</span></div>
+          </div>
+          <div class="row" style="margin-top:6px">
+            <div>Distance: <span id="dist" class="muted">-</span></div>
+            <div>Target: <span class="muted" id="targetText">-</span></div>
+          </div>
+          <div class="small" style="margin-top:8px" id="hint">
+            หมายเหตุ: ต้องเปิดผ่าน HTTPS (หรือ localhost) และอนุญาต “กล้อง” + “ตำแหน่ง”
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div class="small">
+        ถ้าตำแหน่ง “สวิง” ลองออกไปโล่งๆ / เปิด GPS / ใช้มือถือแทนเดสก์ท็อป
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap">
+        <button id="retryCam">ขอกล้องใหม่</button>
+        <button id="retryLoc">ขอตำแหน่งใหม่</button>
+      </div>
+    </footer>
+  </div>
+
+<script>
+(() => {
+  // ====== ตั้งค่าเป้าหมาย (จากลิงก์ที่คุณให้) ======
+  // เลือกใช้พิกัด 14.021499, 99.9758568 (ในลิงก์)
+  const TARGET = { lat: 14.021499, lng: 99.9758568 };
+
+  const el = (id) => document.getElementById(id);
+  const stage = el("stage");
+  const statusText = el("statusText");
+  const video = el("video");
+
+  const latEl = el("lat");
+  const lngEl = el("lng");
+  const accEl = el("acc");
+  const distEl = el("dist");
+  const targetText = el("targetText");
+  const radiusInput = el("radiusM");
+  const hint = el("hint");
+
+  targetText.textContent = `${TARGET.lat.toFixed(6)}, ${TARGET.lng.toFixed(6)}`;
+
+  let watchId = null;
+  let stream = null;
+
+  function setBorder(ok) {
+    stage.style.borderColor = ok ? "#00c853" : "#b00020"; // green / red
+    statusText.textContent = ok ? "อยู่ในพื้นที่ ✅ (กรอบเขียว)" : "อยู่นอกพื้นที่ ❌ (กรอบแดง)";
+  }
+
+  function setStatus(msg) {
+    statusText.textContent = msg;
+  }
+
+  // Haversine distance (meters)
+  function distanceMeters(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const toRad = (d) => d * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a =
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  async function startCamera() {
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setStatus("เบราว์เซอร์นี้ไม่รองรับกล้อง");
+        return;
+      }
+      // ปิดกล้องเก่าถ้ามี
+      if (stream) stream.getTracks().forEach(t => t.stop());
+
+      // ขอใช้กล้องหลังเป็นหลัก (มือถือ)
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false
+      });
+
+      video.srcObject = stream;
+      hint.textContent = "กล้องทำงานแล้ว ✅ กำลังตรวจตำแหน่ง…";
+    } catch (err) {
+      console.error(err);
+      setStatus("ขอกล้องไม่สำเร็จ (อนุญาตกล้อง/HTTPS?)");
+      hint.textContent = "แก้ไข: เปิดผ่าน HTTPS, กดอนุญาตกล้อง, หรือเช็ค Settings ของเบราว์เซอร์";
+    }
+  }
+
+  function stopLocationWatch() {
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId);
+      watchId = null;
+    }
+  }
+
+  function startLocation() {
+    if (!navigator.geolocation) {
+      setStatus("เบราว์เซอร์นี้ไม่รองรับตำแหน่ง (Geolocation)");
+      return;
+    }
+
+    stopLocationWatch();
+    setStatus("กำลังขอตำแหน่ง…");
+
+    watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude, accuracy } = pos.coords;
+
+        latEl.textContent = latitude.toFixed(6);
+        lngEl.textContent = longitude.toFixed(6);
+        accEl.textContent = `${Math.round(accuracy)} m`;
+
+        const d = distanceMeters(latitude, longitude, TARGET.lat, TARGET.lng);
+        distEl.textContent = `${Math.round(d)} m`;
+
+        const radius = Math.max(10, Number(radiusInput.value) || 200);
+        const inside = d <= radius;
+
+        setBorder(inside);
+
+        // เพิ่มคำใบ้เรื่องความแม่นยำ
+        if (accuracy > 80) {
+          hint.textContent = "ตำแหน่งยังไม่ค่อยแม่น (accuracy สูง) ลองออกไปที่โล่ง/เปิด GPS";
+        } else {
+          hint.textContent = "ตำแหน่งอัปเดตแบบเรียลไทม์ ✅";
+        }
+      },
+      (err) => {
+        console.error(err);
+        setStatus("ขอตำแหน่งไม่สำเร็จ (อนุญาตตำแหน่ง/HTTPS?)");
+        hint.textContent = "แก้ไข: เปิดผ่าน HTTPS, กดอนุญาตตำแหน่ง, หรือเช็ค Location Services";
+        // ให้กรอบแดงไว้ก่อน
+        stage.style.borderColor = "#b00020";
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 1000,
+        timeout: 15000
+      }
+    );
+  }
+
+  // ปุ่ม retry
+  el("retryCam").addEventListener("click", () => startCamera());
+  el("retryLoc").addEventListener("click", () => startLocation());
+
+  // เมื่อปรับรัศมี ให้ประเมินใหม่ทันที (ถ้ามีข้อมูลระยะ)
+  radiusInput.addEventListener("input", () => {
+    // แค่บังคับให้ watchPosition รอบถัดไปประเมินใหม่
+    // (ถ้ามีค่า dist แล้ว ก็ปรับสถานะด้วยแบบทันที)
+    const distText = distEl.textContent;
+    const d = Number((distText.match(/\d+/) || [])[0]);
+    if (Number.isFinite(d)) {
+      const radius = Math.max(10, Number(radiusInput.value) || 200);
+      setBorder(d <= radius);
+    }
+  });
+
+  // เริ่มทำงานทันทีเมื่อเปิดหน้า
+  (async () => {
+    // หมายเหตุ: iOS บางครั้งต้องมี user gesture ถึงจะเริ่มกล้องได้
+    // แต่เราลองเริ่มก่อน ถ้าโดนบล็อกผู้ใช้กด "ขอกล้องใหม่" ได้
+    await startCamera();
+    startLocation();
+  })();
+
+  // ทำความสะอาดเมื่อปิดหน้า
+  window.addEventListener("beforeunload", () => {
+    stopLocationWatch();
+    if (stream) stream.getTracks().forEach(t => t.stop());
+  });
+})();
+</script>
+</body>
+</html>
