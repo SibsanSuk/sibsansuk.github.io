@@ -60,6 +60,7 @@
       font-weight: 600;
     }
     button:hover { background: rgba(127,127,127,.18); }
+    button:disabled { opacity: .6; cursor: not-allowed; }
     footer { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
     .small { font-size: 12px; opacity: .8; }
     input[type="number"]{
@@ -105,6 +106,7 @@
         ถ้าตำแหน่ง “สวิง” ลองออกไปโล่งๆ / เปิด GPS / ใช้มือถือแทนเดสก์ท็อป
       </div>
       <div style="display:flex; gap:10px; flex-wrap:wrap">
+        <button id="toggleCam">สลับกล้อง (หลัง)</button>
         <button id="retryCam">ขอกล้องใหม่</button>
         <button id="retryLoc">ขอตำแหน่งใหม่</button>
       </div>
@@ -114,7 +116,6 @@
 <script>
 (() => {
   // ====== ตั้งค่าเป้าหมาย (จากลิงก์ที่คุณให้) ======
-  // เลือกใช้พิกัด 14.021499, 99.9758568 (ในลิงก์)
   const TARGET = { lat: 14.021499, lng: 99.9758568 };
 
   const el = (id) => document.getElementById(id);
@@ -130,19 +131,24 @@
   const radiusInput = el("radiusM");
   const hint = el("hint");
 
+  const btnToggleCam = el("toggleCam");
+  const btnRetryCam  = el("retryCam");
+  const btnRetryLoc  = el("retryLoc");
+
   targetText.textContent = `${TARGET.lat.toFixed(6)}, ${TARGET.lng.toFixed(6)}`;
 
   let watchId = null;
   let stream = null;
 
+  // กล้องเริ่มต้น: หลัง (environment)
+  let facingMode = "environment"; // "user" หรือ "environment"
+  let deviceId = null; // fallback สำหรับบางเครื่อง/เบราว์เซอร์
+
   function setBorder(ok) {
-    stage.style.borderColor = ok ? "#00c853" : "#b00020"; // green / red
+    stage.style.borderColor = ok ? "#00c853" : "#b00020";
     statusText.textContent = ok ? "อยู่ในพื้นที่ ✅ (กรอบเขียว)" : "อยู่นอกพื้นที่ ❌ (กรอบแดง)";
   }
-
-  function setStatus(msg) {
-    statusText.textContent = msg;
-  }
+  function setStatus(msg) { statusText.textContent = msg; }
 
   // Haversine distance (meters)
   function distanceMeters(lat1, lon1, lat2, lon2) {
@@ -158,27 +164,73 @@
     return R * c;
   }
 
+  async function listVideoInputs() {
+    // ต้องได้ permission ก่อน enumerateDevices จะเห็น label ชัด
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    return devices.filter(d => d.kind === "videoinput");
+  }
+
   async function startCamera() {
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
         setStatus("เบราว์เซอร์นี้ไม่รองรับกล้อง");
         return;
       }
+      btnToggleCam.disabled = true;
+
       // ปิดกล้องเก่าถ้ามี
       if (stream) stream.getTracks().forEach(t => t.stop());
 
-      // ขอใช้กล้องหลังเป็นหลัก (มือถือ)
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
-        audio: false
-      });
+      // constraint: ถ้ามี deviceId ให้ใช้, ไม่งั้นใช้ facingMode
+      const constraints = {
+        audio: false,
+        video: deviceId
+          ? { deviceId: { exact: deviceId } }
+          : { facingMode: { ideal: facingMode } }
+      };
 
+      stream = await navigator.mediaDevices.getUserMedia(constraints);
       video.srcObject = stream;
-      hint.textContent = "กล้องทำงานแล้ว ✅ กำลังตรวจตำแหน่ง…";
+
+      // ให้ภาพ mirror เฉพาะกล้องหน้า (user)
+      // (ถ้า browser บางตัวไม่ honor facingMode, จะลองเดาจาก device label)
+      let isFront = (facingMode === "user");
+
+      try {
+        const inputs = await listVideoInputs();
+        const track = stream.getVideoTracks()[0];
+        const settings = track.getSettings?.() || {};
+        if (settings.deviceId) {
+          const used = inputs.find(d => d.deviceId === settings.deviceId);
+          if (used && used.label) {
+            const label = used.label.toLowerCase();
+            // heuristic
+            if (label.includes("front") || label.includes("user") || label.includes("facetime")) isFront = true;
+            if (label.includes("back") || label.includes("rear") || label.includes("environment")) isFront = false;
+          }
+        }
+      } catch {}
+
+      video.style.transform = isFront ? "scaleX(-1)" : "none";
+
+      hint.textContent = `กล้องทำงานแล้ว ✅ (โหมด: ${facingMode === "user" ? "หน้า" : "หลัง"}) กำลังตรวจตำแหน่ง…`;
+
+      // เปิดปุ่มสลับกล้อง ถ้ามีมากกว่า 1 ตัว
+      try {
+        const inputs = await listVideoInputs();
+        btnToggleCam.disabled = inputs.length < 2;
+      } catch {
+        btnToggleCam.disabled = false; // ถ้าดูไม่ได้ ก็ให้ลองกดได้
+      }
+
+      // อัปเดตข้อความบนปุ่ม
+      btnToggleCam.textContent = `สลับกล้อง (${facingMode === "user" ? "หน้า" : "หลัง"})`;
+
     } catch (err) {
       console.error(err);
       setStatus("ขอกล้องไม่สำเร็จ (อนุญาตกล้อง/HTTPS?)");
       hint.textContent = "แก้ไข: เปิดผ่าน HTTPS, กดอนุญาตกล้อง, หรือเช็ค Settings ของเบราว์เซอร์";
+      btnToggleCam.disabled = false;
     }
   }
 
@@ -210,40 +262,71 @@
         distEl.textContent = `${Math.round(d)} m`;
 
         const radius = Math.max(10, Number(radiusInput.value) || 200);
-        const inside = d <= radius;
+        setBorder(d <= radius);
 
-        setBorder(inside);
-
-        // เพิ่มคำใบ้เรื่องความแม่นยำ
-        if (accuracy > 80) {
-          hint.textContent = "ตำแหน่งยังไม่ค่อยแม่น (accuracy สูง) ลองออกไปที่โล่ง/เปิด GPS";
-        } else {
-          hint.textContent = "ตำแหน่งอัปเดตแบบเรียลไทม์ ✅";
-        }
+        hint.textContent = (accuracy > 80)
+          ? "ตำแหน่งยังไม่ค่อยแม่น (accuracy สูง) ลองออกไปที่โล่ง/เปิด GPS"
+          : "ตำแหน่งอัปเดตแบบเรียลไทม์ ✅";
       },
       (err) => {
         console.error(err);
         setStatus("ขอตำแหน่งไม่สำเร็จ (อนุญาตตำแหน่ง/HTTPS?)");
         hint.textContent = "แก้ไข: เปิดผ่าน HTTPS, กดอนุญาตตำแหน่ง, หรือเช็ค Location Services";
-        // ให้กรอบแดงไว้ก่อน
         stage.style.borderColor = "#b00020";
       },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 1000,
-        timeout: 15000
-      }
+      { enableHighAccuracy: true, maximumAge: 1000, timeout: 15000 }
     );
   }
 
-  // ปุ่ม retry
-  el("retryCam").addEventListener("click", () => startCamera());
-  el("retryLoc").addEventListener("click", () => startLocation());
+  // ====== สลับกล้อง หน้า/หลัง ======
+  async function toggleCamera() {
+    // โหมดพื้นฐาน: สลับ facingMode
+    facingMode = (facingMode === "user") ? "environment" : "user";
+    deviceId = null; // reset ก่อนลองด้วย facingMode
 
-  // เมื่อปรับรัศมี ให้ประเมินใหม่ทันที (ถ้ามีข้อมูลระยะ)
+    // บางเครื่อง/บาง browser สลับ facingMode ไม่เป๊ะ → fallback ด้วย deviceId
+    try {
+      // ขอเริ่มกล้องด้วย facingMode ก่อน
+      await startCamera();
+
+      // ถ้ายังสลับไม่สำเร็จจริงๆ (เช่นยังได้กล้องตัวเดิม) ให้ลอง device cycling
+      // ตรวจจาก track settings deviceId แล้วสลับไปตัวอื่น
+      const track = stream?.getVideoTracks?.()[0];
+      const usedId = track?.getSettings?.().deviceId;
+      if (!usedId) return;
+
+      const inputs = await listVideoInputs();
+      if (inputs.length < 2) return;
+
+      const idx = inputs.findIndex(d => d.deviceId === usedId);
+      const next = inputs[(idx + 1) % inputs.length];
+      // ถ้า next เป็นตัวเดิมก็จบ
+      if (!next || next.deviceId === usedId) return;
+
+      deviceId = next.deviceId;
+      await startCamera();
+    } catch (e) {
+      console.error(e);
+      // ถ้าล้มเหลว ให้ลอง enumerate แล้วสลับ deviceId ตรงๆ
+      try {
+        const inputs = await listVideoInputs();
+        if (inputs.length >= 2) {
+          const current = stream?.getVideoTracks?.()[0]?.getSettings?.().deviceId;
+          const idx = inputs.findIndex(d => d.deviceId === current);
+          const next = inputs[(idx + 1) % inputs.length];
+          deviceId = next.deviceId;
+          await startCamera();
+        }
+      } catch {}
+    }
+  }
+
+  // ปุ่มต่าง ๆ
+  btnToggleCam.addEventListener("click", toggleCamera);
+  btnRetryCam.addEventListener("click", () => startCamera());
+  btnRetryLoc.addEventListener("click", () => startLocation());
+
   radiusInput.addEventListener("input", () => {
-    // แค่บังคับให้ watchPosition รอบถัดไปประเมินใหม่
-    // (ถ้ามีค่า dist แล้ว ก็ปรับสถานะด้วยแบบทันที)
     const distText = distEl.textContent;
     const d = Number((distText.match(/\d+/) || [])[0]);
     if (Number.isFinite(d)) {
@@ -254,13 +337,11 @@
 
   // เริ่มทำงานทันทีเมื่อเปิดหน้า
   (async () => {
-    // หมายเหตุ: iOS บางครั้งต้องมี user gesture ถึงจะเริ่มกล้องได้
-    // แต่เราลองเริ่มก่อน ถ้าโดนบล็อกผู้ใช้กด "ขอกล้องใหม่" ได้
+    // iOS บางทีต้องกดปุ่มถึงจะเริ่มกล้องได้ → ถ้าโดนบล็อกกด "ขอกล้องใหม่"
     await startCamera();
     startLocation();
   })();
 
-  // ทำความสะอาดเมื่อปิดหน้า
   window.addEventListener("beforeunload", () => {
     stopLocationWatch();
     if (stream) stream.getTracks().forEach(t => t.stop());
