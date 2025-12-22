@@ -140,9 +140,13 @@
   let watchId = null;
   let stream = null;
 
+  const supportsFacing = !!navigator.mediaDevices?.getSupportedConstraints?.().facingMode;
+
   // กล้องเริ่มต้น: หลัง (environment)
-  let facingMode = "environment"; // "user" หรือ "environment"
-  let deviceId = null; // fallback สำหรับบางเครื่อง/เบราว์เซอร์
+  let desiredFacing = "environment"; // "user" หรือ "environment"
+  let currentFacing = "environment";
+  let deviceId = null; // ถ้าระบุ จะบังคับใช้ตัวนั้น
+  const preferredByFacing = { user: null, environment: null };
 
   function setBorder(ok) {
     stage.style.borderColor = ok ? "#00c853" : "#b00020";
@@ -170,50 +174,95 @@
     return devices.filter(d => d.kind === "videoinput");
   }
 
-  async function startCamera() {
+  function guessFacingFromLabel(label) {
+    if (!label) return null;
+    const text = label.toLowerCase();
+    if (text.includes("front") || text.includes("user") || text.includes("facetime")) return "user";
+    if (text.includes("back") || text.includes("rear") || text.includes("environment")) return "environment";
+    return null;
+  }
+
+  function pickDeviceIdForFacing(inputs, facing) {
+    const wanted = facing === "user"
+      ? ["front", "user", "facetime"]
+      : ["back", "rear", "environment"];
+    const found = inputs.find(d => {
+      const label = (d.label || "").toLowerCase();
+      return wanted.some(k => label.includes(k));
+    });
+    return found?.deviceId || null;
+  }
+
+  function getFacingFromTrack(track, fallback) {
+    const settings = track?.getSettings?.() || {};
+    if (settings.facingMode === "user" || settings.facingMode === "environment") {
+      return settings.facingMode;
+    }
+    const guess = guessFacingFromLabel(track?.label || "");
+    return guess || fallback;
+  }
+
+  async function startCamera(nextFacing = desiredFacing) {
     try {
       if (!navigator.mediaDevices?.getUserMedia) {
         setStatus("เบราว์เซอร์นี้ไม่รองรับกล้อง");
         return;
       }
+      desiredFacing = nextFacing;
       btnToggleCam.disabled = true;
 
       // ปิดกล้องเก่าถ้ามี
       if (stream) stream.getTracks().forEach(t => t.stop());
 
       // constraint: ถ้ามี deviceId ให้ใช้, ไม่งั้นใช้ facingMode
-      const constraints = {
-        audio: false,
-        video: deviceId
-          ? { deviceId: { exact: deviceId } }
-          : { facingMode: { ideal: facingMode } }
-      };
+      let constraints = { audio: false, video: {} };
+      if (deviceId) {
+        constraints.video = { deviceId: { exact: deviceId } };
+      } else if (supportsFacing) {
+        constraints.video = { facingMode: { exact: desiredFacing } };
+      } else {
+        constraints.video = { facingMode: { ideal: desiredFacing } };
+      }
 
-      stream = await navigator.mediaDevices.getUserMedia(constraints);
+      let nextStream;
+      try {
+        nextStream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (err) {
+        // บางเครื่องไม่ยอมรับ exact → fallback เป็น ideal
+        if (!deviceId && supportsFacing && constraints.video.facingMode?.exact) {
+          nextStream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: { facingMode: { ideal: desiredFacing } }
+          });
+        } else {
+          throw err;
+        }
+      }
+
+      stream = nextStream;
       video.srcObject = stream;
+      await video.play().catch(() => {});
 
       // ให้ภาพ mirror เฉพาะกล้องหน้า (user)
       // (ถ้า browser บางตัวไม่ honor facingMode, จะลองเดาจาก device label)
-      let isFront = (facingMode === "user");
+      const track = stream.getVideoTracks()[0];
+      const settings = track?.getSettings?.() || {};
+      const actualFacing = getFacingFromTrack(track, desiredFacing);
+      currentFacing = actualFacing;
 
-      try {
-        const inputs = await listVideoInputs();
-        const track = stream.getVideoTracks()[0];
-        const settings = track.getSettings?.() || {};
-        if (settings.deviceId) {
-          const used = inputs.find(d => d.deviceId === settings.deviceId);
-          if (used && used.label) {
-            const label = used.label.toLowerCase();
-            // heuristic
-            if (label.includes("front") || label.includes("user") || label.includes("facetime")) isFront = true;
-            if (label.includes("back") || label.includes("rear") || label.includes("environment")) isFront = false;
-          }
-        }
-      } catch {}
+      if (settings.deviceId) {
+        preferredByFacing[actualFacing] = settings.deviceId;
+      } else if (track?.label) {
+        try {
+          const inputs = await listVideoInputs();
+          const match = inputs.find(d => d.label === track.label);
+          if (match?.deviceId) preferredByFacing[actualFacing] = match.deviceId;
+        } catch {}
+      }
 
-      video.style.transform = isFront ? "scaleX(-1)" : "none";
+      video.style.transform = actualFacing === "user" ? "scaleX(-1)" : "none";
 
-      hint.textContent = `กล้องทำงานแล้ว ✅ (โหมด: ${facingMode === "user" ? "หน้า" : "หลัง"}) กำลังตรวจตำแหน่ง…`;
+      hint.textContent = `กล้องทำงานแล้ว ✅ (โหมด: ${actualFacing === "user" ? "หน้า" : "หลัง"}) กำลังตรวจตำแหน่ง…`;
 
       // เปิดปุ่มสลับกล้อง ถ้ามีมากกว่า 1 ตัว
       try {
@@ -224,7 +273,7 @@
       }
 
       // อัปเดตข้อความบนปุ่ม
-      btnToggleCam.textContent = `สลับกล้อง (${facingMode === "user" ? "หน้า" : "หลัง"})`;
+      btnToggleCam.textContent = `สลับกล้อง (${actualFacing === "user" ? "หน้า" : "หลัง"})`;
 
     } catch (err) {
       console.error(err);
@@ -280,31 +329,17 @@
 
   // ====== สลับกล้อง หน้า/หลัง ======
   async function toggleCamera() {
-    // โหมดพื้นฐาน: สลับ facingMode
-    facingMode = (facingMode === "user") ? "environment" : "user";
-    deviceId = null; // reset ก่อนลองด้วย facingMode
+    const nextFacing = (currentFacing === "user") ? "environment" : "user";
+    deviceId = preferredByFacing[nextFacing];
 
-    // บางเครื่อง/บาง browser สลับ facingMode ไม่เป๊ะ → fallback ด้วย deviceId
     try {
-      // ขอเริ่มกล้องด้วย facingMode ก่อน
-      await startCamera();
+      try {
+        const inputs = await listVideoInputs();
+        const picked = pickDeviceIdForFacing(inputs, nextFacing);
+        if (picked) deviceId = picked;
+      } catch {}
 
-      // ถ้ายังสลับไม่สำเร็จจริงๆ (เช่นยังได้กล้องตัวเดิม) ให้ลอง device cycling
-      // ตรวจจาก track settings deviceId แล้วสลับไปตัวอื่น
-      const track = stream?.getVideoTracks?.()[0];
-      const usedId = track?.getSettings?.().deviceId;
-      if (!usedId) return;
-
-      const inputs = await listVideoInputs();
-      if (inputs.length < 2) return;
-
-      const idx = inputs.findIndex(d => d.deviceId === usedId);
-      const next = inputs[(idx + 1) % inputs.length];
-      // ถ้า next เป็นตัวเดิมก็จบ
-      if (!next || next.deviceId === usedId) return;
-
-      deviceId = next.deviceId;
-      await startCamera();
+      await startCamera(nextFacing);
     } catch (e) {
       console.error(e);
       // ถ้าล้มเหลว ให้ลอง enumerate แล้วสลับ deviceId ตรงๆ
@@ -314,8 +349,10 @@
           const current = stream?.getVideoTracks?.()[0]?.getSettings?.().deviceId;
           const idx = inputs.findIndex(d => d.deviceId === current);
           const next = inputs[(idx + 1) % inputs.length];
-          deviceId = next.deviceId;
-          await startCamera();
+          if (next?.deviceId) {
+            deviceId = next.deviceId;
+            await startCamera(nextFacing);
+          }
         }
       } catch {}
     }
