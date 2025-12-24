@@ -152,6 +152,13 @@
           <input type="checkbox" id="toggle-threejs-demo" checked />
           ทดลองแสดง 3D text (Three.js)
         </label>
+        <button
+          type="button"
+          id="save-map"
+          style="margin-top:8px; font-size:12px; padding:4px 8px; width:100%;"
+        >
+          บันทึกภาพแผนที่ (PNG)
+        </button>
       </div>
     </div>
     <aside id="sidebar">
@@ -263,7 +270,8 @@
       zoom: 5.3,
       pitch: 60, // เอียงกล้องให้เป็นมุมมอง 3D
       bearing: -30, // หมุนแผนที่เล็กน้อย
-      antialias: true
+      antialias: true,
+      preserveDrawingBuffer: true
     });
 
     // แสดงระดับการซูมมุมขวาบน (ใน info)
@@ -283,6 +291,22 @@
     // - Shift + ลาก: หมุน/เอียงมุมกล้อง
     map.dragRotate.enable();
     map.touchZoomRotate.enableRotation();
+
+    const saveMapButton = document.getElementById("save-map");
+    if (saveMapButton) {
+      saveMapButton.addEventListener("click", () => {
+        map.once("idle", () => {
+          const canvas = map.getCanvas();
+          const dataUrl = canvas.toDataURL("image/png");
+          const link = document.createElement("a");
+          const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+          link.href = dataUrl;
+          link.download = `map-${stamp}.png`;
+          link.click();
+        });
+        map.triggerRepaint();
+      });
+    }
 
     const NORTHERN_PROVINCES = [
       { en: "Chiang Rai", th: "เชียงราย" },
