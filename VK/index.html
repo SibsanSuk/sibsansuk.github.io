@@ -1,0 +1,979 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Claymorphism LMS — Single File (React UMD + Tailwind)</title>
+
+  <!-- Tailwind (CDN) เพื่อลด CSS ที่ต้องเขียนเอง -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700;800&family=Noto+Sans+Thai:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* Claymorphism helpers + subtle dotted background */
+    :root{
+      --bgA:#f7fbfb;
+      --bgB:#ffffff;
+      --surface:#ffffff;
+      --surface-2:#f4f7f9;
+      --ink:#102a2f;
+      --muted:#5b6b6f;
+      --border:#e3e8ee;
+      --brand-900:#0b4f55;
+      --brand-800:#0f6b72;
+      --brand-700:#138a92;
+      --brand-600:#18a4aa;
+      --brand-500:#1fb9b7;
+      --brand-400:#4fd0c8;
+      --brand-300:#87e2da;
+      --brand-200:#b7f1ec;
+      --brand-100:#e0faf8;
+      --success:#18b879;
+      --info:#4f8cff;
+      --warning:#f59e0b;
+      --danger:#f97316;
+      --cat-1:#f56a6a;
+      --cat-2:#f6b86a;
+      --cat-3:#8ccf7a;
+      --cat-4:#5f76c8;
+      --cat-5:#c59cff;
+      --rXL:24px; --rLG:18px; --rMD:14px;
+    }
+    body{
+      background:
+        radial-gradient(circle at 10% 5%, rgba(31,185,183,.08), transparent 40%),
+        radial-gradient(circle at 95% 15%, rgba(79,208,200,.10), transparent 45%),
+        linear-gradient(180deg, var(--bgA), var(--bgB));
+      color: var(--ink);
+      font-family: "Kanit", "Noto Sans Thai", "Segoe UI", system-ui, sans-serif;
+      padding: 22px 12px 32px;
+    }
+    .topbar-gradient{
+      height: 14px;
+      background: linear-gradient(90deg, #19b2af, #32c3b9, #63d6cc, #a7ebe4);
+    }
+    .app-frame{
+      border: 3px solid var(--brand-500);
+      border-radius: 28px;
+      background: var(--surface);
+      box-shadow: 0 14px 30px rgba(15, 107, 114, .12);
+      overflow: hidden;
+    }
+    .nav-surface{
+      background: linear-gradient(180deg, rgba(31,185,183,.12), rgba(255,255,255,1));
+      border-bottom: 2px solid var(--brand-300);
+      box-shadow: 0 8px 18px rgba(24, 164, 170, .12);
+    }
+    .dots{
+      background-image: none;
+    }
+    .clay{
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--rXL);
+      box-shadow: 0 8px 20px rgba(12, 34, 46, .05);
+    }
+    .clay-soft{
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--rLG);
+      box-shadow: none;
+    }
+    .panel{
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--rLG);
+    }
+    .input-inset{
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--rLG);
+      box-shadow: inset 0 2px 6px rgba(12, 34, 46, .12);
+    }
+    .input-inset:focus-within{
+      border-color: var(--brand-300);
+      box-shadow: 0 0 0 4px rgba(79,208,200,.18), inset 0 2px 6px rgba(12, 34, 46, .12);
+    }
+    .pill{
+      border-radius: 999px;
+      border: 1px solid rgba(15,107,114,.18);
+      box-shadow:
+        0 18px 30px rgba(12, 34, 46, .18),
+        0 6px 16px rgba(24, 164, 170, .18),
+        inset 0 2px 0 rgba(255,255,255,.75),
+        inset 0 -6px 12px rgba(0,0,0,.08);
+    }
+    .pill:hover{
+      box-shadow:
+        0 20px 34px rgba(12, 34, 46, .20),
+        0 10px 22px rgba(24, 164, 170, .22),
+        inset 0 2px 0 rgba(255,255,255,.8),
+        inset 0 -8px 14px rgba(0,0,0,.10);
+    }
+    .pill:active{ transform: translateY(1px); filter: brightness(.98); }
+    .ghost{
+      background: #ffffff;
+      border: 1px solid var(--border);
+      box-shadow: 0 12px 20px rgba(12, 34, 46, .14), inset 0 1px 0 rgba(255,255,255,.7);
+      border-radius: 999px;
+    }
+    .tabActive{
+      border: 1px solid var(--brand-200);
+      background: var(--brand-100);
+      color: var(--brand-800);
+    }
+    .tabBtn{
+      border: 1px solid transparent;
+      color: var(--muted);
+      background: transparent;
+    }
+    .tabBtn:hover{
+      border-color: var(--border);
+      background: var(--surface-2);
+      color: var(--ink);
+    }
+    .tab-strip{
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+    }
+    .chip{
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+    }
+    .cat-card{
+      border-left: 6px solid transparent;
+      padding-left: 14px;
+    }
+    .cat-1{ border-left-color: var(--cat-1); }
+    .cat-2{ border-left-color: var(--cat-2); }
+    .cat-3{ border-left-color: var(--cat-3); }
+    .cat-4{ border-left-color: var(--cat-4); }
+    .cat-5{ border-left-color: var(--cat-5); }
+    .cat-pill{
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: .75rem;
+      color: #0f172a;
+      border: 1px solid rgba(0,0,0,.06);
+    }
+    .cat-pill.cat-1{ background: rgba(245,106,106,.18); }
+    .cat-pill.cat-2{ background: rgba(246,184,106,.2); }
+    .cat-pill.cat-3{ background: rgba(140,207,122,.2); }
+    .cat-pill.cat-4{ background: rgba(95,118,200,.18); color: #1f2a52; }
+    .cat-pill.cat-5{ background: rgba(197,156,255,.2); }
+    .mono{ font-feature-settings: "tnum" 1, "ss01" 1; }
+    .text-brand{ color: var(--brand-700); }
+    .text-brand-soft{ color: var(--brand-600); }
+    .grad-brand{ background: linear-gradient(90deg, var(--brand-700), var(--brand-500)); }
+    .grad-success{ background: linear-gradient(90deg, #18b879, #2fd19a); }
+    .grad-danger{ background: linear-gradient(90deg, #f97316, #fb923c); }
+    .btn-soft{
+      color: var(--brand-800);
+      background: #ffffff;
+      border: 1px solid var(--border);
+    }
+    .badge{
+      font-size: .75rem;
+      padding: .25rem .6rem;
+      border-radius: 999px;
+      border: 1px solid transparent;
+    }
+    .badge-done{ background: rgba(24,184,121,.12); color: #0f7a55; border-color: rgba(24,184,121,.25); }
+    .badge-doing{ background: rgba(79,140,255,.12); color: #3566c6; border-color: rgba(79,140,255,.25); }
+    .badge-todo{ background: rgba(148,163,184,.12); color: #637183; border-color: rgba(148,163,184,.25); }
+    .badge-locked{ background: rgba(249,115,22,.12); color: #b45309; border-color: rgba(249,115,22,.25); }
+    .dot-done{ background: var(--success); }
+    .dot-doing{ background: var(--info); }
+    .dot-todo{ background: #94a3b8; }
+    .dot-locked{ background: var(--warning); }
+  </style>
+</head>
+
+<body class="min-h-screen dots">
+  <div id="app"></div>
+
+  <!-- React UMD -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <!-- htm (template literal) แทน JSX เพื่อไม่ต้องใช้ Babel -->
+  <script src="https://unpkg.com/htm@3.1.1/dist/htm.umd.js"></script>
+
+  <script>
+    const { useMemo, useState, useEffect, useRef } = React;
+    const html = htm.bind(React.createElement);
+
+    const NAV = [
+      { id:"course", label:"หลักสูตร" },
+      { id:"content", label:"เนื้อหา" },
+      { id:"forum", label:"กระดานถาม" },
+      { id:"wiki", label:"Wiki" },
+      { id:"analytics", label:"วิเคราะห์" },
+      { id:"results", label:"ผลลัพธ์" },
+      { id:"table", label:"ตาราง" },
+    ];
+
+    const mock = {
+      course: { title:"VK Test (25-01-30)", progress:0.74, schedule:"เริ่ม 20 ม.ค. 2026 • ปิด 30 ม.ค. 2026" },
+      units: [
+        { id:"u1", name:"unit 1", items:[
+          { id:"p1", type:"quiz", name:"ข้อสอบก่อนเรียน", status:"done" },
+          { id:"q1", type:"quiz", name:"ข้อ 1", status:"doing" },
+          { id:"q2", type:"quiz", name:"ข้อ 2", status:"todo" },
+        ]},
+        { id:"u2", name:"unit 2", items:[
+          { id:"l1", type:"lesson", name:"บทเรียน 1", status:"todo" },
+          { id:"l2", type:"lesson", name:"บทเรียน 2", status:"todo" },
+        ]},
+        { id:"u3", name:"unit 3", items:[
+          { id:"e1", type:"exam", name:"แบบทดสอบปลายหน่วย", status:"locked" },
+        ]},
+      ],
+      wiki: { title:"VK Test (25-01-30)", body:"เนื้อหาสรุปสำหรับคอร์ส VK Test พร้อมเอกสารประกอบและลิงก์ที่เกี่ยวข้อง" },
+      student: { name:"student", id:"student", overall:0.68, byUnit:[0.9,0.55,0.0] },
+      results: { speed:0.62, performance:0.71 }
+    };
+
+    const Badge = ({status}) => {
+      const map = {
+        done: { t:"ผ่านแล้ว", c:"badge badge-done" },
+        doing:{ t:"กำลังทำ", c:"badge badge-doing" },
+        todo: { t:"ยังไม่เริ่ม", c:"badge badge-todo" },
+        locked:{ t:"ล็อก", c:"badge badge-locked" },
+      };
+      const m = map[status] || map.todo;
+      return html`<span class=${m.c}>${m.t}</span>`;
+    };
+
+    const CatPill = ({tone, children}) => html`
+      <span class=${"cat-pill cat-" + tone}>${children}</span>
+    `;
+
+    const ClayButton = ({variant="primary", onClick, children, small}) => {
+      const v = {
+        primary: "text-white grad-brand",
+        soft: "btn-soft",
+        danger: "text-white grad-danger",
+        success: "text-white grad-success",
+      }[variant] || "text-white grad-brand";
+      return html`
+        <button
+          class=${(small?"text-xs px-3 py-2":"text-sm px-4 py-3") + " pill font-semibold tracking-wide transition active:scale-[0.99] " + v}
+          onClick=${onClick}
+        >${children}</button>
+      `;
+    };
+
+    const Segmented = ({value, onChange, items}) => html`
+      <div class="tab-strip p-1 flex gap-1">
+        ${items.map(it => html`
+          <button
+            class=${"px-3 py-2 text-sm rounded-full transition " + (value===it.value ? "tabActive font-semibold" : "tabBtn opacity-80")}
+            onClick=${() => onChange(it.value)}
+          >${it.label}</button>
+        `)}
+      </div>
+    `;
+
+    const TopNav = ({route, setRoute}) => html`
+      <div class="sticky top-0 z-50 px-4 sm:px-6 pt-4">
+        <div class="topbar-gradient -mx-4 sm:-mx-6 mb-3"></div>
+        <div class="clay nav-surface px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="clay-soft w-12 h-12 grid place-items-center">
+              <img
+                src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-adap-green-untext.1c98bf032947.png"
+                alt="App Logo"
+                class="w-9 h-9 object-contain"
+              />
+            </div>
+            <div>
+              <div class="mt-2 flex items-center gap-2">
+                <img
+                  src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-nectec.4a797e97e6ed.png"
+                  alt="NECTEC"
+                  class="h-6 w-auto object-contain"
+                />
+                <img
+                  src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-nstda.a0c679b2e45e.png"
+                  alt="NSTDA"
+                  class="h-6 w-auto object-contain"
+                />
+                <img
+                  src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-mhesi.f3e5c05e5ebe.png"
+                  alt="MHESI"
+                  class="h-6 w-auto object-contain"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="hidden lg:flex gap-2">
+            ${NAV.map(n => html`
+              <button
+                class=${"px-4 py-2 rounded-full text-sm transition " + (route===n.id ? "tabActive font-semibold" : "tabBtn")}
+                onClick=${() => setRoute(n.id)}
+              >${n.label}</button>
+            `)}
+          </div>
+
+          <div class="flex items-center gap-2">
+            <div class="hidden sm:flex chip px-3 py-2 rounded-full text-xs text-slate-600 mono">
+              build: UI-01 • ${new Date().toISOString().slice(0,10)}
+            </div>
+            <${ClayButton} variant="soft" small onClick=${() => alert("ตัวอย่าง UI เท่านั้น (ยังไม่ผูก backend)")} >
+              ช่วยเหลือ
+            </${ClayButton}>
+          </div>
+        </div>
+
+        <!-- mobile nav -->
+        <div class="lg:hidden mt-3 clay-soft p-2 flex gap-2 overflow-auto">
+          ${NAV.map(n => html`
+            <button
+              class=${"px-4 py-2 rounded-full text-sm whitespace-nowrap transition " + (route===n.id ? "tabActive font-semibold" : "tabBtn")}
+              onClick=${() => setRoute(n.id)}
+            >${n.label}</button>
+          `)}
+        </div>
+      </div>
+    `;
+
+    const Layout = ({children}) => html`
+      <div class="max-w-[1280px] mx-auto px-4 sm:px-6 pb-10">
+        <div class="mt-5 grid gap-5">
+          ${children}
+        </div>
+      </div>
+    `;
+
+    const ProgressBar = ({value}) => {
+      const pct = Math.round(value*100);
+      return html`
+        <div class="panel p-2">
+          <div class="flex justify-between text-xs text-slate-600 mb-2">
+            <span>ความคืบหน้า</span><span class="mono">${pct}%</span>
+          </div>
+          <div class="h-3 rounded-full bg-white/40 overflow-hidden">
+            <div class="h-full rounded-full grad-brand" style=${{width: pct+"%"}}></div>
+          </div>
+        </div>
+      `;
+    };
+
+    const CourseOverview = ({goto}) => {
+      const [open, setOpen] = useState({ u1:true, u2:false, u3:false });
+
+      const StatusDot = ({s}) => {
+        const map = { done:"dot-done", doing:"dot-doing", todo:"dot-todo", locked:"dot-locked" };
+        return html`<span class=${"w-2.5 h-2.5 rounded-full " + (map[s]||"dot-todo")}></span>`;
+      };
+
+      return html`
+        <div class="clay p-5 sm:p-6">
+          <div class="flex flex-col lg:flex-row lg:items-start gap-5">
+            <div class="flex-1">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <div class="text-2xl font-extrabold">${mock.course.title}</div>
+                  <div class="text-sm text-slate-500 mt-1">${mock.course.schedule}</div>
+                </div>
+                <${ClayButton} onClick=${() => goto("content")}>Start Course</${ClayButton}>
+              </div>
+
+              <div class="mt-4">
+                <${ProgressBar} value=${mock.course.progress} />
+              </div>
+
+              <div class="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <!-- Left: Units -->
+                <div class="lg:col-span-2 clay-soft p-4">
+                  <div class="flex items-center justify-between">
+                    <div class="font-bold">โครงสร้างบทเรียน</div>
+                    <div class="text-xs text-slate-500">คลิกเพื่อขยาย/ยุบ</div>
+                  </div>
+
+                  <div class="mt-3 grid gap-3">
+                    ${mock.units.map((u, idx) => html`
+                      <div class=${"panel p-3 cat-card cat-" + ((idx%5)+1)}>
+                        <button class="w-full flex items-center justify-between" onClick=${() => setOpen(o => ({...o, [u.id]: !o[u.id]}))}>
+                          <div class="flex items-center gap-2">
+                            <span class="font-semibold">${u.name}</span>
+                            <${CatPill} tone=${(idx%5)+1}>หมวด ${idx+1}</${CatPill}>
+                            <span class="text-xs text-slate-500">(${u.items.length} รายการ)</span>
+                          </div>
+                          <span class="text-slate-500">${open[u.id] ? "▾" : "▸"}</span>
+                        </button>
+
+                        ${open[u.id] ? html`
+                          <div class="mt-3 grid gap-2">
+                            ${u.items.map(it => html`
+                              <button
+                                class="w-full text-left clay-soft px-3 py-3 rounded-2xl flex items-center justify-between hover:brightness-[.99] transition"
+                                onClick=${() => goto("content")}
+                              >
+                                <div class="flex items-center gap-3">
+                                  <${StatusDot} s=${it.status} />
+                                  <div>
+                                    <div class="font-medium">${it.name}</div>
+                                    <div class="text-xs text-slate-500">${it.type.toUpperCase()} • ID: ${it.id}</div>
+                                  </div>
+                                </div>
+                                <${Badge} status=${it.status} />
+                              </button>
+                            `)}
+                          </div>
+                        ` : null}
+                      </div>
+                    `)}
+                  </div>
+                </div>
+
+                <!-- Right: Tools -->
+                <div class="clay-soft p-4">
+                  <div class="font-bold">Course Tools</div>
+                  <div class="mt-3 grid gap-2">
+                    <button class="ghost px-4 py-3 rounded-full text-sm text-slate-700 text-left">Bookmarks</button>
+                    <button class="ghost px-4 py-3 rounded-full text-sm text-slate-700 text-left">Progress / Reports</button>
+                    <button class="ghost px-4 py-3 rounded-full text-sm text-slate-700 text-left">Announcements</button>
+                  </div>
+
+                  <div class="mt-4 panel p-4">
+                    <div class="text-sm font-semibold">Quick Tips</div>
+                    <ul class="mt-2 text-sm text-slate-600 list-disc pl-5 space-y-1">
+                      <li>ใช้ปุ่ม Start Course เพื่อไปยังหน้าเนื้อหา</li>
+                      <li>สถานะงานเป็น badge สีอ่อนอ่านง่าย</li>
+                      <li>ดีไซน์เน้น card-in-card แบบ clay</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    };
+
+    const ContentViewer = () => {
+      const [tab, setTab] = useState("content");
+      const [page, setPage] = useState(1);
+      const max = 2;
+
+      return html`
+        <div class="clay p-5 sm:p-6">
+          <div class="flex flex-col lg:flex-row gap-5">
+            <div class="flex-1">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <div class="text-sm text-slate-500">หลักสูตร > unit 1 > ข้อสอบก่อนเรียน</div>
+                  <div class="text-2xl font-extrabold mt-1">Content Viewer</div>
+                  <div class="mt-2"><${CatPill} tone=${1}>เนื้อหา</${CatPill}></div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <${ClayButton} variant="soft" small onClick=${() => alert("Bookmark!")}>Bookmark</${ClayButton}>
+                  <${ClayButton} variant="success" small onClick=${() => alert("Marked as done")}>Mark Done</${ClayButton}>
+                </div>
+              </div>
+
+              <div class="mt-4 grid gap-4">
+                <${ProgressBar} value=${1.0} />
+
+                <div class="flex items-center justify-between gap-3">
+                  <${Segmented}
+                    value=${tab}
+                    onChange=${setTab}
+                    items=${[
+                      {value:"content", label:"เนื้อหา"},
+                      {value:"quiz", label:"แบบทดสอบ"},
+                      {value:"summary", label:"สรุป"},
+                    ]}
+                  />
+                  <div class="chip px-4 py-2 rounded-full text-sm text-slate-600 mono">page ${page}/${max}</div>
+                </div>
+
+                <div class="clay-soft p-4 cat-card cat-1">
+                  <div class="flex items-center justify-between gap-2">
+                    <div class="flex gap-2">
+                      <${ClayButton} variant="soft" small onClick=${() => alert("Zoom -")}>-</${ClayButton}>
+                      <${ClayButton} variant="soft" small onClick=${() => alert("Zoom +")}>+</${ClayButton}>
+                      <${ClayButton} variant="soft" small onClick=${() => alert("Download")}>Download</${ClayButton}>
+                    </div>
+                    <div class="text-xs text-slate-500">Toolbar (clay buttons)</div>
+                  </div>
+
+                  <div class="mt-4 panel p-4">
+                    <div class="rounded-2xl bg-white/55 border border-white/60 h-[360px] grid place-items-center">
+                      <div class="text-center">
+                        <div class="text-sm text-slate-500 mb-1">${tab==="quiz" ? "Quiz Placeholder" : tab==="summary" ? "Summary Placeholder" : "PDF / Slide Placeholder"}</div>
+                        <div class="text-5xl font-black text-brand-soft mono">${page}</div>
+                        <div class="text-xs text-slate-500 mt-2">แทนที่ด้วย viewer จริงได้ภายหลัง</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mt-4 flex items-center justify-between">
+                    <${ClayButton} variant="soft" onClick=${() => setPage(p => Math.max(1, p-1))}>ก่อนหน้า</${ClayButton}>
+                    <${ClayButton} onClick=${() => setPage(p => Math.min(max, p+1))}>ถัดไป</${ClayButton}>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="w-full lg:w-[320px] clay-soft p-4 cat-card cat-2">
+              <div class="font-bold">Action Panel</div>
+              <div class="mt-3 grid gap-2">
+                <button class="ghost px-4 py-3 rounded-full text-sm text-slate-700 text-left">แก้ไขบันทึก (Notes)</button>
+                <button class="ghost px-4 py-3 rounded-full text-sm text-slate-700 text-left">ส่งคำถามไปกระดานถาม</button>
+                <button class="ghost px-4 py-3 rounded-full text-sm text-slate-700 text-left">ดูประวัติการทำ</button>
+              </div>
+
+              <div class="mt-4 panel p-4">
+                <div class="text-sm font-semibold">Metadata</div>
+                <div class="mt-2 text-sm text-slate-600 space-y-1">
+                  <div>ผู้สอน: Staff</div>
+                  <div>อัปเดตล่าสุด: 31 Jan 2026</div>
+                  <div>สถานะ: <span class="mono">unit complete</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    };
+
+    const Forum = () => {
+      const [q, setQ] = useState("");
+      return html`
+        <div class="clay p-5 sm:p-6">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div>
+              <div class="text-2xl font-extrabold">All Topics</div>
+              <div class="mt-2"><${CatPill} tone=${3}>กระดานถาม-ตอบ</${CatPill}></div>
+              <div class="text-sm text-slate-500">กระดานถาม-ตอบและการสนทนาในคอร์ส</div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
+              <${ClayButton} onClick=${() => alert("Add post")}>Add a Post</${ClayButton}>
+              <div class="input-inset p-1 flex items-center gap-1">
+                <input class="bg-transparent px-3 py-2 outline-none text-sm w-64"
+                       placeholder="Search posts..."
+                       value=${q}
+                       onInput=${(e)=>setQ(e.target.value)} />
+                <${ClayButton} variant="soft" small onClick=${() => alert("Search: " + q)}>Search</${ClayButton}>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-5 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
+            <div class="clay-soft p-4 cat-card cat-3">
+              <div class="font-bold">Filters</div>
+              <div class="mt-3 grid gap-2">
+                <div class="input-inset p-3">
+                  <div class="text-xs text-slate-500 mb-2">หมวดหมู่</div>
+                  <select class="w-full bg-transparent outline-none text-sm">
+                    <option>ทั้งหมด</option><option>ประกาศ</option><option>คำถาม</option><option>ไอเดีย</option>
+                  </select>
+                </div>
+                <div class="input-inset p-3">
+                  <div class="text-xs text-slate-500 mb-2">สถานะ</div>
+                  <select class="w-full bg-transparent outline-none text-sm">
+                    <option>ทั้งหมด</option><option>ยังไม่ตอบ</option><option>ตอบแล้ว</option><option>ติดตามอยู่</option>
+                  </select>
+                </div>
+                <div class="input-inset p-3">
+                  <div class="text-xs text-slate-500 mb-2">เรียงตาม</div>
+                  <select class="w-full bg-transparent outline-none text-sm">
+                    <option>ล่าสุด</option><option>ยอดนิยม</option><option>คำตอบมาก</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="clay-soft p-4 cat-card cat-4">
+              <div class="font-bold">Empty State (แนะนำการใช้งาน)</div>
+              <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                ${[
+                  {t:"Find discussions", d:"ค้นหาหัวข้อจากคำสำคัญหรือหมวดหมู่"},
+                  {t:"Engage with posts", d:"โหวต ตอบ หรือบันทึกโพสต์ที่สำคัญ"},
+                  {t:"Receive updates", d:"ติดตามหัวข้อเพื่อรับแจ้งเตือน"},
+                  {t:"Report & sort", d:"รายงานเนื้อหา และจัดเรียงตามความต้องการ"},
+                ].map(c => html`
+                  <div class="panel p-4">
+                    <div class="font-semibold">${c.t}</div>
+                    <div class="text-sm text-slate-600 mt-1">${c.d}</div>
+                    <div class="mt-3 flex gap-2">
+                      <${ClayButton} variant="soft" small onClick=${() => alert(c.t)}>ลองทำ</${ClayButton}>
+                      <span class="text-xs text-slate-500 self-center">tip card</span>
+                    </div>
+                  </div>
+                `)}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    };
+
+    const Wiki = () => html`
+      <div class="clay p-5 sm:p-6">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="text-sm text-slate-500">Wiki > ${mock.course.title}</div>
+            <div class="text-2xl font-extrabold mt-1">${mock.wiki.title}</div>
+            <div class="mt-2"><${CatPill} tone=${4}>คลังความรู้</${CatPill}></div>
+            <div class="text-sm text-slate-600 mt-2 max-w-2xl">${mock.wiki.body}</div>
+          </div>
+          <${ClayButton} onClick=${() => alert("เพิ่มบทความ")}>+ เพิ่มบทความ</${ClayButton}>
+        </div>
+
+        <div class="mt-5 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+          <div class="clay-soft p-4 cat-card cat-4">
+            <div class="font-bold">บทความ</div>
+            <div class="mt-3 grid gap-3">
+              ${["แนวทางการเรียน", "เอกสารประกอบ", "คำถามที่พบบ่อย"].map((t,i)=>html`
+                <div class="panel p-4">
+                  <div class="font-semibold">${t}</div>
+                  <div class="text-sm text-slate-600 mt-1">เนื้อหาแบบย่อสำหรับหัวข้อที่ ${i+1} (แทนข้อมูลจริงได้)</div>
+                </div>
+              `)}
+            </div>
+          </div>
+
+          <div class="clay-soft p-4 cat-card cat-2">
+            <div class="font-bold">Action / Meta</div>
+            <div class="mt-3 flex gap-2">
+              <${ClayButton} variant="soft" small onClick=${() => alert("แก้ไข")}>แก้ไข</${ClayButton}>
+              <${ClayButton} variant="danger" small onClick=${() => alert("ลบ (demo)")}>ลบ</${ClayButton}>
+            </div>
+            <div class="mt-4 panel p-4 text-sm text-slate-600 space-y-1">
+              <div>ผู้สร้าง: Staff</div>
+              <div>แก้ไขล่าสุด: 31 Jan 2026</div>
+              <div>แท็ก: <span class="mono">vk, test, unit1</span></div>
+              <div>สถานะ: เผยแพร่</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const Bar = ({value, label}) => html`
+      <div class="panel p-3">
+        <div class="flex items-center justify-between text-sm mb-2">
+          <span class="font-medium">${label}</span>
+          <span class="text-slate-500 mono">${Math.round(value*100)}%</span>
+        </div>
+          <div class="h-4 rounded-full bg-white/45 overflow-hidden">
+            <div class="h-full rounded-full grad-brand" style=${{width:(value*100)+"%"}}></div>
+          </div>
+      </div>
+    `;
+
+    const Analytics = () => {
+      const barRef = useRef(null);
+      const donutRef = useRef(null);
+
+      useEffect(() => {
+        if (!barRef.current || !donutRef.current || !window.Chart) return;
+
+        const ctxBar = barRef.current.getContext("2d");
+        const ctxDonut = donutRef.current.getContext("2d");
+
+        const barChart = new Chart(ctxBar, {
+          type: "bar",
+          data: {
+            labels: ["unit 01", "unit 02", "unit 03", "unit 04", "unit 05"],
+            datasets: [
+              {
+                type: "bar",
+                label: "Learning speed",
+                data: [240, 410, 150, 320, 260],
+                backgroundColor: ["#f56a6a", "#f6b86a", "#a6d37a", "#5f76c8", "#c59cff"],
+                borderRadius: 10,
+              },
+              {
+                type: "line",
+                label: "Focus score",
+                data: [68, 72, 61, 78, 70],
+                borderColor: "#18a4aa",
+                backgroundColor: "rgba(24,164,170,.2)",
+                tension: 0.35,
+                fill: true,
+                yAxisID: "y1",
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+              duration: 1200,
+              easing: "easeOutQuart",
+            },
+            plugins: {
+              legend: { display: true, labels: { boxWidth: 12, usePointStyle: true } },
+              tooltip: { backgroundColor: "#0f6b72", padding: 10, cornerRadius: 8 },
+            },
+            scales: {
+              x: { grid: { display: false } },
+              y: { beginAtZero: true, grid: { color: "rgba(16,42,47,.08)" } },
+              y1: {
+                beginAtZero: true,
+                position: "right",
+                grid: { drawOnChartArea: false },
+                ticks: { color: "#18a4aa" },
+              },
+            },
+          },
+        });
+
+        const donutChart = new Chart(ctxDonut, {
+          type: "doughnut",
+          data: {
+            labels: ["เสร็จแล้ว", "กำลังทำ", "ยังไม่เริ่ม"],
+            datasets: [
+              {
+                data: [62, 24, 14],
+                backgroundColor: ["#1fb9b7", "#f6b86a", "#cfd8dd"],
+                hoverOffset: 6,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "68%",
+            animation: {
+              animateRotate: true,
+              duration: 1300,
+              easing: "easeOutCubic",
+            },
+            plugins: {
+              legend: { position: "bottom", labels: { boxWidth: 12, usePointStyle: true } },
+              tooltip: { backgroundColor: "#0f6b72", padding: 10, cornerRadius: 8 },
+            },
+          },
+        });
+
+        return () => {
+          barChart.destroy();
+          donutChart.destroy();
+        };
+      }, []);
+
+      return html`
+        <div class="clay p-5 sm:p-6">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="text-2xl font-extrabold">ความก้าวหน้าของผู้เรียน : "${mock.student.name}"</div>
+              <div class="mt-2"><${CatPill} tone=${5}>Analytics</${CatPill}></div>
+              <div class="text-sm text-slate-500">Student Analytics (mock)</div>
+            </div>
+            <${ClayButton} variant="soft" onClick=${() => alert("Export (demo)")}>Export</${ClayButton}>
+          </div>
+
+          <div class="mt-5 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
+            <div class="clay-soft p-4 cat-card cat-5">
+              <div class="font-bold">Learning Speed & Focus (Animated)</div>
+              <div class="mt-3 h-[320px]">
+                <canvas ref=${barRef}></canvas>
+              </div>
+
+              <div class="mt-4 panel p-4">
+                <div class="font-semibold">รายการงาน (ตัวอย่าง)</div>
+                <div class="mt-2 grid gap-2">
+                  ${mock.units.map(unit => html`
+                    <div class="clay-soft p-3 rounded-2xl">
+                      <div class="flex items-center justify-between">
+                        <div class="font-medium">${unit.name}</div>
+                        <span class="text-xs text-slate-500">${unit.items.length} รายการ</span>
+                      </div>
+                      <div class="mt-2 grid gap-2">
+                        ${unit.items.slice(0,2).map(it => html`
+                          <div class="flex items-center justify-between text-sm">
+                            <span class="text-slate-700">${it.name}</span>
+                            <${Badge} status=${it.status} />
+                          </div>
+                        `)}
+                      </div>
+                    </div>
+                  `)}
+                </div>
+              </div>
+            </div>
+
+            <div class="clay-soft p-4 cat-card cat-1">
+              <div class="font-bold">Summary</div>
+              <div class="mt-3 panel p-4">
+                <div class="text-sm text-slate-500">Overall</div>
+                <div class="text-4xl font-black mono text-brand-soft">${Math.round(mock.student.overall*100)}%</div>
+                <div class="text-sm text-slate-600 mt-1">ความสำเร็จรวมของผู้เรียน</div>
+              </div>
+
+              <div class="mt-4 panel p-4">
+                <div class="font-semibold">Progress Status</div>
+                <div class="mt-3 h-[220px]">
+                  <canvas ref=${donutRef}></canvas>
+                </div>
+              </div>
+
+              <div class="mt-4 panel p-4">
+                <div class="font-semibold">Insight (mock)</div>
+                <ul class="mt-2 text-sm text-slate-600 list-disc pl-5 space-y-1">
+                  <li>unit 1 ทำได้ดีมาก</li>
+                  <li>unit 2 ยังมีช่องว่าง (ควรเสริมเนื้อหา)</li>
+                  <li>unit 3 ยังไม่เริ่ม</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    };
+
+    const Results = () => html`
+      <div class="clay p-5 sm:p-6">
+        <div class="clay-soft p-4">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <div class="text-sm text-slate-500">ผลการวิเคราะห์การเรียนรู้</div>
+              <div class="text-2xl font-extrabold">student example</div>
+              <div class="mt-2"><${CatPill} tone=${2}>ผลการเรียนรู้</${CatPill}></div>
+            </div>
+            <div class="chip px-4 py-2 rounded-full text-sm text-slate-600 mono">
+              id: c5d44a6b-...-3144
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="clay-soft p-4 cat-card cat-2">
+            <div class="font-bold">Learning Speed</div>
+            <div class="mt-3">
+              <${Bar} value=${mock.results.speed} label="Speed score" />
+            </div>
+            <div class="mt-3 panel p-4 text-sm text-slate-600">
+              ตีความ: คะแนนความเร็วในการเรียนรู้ (mock) — ใช้แทน metric จริงได้
+            </div>
+          </div>
+
+          <div class="clay-soft p-4 cat-card cat-3">
+            <div class="font-bold">Learning Performance</div>
+            <div class="mt-3">
+              <${Bar} value=${mock.results.performance} label="Performance score" />
+            </div>
+            <div class="mt-3 panel p-4 text-sm text-slate-600">
+              ตีความ: ผลสัมฤทธิ์รวม (mock) — เชื่อมกับคะแนน/ข้อสอบจริงภายหลัง
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 clay-soft p-4 cat-card cat-4">
+          <div class="font-bold">Notes</div>
+          <textarea class="mt-3 w-full input-inset p-4 outline-none text-sm"
+            rows="4"
+            placeholder="จดบันทึกการวิเคราะห์ (demo)"></textarea>
+          <div class="mt-3 flex justify-end">
+            <${ClayButton} variant="soft" onClick=${() => alert("Saved (demo)")}>บันทึก</${ClayButton}>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const DataTable = () => {
+      const rows = useMemo(() => ([
+        { name:"student", role:"Student", unit:"unit 1", progress:74, updated:"2026-01-31" },
+        { name:"staff01", role:"Staff", unit:"-", progress:100, updated:"2026-01-31" },
+        { name:"student2", role:"Student", unit:"unit 2", progress:55, updated:"2026-01-30" },
+      ]), []);
+      const [q, setQ] = useState("");
+      const filtered = rows.filter(r => (r.name+r.role+r.unit).toLowerCase().includes(q.toLowerCase()));
+      return html`
+        <div class="clay p-5 sm:p-6">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div>
+              <div class="text-2xl font-extrabold">ตารางรายการ (ปริมาณ/กิจกรรม)</div>
+              <div class="mt-2"><${CatPill} tone=${3}>ตารางข้อมูล</${CatPill}></div>
+              <div class="text-sm text-slate-500">ตัวอย่างตารางแบบ row-cards พร้อม toolbar</div>
+            </div>
+            <div class="input-inset p-1 flex items-center gap-1">
+              <input class="bg-transparent px-3 py-2 outline-none text-sm w-64"
+                     placeholder="ค้นหา..."
+                     value=${q}
+                     onInput=${(e)=>setQ(e.target.value)} />
+              <${ClayButton} variant="soft" small onClick=${() => setQ("")}>ล้าง</${ClayButton}>
+            </div>
+          </div>
+
+          <div class="mt-4 clay-soft p-4 cat-card cat-3">
+            <div class="hidden md:grid grid-cols-[1.2fr_.8fr_.8fr_.6fr_.8fr_.6fr] gap-3 text-xs text-slate-500 px-2">
+              <div>ชื่อ</div><div>บทบาท</div><div>หน่วย</div><div class="text-right">Progress</div><div>อัปเดต</div><div class="text-right">Action</div>
+            </div>
+
+            <div class="mt-3 grid gap-3">
+              ${filtered.map(r => {
+                const roleTone = r.role === "Staff" ? 4 : 3;
+                const unitTone = r.unit === "-" ? 2 : 1;
+                return html`
+                  <div class="panel p-3">
+                    <div class="grid md:grid-cols-[1.2fr_.8fr_.8fr_.6fr_.8fr_.6fr] gap-3 items-center">
+                      <div class="font-semibold">${r.name}</div>
+                      <div><${CatPill} tone=${roleTone}>${r.role}</${CatPill}></div>
+                      <div><${CatPill} tone=${unitTone}>${r.unit}</${CatPill}></div>
+                      <div class="text-right mono font-bold text-brand-soft">${r.progress}%</div>
+                      <div class="text-sm text-slate-600 mono">${r.updated}</div>
+                      <div class="flex md:justify-end gap-2">
+                        <${ClayButton} variant="soft" small onClick=${() => alert("ดู: " + r.name)}>ดู</${ClayButton}>
+                        <${ClayButton} variant="soft" small onClick=${() => alert("แก้ไข: " + r.name)}>แก้ไข</${ClayButton}>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              })}
+              ${filtered.length===0 ? html`
+                <div class="panel p-6 text-center text-slate-600">
+                  ไม่พบข้อมูลที่ค้นหา
+                </div>
+              ` : null}
+            </div>
+          </div>
+        </div>
+      `;
+    };
+
+    function App(){
+      const [route, setRoute] = useState("course");
+
+      const goto = (r) => setRoute(r);
+
+      const Page = () => {
+        if(route==="course") return html`<${CourseOverview} goto=${goto} />`;
+        if(route==="content") return html`<${ContentViewer} />`;
+        if(route==="forum") return html`<${Forum} />`;
+        if(route==="wiki") return html`<${Wiki} />`;
+        if(route==="analytics") return html`<${Analytics} />`;
+        if(route==="results") return html`<${Results} />`;
+        if(route==="table") return html`<${DataTable} />`;
+        return html`<div class="clay p-6">Not found</div>`;
+      };
+
+      return html`
+        <div class="app-frame">
+          <${TopNav} route=${route} setRoute=${setRoute} />
+          <${Layout}>
+            <${Page} />
+            <div class="text-center text-xs text-slate-500 pb-6">
+              Prototype UI • React UMD + htm + Tailwind CDN • Single HTML file
+            </div>
+          </${Layout}>
+        </div>
+      `;
+    }
+
+    ReactDOM.createRoot(document.getElementById("app")).render(React.createElement(App));
+  </script>
+</body>
+</html>

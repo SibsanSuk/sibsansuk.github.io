@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ธุรกิจรอบ ม.เกษตร กำแพงแสน (OSM/Overpass) – 1 ไฟล์</title>
+
+  <!-- Optional map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; }
+    header { padding: 16px; border-bottom: 1px solid rgba(127,127,127,.25); }
+    h1 { margin: 0 0 8px; font-size: 18px; }
+    .wrap { padding: 16px; display: grid; gap: 12px; }
+    .grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+    @media (min-width: 980px) { .grid { grid-template-columns: 420px 1fr; } }
+    .card { border: 1px solid rgba(127,127,127,.25); border-radius: 12px; padding: 12px; }
+    .row { display: grid; gap: 8px; grid-template-columns: 1fr; }
+    @media (min-width: 520px) { .row.two { grid-template-columns: 1fr 1fr; } }
+    label { font-size: 12px; opacity: .85; display:block; margin-bottom: 4px; }
+    input, select, button, textarea { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid rgba(127,127,127,.35); background: transparent; }
+    button { cursor: pointer; }
+    .btns { display: grid; gap: 8px; grid-template-columns: 1fr; }
+    @media (min-width: 520px) { .btns { grid-template-columns: 1fr 1fr 1fr; } }
+    .muted { font-size: 12px; opacity: .75; line-height: 1.4; }
+    .kpi { display:flex; gap:12px; flex-wrap: wrap; font-size: 12px; }
+    .pill { padding: 6px 10px; border-radius: 999px; border: 1px solid rgba(127,127,127,.25); }
+    #map { height: 420px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(127,127,127,.25); }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 8px; border-bottom: 1px solid rgba(127,127,127,.18); vertical-align: top; }
+    th { text-align: left; position: sticky; top: 0; backdrop-filter: blur(8px); background: rgba(127,127,127,.08); }
+    details { border: 1px solid rgba(127,127,127,.25); border-radius: 12px; padding: 10px; }
+    summary { cursor: pointer; font-weight: 600; }
+    .right { text-align: right; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+    .small { font-size: 11px; opacity: .8; }
+    .warn { color: #b45309; }
+    .ok { color: #16a34a; }
+  </style>
+</head>
+
+<body>
+<header>
+  <h1>ตัวอย่าง: รายการธุรกิจ/สถานที่ รอบ “ม.เกษตร กำแพงแสน” ภายในรัศมี (OSM/Overpass)</h1>
+  <div class="muted">
+    ดึงข้อมูลจาก OpenStreetMap ผ่าน Overpass API แล้วจัดกลุ่มเป็นประเภท + ตารางสำหรับวิเคราะห์ และ Export เป็น JSON/CSV ได้<br/>
+    ศูนย์กลางเริ่มต้น: 14.022788, 99.978337 (Kamphaeng Saen Campus)
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <div class="card">
+      <div class="row two">
+        <div>
+          <label>ละติจูด (Lat)</label>
+          <input id="lat" type="number" step="0.000001" value="14.022788">
+        </div>
+        <div>
+          <label>ลองจิจูด (Lon)</label>
+          <input id="lon" type="number" step="0.000001" value="99.978337">
+        </div>
+      </div>
+
+      <div class="row two" style="margin-top:10px;">
+        <div>
+          <label>รัศมี (เมตร)</label>
+          <input id="radius" type="number" step="50" value="2000">
+        </div>
+        <div>
+          <label>Overpass Endpoint</label>
+          <select id="endpoint">
+            <option value="https://overpass-api.de/api/interpreter">overpass-api.de (หลัก)</option>
+            <option value="https://overpass.kumi.systems/api/interpreter">kumi.systems</option>
+            <option value="https://overpass.nchc.org.tw/api/interpreter">nchc.org.tw</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <label>ประเภทที่ต้องการดึง (เลือกได้หลายกลุ่ม)</label>
+        <select id="scope" multiple size="9">
+          <option value="amenity" selected>amenity (ร้านอาหาร/คาเฟ่/บริการทั่วไป)</option>
+          <option value="shop" selected>shop (ร้านค้าปลีก/ค้าส่ง)</option>
+          <option value="office" selected>office (สำนักงาน/บริการ)</option>
+          <option value="tourism" selected>tourism (โรงแรม/ที่พัก/ท่องเที่ยว)</option>
+          <option value="leisure" selected>leisure (ฟิตเนส/กีฬา/สันทนาการ)</option>
+          <option value="health" selected>healthcare (คลินิก/ร้านยา ฯลฯ)</option>
+          <option value="craft">craft (งานช่าง/เวิร์กช็อป)</option>
+          <option value="service">service (ซ่อม/บริการเฉพาะทาง)</option>
+          <option value="all">all (ดึงกว้างขึ้น—อาจมี noise)</option>
+        </select>
+        <div class="muted small">
+          ทิป: ถ้าต้องการ “เฉพาะธุรกิจ” ให้เน้น amenity/shop/office/tourism/healthcare ก่อน
+        </div>
+      </div>
+
+      <div class="btns" style="margin-top:12px;">
+        <button id="btnFetch">ดึงข้อมูลในรัศมี</button>
+        <button id="btnCSV" disabled>Export CSV</button>
+        <button id="btnJSON" disabled>Export JSON</button>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <label>ตัวกรองชื่อ/คีย์เวิร์ด</label>
+        <input id="filterText" placeholder="เช่น cafe, 7-eleven, repair, ร้าน..." />
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <label>สรุป</label>
+        <div id="kpis" class="kpi"></div>
+      </div>
+
+      <div class="row" style="margin-top:10px;">
+        <label>สถานะ</label>
+        <div id="status" class="muted">พร้อม</div>
+      </div>
+
+      <details style="margin-top:12px;">
+        <summary>ดู/แก้ Overpass Query (สำหรับงานวิจัย)</summary>
+        <div class="muted small" style="margin: 8px 0;">
+          ระบบจะสร้างคิวรีตาม scope ที่เลือก คุณสามารถแก้เองแล้วกด “ดึงข้อมูล” ได้
+        </div>
+        <textarea id="query" rows="10" class="mono"></textarea>
+      </details>
+    </div>
+
+    <div class="card">
+      <div id="map"></div>
+      <div class="muted small" style="margin-top:8px;">
+        คลิก marker เพื่อดูชื่อ/ประเภท และเปิดดูบน OSM ได้
+      </div>
+
+      <div style="margin-top:12px;">
+        <div class="row two">
+          <div>
+            <label>เลือกประเภทเพื่อดูตาราง</label>
+            <select id="categorySelect"></select>
+          </div>
+          <div>
+            <label>เรียงลำดับ</label>
+            <select id="sortBy">
+              <option value="name">ชื่อ</option>
+              <option value="subcategory">ประเภทย่อย</option>
+              <option value="distance">ระยะจากศูนย์กลาง</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:12px; max-height: 440px; overflow:auto; border:1px solid rgba(127,127,127,.18); border-radius:12px;">
+          <table id="tbl">
+            <thead>
+              <tr>
+                <th>ชื่อ</th>
+                <th>ประเภท</th>
+                <th>ระยะ(ม.)</th>
+                <th>ที่อยู่</th>
+                <th>ติดต่อ</th>
+                <th class="right">OSM</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <details style="margin-top:12px;">
+          <summary>ดูข้อมูลดิบ (JSON) ของรายการที่กำลังแสดง</summary>
+          <pre id="raw" class="mono" style="white-space: pre-wrap; word-break: break-word; font-size: 11px;"></pre>
+        </details>
+      </div>
+
+      <div style="margin-top:12px;">
+        <details>
+          <summary>สถิติแยกตามประเภท (Counts)</summary>
+          <div id="stats" class="muted small" style="margin-top:10px;"></div>
+        </details>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  // ---------------------------
+  // Utilities
+  // ---------------------------
+  const $ = (id) => document.getElementById(id);
+
+  function haversineMeters(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const toRad = (d) => d * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a =
+      Math.sin(dLat/2)**2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+
+  function safe(v) { return (v ?? "").toString().trim(); }
+
+  function buildAddress(tags) {
+    const parts = [];
+    const hn = safe(tags["addr:housenumber"]);
+    const st = safe(tags["addr:street"]);
+    const subd = safe(tags["addr:subdistrict"] || tags["addr:suburb"]);
+    const dist = safe(tags["addr:district"] || tags["addr:city"]);
+    const prov = safe(tags["addr:province"] || tags["addr:state"]);
+    const pc = safe(tags["addr:postcode"]);
+
+    const line1 = [hn, st].filter(Boolean).join(" ");
+    if (line1) parts.push(line1);
+
+    const line2 = [subd, dist, prov].filter(Boolean).join(", ");
+    if (line2) parts.push(line2);
+
+    if (pc) parts.push(pc);
+
+    return parts.join(" • ");
+  }
+
+  function osmLink(type, id) {
+    // element: node/way/relation
+    return `https://www.openstreetmap.org/${type}/${id}`;
+  }
+
+  function pickContact(tags) {
+    const phone = safe(tags["phone"] || tags["contact:phone"]);
+    const web = safe(tags["website"] || tags["contact:website"]);
+    const oh = safe(tags["opening_hours"]);
+    const lines = [];
+    if (phone) lines.push(phone);
+    if (web) lines.push(web);
+    if (oh) lines.push(oh);
+    return lines.join(" • ");
+  }
+
+  // ---------------------------
+  // Categorization (ปรับได้)
+  // ---------------------------
+  function categorize(tags) {
+    const amenity = safe(tags.amenity);
+    const shop = safe(tags.shop);
+    const office = safe(tags.office);
+    const tourism = safe(tags.tourism);
+    const leisure = safe(tags.leisure);
+    const healthcare = safe(tags.healthcare);
+    const craft = safe(tags.craft);
+    const service = safe(tags.service);
+
+    // Food & Drink (amenity)
+    if (["restaurant","cafe","fast_food","food_court","bar","pub","ice_cream"].includes(amenity)) {
+      return { category: "อาหารและเครื่องดื่ม", subcategory: amenity };
+    }
+    // Education-ish amenities can be filtered out if you want; keep as "บริการ"
+    if (["bank","atm","pharmacy","clinic","hospital","doctors","dentist","veterinary","marketplace"].includes(amenity)) {
+      if (["pharmacy","clinic","hospital","doctors","dentist","veterinary"].includes(amenity)) {
+        return { category: "สุขภาพและการแพทย์", subcategory: amenity };
+      }
+      if (["bank","atm"].includes(amenity)) {
+        return { category: "การเงิน", subcategory: amenity };
+      }
+      if (amenity === "marketplace") {
+        return { category: "ตลาด/แหล่งชุมชน", subcategory: amenity };
+      }
+      return { category: "บริการทั่วไป", subcategory: amenity };
+    }
+
+    // Healthcare key
+    if (healthcare) return { category: "สุขภาพและการแพทย์", subcategory: healthcare };
+
+    // Accommodation / Tourism
+    if (["hotel","guest_house","hostel","motel","resort"].includes(tourism)) {
+      return { category: "ที่พัก", subcategory: tourism };
+    }
+    if (tourism) return { category: "ท่องเที่ยว/บริการนักท่องเที่ยว", subcategory: tourism };
+
+    // Leisure
+    if (["fitness_centre","sports_centre","stadium","park","pitch","swimming_pool"].includes(leisure)) {
+      return { category: "กีฬา/สันทนาการ", subcategory: leisure };
+    }
+    if (leisure) return { category: "สันทนาการ", subcategory: leisure };
+
+    // Shops
+    if (shop) {
+      const grocery = ["convenience","supermarket","greengrocer","bakery","butcher","deli","beverages"];
+      const apparel = ["clothes","shoes","bag","jewelry","fashion"];
+      const personal = ["hairdresser","beauty","cosmetics","massage","spa","optician","tattoo"];
+      const electronics = ["electronics","mobile_phone","computer"];
+      const home = ["furniture","hardware","houseware","doityourself"];
+      const vehicles = ["car_repair","car","motorcycle","bicycle","tyres"];
+      const books = ["books","stationery","copyshop"];
+      if (grocery.includes(shop)) return { category: "ค้าปลีก-อาหาร/ของใช้", subcategory: shop };
+      if (apparel.includes(shop)) return { category: "ค้าปลีก-แฟชั่น", subcategory: shop };
+      if (personal.includes(shop)) return { category: "บริการ-ความงาม/ดูแลตัวเอง", subcategory: shop };
+      if (electronics.includes(shop)) return { category: "ค้าปลีก-อิเล็กทรอนิกส์", subcategory: shop };
+      if (home.includes(shop)) return { category: "ค้าปลีก-ของใช้/บ้าน", subcategory: shop };
+      if (vehicles.includes(shop)) return { category: "ยานยนต์/ซ่อมบำรุง", subcategory: shop };
+      if (books.includes(shop)) return { category: "หนังสือ/ถ่ายเอกสาร/เครื่องเขียน", subcategory: shop };
+      return { category: "ค้าปลีก-อื่นๆ", subcategory: shop };
+    }
+
+    // Office / services
+    if (office) return { category: "สำนักงาน/บริการ", subcategory: office };
+    if (service) return { category: "บริการเฉพาะทาง", subcategory: service };
+    if (craft) return { category: "ช่าง/เวิร์กช็อป", subcategory: craft };
+
+    // fallback
+    const keys = Object.keys(tags || {});
+    const hint = keys.find(k => ["amenity","shop","office","tourism","leisure","healthcare","craft","service"].includes(k));
+    return { category: "ไม่จัดประเภท", subcategory: hint ? `${hint}:${safe(tags[hint])}` : "unknown" };
+  }
+
+  // ---------------------------
+  // Overpass query builder
+  // ---------------------------
+  function makeOverpassQuery(lat, lon, radius, scopeList) {
+    const around = `around:${radius},${lat},${lon}`;
+    const blocks = [];
+
+    const wantAll = scopeList.includes("all");
+    const add = (expr) => blocks.push(expr);
+
+    if (wantAll || scopeList.includes("amenity")) add(`nwr(${around})["amenity"];`);
+    if (wantAll || scopeList.includes("shop")) add(`nwr(${around})["shop"];`);
+    if (wantAll || scopeList.includes("office")) add(`nwr(${around})["office"];`);
+    if (wantAll || scopeList.includes("tourism")) add(`nwr(${around})["tourism"];`);
+    if (wantAll || scopeList.includes("leisure")) add(`nwr(${around})["leisure"];`);
+    if (wantAll || scopeList.includes("health")) add(`nwr(${around})["healthcare"];`);
+    if (wantAll || scopeList.includes("craft")) add(`nwr(${around})["craft"];`);
+    if (wantAll || scopeList.includes("service")) add(`nwr(${around})["service"];`);
+
+    // Extra (optional) – บางพื้นที่ร้านค้ามีแท็กแบบอื่น
+    if (wantAll) {
+      add(`nwr(${around})["man_made"="works"];`);
+      add(`nwr(${around})["building"="retail"];`);
+      add(`nwr(${around})["building"="commercial"];`);
+    }
+
+    return `
+[out:json][timeout:25];
+(
+  ${blocks.join("\n  ")}
+);
+out center tags;
+`.trim();
+  }
+
+  // ---------------------------
+  // App state
+  // ---------------------------
+  let map, markersLayer;
+  let allRecords = [];
+  let grouped = new Map(); // category => records
+
+  function setStatus(msg, cls="") {
+    const el = $("status");
+    el.className = "muted " + cls;
+    el.textContent = msg;
+  }
+
+  function initMap(lat, lon) {
+    if (map) return;
+    map = L.map("map").setView([lat, lon], 15);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+    markersLayer = L.layerGroup().addTo(map);
+  }
+
+  function renderKPIs(centerLat, centerLon, radius) {
+    const total = allRecords.length;
+    const cats = grouped.size;
+    const withName = allRecords.filter(r => r.name).length;
+    const withAddr = allRecords.filter(r => r.address).length;
+    const withPhone = allRecords.filter(r => r.phone).length;
+
+    $("kpis").innerHTML = `
+      <div class="pill">ทั้งหมด: <b>${total}</b></div>
+      <div class="pill">ประเภท: <b>${cats}</b></div>
+      <div class="pill">มีชื่อ: <b>${withName}</b></div>
+      <div class="pill">มีที่อยู่: <b>${withAddr}</b></div>
+      <div class="pill">มีเบอร์: <b>${withPhone}</b></div>
+      <div class="pill">ศูนย์กลาง: <span class="mono">${centerLat.toFixed(6)}, ${centerLon.toFixed(6)}</span></div>
+      <div class="pill">รัศมี: <b>${radius}</b> m</div>
+    `;
+  }
+
+  function renderStats() {
+    const entries = Array.from(grouped.entries())
+      .map(([cat, recs]) => ({ cat, n: recs.length }))
+      .sort((a,b) => b.n - a.n);
+
+    $("stats").innerHTML = entries.map(e => `• ${e.cat}: <b>${e.n}</b>`).join("<br/>");
+  }
+
+  function renderCategorySelect() {
+    const sel = $("categorySelect");
+    const cats = Array.from(grouped.keys()).sort((a,b)=>a.localeCompare(b,"th"));
+    sel.innerHTML = `<option value="__ALL__">ทั้งหมด</option>` + cats.map(c => `<option>${c}</option>`).join("");
+  }
+
+  function applyFilterAndRenderTable() {
+    const cat = $("categorySelect").value;
+    const q = safe($("filterText").value).toLowerCase();
+    const sortBy = $("sortBy").value;
+
+    let rows = [];
+    if (cat === "__ALL__") rows = allRecords.slice();
+    else rows = (grouped.get(cat) || []).slice();
+
+    if (q) {
+      rows = rows.filter(r =>
+        (r.name || "").toLowerCase().includes(q) ||
+        (r.category || "").toLowerCase().includes(q) ||
+        (r.subcategory || "").toLowerCase().includes(q) ||
+        (r.address || "").toLowerCase().includes(q)
+      );
+    }
+
+    rows.sort((a,b) => {
+      if (sortBy === "distance") return a.distance_m - b.distance_m;
+      if (sortBy === "subcategory") return (a.subcategory||"").localeCompare((b.subcategory||""), "en");
+      return (a.name||"").localeCompare((b.name||""), "th");
+    });
+
+    const tbody = $("tbl").querySelector("tbody");
+    tbody.innerHTML = rows.map(r => {
+      const addr = r.address ? r.address : `<span class="small muted">—</span>`;
+      const contactBits = [];
+      if (r.phone) contactBits.push(r.phone);
+      if (r.website) contactBits.push(r.website);
+      if (r.opening_hours) contactBits.push(r.opening_hours);
+      const contact = contactBits.length ? contactBits.join(" • ") : `<span class="small muted">—</span>`;
+
+      return `
+        <tr>
+          <td>
+            <div><b>${r.name || "(ไม่มีชื่อ)"}</b></div>
+            <div class="small muted mono">${r.lat.toFixed(6)}, ${r.lon.toFixed(6)}</div>
+          </td>
+          <td>
+            <div>${r.category}</div>
+            <div class="small muted mono">${r.subcategory || ""}</div>
+          </td>
+          <td class="mono">${Math.round(r.distance_m)}</td>
+          <td>${addr}</td>
+          <td>${contact}</td>
+          <td class="right"><a href="${r.osm_url}" target="_blank" rel="noreferrer">เปิด</a></td>
+        </tr>
+      `;
+    }).join("");
+
+    $("raw").textContent = JSON.stringify(rows, null, 2);
+    renderMapMarkers(rows);
+  }
+
+  function renderMapMarkers(rows) {
+    if (!markersLayer) return;
+    markersLayer.clearLayers();
+    rows.slice(0, 400).forEach(r => { // กันหนักเกิน
+      const mk = L.marker([r.lat, r.lon]);
+      mk.bindPopup(`
+        <div style="min-width:220px">
+          <div><b>${r.name || "(ไม่มีชื่อ)"}</b></div>
+          <div style="opacity:.8; font-size:12px">${r.category} • <span class="mono">${r.subcategory||""}</span></div>
+          <div style="opacity:.8; font-size:12px">ระยะ ~ ${Math.round(r.distance_m)} m</div>
+          <div style="margin-top:6px"><a href="${r.osm_url}" target="_blank" rel="noreferrer">ดูบน OSM</a></div>
+        </div>
+      `);
+      mk.addTo(markersLayer);
+    });
+  }
+
+  function enableExports(enable) {
+    $("btnCSV").disabled = !enable;
+    $("btnJSON").disabled = !enable;
+  }
+
+  function downloadText(filename, text, mime="text/plain") {
+    const blob = new Blob([text], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function toCSV(records) {
+    const cols = [
+      "name","category","subcategory","distance_m","lat","lon",
+      "address","phone","website","opening_hours",
+      "osm_type","osm_id","osm_url",
+      "raw_tags_json"
+    ];
+    const esc = (v) => {
+      const s = (v ?? "").toString();
+      if (/[",\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
+      return s;
+    };
+    const header = cols.join(",");
+    const lines = records.map(r => cols.map(c => {
+      if (c === "raw_tags_json") return esc(JSON.stringify(r.tags || {}));
+      return esc(r[c]);
+    }).join(","));
+    return [header, ...lines].join("\n");
+  }
+
+  // ---------------------------
+  // Fetch & transform
+  // ---------------------------
+  async function fetchOverpass(endpoint, query) {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+      body: "data=" + encodeURIComponent(query)
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
+  function buildRecords(data, centerLat, centerLon) {
+    const seen = new Set();
+    const records = [];
+
+    for (const el of (data.elements || [])) {
+      const key = `${el.type}/${el.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      const tags = el.tags || {};
+      const name = safe(tags.name) || safe(tags["name:th"]) || safe(tags["name:en"]);
+      // ถ้าต้องการ “ธุรกิจจริงๆ” มากขึ้น: เปิดคอมเมนต์บรรทัดล่างเพื่อข้ามรายการไม่มีชื่อ
+      // if (!name) continue;
+
+      const lat = el.type === "node" ? el.lat : (el.center ? el.center.lat : null);
+      const lon = el.type === "node" ? el.lon : (el.center ? el.center.lon : null);
+      if (lat == null || lon == null) continue;
+
+      const {category, subcategory} = categorize(tags);
+      const address = buildAddress(tags);
+      const phone = safe(tags.phone || tags["contact:phone"]);
+      const website = safe(tags.website || tags["contact:website"]);
+      const opening_hours = safe(tags.opening_hours);
+
+      const distance_m = haversineMeters(centerLat, centerLon, lat, lon);
+
+      // heuristic: ถ้าไม่มีแท็กธุรกิจหลักเลย อาจไม่ใช่สิ่งที่ต้องการ
+      const hasBizKey = ["amenity","shop","office","tourism","leisure","healthcare","craft","service"].some(k => tags[k]);
+      if (!hasBizKey) continue;
+
+      records.push({
+        name,
+        category,
+        subcategory,
+        distance_m: Math.round(distance_m * 10) / 10,
+        lat, lon,
+        address,
+        phone, website, opening_hours,
+        osm_type: el.type,
+        osm_id: el.id,
+        osm_url: osmLink(el.type, el.id),
+        tags
+      });
+    }
+
+    // กรองเฉพาะในรัศมี (เผื่อบาง element center คลาด)
+    return records;
+  }
+
+  function regroup(records) {
+    const m = new Map();
+    for (const r of records) {
+      const k = r.category || "ไม่จัดประเภท";
+      if (!m.has(k)) m.set(k, []);
+      m.get(k).push(r);
+    }
+    return m;
+  }
+
+  // ---------------------------
+  // Wire UI
+  // ---------------------------
+  function selectedScope() {
+    return Array.from($("scope").selectedOptions).map(o => o.value);
+  }
+
+  function refreshQueryBox() {
+    const lat = parseFloat($("lat").value);
+    const lon = parseFloat($("lon").value);
+    const radius = parseInt($("radius").value, 10);
+    const scopeList = selectedScope();
+    $("query").value = makeOverpassQuery(lat, lon, radius, scopeList);
+  }
+
+  $("scope").addEventListener("change", refreshQueryBox);
+  $("lat").addEventListener("change", refreshQueryBox);
+  $("lon").addEventListener("change", refreshQueryBox);
+  $("radius").addEventListener("change", refreshQueryBox);
+
+  $("filterText").addEventListener("input", applyFilterAndRenderTable);
+  $("categorySelect").addEventListener("change", applyFilterAndRenderTable);
+  $("sortBy").addEventListener("change", applyFilterAndRenderTable);
+
+  $("btnFetch").addEventListener("click", async () => {
+    enableExports(false);
+    const centerLat = parseFloat($("lat").value);
+    const centerLon = parseFloat($("lon").value);
+    const radius = parseInt($("radius").value, 10);
+    const endpoint = $("endpoint").value;
+    const query = $("query").value.trim() || makeOverpassQuery(centerLat, centerLon, radius, selectedScope());
+
+    initMap(centerLat, centerLon);
+    map.setView([centerLat, centerLon], 15);
+    setStatus("กำลังดึงข้อมูลจาก Overpass…");
+
+    try {
+      const data = await fetchOverpass(endpoint, query);
+
+      allRecords = buildRecords(data, centerLat, centerLon)
+        .filter(r => r.distance_m <= radius + 30); // เผื่อ rounding
+
+      grouped = regroup(allRecords);
+
+      renderKPIs(centerLat, centerLon, radius);
+      renderStats();
+      renderCategorySelect();
+      applyFilterAndRenderTable();
+
+      enableExports(true);
+      setStatus(`สำเร็จ: พบ ${allRecords.length} รายการ, ${grouped.size} ประเภท`, "ok");
+
+    } catch (err) {
+      console.error(err);
+      setStatus(`ผิดพลาด: ${err.message} (ลองเปลี่ยน endpoint หรือเปิดผ่าน local server)`, "warn");
+    }
+  });
+
+  $("btnCSV").addEventListener("click", () => {
+    const csv = toCSV(allRecords);
+    downloadText("kps_business_radius.csv", csv, "text/csv;charset=utf-8");
+  });
+
+  $("btnJSON").addEventListener("click", () => {
+    downloadText("kps_business_radius.json", JSON.stringify(allRecords, null, 2), "application/json");
+  });
+
+  // init
+  refreshQueryBox();
+  initMap(parseFloat($("lat").value), parseFloat($("lon").value));
+  renderKPIs(parseFloat($("lat").value), parseFloat($("lon").value), parseInt($("radius").value,10));
+  $("kpis").insertAdjacentHTML("beforeend", `<div class="pill">กด “ดึงข้อมูลในรัศมี” เพื่อเริ่ม</div>`);
+</script>
+</body>
+</html>
