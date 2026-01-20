@@ -52,12 +52,9 @@
       color: var(--ink);
       font-family: "Kanit", "Noto Sans Thai", "Segoe UI", system-ui, sans-serif;
       margin: 0;
-      padding: 22px 12px 32px;
+      padding: 16px 12px;
       overscroll-behavior: none;
-    }
-    .topbar-gradient{
-      height: 14px;
-      background: linear-gradient(90deg, #19b2af, #32c3b9, #63d6cc, #a7ebe4);
+      overflow: hidden;
     }
     .app-frame{
       border: 3px solid var(--brand-500);
@@ -65,46 +62,118 @@
       background: var(--surface);
       box-shadow: 0 14px 30px rgba(15, 107, 114, .12);
       overflow: hidden;
-      min-height: 100dvh;
+      height: calc(100dvh - 32px);
       display: flex;
       flex-direction: column;
     }
     .app-body{
       flex: 1;
-      overflow-y: auto;
+      overflow: hidden;
       -webkit-overflow-scrolling: touch;
       scroll-behavior: smooth;
       background: var(--surface);
     }
     .app-content{
-      padding-bottom: calc(88px + env(safe-area-inset-bottom));
+      height: 100%;
+      padding: 12px;
+      display: flex;
+    }
+    .app-shell{
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      position: relative;
+      gap: 12px;
+    }
+    .sidebar{
+      width: 280px;
+      background: linear-gradient(180deg, rgba(31,185,183,.12), rgba(255,255,255,1));
+      border: 1px solid var(--border);
+      border-radius: var(--rLG);
+      box-shadow: 0 8px 18px rgba(24, 164, 170, .12);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: width .2s ease, transform .2s ease;
+    }
+    .sidebar.is-collapsed{ width: 84px; }
+    .sidebar-header{
+      padding: 14px 14px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .sidebar-title{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .sidebar-logos{
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .sidebar.is-collapsed .sidebar-logos,
+    .sidebar.is-collapsed .sidebar-title span{
+      display: none;
+    }
+    .sidebar-nav{
+      flex: 1;
+      overflow: auto;
+      padding: 8px;
+    }
+    .sidebar-btn{
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 12px;
+      border-radius: 16px;
+      transition: background .2s ease, transform .12s ease;
+      color: var(--muted);
+      font-weight: 600;
+      text-align: left;
+    }
+    .sidebar-btn:hover{ background: rgba(255,255,255,.7); }
+    .sidebar-btn.active{
+      background: var(--brand-100);
+      color: var(--brand-800);
+      border: 1px solid var(--brand-200);
+      box-shadow: 0 8px 16px rgba(12, 34, 46, .08);
+    }
+    .sidebar-short{ display: none; }
+    .sidebar.is-collapsed .sidebar-label{ display: none; }
+    .sidebar.is-collapsed .sidebar-short{ display: inline; }
+    .sidebar-footer{
+      padding: 10px 12px 12px;
+      border-top: 1px solid var(--border);
     }
     .bottom-nav{
-      position: sticky;
-      bottom: 0;
-      z-index: 60;
-      background: rgba(255,255,255,.92);
+      display: none;
       border-top: 1px solid var(--border);
+      background: rgba(255,255,255,.92);
       backdrop-filter: blur(14px);
     }
     .bottom-nav-inner{
       display: flex;
+      justify-content: space-around;
       gap: 8px;
-      padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
-      overflow-x: auto;
-      scrollbar-width: none;
+      padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
     }
-    .bottom-nav-inner::-webkit-scrollbar{ display: none; }
     .bottom-tab{
-      min-width: 92px;
-      padding: 10px 12px;
-      border-radius: 18px;
+      flex: 1 1 0;
+      min-width: 64px;
+      padding: 8px 6px;
+      border-radius: 14px;
       border: 1px solid transparent;
       background: var(--surface-2);
       color: var(--muted);
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 600;
       letter-spacing: .2px;
+      text-align: center;
       transition: transform .15s ease, box-shadow .2s ease, background .2s ease, color .2s ease;
       box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
     }
@@ -115,11 +184,28 @@
       box-shadow: 0 10px 16px rgba(12, 34, 46, .12);
       transform: translateY(-2px);
     }
-    .bottom-label{ white-space: nowrap; }
-    .nav-surface{
-      background: linear-gradient(180deg, rgba(31,185,183,.12), rgba(255,255,255,1));
-      border-bottom: 2px solid var(--brand-300);
-      box-shadow: 0 8px 18px rgba(24, 164, 170, .12);
+    .sidebar-toggle{ display: grid; }
+    .app-main{
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .page-screen{
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    .page-head{
+      flex: 0 0 auto;
+    }
+    .page-scroll{
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+      padding-right: 2px;
     }
     .dots{
       background-image: none;
@@ -245,6 +331,11 @@
     .dot-doing{ background: var(--info); }
     .dot-todo{ background: #94a3b8; }
     .dot-locked{ background: var(--warning); }
+    .chart-canvas{
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
 
     @media (max-width: 1024px){
       body{
@@ -257,7 +348,19 @@
         border: none;
         border-radius: 0;
         box-shadow: none;
+        height: 100dvh;
       }
+      .app-content{ padding: 10px; }
+      .app-shell{ gap: 0; }
+    }
+    @media (orientation: portrait){
+      .sidebar{ display: none; }
+      .sidebar-toggle{ display: none; }
+      .bottom-nav{ display: block; }
+      .page-scroll{ padding-bottom: 72px; }
+    }
+    @media (orientation: landscape){
+      .bottom-nav{ display: none; }
     }
     @media (hover: none){
       .pill:hover{ box-shadow: 0 18px 30px rgba(12, 34, 46, .18); }
@@ -281,13 +384,13 @@
     const html = htm.bind(React.createElement);
 
     const NAV = [
-      { id:"course", label:"หลักสูตร" },
-      { id:"content", label:"เนื้อหา" },
-      { id:"forum", label:"กระดานถาม" },
-      { id:"wiki", label:"Wiki" },
-      { id:"analytics", label:"วิเคราะห์" },
-      { id:"results", label:"ผลลัพธ์" },
-      { id:"table", label:"ตาราง" },
+      { id:"course", label:"หลักสูตร", short:"คส" },
+      { id:"content", label:"เนื้อหา", short:"นห" },
+      { id:"forum", label:"กระดานถาม", short:"ถ" },
+      { id:"wiki", label:"Wiki", short:"W" },
+      { id:"analytics", label:"วิเคราะห์", short:"วค" },
+      { id:"results", label:"ผลลัพธ์", short:"ผล" },
+      { id:"table", label:"ตาราง", short:"ต" },
     ];
 
     const mock = {
@@ -352,76 +455,85 @@
       </div>
     `;
 
-    const TopNav = ({route, setRoute}) => html`
-      <div class="sticky top-0 z-50 px-4 sm:px-6 pt-4">
-        <div class="topbar-gradient -mx-4 sm:-mx-6 mb-3"></div>
-        <div class="clay nav-surface px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
-          <div class="flex items-center gap-3">
-            <div class="clay-soft w-12 h-12 grid place-items-center">
-              <img
-                src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-adap-green-untext.1c98bf032947.png"
-                alt="App Logo"
-                class="w-9 h-9 object-contain"
-              />
-            </div>
-            <div>
-              <div class="mt-2 flex items-center gap-2">
+    const Sidebar = ({route, setRoute, sidebarOpen, setSidebarOpen}) => html`
+      <aside class=${"sidebar " + (sidebarOpen ? "" : "is-collapsed")}>
+        <div class="sidebar-header">
+          <div class="flex items-center justify-between w-full">
+            <div class="sidebar-title">
+              <div class="clay-soft w-11 h-11 grid place-items-center">
                 <img
-                  src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-nectec.4a797e97e6ed.png"
-                  alt="NECTEC"
-                  class="h-6 w-auto object-contain"
-                />
-                <img
-                  src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-nstda.a0c679b2e45e.png"
-                  alt="NSTDA"
-                  class="h-6 w-auto object-contain"
-                />
-                <img
-                  src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-mhesi.f3e5c05e5ebe.png"
-                  alt="MHESI"
-                  class="h-6 w-auto object-contain"
+                  src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-adap-green-untext.1c98bf032947.png"
+                  alt="App Logo"
+                  class="w-8 h-8 object-contain"
                 />
               </div>
+              <span class="text-lg font-extrabold">VK LMS</span>
             </div>
+            <button
+              class="ghost w-9 h-9 rounded-full sidebar-toggle grid place-items-center"
+              onClick=${() => setSidebarOpen(o => !o)}
+              title="Toggle sidebar"
+            >
+              ${sidebarOpen ? "⟨" : "⟩"}
+            </button>
           </div>
-
-          <div class="hidden lg:flex gap-2">
-            ${NAV.map(n => html`
-              <button
-                class=${"px-4 py-2 rounded-full text-sm transition " + (route===n.id ? "tabActive font-semibold" : "tabBtn")}
-                onClick=${() => setRoute(n.id)}
-              >${n.label}</button>
-            `)}
+          <div class="sidebar-logos">
+            <img
+              src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-nectec.4a797e97e6ed.png"
+              alt="NECTEC"
+              class="h-5 w-auto object-contain"
+            />
+            <img
+              src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-nstda.a0c679b2e45e.png"
+              alt="NSTDA"
+              class="h-5 w-auto object-contain"
+            />
+            <img
+              src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-mhesi.f3e5c05e5ebe.png"
+              alt="MHESI"
+              class="h-5 w-auto object-contain"
+            />
           </div>
-
-          <div class="flex items-center gap-2">
-            <div class="hidden sm:flex chip px-3 py-2 rounded-full text-xs text-slate-600 mono">
-              build: UI-01 • ${new Date().toISOString().slice(0,10)}
-            </div>
-            <${ClayButton} variant="soft" small onClick=${() => alert("ตัวอย่าง UI เท่านั้น (ยังไม่ผูก backend)")} >
-              ช่วยเหลือ
-            </${ClayButton}>
-          </div>
+          <div class="text-xs text-slate-500 mono">build: UI-01 • ${new Date().toISOString().slice(0,10)}</div>
         </div>
-      </div>
+        <div class="sidebar-nav grid gap-2">
+          ${NAV.map(n => html`
+            <button
+              class=${"sidebar-btn " + (route===n.id ? "active" : "")}
+              onClick=${() => {
+                setRoute(n.id);
+              }}
+              title=${n.label}
+            >
+              <span class="sidebar-short">${n.short}</span>
+              <span class="sidebar-label">${n.label}</span>
+            </button>
+          `)}
+        </div>
+        <div class="sidebar-footer">
+          <${ClayButton} variant="soft" small onClick=${() => alert("ตัวอย่าง UI เท่านั้น (ยังไม่ผูก backend)")}>
+            ช่วยเหลือ
+          </${ClayButton}>
+        </div>
+      </aside>
     `;
 
     const BottomNav = ({route, setRoute}) => html`
-      <div class="bottom-nav lg:hidden">
+      <div class="bottom-nav">
         <div class="bottom-nav-inner">
           ${NAV.map(n => html`
             <button
               class=${"bottom-tab " + (route===n.id ? "is-active" : "")}
               onClick=${() => setRoute(n.id)}
-            ><span class="bottom-label">${n.label}</span></button>
+            >${n.label}</button>
           `)}
         </div>
       </div>
     `;
 
     const Layout = ({children}) => html`
-      <div class="app-content max-w-[1280px] mx-auto px-4 sm:px-6 pb-10">
-        <div class="mt-5 grid gap-5">
+      <div class="app-content">
+        <div class="max-w-[1280px] mx-auto w-full h-full flex flex-col min-h-0">
           ${children}
         </div>
       </div>
@@ -450,7 +562,9 @@
       };
 
       return html`
-        <div class="clay p-5 sm:p-6">
+        <div class="page-screen">
+          <div class="page-scroll">
+            <div class="clay p-5 sm:p-6">
           <div class="flex flex-col lg:flex-row lg:items-start gap-5">
             <div class="flex-1">
               <div class="flex items-start justify-between gap-3">
@@ -530,6 +644,8 @@
               </div>
             </div>
           </div>
+            </div>
+          </div>
         </div>
       `;
     };
@@ -540,7 +656,9 @@
       const max = 2;
 
       return html`
-        <div class="clay p-5 sm:p-6">
+        <div class="page-screen">
+          <div class="page-scroll">
+            <div class="clay p-5 sm:p-6">
           <div class="flex flex-col lg:flex-row gap-5">
             <div class="flex-1">
               <div class="flex items-center justify-between gap-3">
@@ -617,6 +735,8 @@
               </div>
             </div>
           </div>
+            </div>
+          </div>
         </div>
       `;
     };
@@ -624,7 +744,9 @@
     const Forum = () => {
       const [q, setQ] = useState("");
       return html`
-        <div class="clay p-5 sm:p-6">
+        <div class="page-screen">
+          <div class="page-scroll">
+            <div class="clay p-5 sm:p-6">
           <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div>
               <div class="text-2xl font-extrabold">All Topics</div>
@@ -689,12 +811,16 @@
               </div>
             </div>
           </div>
+            </div>
+          </div>
         </div>
       `;
     };
 
     const Wiki = () => html`
-      <div class="clay p-5 sm:p-6">
+      <div class="page-screen">
+        <div class="page-scroll">
+          <div class="clay p-5 sm:p-6">
         <div class="flex items-start justify-between gap-3">
           <div>
             <div class="text-sm text-slate-500">Wiki > ${mock.course.title}</div>
@@ -732,6 +858,8 @@
             </div>
           </div>
         </div>
+          </div>
+        </div>
       </div>
     `;
 
@@ -750,97 +878,128 @@
     const Analytics = () => {
       const barRef = useRef(null);
       const donutRef = useRef(null);
+      const barWrapRef = useRef(null);
+      const donutWrapRef = useRef(null);
 
       useEffect(() => {
         if (!barRef.current || !donutRef.current || !window.Chart) return;
 
-        const ctxBar = barRef.current.getContext("2d");
-        const ctxDonut = donutRef.current.getContext("2d");
+        let barChart;
+        let donutChart;
+        let ro;
+        let resizeHandler;
 
-        const barChart = new Chart(ctxBar, {
-          type: "bar",
-          data: {
-            labels: ["unit 01", "unit 02", "unit 03", "unit 04", "unit 05"],
-            datasets: [
-              {
-                type: "bar",
-                label: "Learning speed",
-                data: [240, 410, 150, 320, 260],
-                backgroundColor: ["#f56a6a", "#f6b86a", "#a6d37a", "#5f76c8", "#c59cff"],
-                borderRadius: 10,
-              },
-              {
-                type: "line",
-                label: "Focus score",
-                data: [68, 72, 61, 78, 70],
-                borderColor: "#18a4aa",
-                backgroundColor: "rgba(24,164,170,.2)",
-                tension: 0.35,
-                fill: true,
-                yAxisID: "y1",
-              },
-            ],
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            animation: {
-              duration: 1200,
-              easing: "easeOutQuart",
-            },
-            plugins: {
-              legend: { display: true, labels: { boxWidth: 12, usePointStyle: true } },
-              tooltip: { backgroundColor: "#0f6b72", padding: 10, cornerRadius: 8 },
-            },
-            scales: {
-              x: { grid: { display: false } },
-              y: { beginAtZero: true, grid: { color: "rgba(16,42,47,.08)" } },
-              y1: {
-                beginAtZero: true,
-                position: "right",
-                grid: { drawOnChartArea: false },
-                ticks: { color: "#18a4aa" },
-              },
-            },
-          },
-        });
+        const init = () => {
+          const ctxBar = barRef.current.getContext("2d");
+          const ctxDonut = donutRef.current.getContext("2d");
 
-        const donutChart = new Chart(ctxDonut, {
-          type: "doughnut",
-          data: {
-            labels: ["เสร็จแล้ว", "กำลังทำ", "ยังไม่เริ่ม"],
-            datasets: [
-              {
-                data: [62, 24, 14],
-                backgroundColor: ["#1fb9b7", "#f6b86a", "#cfd8dd"],
-                hoverOffset: 6,
+          barChart = new Chart(ctxBar, {
+            type: "bar",
+            data: {
+              labels: ["unit 01", "unit 02", "unit 03", "unit 04", "unit 05"],
+              datasets: [
+                {
+                  type: "bar",
+                  label: "Learning speed",
+                  data: [240, 410, 150, 320, 260],
+                  backgroundColor: ["#f56a6a", "#f6b86a", "#a6d37a", "#5f76c8", "#c59cff"],
+                  borderRadius: 10,
+                },
+                {
+                  type: "line",
+                  label: "Focus score",
+                  data: [68, 72, 61, 78, 70],
+                  borderColor: "#18a4aa",
+                  backgroundColor: "rgba(24,164,170,.2)",
+                  tension: 0.35,
+                  fill: true,
+                  yAxisID: "y1",
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              animation: {
+                duration: 1200,
+                easing: "easeOutQuart",
               },
-            ],
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: "68%",
-            animation: {
-              animateRotate: true,
-              duration: 1300,
-              easing: "easeOutCubic",
+              plugins: {
+                legend: { display: true, labels: { boxWidth: 12, usePointStyle: true } },
+                tooltip: { backgroundColor: "#0f6b72", padding: 10, cornerRadius: 8 },
+              },
+              scales: {
+                x: { grid: { display: false } },
+                y: { beginAtZero: true, grid: { color: "rgba(16,42,47,.08)" } },
+                y1: {
+                  beginAtZero: true,
+                  position: "right",
+                  grid: { drawOnChartArea: false },
+                  ticks: { color: "#18a4aa" },
+                },
+              },
             },
-            plugins: {
-              legend: { position: "bottom", labels: { boxWidth: 12, usePointStyle: true } },
-              tooltip: { backgroundColor: "#0f6b72", padding: 10, cornerRadius: 8 },
+          });
+
+          donutChart = new Chart(ctxDonut, {
+            type: "doughnut",
+            data: {
+              labels: ["เสร็จแล้ว", "กำลังทำ", "ยังไม่เริ่ม"],
+              datasets: [
+                {
+                  data: [62, 24, 14],
+                  backgroundColor: ["#1fb9b7", "#f6b86a", "#cfd8dd"],
+                  hoverOffset: 6,
+                },
+              ],
             },
-          },
-        });
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: "68%",
+              animation: {
+                animateRotate: true,
+                duration: 1300,
+                easing: "easeOutCubic",
+              },
+              plugins: {
+                legend: { position: "bottom", labels: { boxWidth: 12, usePointStyle: true } },
+                tooltip: { backgroundColor: "#0f6b72", padding: 10, cornerRadius: 8 },
+              },
+            },
+          });
+
+          resizeHandler = () => {
+            if (barChart) barChart.resize();
+            if (donutChart) donutChart.resize();
+          };
+          if (window.ResizeObserver) {
+            ro = new ResizeObserver(resizeHandler);
+            if (barWrapRef.current) ro.observe(barWrapRef.current);
+            if (donutWrapRef.current) ro.observe(donutWrapRef.current);
+          }
+          window.addEventListener("orientationchange", resizeHandler);
+          window.addEventListener("resize", resizeHandler);
+        };
+
+        const raf = requestAnimationFrame(init);
 
         return () => {
-          barChart.destroy();
-          donutChart.destroy();
+          cancelAnimationFrame(raf);
+          if (ro) ro.disconnect();
+          if (resizeHandler) {
+            window.removeEventListener("orientationchange", resizeHandler);
+            window.removeEventListener("resize", resizeHandler);
+          }
+          if (barChart) barChart.destroy();
+          if (donutChart) donutChart.destroy();
         };
       }, []);
 
       return html`
-        <div class="clay p-5 sm:p-6">
+        <div class="page-screen">
+          <div class="page-scroll">
+            <div class="clay p-5 sm:p-6">
           <div class="flex items-start justify-between gap-3">
             <div>
               <div class="text-2xl font-extrabold">ความก้าวหน้าของผู้เรียน : "${mock.student.name}"</div>
@@ -853,8 +1012,8 @@
           <div class="mt-5 grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
             <div class="clay-soft p-4 cat-card cat-5">
               <div class="font-bold">Learning Speed & Focus (Animated)</div>
-              <div class="mt-3 h-[320px]">
-                <canvas ref=${barRef}></canvas>
+              <div class="mt-3 h-[320px]" ref=${barWrapRef}>
+                <canvas class="chart-canvas" ref=${barRef}></canvas>
               </div>
 
               <div class="mt-4 panel p-4">
@@ -890,8 +1049,8 @@
 
               <div class="mt-4 panel p-4">
                 <div class="font-semibold">Progress Status</div>
-                <div class="mt-3 h-[220px]">
-                  <canvas ref=${donutRef}></canvas>
+                <div class="mt-3 h-[220px]" ref=${donutWrapRef}>
+                  <canvas class="chart-canvas" ref=${donutRef}></canvas>
                 </div>
               </div>
 
@@ -905,12 +1064,16 @@
               </div>
             </div>
           </div>
+            </div>
+          </div>
         </div>
       `;
     };
 
     const Results = () => html`
-      <div class="clay p-5 sm:p-6">
+      <div class="page-screen">
+        <div class="page-scroll">
+          <div class="clay p-5 sm:p-6">
         <div class="clay-soft p-4">
           <div class="flex items-center justify-between gap-3">
             <div>
@@ -955,6 +1118,8 @@
             <${ClayButton} variant="soft" onClick=${() => alert("Saved (demo)")}>บันทึก</${ClayButton}>
           </div>
         </div>
+          </div>
+        </div>
       </div>
     `;
 
@@ -967,7 +1132,9 @@
       const [q, setQ] = useState("");
       const filtered = rows.filter(r => (r.name+r.role+r.unit).toLowerCase().includes(q.toLowerCase()));
       return html`
-        <div class="clay p-5 sm:p-6">
+        <div class="page-screen">
+          <div class="page-scroll">
+            <div class="clay p-5 sm:p-6">
           <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div>
               <div class="text-2xl font-extrabold">ตารางรายการ (ปริมาณ/กิจกรรม)</div>
@@ -1015,14 +1182,29 @@
               ` : null}
             </div>
           </div>
+            </div>
+          </div>
         </div>
       `;
     };
 
     function App(){
       const [route, setRoute] = useState("course");
+      const [sidebarOpen, setSidebarOpen] = useState(true);
 
       const goto = (r) => setRoute(r);
+
+      useEffect(() => {
+        const mq = window.matchMedia("(orientation: portrait)");
+        const sync = () => setSidebarOpen(!mq.matches);
+        sync();
+        if (mq.addEventListener) mq.addEventListener("change", sync);
+        else mq.addListener(sync);
+        return () => {
+          if (mq.removeEventListener) mq.removeEventListener("change", sync);
+          else mq.removeListener(sync);
+        };
+      }, []);
 
       const Page = () => {
         if(route==="course") return html`<${CourseOverview} goto=${goto} />`;
@@ -1032,16 +1214,26 @@
         if(route==="analytics") return html`<${Analytics} />`;
         if(route==="results") return html`<${Results} />`;
         if(route==="table") return html`<${DataTable} />`;
-        return html`<div class="clay p-6">Not found</div>`;
+        return html`
+          <div class="page-screen">
+            <div class="page-scroll">
+              <div class="clay p-6">Not found</div>
+            </div>
+          </div>
+        `;
       };
 
       return html`
         <div class="app-frame">
-          <${TopNav} route=${route} setRoute=${setRoute} />
           <div class="app-body">
             <${Layout}>
-              <${Page} />
-              <div class="text-center text-xs text-slate-500 pb-6">
+              <div class="app-shell">
+                <${Sidebar} route=${route} setRoute=${setRoute} sidebarOpen=${sidebarOpen} setSidebarOpen=${setSidebarOpen} />
+                <div class="app-main mt-4">
+                  <${Page} />
+                </div>
+              </div>
+              <div class="text-center text-xs text-slate-500 py-4">
                 Prototype UI • React UMD + htm + Tailwind CDN • Single HTML file
               </div>
             </${Layout}>
