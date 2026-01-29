@@ -397,6 +397,7 @@
       authorizationEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/auth",
       tokenEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/token",
       userinfoEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/userinfo",
+      logoutEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/logout",
       clientId: "dashboard",
       redirectUri: "https://sibsansuk.github.io/VK/index.html",
       scope: "openid profile email",
@@ -458,6 +459,18 @@
       try { return JSON.parse(raw); } catch { return null; }
     };
     const clearAuth = () => sessionStorage.removeItem("oidc_auth");
+
+    const logout = (auth) => {
+      clearAuth();
+      const idToken = auth?.token?.id_token;
+      if (!idToken) return;
+      const params = new URLSearchParams({
+        id_token_hint: idToken,
+        post_logout_redirect_uri: OIDC.redirectUri,
+        client_id: OIDC.clientId,
+      });
+      window.location.href = `${OIDC.logoutEndpoint}?${params.toString()}`;
+    };
 
     const exchangeCodeForToken = async (code) => {
       const verifier = sessionStorage.getItem("pkce_verifier");
@@ -1401,7 +1414,7 @@
                   setSidebarOpen=${setSidebarOpen}
                   auth=${auth}
                   authError=${authError}
-                  onLogout=${() => { clearAuth(); setAuth(null); }}
+                  onLogout=${() => { logout(auth); setAuth(null); }}
                 />
                 <div class="app-main mt-4">
                   ${authError ? html`
@@ -1424,7 +1437,7 @@
               </div>
             </${Layout}>
           </div>
-          <${BottomNav} route=${route} setRoute=${setRoute} auth=${auth} onLogout=${() => { clearAuth(); setAuth(null); }} />
+          <${BottomNav} route=${route} setRoute=${setRoute} auth=${auth} onLogout=${() => { logout(auth); setAuth(null); }} />
         </div>
       `;
     }
