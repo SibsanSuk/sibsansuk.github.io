@@ -607,17 +607,20 @@
           `)}
         </div>
         <div class="sidebar-footer">
-          <${ClayButton} variant="primary" small onClick=${startLogin}>
-            Login
-          </${ClayButton}>
+          ${auth?.userId ? html`
+            <${ClayButton} variant="danger" small onClick=${onLogout}>
+              Logout
+            </${ClayButton}>
+          ` : html`
+            <${ClayButton} variant="primary" small onClick=${startLogin}>
+              Login
+            </${ClayButton}>
+          `}
           ${auth?.userId ? html`
             <div class="mt-3 panel p-3 text-xs">
               <div class="font-semibold text-slate-700">Logged in</div>
               <div class="mt-1 text-slate-600 mono break-all">user id: ${auth.userId}</div>
               <pre class="mt-2 text-[11px] text-slate-600 whitespace-pre-wrap break-all">${JSON.stringify(auth.profile || {}, null, 2)}</pre>
-              <div class="mt-2">
-                <${ClayButton} variant="soft" small onClick=${onLogout}>Logout</${ClayButton}>
-              </div>
             </div>
           ` : null}
           ${authError ? html`
@@ -630,7 +633,7 @@
       </aside>
     `;
 
-    const BottomNav = ({route, setRoute}) => html`
+    const BottomNav = ({route, setRoute, auth, onLogout}) => html`
       <div class="bottom-nav">
         <div class="bottom-nav-inner">
           ${NAV.map(n => html`
@@ -639,7 +642,11 @@
               onClick=${() => setRoute(n.id)}
             >${n.label}</button>
           `)}
-          <button class="bottom-tab" onClick=${startLogin}>Login</button>
+          ${auth?.userId ? html`
+            <button class="bottom-tab" onClick=${onLogout}>Logout</button>
+          ` : html`
+            <button class="bottom-tab" onClick=${startLogin}>Login</button>
+          `}
         </div>
       </div>
     `;
@@ -1417,7 +1424,7 @@
               </div>
             </${Layout}>
           </div>
-          <${BottomNav} route=${route} setRoute=${setRoute} />
+          <${BottomNav} route=${route} setRoute=${setRoute} auth=${auth} onLogout=${() => { clearAuth(); setAuth(null); }} />
         </div>
       `;
     }
