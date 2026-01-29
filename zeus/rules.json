@@ -1,0 +1,19 @@
+{
+  "version": "1.0",
+  "build_rules": {
+    "starting_buildings": ["tent"],
+    "prerequisites": {
+      "hut": ["tent"]
+    },
+    "starting_population": 3,
+    "starting_resources": {
+      "wood": 20
+    },
+    "build_costs": {
+      "hut": {
+        "wood": 10,
+        "workers": 1
+      }
+    }
+  }
+}

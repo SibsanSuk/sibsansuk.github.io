@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Drag Speed Paint</title>
+  <style>
+    :root {
+      --bg: #0b0e14;
+      --grid: #121826;
+      --text: #d9e2ff;
+    }
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "IBM Plex Sans", "Noto Sans Thai", sans-serif;
+      overflow: hidden;
+    }
+    #app {
+      position: fixed;
+      inset: 0;
+    }
+    .hud {
+      position: fixed;
+      left: 16px;
+      top: 14px;
+      padding: 10px 12px;
+      background: rgba(10, 14, 20, 0.7);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      backdrop-filter: blur(6px);
+      font-size: 14px;
+      letter-spacing: 0.2px;
+    }
+    .hud b { color: #8ef0ff; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div class="hud">ลากเมาส์เพื่อวาดสีตามความเร็ว</div>
+
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <script>
+    const container = document.getElementById("app");
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    container.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0b0e14);
+
+    const camera = new THREE.OrthographicCamera(
+      -window.innerWidth / 2,
+      window.innerWidth / 2,
+      window.innerHeight / 2,
+      -window.innerHeight / 2,
+      0.1,
+      10
+    );
+    camera.position.z = 2;
+
+    // Draw surface via canvas texture
+    const paintCanvas = document.createElement("canvas");
+    const paintCtx = paintCanvas.getContext("2d");
+
+    function resizeCanvas() {
+      paintCanvas.width = window.innerWidth;
+      paintCanvas.height = window.innerHeight;
+      paintCtx.fillStyle = "#0b0e14";
+      paintCtx.fillRect(0, 0, paintCanvas.width, paintCanvas.height);
+    }
+    resizeCanvas();
+
+    const texture = new THREE.CanvasTexture(paintCanvas);
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(window.innerWidth, window.innerHeight),
+      new THREE.MeshBasicMaterial({ map: texture })
+    );
+    scene.add(plane);
+
+    let dragging = false;
+    let lastPos = null;
+    let lastTime = 0;
+
+    const MAX_SPEED = 1.6; // px/ms
+    const MIN_RADIUS = 5;
+    const MAX_RADIUS = 14;
+    let smoothSpeed = 0;
+
+    function speedToColor(speed) {
+      // speed in px/ms, clamp 0..MAX_SPEED
+      const t = Math.min(Math.max(speed / MAX_SPEED, 0), 1);
+      const hue = 220 - t * 220; // blue -> red
+      return `hsl(${hue}, 90%, 55%)`;
+    }
+
+    function drawAt(x, y, speed) {
+      const color = speedToColor(speed);
+      paintCtx.fillStyle = color;
+      paintCtx.beginPath();
+      const r = Math.min(Math.max(MIN_RADIUS + speed * 6, MIN_RADIUS), MAX_RADIUS);
+      paintCtx.arc(x, y, r, 0, Math.PI * 2);
+      paintCtx.fill();
+      texture.needsUpdate = true;
+    }
+
+    function pointerPos(evt) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      return {
+        x: evt.clientX - rect.left,
+        y: evt.clientY - rect.top
+      };
+    }
+
+    renderer.domElement.addEventListener("pointerdown", (e) => {
+      dragging = true;
+      lastPos = pointerPos(e);
+      lastTime = performance.now();
+      drawAt(lastPos.x, lastPos.y, 0);
+      renderer.domElement.setPointerCapture(e.pointerId);
+    });
+
+    renderer.domElement.addEventListener("pointermove", (e) => {
+      if (!dragging || !lastPos) return;
+      const now = performance.now();
+      const pos = pointerPos(e);
+      const dx = pos.x - lastPos.x;
+      const dy = pos.y - lastPos.y;
+      const dist = Math.hypot(dx, dy);
+      const dt = Math.max(now - lastTime, 4);
+      const rawSpeed = dist / dt;
+      smoothSpeed = smoothSpeed * 0.7 + rawSpeed * 0.3;
+      const speed = Math.min(smoothSpeed, MAX_SPEED);
+      drawAt(pos.x, pos.y, speed);
+      lastPos = pos;
+      lastTime = now;
+    });
+
+    function endDrag(e) {
+      dragging = false;
+      lastPos = null;
+      try { renderer.domElement.releasePointerCapture(e.pointerId); } catch {}
+    }
+
+    renderer.domElement.addEventListener("pointerup", endDrag);
+    renderer.domElement.addEventListener("pointercancel", endDrag);
+
+    function onResize() {
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      camera.left = -window.innerWidth / 2;
+      camera.right = window.innerWidth / 2;
+      camera.top = window.innerHeight / 2;
+      camera.bottom = -window.innerHeight / 2;
+      camera.updateProjectionMatrix();
+      plane.geometry.dispose();
+      plane.geometry = new THREE.PlaneGeometry(window.innerWidth, window.innerHeight);
+      resizeCanvas();
+      texture.needsUpdate = true;
+    }
+    window.addEventListener("resize", onResize);
+
+    function animate() {
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+    animate();
+  </script>
+</body>
+</html>

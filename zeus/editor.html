@@ -1,0 +1,1427 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zeus Map Editor — Height Layers</title>
+  <style>
+    :root {
+      --bg-1: #0f1310;
+      --bg-2: #1f2721;
+      --panel: #121714;
+      --panel-2: #1a201b;
+      --ink: #f5f1e8;
+      --muted: #b5b0a5;
+      --accent: #f7c65b;
+      --accent-2: #6fd3a5;
+      --grid: rgba(255, 255, 255, 0.08);
+      --tile-border: rgba(255, 255, 255, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Kanit", "Prompt", "Noto Sans Thai", system-ui, sans-serif;
+      background: radial-gradient(1200px 800px at 20% -10%, #2a352e, transparent),
+        linear-gradient(135deg, var(--bg-1), #0b0e0c 40%, var(--bg-2));
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 28px clamp(16px, 3vw, 36px) 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    header h1 {
+      font-size: clamp(24px, 3vw, 32px);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    header p {
+      color: var(--muted);
+      max-width: 780px;
+      line-height: 1.6;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+      gap: 20px;
+      padding: 16px clamp(16px, 3vw, 36px) 36px;
+    }
+
+    .panel {
+      background: linear-gradient(160deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.4)),
+        var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28);
+    }
+
+    .tool-section {
+      display: grid;
+      gap: 14px;
+    }
+
+    .tool-section h2 {
+      font-size: 16px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .brush-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .brush-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: var(--panel-2);
+      color: var(--ink);
+      cursor: pointer;
+      transition: transform 0.2s ease, border 0.2s ease, background 0.2s ease;
+    }
+
+    .brush-btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .brush-btn.active {
+      border-color: var(--accent);
+      background: linear-gradient(120deg, rgba(247, 198, 91, 0.18), rgba(0, 0, 0, 0.2));
+    }
+
+    .brush-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .controls {
+      display: grid;
+      gap: 10px;
+    }
+
+    .controls label {
+      font-size: 13px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .controls input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .controls select {
+      width: 100%;
+      background: var(--panel-2);
+      color: var(--ink);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+
+    .controls .value-pill {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      color: var(--ink);
+      min-width: 36px;
+      text-align: center;
+    }
+
+    .button-row {
+      display: grid;
+      gap: 10px;
+    }
+
+    button.action {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 12px;
+      cursor: pointer;
+      background: var(--accent);
+      color: #1b1402;
+      font-weight: 600;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    button.action.secondary {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: var(--ink);
+    }
+
+    button.action:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .canvas-wrap {
+      display: grid;
+      gap: 16px;
+    }
+
+    .canvas-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .canvas-toolbar .legend {
+      display: flex;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--muted);
+      flex-wrap: wrap;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent-2);
+    }
+
+    canvas {
+      width: min(92vw, 768px);
+      height: min(92vw, 768px);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: #0a0d0b;
+      image-rendering: pixelated;
+      box-shadow: 0 18px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .status {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .status strong {
+      color: var(--ink);
+    }
+
+    .toast {
+      padding: 10px 12px;
+      background: rgba(111, 211, 165, 0.15);
+      border: 1px solid rgba(111, 211, 165, 0.35);
+      border-radius: 12px;
+      font-size: 13px;
+      color: var(--ink);
+      display: none;
+    }
+
+    @media (max-width: 960px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      canvas {
+        width: min(92vw, 640px);
+        height: min(92vw, 640px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Map Editor — Heightmap 128×128</h1>
+    <p>พื้นฐานแผนที่แบบ data-driven สำหรับเกมแนว The Settler: ใช้ระดับความสูงเป็นเลขจำนวนเต็ม, เลือกแปรงระดับภูมิประเทศ แล้วลากเพื่อวาดลงกริด 128×128 ก่อนนำไป port เป็น Unity C#.</p>
+  </header>
+
+  <main>
+    <section class="panel tool-section">
+      <h2>Terrain Levels</h2>
+      <div class="brush-list" id="brushList"></div>
+
+      <div class="controls">
+        <label>
+          Brush size
+          <span class="value-pill" id="brushSizeValue">1</span>
+        </label>
+        <input type="range" id="brushSize" min="1" max="8" value="1" />
+
+        <label>
+          Perlin seed
+          <span class="value-pill" id="seedValue">1337</span>
+        </label>
+        <input type="range" id="perlinSeed" min="1" max="99999" value="1337" />
+
+        <label>
+          Perlin scale
+          <span class="value-pill" id="scaleValue">18</span>
+        </label>
+        <input type="range" id="perlinScale" min="6" max="48" value="18" />
+
+        <label>
+          Levels low
+          <span class="value-pill" id="levelLowValue">0</span>
+        </label>
+        <input type="range" id="levelLow" min="0" max="5" value="0" />
+
+        <label>
+          Levels mid
+          <span class="value-pill" id="levelMidValue">0.50</span>
+        </label>
+        <input type="range" id="levelMid" min="0.05" max="0.95" step="0.05" value="0.5" />
+
+        <label>
+          Levels high
+          <span class="value-pill" id="levelHighValue">5</span>
+        </label>
+        <input type="range" id="levelHigh" min="0" max="5" value="5" />
+
+        <label>
+          Ramp density
+          <span class="value-pill" id="rampValue">0.08</span>
+        </label>
+        <input type="range" id="rampDensity" min="0.02" max="0.3" step="0.01" value="0.08" />
+
+        <label>
+          Resource type
+          <span class="value-pill" id="resourceValue">ป่าไม้</span>
+        </label>
+        <select id="resourceType"></select>
+
+        <label>
+          Resource amount
+          <span class="value-pill" id="resourceAmountValue">25%</span>
+        </label>
+        <input type="range" id="resourceAmount" min="0" max="100" value="25" />
+
+        <label>
+          Resource opacity
+          <span class="value-pill" id="resourceOpacityValue">0.70</span>
+        </label>
+        <input type="range" id="resourceOpacity" min="0" max="1" step="0.05" value="0.7" />
+
+        <label>
+          Road level
+          <span class="value-pill" id="roadValue">0</span>
+        </label>
+        <input type="range" id="roadLevel" min="0" max="5" value="0" />
+
+        <label>
+          Unit type
+          <span class="value-pill" id="unitValue">None</span>
+        </label>
+        <select id="unitType"></select>
+
+        <label>
+          Building type
+          <span class="value-pill" id="buildingValue">None</span>
+        </label>
+        <select id="buildingType"></select>
+
+        <label>
+          Edit mode
+          <span class="value-pill" id="editModeValue">Height</span>
+        </label>
+        <select id="editMode">
+          <option value="height">Height</option>
+          <option value="ramp">Ramp</option>
+          <option value="road">Road</option>
+          <option value="unit">Unit</option>
+          <option value="building">Building</option>
+        </select>
+
+        <label>
+          View layer
+          <span class="value-pill" id="viewValue">Height</span>
+        </label>
+        <select id="viewLayer">
+          <option value="height">Height</option>
+          <option value="walk">Walk</option>
+          <option value="resource">Resource</option>
+          <option value="resource-overlay">Height + Resource</option>
+          <option value="road">Road</option>
+          <option value="unit">Unit</option>
+          <option value="building">Building</option>
+        </select>
+
+        <label>
+          Overlay opacity
+          <span class="value-pill" id="overlayValue">0.35</span>
+        </label>
+        <input type="range" id="overlayOpacity" min="0" max="1" step="0.05" value="0.35" />
+      </div>
+
+      <div class="button-row">
+        <button class="action" id="fillAll">Fill All</button>
+        <button class="action secondary" id="genPerlin">Gen Perlin</button>
+        <button class="action secondary" id="genResource">Gen Resource</button>
+        <button class="action secondary" id="loadJson">Load JSON</button>
+        <button class="action secondary" id="clearMap">Reset Map</button>
+        <button class="action secondary" id="exportJson">Export JSON</button>
+      </div>
+
+      <input type="file" id="jsonFileInput" accept="application/json" style="display:none" />
+
+      <div class="toast" id="toast">Copied JSON to clipboard</div>
+    </section>
+
+    <section class="canvas-wrap">
+      <div class="canvas-toolbar">
+        <div class="legend">
+          <span id="heightLegendGroup">
+            <span style="font-weight:600">Height</span>
+            <span><span class="dot" style="background:#223a4d"></span>ต่ำสุด</span>
+            <span><span class="dot" style="background:#5aa6a9"></span>ชุ่มน้ำ</span>
+            <span><span class="dot" style="background:#8ac37c"></span>ที่ราบ</span>
+            <span><span class="dot" style="background:#b5c07d"></span>ดอน</span>
+            <span><span class="dot" style="background:#d3b56a"></span>ที่ราบสูง</span>
+            <span><span class="dot" style="background:#9f6a3f"></span>ภูเขา</span>
+          </span>
+          <span id="walkLegendGroup">
+            <span style="font-weight:600">Walk</span>
+            <span><span class="dot" style="background:#2b2b2b"></span>บล็อก</span>
+            <span><span class="dot" style="background:#b66a3c"></span>ช้า</span>
+            <span><span class="dot" style="background:#6fd3a5"></span>ปกติ</span>
+            <span><span class="dot" style="background:#f7c65b"></span>ramp</span>
+          </span>
+          <span id="resourceLegendGroup">
+            <span style="font-weight:600">Resource</span>
+            <span><span class="dot" id="resourceLegendDot" style="background:#6aa86a"></span><span id="resourceLegendText">selected</span></span>
+          </span>
+          <span id="roadLegendGroup">
+            <span style="font-weight:600">Road</span>
+            <span><span class="dot" style="background:#3b2f23"></span>ดิน</span>
+            <span><span class="dot" style="background:#7b5b39"></span>ดีขึ้น</span>
+            <span><span class="dot" style="background:#c8a05a"></span>หลัก</span>
+          </span>
+          <span id="unitLegendGroup">
+            <span style="font-weight:600">Unit</span>
+            <span><span class="dot" id="unitLegendDot" style="background:#c96a5a"></span><span id="unitLegendText">selected</span></span>
+          </span>
+          <span id="buildingLegendGroup">
+            <span style="font-weight:600">Building</span>
+            <span><span class="dot" id="buildingLegendDot" style="background:#caa24e"></span><span id="buildingLegendText">selected</span></span>
+          </span>
+        </div>
+        <div class="status">
+          <span>Cell: <strong id="cellPos">-</strong></span>
+          <span>Height: <strong id="cellHeight">-</strong></span>
+          <span>Level: <strong id="cellName">-</strong></span>
+          <span>Walk: <strong id="cellWalk">-</strong></span>
+          <span>Ramp: <strong id="cellRamp">-</strong></span>
+          <span>Resource: <strong id="cellResource">-</strong></span>
+          <span>Res Qty: <strong id="cellResourceQty">-</strong></span>
+          <span>Road: <strong id="cellRoad">-</strong></span>
+          <span>Unit: <strong id="cellUnit">-</strong></span>
+          <span>Building: <strong id="cellBuilding">-</strong></span>
+        </div>
+      </div>
+
+      <canvas id="mapCanvas" width="128" height="128"></canvas>
+    </section>
+  </main>
+
+  <script>
+    const TERRAIN_LEVELS = [
+      { id: 5, name: "ภูเขา/ดอย", height: 5, color: "#9f6a3f", note: "สูงชัน" },
+      { id: 4, name: "ที่ราบสูง", height: 4, color: "#d3b56a", note: "กว้างและสูงเป็นแผ่น" },
+      { id: 3, name: "ดอน/โคก/เนิน", height: 3, color: "#b5c07d", note: "สูงกว่ารอบ ๆ" },
+      { id: 2, name: "ที่ราบลุ่ม/ทุ่ง", height: 2, color: "#8ac37c", note: "รับน้ำหลาก" },
+      { id: 1, name: "หนอง/บึง/พรุ", height: 1, color: "#5aa6a9", note: "แอ่งน้ำ/ชุ่มน้ำ" },
+      { id: 0, name: "ปากน้ำ/ชายฝั่ง", height: 0, color: "#223a4d", note: "ต่ำสุด ใกล้ทะเล" }
+    ];
+
+    const canvas = document.getElementById("mapCanvas");
+    const ctx = canvas.getContext("2d");
+    const brushList = document.getElementById("brushList");
+    const brushSizeInput = document.getElementById("brushSize");
+    const brushSizeValue = document.getElementById("brushSizeValue");
+    const perlinSeedInput = document.getElementById("perlinSeed");
+    const perlinScaleInput = document.getElementById("perlinScale");
+    const seedValue = document.getElementById("seedValue");
+    const scaleValue = document.getElementById("scaleValue");
+    const levelLowInput = document.getElementById("levelLow");
+    const levelMidInput = document.getElementById("levelMid");
+    const levelHighInput = document.getElementById("levelHigh");
+    const levelLowValue = document.getElementById("levelLowValue");
+    const levelMidValue = document.getElementById("levelMidValue");
+    const levelHighValue = document.getElementById("levelHighValue");
+    const rampDensityInput = document.getElementById("rampDensity");
+    const rampValue = document.getElementById("rampValue");
+    const resourceTypeInput = document.getElementById("resourceType");
+    const resourceValue = document.getElementById("resourceValue");
+    const resourceAmountInput = document.getElementById("resourceAmount");
+    const resourceAmountValue = document.getElementById("resourceAmountValue");
+    const resourceOpacityInput = document.getElementById("resourceOpacity");
+    const resourceOpacityValue = document.getElementById("resourceOpacityValue");
+    const roadLevelInput = document.getElementById("roadLevel");
+    const roadValue = document.getElementById("roadValue");
+    const unitTypeInput = document.getElementById("unitType");
+    const unitValue = document.getElementById("unitValue");
+    const buildingTypeInput = document.getElementById("buildingType");
+    const buildingValue = document.getElementById("buildingValue");
+    const editModeInput = document.getElementById("editMode");
+    const editModeValue = document.getElementById("editModeValue");
+    const viewLayerInput = document.getElementById("viewLayer");
+    const viewValue = document.getElementById("viewValue");
+    const jsonFileInput = document.getElementById("jsonFileInput");
+    const overlayOpacityInput = document.getElementById("overlayOpacity");
+    const overlayValue = document.getElementById("overlayValue");
+    const cellPos = document.getElementById("cellPos");
+    const cellHeight = document.getElementById("cellHeight");
+    const cellName = document.getElementById("cellName");
+    const cellWalk = document.getElementById("cellWalk");
+    const cellRamp = document.getElementById("cellRamp");
+    const cellResource = document.getElementById("cellResource");
+    const cellResourceQty = document.getElementById("cellResourceQty");
+    const cellRoad = document.getElementById("cellRoad");
+    const cellUnit = document.getElementById("cellUnit");
+    const cellBuilding = document.getElementById("cellBuilding");
+    const toast = document.getElementById("toast");
+
+    const MAP_SIZE = 128;
+    const mapData = new Int8Array(MAP_SIZE * MAP_SIZE);
+    const walkData = new Int8Array(MAP_SIZE * MAP_SIZE);
+    const rampData = new Uint8Array(MAP_SIZE * MAP_SIZE);
+    const resourceData = new Int16Array(MAP_SIZE * MAP_SIZE);
+    const resourceQtyData = new Int16Array(MAP_SIZE * MAP_SIZE);
+    const roadData = new Uint8Array(MAP_SIZE * MAP_SIZE);
+    const unitData = new Int16Array(MAP_SIZE * MAP_SIZE);
+    const buildingData = new Int16Array(MAP_SIZE * MAP_SIZE);
+
+    let currentBrush = TERRAIN_LEVELS[2];
+    let brushSize = Number(brushSizeInput.value);
+    let overlayOpacity = Number(overlayOpacityInput.value);
+    let isPainting = false;
+    let showGrid = true;
+    let noiseSeed = Number(perlinSeedInput.value);
+    let noiseScale = Number(perlinScaleInput.value);
+    let levelLow = Number(levelLowInput.value);
+    let levelMid = Number(levelMidInput.value);
+    let levelHigh = Number(levelHighInput.value);
+    let rampDensity = Number(rampDensityInput.value);
+    let viewLayer = viewLayerInput.value;
+    let editMode = editModeInput.value;
+    let resourceAmount = Number(resourceAmountInput.value) / 100;
+    let resourceOpacity = Number(resourceOpacityInput.value);
+    let roadLevel = Number(roadLevelInput.value);
+    let walkDirty = true;
+    const PLATEAU_MIN = 4;
+
+    const WALK_COLORS = {
+      blocked: "#2b2b2b",
+      slow: "#b66a3c",
+      normal: "#6fd3a5",
+      ramp: "#f7c65b"
+    };
+
+    const ROAD_COLORS = [
+      "#141715",
+      "#3b2f23",
+      "#5b432b",
+      "#7b5b39",
+      "#a37744",
+      "#c8a05a"
+    ];
+
+    const RESOURCES = [
+      { id: "forest_timber", name_th: "ป่าไม้", name_en: "Forest (Timber)", terrain_tags: ["plain", "foothill", "hill"], prefers_near: [], avoids_near: ["coast"], amount: { min: 300, max: 900 }, color: "#1f5e32" },
+      { id: "bamboo_grove", name_th: "ป่าไผ่", name_en: "Bamboo Grove", terrain_tags: ["plain", "foothill", "riverbank"], prefers_near: ["fresh_water"], avoids_near: [], amount: { min: 200, max: 600 }, color: "#4fa44f" },
+      { id: "stone_outcrop", name_th: "โขดหิน", name_en: "Stone Outcrop", terrain_tags: ["foothill", "hill", "rocky"], prefers_near: [], avoids_near: ["floodplain"], amount: { min: 400, max: 1200 }, color: "#7f8893" },
+      { id: "clay_deposit", name_th: "ดินเหนียว", name_en: "Clay Deposit", terrain_tags: ["riverbank", "floodplain", "wetland_edge"], prefers_near: ["fresh_water"], avoids_near: ["highland"], amount: { min: 150, max: 500 }, color: "#b45a3c" },
+      { id: "sand_gravel", name_th: "ทราย/กรวด", name_en: "Sand & Gravel", terrain_tags: ["riverbank", "plain"], prefers_near: ["fresh_water"], avoids_near: [], amount: { min: 200, max: 700 }, color: "#e2c16a" },
+      { id: "fresh_water", name_th: "แหล่งน้ำจืด", name_en: "Fresh Water", terrain_tags: ["floodplain", "wetland", "plain"], prefers_near: [], avoids_near: [], amount: { min: 9999, max: 9999 }, color: "#2f7ec7" },
+      { id: "fish_node", name_th: "แหล่งปลา", name_en: "Fish Node", terrain_tags: ["water"], prefers_near: ["fresh_water"], avoids_near: [], amount: { min: 200, max: 600 }, color: "#1a5fa3" },
+      { id: "game_animals", name_th: "แหล่งสัตว์ป่า", name_en: "Game Animals", terrain_tags: ["forest_edge", "plain", "foothill"], prefers_near: ["forest_timber"], avoids_near: [], amount: { min: 120, max: 400 }, color: "#a18433" },
+      { id: "herb_node", name_th: "สมุนไพรป่า", name_en: "Wild Herbs", terrain_tags: ["forest", "wetland_edge", "foothill"], prefers_near: ["fresh_water", "forest_timber"], avoids_near: [], amount: { min: 80, max: 260 }, color: "#4f8f4a" },
+      { id: "iron_ore", name_th: "แร่เหล็ก", name_en: "Iron Ore", terrain_tags: ["foothill", "hill", "rocky"], prefers_near: ["stone_outcrop"], avoids_near: ["floodplain"], amount: { min: 300, max: 900 }, color: "#5b4a3d" },
+      { id: "salt_source", name_th: "แหล่งเกลือ", name_en: "Salt Source", terrain_tags: ["plain", "basin"], prefers_near: [], avoids_near: ["fresh_water"], amount: { min: 150, max: 500 }, color: "#e7dac2" },
+      { id: "silver_ore", name_th: "แร่เงิน", name_en: "Silver Ore", terrain_tags: ["hill", "mountain", "rocky"], prefers_near: ["stone_outcrop"], avoids_near: [], amount: { min: 200, max: 600 }, color: "#c7d0d9" },
+      { id: "gold_ore", name_th: "แร่ทองคำ", name_en: "Gold Ore", terrain_tags: ["hill", "mountain", "rocky"], prefers_near: ["stone_outcrop"], avoids_near: [], amount: { min: 150, max: 500 }, color: "#d3a52f" },
+      { id: "banana_grove", name_th: "ดงกล้วย", name_en: "Banana Grove", terrain_tags: ["plain", "riverbank", "garden"], prefers_near: ["fresh_water"], avoids_near: ["highland"], amount: { min: 180, max: 520 }, color: "#a6c63a" },
+      { id: "rice_paddy", name_th: "นาข้าว", name_en: "Rice Paddy", terrain_tags: ["floodplain", "plain", "irrigable"], prefers_near: ["fresh_water", "river"], avoids_near: ["hill", "rocky"], amount: { min: 250, max: 800 }, color: "#6cc85a" }
+    ];
+
+    let selectedResource = RESOURCES[0];
+
+    const UNITS = [
+      { id: "none", name_th: "None", color: "#1c1f1d" },
+      { id: "villager", name_th: "ชาวบ้าน", color: "#c96a5a" },
+      { id: "worker", name_th: "แรงงาน", color: "#b46c8b" },
+      { id: "scout", name_th: "หน่วยสำรวจ", color: "#5aa6a9" }
+    ];
+
+    const BUILDINGS = [
+      { id: "none", name_th: "None", color: "#1c1f1d", size: { w: 1, h: 1 } },
+      { id: "tent", name_th: "กระโจม", color: "#f25f2c", size: { w: 4, h: 4 } },
+      { id: "hut", name_th: "กระท่อม", color: "#f2c94c", size: { w: 1, h: 1 } },
+      { id: "storage", name_th: "โกดัง", color: "#8a5cf6", size: { w: 3, h: 3 } },
+      { id: "workshop", name_th: "โรงงานเล็ก", color: "#00c2a8", size: { w: 3, h: 3 } }
+    ];
+
+    let selectedUnit = UNITS[0];
+    let selectedBuilding = BUILDINGS[0];
+
+    const createBrushButton = (level) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "brush-btn";
+      button.dataset.id = level.id;
+      button.innerHTML = `
+        <div>
+          <strong>${level.name}</strong>
+          <div style="font-size:12px;color:var(--muted)">${level.note}</div>
+        </div>
+        <span class="brush-color" style="background:${level.color}"></span>
+      `;
+      button.addEventListener("click", () => selectBrush(level.id));
+      return button;
+    };
+
+    const selectBrush = (id) => {
+      const match = TERRAIN_LEVELS.find((level) => level.id === id);
+      if (!match) return;
+      currentBrush = match;
+      document.querySelectorAll(".brush-btn").forEach((btn) => {
+        btn.classList.toggle("active", Number(btn.dataset.id) === id);
+      });
+    };
+
+    const initBrushList = () => {
+      TERRAIN_LEVELS.forEach((level) => {
+        brushList.appendChild(createBrushButton(level));
+      });
+      selectBrush(currentBrush.id);
+    };
+
+    const indexFor = (x, y) => y * MAP_SIZE + x;
+
+    const hashString = (text) => {
+      let h = 2166136261;
+      for (let i = 0; i < text.length; i += 1) {
+        h ^= text.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return h >>> 0;
+    };
+
+    const hash2d = (x, y, seed) => {
+      let h = x * 374761393 + y * 668265263 + seed * 69069;
+      h = (h ^ (h >> 13)) * 1274126177;
+      return ((h ^ (h >> 16)) >>> 0) / 4294967296;
+    };
+
+    const getTerrainTags = (x, y) => {
+      const height = mapData[indexFor(x, y)];
+      const tags = [];
+      if (height === 0) tags.push("coast", "water");
+      if (height === 1) tags.push("wetland", "floodplain", "water");
+      if (height === 2) tags.push("plain", "floodplain", "irrigable");
+      if (height === 3) tags.push("foothill", "hill");
+      if (height === 4) tags.push("highland", "hill", "rocky");
+      if (height === 5) tags.push("mountain", "rocky");
+
+      const nearWater = isAdjacentToWater(x, y);
+      if (nearWater) tags.push("riverbank", "wetland_edge");
+      if (height >= 3) tags.push("forest_edge");
+      return { tags, height, nearWater };
+    };
+
+    const isAdjacentToWater = (x, y) => {
+      if (mapData[indexFor(x, y)] <= 1) return true;
+      if (x > 0 && mapData[indexFor(x - 1, y)] <= 1) return true;
+      if (x < MAP_SIZE - 1 && mapData[indexFor(x + 1, y)] <= 1) return true;
+      if (y > 0 && mapData[indexFor(x, y - 1)] <= 1) return true;
+      if (y < MAP_SIZE - 1 && mapData[indexFor(x, y + 1)] <= 1) return true;
+      return false;
+    };
+
+    const initResourceList = () => {
+      RESOURCES.forEach((resource, index) => {
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = resource.name_th;
+        resourceTypeInput.appendChild(option);
+      });
+      resourceTypeInput.value = "0";
+      resourceValue.textContent = selectedResource.name_th;
+      document.getElementById("resourceLegendDot").style.background = selectedResource.color;
+      document.getElementById("resourceLegendText").textContent = selectedResource.name_th;
+    };
+
+    const initUnitList = () => {
+      UNITS.forEach((unit, index) => {
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = unit.name_th;
+        unitTypeInput.appendChild(option);
+      });
+      unitTypeInput.value = "0";
+      unitValue.textContent = selectedUnit.name_th;
+      document.getElementById("unitLegendDot").style.background = selectedUnit.color;
+      document.getElementById("unitLegendText").textContent = selectedUnit.name_th;
+    };
+
+    const initBuildingList = () => {
+      BUILDINGS.forEach((building, index) => {
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = building.name_th;
+        buildingTypeInput.appendChild(option);
+      });
+      buildingTypeInput.value = "0";
+      buildingValue.textContent = selectedBuilding.name_th;
+      document.getElementById("buildingLegendDot").style.background = selectedBuilding.color;
+      document.getElementById("buildingLegendText").textContent = selectedBuilding.name_th;
+    };
+
+    const matchesResource = (resource, x, y) => {
+      const info = getTerrainTags(x, y);
+      const tagMatch = resource.terrain_tags.some((tag) => info.tags.includes(tag));
+      if (!tagMatch) return false;
+      if (resource.prefers_near.includes("fresh_water") || resource.prefers_near.includes("river")) {
+        if (!info.nearWater) return false;
+      }
+      if (resource.avoids_near.includes("coast") && info.tags.includes("coast")) return false;
+      if (resource.avoids_near.includes("highland") && info.tags.includes("highland")) return false;
+      if (resource.avoids_near.includes("floodplain") && info.tags.includes("floodplain")) return false;
+      if (resource.avoids_near.includes("hill") && info.tags.includes("hill")) return false;
+      if (resource.avoids_near.includes("rocky") && info.tags.includes("rocky")) return false;
+      return true;
+    };
+
+    const resourceQuantityFor = (resource, x, y) => {
+      const seed = hashString(resource.id) ^ (noiseSeed * 131);
+      const roll = hash2d(x, y, seed);
+      const min = resource.amount.min;
+      const max = resource.amount.max;
+      return Math.round(min + (max - min) * roll);
+    };
+
+    const isPlateauBoundary = (x, y) => {
+      const height = mapData[indexFor(x, y)];
+      if (height < PLATEAU_MIN) return false;
+      return (x > 0 && mapData[indexFor(x - 1, y)] < PLATEAU_MIN)
+        || (x < MAP_SIZE - 1 && mapData[indexFor(x + 1, y)] < PLATEAU_MIN)
+        || (y > 0 && mapData[indexFor(x, y - 1)] < PLATEAU_MIN)
+        || (y < MAP_SIZE - 1 && mapData[indexFor(x, y + 1)] < PLATEAU_MIN);
+    };
+
+    const rebuildWalkLayer = () => {
+      for (let y = 0; y < MAP_SIZE; y += 1) {
+        for (let x = 0; x < MAP_SIZE; x += 1) {
+          const idx = indexFor(x, y);
+          const height = mapData[idx];
+          if (height <= 1) {
+            walkData[idx] = 0;
+            continue;
+          }
+
+          let maxDiff = 0;
+          if (x > 0) maxDiff = Math.max(maxDiff, Math.abs(height - mapData[indexFor(x - 1, y)]));
+          if (x < MAP_SIZE - 1) maxDiff = Math.max(maxDiff, Math.abs(height - mapData[indexFor(x + 1, y)]));
+          if (y > 0) maxDiff = Math.max(maxDiff, Math.abs(height - mapData[indexFor(x, y - 1)]));
+          if (y < MAP_SIZE - 1) maxDiff = Math.max(maxDiff, Math.abs(height - mapData[indexFor(x, y + 1)]));
+
+          let cost = 1 + Math.min(3, maxDiff);
+          if (height >= PLATEAU_MIN) cost += 1;
+          walkData[idx] = Math.min(5, cost);
+        }
+      }
+
+      for (let y = 0; y < MAP_SIZE; y += 1) {
+        for (let x = 0; x < MAP_SIZE; x += 1) {
+          const idx = indexFor(x, y);
+          if (!isPlateauBoundary(x, y)) {
+            if (rampData[idx] === 1) rampData[idx] = 0;
+            continue;
+          }
+          const hasRamp = rampData[idx] === 1;
+          if (!hasRamp) walkData[idx] = 0;
+        }
+      }
+      walkDirty = false;
+    };
+
+    const drawMap = () => {
+      if (walkDirty) rebuildWalkLayer();
+      const image = ctx.createImageData(MAP_SIZE, MAP_SIZE);
+      for (let y = 0; y < MAP_SIZE; y += 1) {
+        for (let x = 0; x < MAP_SIZE; x += 1) {
+          const mapIndex = indexFor(x, y);
+          let color;
+          if (viewLayer === "walk") {
+            const cost = walkData[mapIndex];
+            if (rampData[mapIndex] === 1) {
+              color = hexToRgb(WALK_COLORS.ramp);
+            } else if (cost === 0) {
+              color = hexToRgb(WALK_COLORS.blocked);
+            } else if (cost >= 4) {
+              color = hexToRgb(WALK_COLORS.slow);
+            } else {
+              color = hexToRgb(WALK_COLORS.normal);
+            }
+          } else if (viewLayer === "resource") {
+            const resIndex = resourceData[mapIndex];
+            if (resIndex > 0) {
+              color = hexToRgb(RESOURCES[resIndex - 1].color);
+            } else {
+              color = hexToRgb("#101412");
+            }
+          } else if (viewLayer === "resource-overlay") {
+            const height = mapData[mapIndex];
+            const level = TERRAIN_LEVELS.find((item) => item.height === height) || TERRAIN_LEVELS[0];
+            const base = hexToRgb(level.color);
+            const resIndex = resourceData[mapIndex];
+            if (resIndex > 0) {
+              const top = hexToRgb(RESOURCES[resIndex - 1].color);
+              color = {
+                r: Math.round(base.r + (top.r - base.r) * resourceOpacity),
+                g: Math.round(base.g + (top.g - base.g) * resourceOpacity),
+                b: Math.round(base.b + (top.b - base.b) * resourceOpacity)
+              };
+            } else {
+              color = base;
+            }
+          } else if (viewLayer === "road") {
+            color = hexToRgb(ROAD_COLORS[roadData[mapIndex]] || ROAD_COLORS[0]);
+          } else if (viewLayer === "unit") {
+            const unitIndex = unitData[mapIndex];
+            if (unitIndex > 0) {
+              color = hexToRgb(UNITS[unitIndex].color);
+            } else {
+              color = hexToRgb("#101412");
+            }
+          } else if (viewLayer === "building") {
+            const buildingIndex = buildingData[mapIndex];
+            if (buildingIndex > 0) {
+              color = hexToRgb(BUILDINGS[buildingIndex].color);
+            } else {
+              color = hexToRgb("#101412");
+            }
+          } else {
+            const height = mapData[mapIndex];
+            const level = TERRAIN_LEVELS.find((item) => item.height === height) || TERRAIN_LEVELS[0];
+            color = hexToRgb(level.color);
+          }
+          const pixelIndex = (y * MAP_SIZE + x) * 4;
+          image.data[pixelIndex] = color.r;
+          image.data[pixelIndex + 1] = color.g;
+          image.data[pixelIndex + 2] = color.b;
+          image.data[pixelIndex + 3] = 255;
+        }
+      }
+      ctx.putImageData(image, 0, 0);
+
+      if (showGrid) {
+        ctx.save();
+        ctx.globalAlpha = overlayOpacity;
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--grid");
+        ctx.lineWidth = 0.25;
+        for (let i = 0; i <= MAP_SIZE; i += 8) {
+          ctx.beginPath();
+          ctx.moveTo(i + 0.5, 0);
+          ctx.lineTo(i + 0.5, MAP_SIZE);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(0, i + 0.5);
+          ctx.lineTo(MAP_SIZE, i + 0.5);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    };
+
+    const paintAt = (x, y) => {
+      if (editMode === "ramp") {
+        if (!isPlateauBoundary(x, y)) return;
+        const idx = indexFor(x, y);
+        rampData[idx] = rampData[idx] === 1 ? 0 : 1;
+        walkDirty = true;
+        drawMap();
+        return;
+      }
+      if (editMode === "road") {
+        const radius = Math.floor(brushSize / 2);
+        for (let dy = -radius; dy <= radius; dy += 1) {
+          for (let dx = -radius; dx <= radius; dx += 1) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx < 0 || nx >= MAP_SIZE || ny < 0 || ny >= MAP_SIZE) continue;
+            roadData[indexFor(nx, ny)] = roadLevel;
+          }
+        }
+        drawMap();
+        return;
+      }
+      if (editMode === "unit") {
+        const idx = indexFor(x, y);
+        const selectedIndex = Math.max(0, Math.min(UNITS.length - 1, UNITS.indexOf(selectedUnit)));
+        unitData[idx] = unitData[idx] === selectedIndex ? 0 : selectedIndex;
+        drawMap();
+        return;
+      }
+      if (editMode === "building") {
+        const idx = indexFor(x, y);
+        const selectedIndex = Math.max(0, Math.min(BUILDINGS.length - 1, BUILDINGS.indexOf(selectedBuilding)));
+        buildingData[idx] = buildingData[idx] === selectedIndex ? 0 : selectedIndex;
+        drawMap();
+        return;
+      }
+      const radius = Math.floor(brushSize / 2);
+      for (let dy = -radius; dy <= radius; dy += 1) {
+        for (let dx = -radius; dx <= radius; dx += 1) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || nx >= MAP_SIZE || ny < 0 || ny >= MAP_SIZE) continue;
+          mapData[indexFor(nx, ny)] = currentBrush.height;
+        }
+      }
+      walkDirty = true;
+    };
+
+    const handlePointer = (event) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = MAP_SIZE / rect.width;
+      const scaleY = MAP_SIZE / rect.height;
+      const x = Math.floor((event.clientX - rect.left) * scaleX);
+      const y = Math.floor((event.clientY - rect.top) * scaleY);
+      if (x < 0 || x >= MAP_SIZE || y < 0 || y >= MAP_SIZE) return;
+      if (walkDirty) rebuildWalkLayer();
+
+      if (isPainting) {
+        paintAt(x, y);
+        drawMap();
+      }
+
+      const height = mapData[indexFor(x, y)];
+      const level = TERRAIN_LEVELS.find((item) => item.height === height) || TERRAIN_LEVELS[0];
+      cellPos.textContent = `${x}, ${y}`;
+      cellHeight.textContent = height;
+      cellName.textContent = level.name;
+      const walkValue = walkData[indexFor(x, y)];
+      cellWalk.textContent = walkValue === 0 ? "บล็อก" : walkValue;
+      cellRamp.textContent = rampData[indexFor(x, y)] === 1 ? "มี" : "-";
+      const resValue = resourceData[indexFor(x, y)];
+      cellResource.textContent = resValue > 0 ? RESOURCES[resValue - 1].name_th : "-";
+      cellResourceQty.textContent = resValue > 0 ? resourceQtyData[indexFor(x, y)] : "-";
+      cellRoad.textContent = roadData[indexFor(x, y)];
+      const unitIndex = unitData[indexFor(x, y)];
+      cellUnit.textContent = unitIndex > 0 ? UNITS[unitIndex].name_th : "-";
+      const buildingIndex = buildingData[indexFor(x, y)];
+      cellBuilding.textContent = buildingIndex > 0 ? BUILDINGS[buildingIndex].name_th : "-";
+    };
+
+    const hexToRgb = (hex) => {
+      const clean = hex.replace("#", "");
+      const num = parseInt(clean, 16);
+      return {
+        r: (num >> 16) & 255,
+        g: (num >> 8) & 255,
+        b: num & 255
+      };
+    };
+
+    const fillAll = () => {
+      mapData.fill(currentBrush.height);
+      rampData.fill(0);
+      resourceData.fill(0);
+      resourceQtyData.fill(0);
+      roadData.fill(0);
+      unitData.fill(0);
+      buildingData.fill(0);
+      walkDirty = true;
+      drawMap();
+    };
+
+    const mulberry32 = (seed) => {
+      let t = seed >>> 0;
+      return () => {
+        t += 0x6d2b79f5;
+        let r = Math.imul(t ^ (t >>> 15), 1 | t);
+        r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+        return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+      };
+    };
+
+    const buildPermutation = (seed) => {
+      const perm = new Uint8Array(512);
+      const rand = mulberry32(seed);
+      const p = new Uint8Array(256);
+      for (let i = 0; i < 256; i += 1) p[i] = i;
+      for (let i = 255; i > 0; i -= 1) {
+        const j = Math.floor(rand() * (i + 1));
+        [p[i], p[j]] = [p[j], p[i]];
+      }
+      for (let i = 0; i < 512; i += 1) perm[i] = p[i & 255];
+      return perm;
+    };
+
+    const fade = (t) => t * t * t * (t * (t * 6 - 15) + 10);
+    const lerp = (a, b, t) => a + t * (b - a);
+    const grad = (hash, x, y) => {
+      switch (hash & 3) {
+        case 0: return x + y;
+        case 1: return -x + y;
+        case 2: return x - y;
+        default: return -x - y;
+      }
+    };
+
+    const perlin2 = (x, y, perm) => {
+      const xi = Math.floor(x) & 255;
+      const yi = Math.floor(y) & 255;
+      const xf = x - Math.floor(x);
+      const yf = y - Math.floor(y);
+      const u = fade(xf);
+      const v = fade(yf);
+
+      const aa = perm[perm[xi] + yi];
+      const ab = perm[perm[xi] + yi + 1];
+      const ba = perm[perm[xi + 1] + yi];
+      const bb = perm[perm[xi + 1] + yi + 1];
+
+      const x1 = lerp(grad(aa, xf, yf), grad(ba, xf - 1, yf), u);
+      const x2 = lerp(grad(ab, xf, yf - 1), grad(bb, xf - 1, yf - 1), u);
+      return lerp(x1, x2, v);
+    };
+
+    const generatePerlin = () => {
+      const perm = buildPermutation(noiseSeed);
+      const scale = noiseScale;
+      const octaves = 3;
+      const persistence = 0.55;
+      const low = Math.min(levelLow, levelHigh) / 5;
+      const high = Math.max(levelLow, levelHigh) / 5;
+      const gamma = Math.log(0.5) / Math.log(Math.max(0.01, Math.min(0.99, levelMid)));
+      for (let y = 0; y < MAP_SIZE; y += 1) {
+        for (let x = 0; x < MAP_SIZE; x += 1) {
+          let amp = 1;
+          let freq = 1;
+          let value = 0;
+          let maxAmp = 0;
+          for (let o = 0; o < octaves; o += 1) {
+            const nx = (x / scale) * freq;
+            const ny = (y / scale) * freq;
+            value += perlin2(nx, ny, perm) * amp;
+            maxAmp += amp;
+            amp *= persistence;
+            freq *= 2;
+          }
+          const normalized = (value / maxAmp + 1) / 2;
+          const clamped = Math.min(high, Math.max(low, normalized));
+          const remapped = (clamped - low) / Math.max(0.0001, high - low);
+          const adjusted = Math.pow(remapped, gamma);
+          const height = Math.min(5, Math.max(0, Math.round(adjusted * 5)));
+          mapData[indexFor(x, y)] = height;
+        }
+      }
+      rampData.fill(0);
+      for (let y = 0; y < MAP_SIZE; y += 1) {
+        for (let x = 0; x < MAP_SIZE; x += 1) {
+          if (!isPlateauBoundary(x, y)) continue;
+          if (hash2d(x, y, noiseSeed) < rampDensity) {
+            rampData[indexFor(x, y)] = 1;
+          }
+        }
+      }
+      walkDirty = true;
+      drawMap();
+    };
+
+    const generateResources = () => {
+      if (walkDirty) rebuildWalkLayer();
+      const resource = selectedResource;
+      const resIndex = RESOURCES.indexOf(resource) + 1;
+      if (resIndex <= 0) return;
+      for (let i = 0; i < resourceData.length; i += 1) {
+        if (resourceData[i] === resIndex) {
+          resourceData[i] = 0;
+          resourceQtyData[i] = 0;
+        }
+      }
+
+      const candidates = [];
+      for (let y = 0; y < MAP_SIZE; y += 1) {
+        for (let x = 0; x < MAP_SIZE; x += 1) {
+          const idx = indexFor(x, y);
+          if (resourceData[idx] !== 0) continue;
+          const walkable = walkData[idx] > 0;
+          if (!walkable && resource.id !== "fish_node" && resource.id !== "fresh_water") continue;
+          if (!matchesResource(resource, x, y)) continue;
+          candidates.push({ x, y, idx });
+        }
+      }
+      if (candidates.length === 0) return;
+
+      const targetCount = Math.floor(candidates.length * resourceAmount);
+      if (targetCount <= 0) return;
+
+      const seed = hashString(resource.id) ^ (noiseSeed * 131);
+      const perm = buildPermutation(seed);
+      const scale = 10;
+      const scored = candidates.map((cell) => {
+        const value = perlin2(cell.x / scale, cell.y / scale, perm);
+        return { ...cell, score: value };
+      });
+      scored.sort((a, b) => b.score - a.score);
+      for (let i = 0; i < targetCount && i < scored.length; i += 1) {
+        const idx = scored[i].idx;
+        resourceData[idx] = resIndex;
+        resourceQtyData[idx] = resourceQuantityFor(resource, scored[i].x, scored[i].y);
+      }
+      drawMap();
+    };
+
+    const clearMap = () => {
+      mapData.fill(0);
+      rampData.fill(0);
+      resourceData.fill(0);
+      resourceQtyData.fill(0);
+      roadData.fill(0);
+      unitData.fill(0);
+      buildingData.fill(0);
+      walkDirty = true;
+      drawMap();
+    };
+
+    const exportMap = async () => {
+      if (walkDirty) rebuildWalkLayer();
+      const data = {
+        version: "1.0",
+        tile_size_m: 2,
+        size: MAP_SIZE,
+        layer: "height",
+        levels: TERRAIN_LEVELS.map((level) => ({
+          id: level.id,
+          name: level.name,
+          height: level.height,
+          color: level.color
+        })),
+        data: Array.from(mapData),
+        walk: {
+          layer: "walk",
+          rampDensity,
+          plateauMin: PLATEAU_MIN,
+          data: Array.from(walkData)
+        },
+        ramp: {
+          layer: "ramp",
+          data: Array.from(rampData)
+        },
+        resources: {
+          layer: "resource",
+          defs: RESOURCES.map((res) => ({
+            id: res.id,
+            name_th: res.name_th,
+            name_en: res.name_en,
+            amount: res.amount,
+            color: res.color
+          })),
+          data: Array.from(resourceData),
+          qty: Array.from(resourceQtyData)
+        },
+        roads: {
+          layer: "road",
+          data: Array.from(roadData)
+        },
+        units: {
+          layer: "unit",
+          defs: UNITS.map((unit) => ({ id: unit.id, name_th: unit.name_th, color: unit.color })),
+          data: Array.from(unitData)
+        },
+        buildings: {
+          layer: "building",
+          defs: BUILDINGS.map((building) => ({
+            id: building.id,
+            name_th: building.name_th,
+            color: building.color,
+            size: building.size
+          })),
+          data: Array.from(buildingData)
+        }
+      };
+      const json = JSON.stringify(data, null, 2);
+      try {
+        await navigator.clipboard.writeText(json);
+        toast.style.display = "block";
+        setTimeout(() => {
+          toast.style.display = "none";
+        }, 2000);
+      } catch (err) {
+        alert(json);
+      }
+    };
+
+    const loadMap = (jsonText) => {
+      const parsed = JSON.parse(jsonText);
+      if (!parsed || parsed.size !== MAP_SIZE || !Array.isArray(parsed.data)) {
+        alert("JSON ไม่ถูกต้อง: ต้องมี size=128 และ data เป็น array");
+        return;
+      }
+      if (parsed.data.length !== MAP_SIZE * MAP_SIZE) {
+        alert("JSON ไม่ถูกต้อง: จำนวน data ไม่ตรงกับ 128x128");
+        return;
+      }
+      for (let i = 0; i < parsed.data.length; i += 1) {
+        const value = Math.max(0, Math.min(5, Number(parsed.data[i]) || 0));
+        mapData[i] = value;
+      }
+      rampData.fill(0);
+      if (parsed.ramp && Array.isArray(parsed.ramp.data) && parsed.ramp.data.length === MAP_SIZE * MAP_SIZE) {
+        for (let i = 0; i < parsed.ramp.data.length; i += 1) {
+          rampData[i] = parsed.ramp.data[i] ? 1 : 0;
+        }
+      }
+      resourceData.fill(0);
+      resourceQtyData.fill(0);
+      if (parsed.resources && Array.isArray(parsed.resources.data) && parsed.resources.data.length === MAP_SIZE * MAP_SIZE) {
+        for (let i = 0; i < parsed.resources.data.length; i += 1) {
+          const value = Number(parsed.resources.data[i]) || 0;
+          resourceData[i] = Math.max(0, Math.min(RESOURCES.length, value));
+        }
+      }
+      if (parsed.resources && Array.isArray(parsed.resources.qty) && parsed.resources.qty.length === MAP_SIZE * MAP_SIZE) {
+        for (let i = 0; i < parsed.resources.qty.length; i += 1) {
+          const value = Number(parsed.resources.qty[i]) || 0;
+          resourceQtyData[i] = value >= 0 ? value : 0;
+        }
+      }
+      roadData.fill(0);
+      if (parsed.roads && Array.isArray(parsed.roads.data) && parsed.roads.data.length === MAP_SIZE * MAP_SIZE) {
+        for (let i = 0; i < parsed.roads.data.length; i += 1) {
+          const value = Number(parsed.roads.data[i]) || 0;
+          roadData[i] = Math.max(0, Math.min(5, value));
+        }
+      }
+      unitData.fill(0);
+      if (parsed.units && Array.isArray(parsed.units.data) && parsed.units.data.length === MAP_SIZE * MAP_SIZE) {
+        for (let i = 0; i < parsed.units.data.length; i += 1) {
+          const value = Number(parsed.units.data[i]) || 0;
+          unitData[i] = Math.max(0, Math.min(UNITS.length - 1, value));
+        }
+      }
+      buildingData.fill(0);
+      if (parsed.buildings && Array.isArray(parsed.buildings.data) && parsed.buildings.data.length === MAP_SIZE * MAP_SIZE) {
+        for (let i = 0; i < parsed.buildings.data.length; i += 1) {
+          const value = Number(parsed.buildings.data[i]) || 0;
+          buildingData[i] = Math.max(0, Math.min(BUILDINGS.length - 1, value));
+        }
+      }
+      walkDirty = true;
+      drawMap();
+    };
+
+    const updateLegend = () => {
+      const showWalk = viewLayer === "walk";
+      const showResource = viewLayer === "resource" || viewLayer === "resource-overlay";
+      const showRoad = viewLayer === "road";
+      const showUnit = viewLayer === "unit";
+      const showBuilding = viewLayer === "building";
+      document.getElementById("heightLegendGroup").style.display = showWalk || showResource || showRoad || showUnit || showBuilding ? "none" : "inline-flex";
+      document.getElementById("walkLegendGroup").style.display = showWalk ? "inline-flex" : "none";
+      document.getElementById("resourceLegendGroup").style.display = showResource ? "inline-flex" : "none";
+      document.getElementById("roadLegendGroup").style.display = showRoad ? "inline-flex" : "none";
+      document.getElementById("unitLegendGroup").style.display = showUnit ? "inline-flex" : "none";
+      document.getElementById("buildingLegendGroup").style.display = showBuilding ? "inline-flex" : "none";
+    };
+
+    const initEvents = () => {
+      canvas.addEventListener("pointerdown", (event) => {
+        isPainting = true;
+        handlePointer(event);
+      });
+      canvas.addEventListener("pointermove", handlePointer);
+      window.addEventListener("pointerup", () => {
+        isPainting = false;
+      });
+
+      brushSizeInput.addEventListener("input", (event) => {
+        brushSize = Number(event.target.value);
+        brushSizeValue.textContent = brushSize;
+      });
+
+      perlinSeedInput.addEventListener("input", (event) => {
+        noiseSeed = Number(event.target.value);
+        seedValue.textContent = noiseSeed;
+      });
+
+      perlinScaleInput.addEventListener("input", (event) => {
+        noiseScale = Number(event.target.value);
+        scaleValue.textContent = noiseScale;
+      });
+
+      levelLowInput.addEventListener("input", (event) => {
+        levelLow = Number(event.target.value);
+        levelLowValue.textContent = levelLow;
+        if (levelLow > levelHigh) {
+          levelHigh = levelLow;
+          levelHighInput.value = levelHigh;
+          levelHighValue.textContent = levelHigh;
+        }
+      });
+
+      levelMidInput.addEventListener("input", (event) => {
+        levelMid = Number(event.target.value);
+        levelMidValue.textContent = levelMid.toFixed(2);
+      });
+
+      levelHighInput.addEventListener("input", (event) => {
+        levelHigh = Number(event.target.value);
+        levelHighValue.textContent = levelHigh;
+        if (levelHigh < levelLow) {
+          levelLow = levelHigh;
+          levelLowInput.value = levelLow;
+          levelLowValue.textContent = levelLow;
+        }
+      });
+
+      rampDensityInput.addEventListener("input", (event) => {
+        rampDensity = Number(event.target.value);
+        rampValue.textContent = rampDensity.toFixed(2);
+        walkDirty = true;
+        drawMap();
+      });
+
+      roadLevelInput.addEventListener("input", (event) => {
+        roadLevel = Number(event.target.value);
+        roadValue.textContent = roadLevel;
+      });
+
+      resourceTypeInput.addEventListener("change", (event) => {
+        const index = Number(event.target.value);
+        selectedResource = RESOURCES[Math.max(0, Math.min(RESOURCES.length - 1, index))];
+        resourceValue.textContent = selectedResource.name_th;
+        document.getElementById("resourceLegendDot").style.background = selectedResource.color;
+        document.getElementById("resourceLegendText").textContent = selectedResource.name_th;
+        if (viewLayer === "resource") drawMap();
+      });
+
+      resourceAmountInput.addEventListener("input", (event) => {
+        resourceAmount = Number(event.target.value) / 100;
+        resourceAmountValue.textContent = `${Math.round(resourceAmount * 100)}%`;
+      });
+
+      resourceOpacityInput.addEventListener("input", (event) => {
+        resourceOpacity = Number(event.target.value);
+        resourceOpacityValue.textContent = resourceOpacity.toFixed(2);
+        if (viewLayer === "resource-overlay") drawMap();
+      });
+
+      unitTypeInput.addEventListener("change", (event) => {
+        const index = Number(event.target.value);
+        selectedUnit = UNITS[Math.max(0, Math.min(UNITS.length - 1, index))];
+        unitValue.textContent = selectedUnit.name_th;
+        document.getElementById("unitLegendDot").style.background = selectedUnit.color;
+        document.getElementById("unitLegendText").textContent = selectedUnit.name_th;
+        if (viewLayer === "unit") drawMap();
+      });
+
+      buildingTypeInput.addEventListener("change", (event) => {
+        const index = Number(event.target.value);
+        selectedBuilding = BUILDINGS[Math.max(0, Math.min(BUILDINGS.length - 1, index))];
+        buildingValue.textContent = selectedBuilding.name_th;
+        document.getElementById("buildingLegendDot").style.background = selectedBuilding.color;
+        document.getElementById("buildingLegendText").textContent = selectedBuilding.name_th;
+        if (viewLayer === "building") drawMap();
+      });
+
+      editModeInput.addEventListener("change", (event) => {
+        editMode = event.target.value;
+        if (editMode === "ramp") editModeValue.textContent = "Ramp";
+        else if (editMode === "road") editModeValue.textContent = "Road";
+        else if (editMode === "unit") editModeValue.textContent = "Unit";
+        else if (editMode === "building") editModeValue.textContent = "Building";
+        else editModeValue.textContent = "Height";
+      });
+
+      viewLayerInput.addEventListener("change", (event) => {
+        viewLayer = event.target.value;
+        if (viewLayer === "walk") viewValue.textContent = "Walk";
+        else if (viewLayer === "resource") viewValue.textContent = "Resource";
+        else if (viewLayer === "resource-overlay") viewValue.textContent = "Height + Resource";
+        else if (viewLayer === "road") viewValue.textContent = "Road";
+        else if (viewLayer === "unit") viewValue.textContent = "Unit";
+        else if (viewLayer === "building") viewValue.textContent = "Building";
+        else viewValue.textContent = "Height";
+        updateLegend();
+        drawMap();
+      });
+
+      overlayOpacityInput.addEventListener("input", (event) => {
+        overlayOpacity = Number(event.target.value);
+        overlayValue.textContent = overlayOpacity.toFixed(2);
+        drawMap();
+      });
+
+      document.getElementById("fillAll").addEventListener("click", fillAll);
+      document.getElementById("genPerlin").addEventListener("click", generatePerlin);
+      document.getElementById("genResource").addEventListener("click", generateResources);
+      document.getElementById("loadJson").addEventListener("click", () => {
+        jsonFileInput.value = "";
+        jsonFileInput.click();
+      });
+      document.getElementById("clearMap").addEventListener("click", clearMap);
+      document.getElementById("exportJson").addEventListener("click", exportMap);
+
+      jsonFileInput.addEventListener("change", (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            loadMap(String(reader.result));
+          } catch (err) {
+            alert("อ่านไฟล์ JSON ไม่สำเร็จ");
+          }
+        };
+        reader.readAsText(file);
+      });
+
+      window.addEventListener("keydown", (event) => {
+        if (event.key === "g" || event.key === "G") {
+          showGrid = !showGrid;
+          drawMap();
+        }
+      });
+    };
+
+    initBrushList();
+    initResourceList();
+    initUnitList();
+    initBuildingList();
+    initEvents();
+    updateLegend();
+    clearMap();
+  </script>
+</body>
+</html>

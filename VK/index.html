@@ -395,6 +395,8 @@
 
     const OIDC = {
       authorizationEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/auth",
+      tokenEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/token",
+      userinfoEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/userinfo",
       clientId: "dashboard",
       redirectUri: "https://sibsansuk.github.io/VK/index.html",
       scope: "openid profile email",
@@ -437,6 +439,54 @@
       }
       const url = await buildAuthUrl();
       window.location.href = url;
+    };
+
+    const decodeJwt = (token) => {
+      try {
+        const payload = token.split(".")[1];
+        const padded = payload.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(payload.length / 4) * 4, "=");
+        return JSON.parse(atob(padded));
+      } catch (e) {
+        return null;
+      }
+    };
+
+    const storeAuth = (auth) => sessionStorage.setItem("oidc_auth", JSON.stringify(auth));
+    const readAuth = () => {
+      const raw = sessionStorage.getItem("oidc_auth");
+      if (!raw) return null;
+      try { return JSON.parse(raw); } catch { return null; }
+    };
+    const clearAuth = () => sessionStorage.removeItem("oidc_auth");
+
+    const exchangeCodeForToken = async (code) => {
+      const verifier = sessionStorage.getItem("pkce_verifier");
+      if (!verifier) throw new Error("missing PKCE verifier");
+      const body = new URLSearchParams({
+        grant_type: "authorization_code",
+        client_id: OIDC.clientId,
+        redirect_uri: OIDC.redirectUri,
+        code,
+        code_verifier: verifier,
+      });
+      const res = await fetch(OIDC.tokenEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body,
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || "token exchange failed");
+      }
+      return res.json();
+    };
+
+    const fetchUserInfo = async (accessToken) => {
+      const res = await fetch(OIDC.userinfoEndpoint, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!res.ok) return null;
+      return res.json();
     };
 
     const mock = {
@@ -501,7 +551,7 @@
       </div>
     `;
 
-    const Sidebar = ({route, setRoute, sidebarOpen, setSidebarOpen}) => html`
+    const Sidebar = ({route, setRoute, sidebarOpen, setSidebarOpen, auth, onLogout, authError}) => html`
       <aside class=${"sidebar " + (sidebarOpen ? "" : "is-collapsed")}>
         <div class="sidebar-header">
           <div class="flex items-center justify-between w-full">
@@ -560,6 +610,19 @@
           <${ClayButton} variant="primary" small onClick=${startLogin}>
             Login
           </${ClayButton}>
+          ${auth?.userId ? html`
+            <div class="mt-3 panel p-3 text-xs">
+              <div class="font-semibold text-slate-700">Logged in</div>
+              <div class="mt-1 text-slate-600 mono break-all">user id: ${auth.userId}</div>
+              <pre class="mt-2 text-[11px] text-slate-600 whitespace-pre-wrap break-all">${JSON.stringify(auth.profile || {}, null, 2)}</pre>
+              <div class="mt-2">
+                <${ClayButton} variant="soft" small onClick=${onLogout}>Logout</${ClayButton}>
+              </div>
+            </div>
+          ` : null}
+          ${authError ? html`
+            <div class="mt-3 text-xs text-orange-600">${authError}</div>
+          ` : null}
           <${ClayButton} variant="soft" small onClick=${() => alert("ตัวอย่าง UI เท่านั้น (ยังไม่ผูก backend)")}>
             ช่วยเหลือ
           </${ClayButton}>
@@ -1241,6 +1304,8 @@
     function App(){
       const [route, setRoute] = useState("course");
       const [sidebarOpen, setSidebarOpen] = useState(true);
+      const [auth, setAuth] = useState(() => readAuth());
+      const [authError, setAuthError] = useState("");
 
       const goto = (r) => setRoute(r);
 
@@ -1254,6 +1319,50 @@
           if (mq.removeEventListener) mq.removeEventListener("change", sync);
           else mq.removeListener(sync);
         };
+      }, []);
+
+      useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get("code");
+        const error = params.get("error");
+        if (error) {
+          setAuthError(`Login ไม่สำเร็จ: ${error}`);
+          return;
+        }
+        if (!code) return;
+
+        let cancelled = false;
+        (async () => {
+          try {
+            const token = await exchangeCodeForToken(code);
+            const claims = token.id_token ? decodeJwt(token.id_token) : null;
+            const userinfo = token.access_token ? await fetchUserInfo(token.access_token) : null;
+            const userId =
+              (userinfo && (userinfo.sub || userinfo.preferred_username || userinfo.email)) ||
+              (claims && (claims.sub || claims.preferred_username || claims.email)) ||
+              "-";
+            const authPayload = {
+              userId,
+              profile: userinfo || claims || {},
+              token: {
+                access_token: token.access_token,
+                id_token: token.id_token,
+                expires_in: token.expires_in,
+              },
+            };
+            if (!cancelled) {
+              setAuth(authPayload);
+              storeAuth(authPayload);
+            }
+          } catch (e) {
+            if (!cancelled) setAuthError(`Login ไม่สำเร็จ: ${e.message || "unknown error"}`);
+          } finally {
+            sessionStorage.removeItem("pkce_verifier");
+            window.history.replaceState({}, document.title, OIDC.redirectUri);
+          }
+        })();
+
+        return () => { cancelled = true; };
       }, []);
 
       const Page = () => {
@@ -1278,8 +1387,28 @@
           <div class="app-body">
             <${Layout}>
               <div class="app-shell">
-                <${Sidebar} route=${route} setRoute=${setRoute} sidebarOpen=${sidebarOpen} setSidebarOpen=${setSidebarOpen} />
+                <${Sidebar}
+                  route=${route}
+                  setRoute=${setRoute}
+                  sidebarOpen=${sidebarOpen}
+                  setSidebarOpen=${setSidebarOpen}
+                  auth=${auth}
+                  authError=${authError}
+                  onLogout=${() => { clearAuth(); setAuth(null); }}
+                />
                 <div class="app-main mt-4">
+                  ${authError ? html`
+                    <div class="clay-soft p-3 mb-3 text-xs text-orange-600">
+                      ${authError}
+                    </div>
+                  ` : null}
+                  ${auth?.userId ? html`
+                    <div class="clay-soft p-3 mb-3 text-xs">
+                      <div class="font-semibold text-slate-700">Login สำเร็จ</div>
+                      <div class="mt-1 text-slate-600 mono break-all">user id: ${auth.userId}</div>
+                      <pre class="mt-2 text-[11px] text-slate-600 whitespace-pre-wrap break-all">${JSON.stringify(auth.profile || {}, null, 2)}</pre>
+                    </div>
+                  ` : null}
                   <${Page} />
                 </div>
               </div>

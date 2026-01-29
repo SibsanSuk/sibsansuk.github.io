@@ -1,0 +1,880 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Zeus Player — Data Systems & View</title>
+  <style>
+    :root {
+      --bg: #1c1510;
+      --panel: #2a2118;
+      --panel-2: #3a2b1f;
+      --ink: #f5ead6;
+      --muted: #c3b39a;
+      --accent: #d9a441;
+      --accent-2: #3aa4a7;
+      --grid: rgba(255, 255, 255, 0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Kanit", "Prompt", "Noto Sans Thai", system-ui, sans-serif;
+      background: radial-gradient(1000px 600px at 15% -10%, #3b2b1d, transparent),
+        linear-gradient(130deg, #17110c, var(--bg));
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 24px clamp(16px, 3vw, 36px) 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    header h1 { font-size: clamp(22px, 3vw, 30px); font-weight: 600; }
+    header p { color: var(--muted); max-width: 780px; line-height: 1.6; }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+      gap: 18px;
+      padding: 12px clamp(16px, 3vw, 36px) 32px;
+    }
+
+    .panel {
+      background: linear-gradient(170deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.4)), var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 12px 26px rgba(0, 0, 0, 0.28);
+    }
+
+    .controls { display: grid; gap: 12px; }
+    .controls label { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; }
+    .controls input[type="range"] { width: 100%; accent-color: var(--accent); }
+    .controls select {
+      width: 100%;
+      background: var(--panel-2);
+      color: var(--ink);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      padding: 8px 10px;
+    }
+    .controls .value-pill {
+      background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 999px; color: var(--ink);
+      min-width: 36px; text-align: center; font-size: 12px;
+    }
+
+    .button-row { display: grid; gap: 10px; }
+    button.action {
+      border: none; border-radius: 10px; padding: 10px 12px; cursor: pointer;
+      background: var(--accent); color: #2c1903; font-weight: 600;
+    }
+    button.action.secondary { background: transparent; color: var(--ink); border: 1px solid rgba(255,255,255,0.2); }
+
+    .canvas-wrap { display: grid; gap: 12px; }
+    .status { font-size: 13px; color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; }
+    .status strong { color: var(--ink); }
+
+    canvas {
+      width: min(92vw, 1024px);
+      height: min(92vw, 1024px);
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: #2b2217;
+      image-rendering: pixelated;
+      box-shadow: 0 18px 30px rgba(0,0,0,0.35);
+    }
+
+    @media (max-width: 960px) {
+      main { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Player View — Data Systems & Sprite Render</h1>
+    <p>โหลดไฟล์ JSON จาก editor แล้วแยกส่วน System (แก้ข้อมูล) กับ View (แสดงผล) ชัดเจน โดย 1 pixel ของ editor = 2x2 เมตร และแสดงผลแบบ sprite สไตล์เกม DOS</p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div class="controls">
+        <label>
+          Simulation speed
+          <span class="value-pill" id="speedValue">1.0x</span>
+        </label>
+        <input type="range" id="simSpeed" min="0" max="3" step="0.1" value="1" />
+
+        <label>
+          Build mode
+          <span class="value-pill" id="buildValue">None</span>
+        </label>
+        <select id="buildMode" class="panel-select"></select>
+
+        <label>
+          Resource fade
+          <span class="value-pill" id="resourceFadeValue">0.75</span>
+        </label>
+        <input type="range" id="resourceFade" min="0" max="1" step="0.05" value="0.75" />
+      </div>
+
+      <div class="button-row" style="margin-top:12px">
+        <button class="action" id="loadJson">Load JSON</button>
+        <button class="action secondary" id="saveJson">Save JSON</button>
+        <button class="action secondary" id="toggleSim">Pause</button>
+        <button class="action secondary" id="stepSim">Step</button>
+      </div>
+
+      <input type="file" id="jsonFileInput" accept="application/json" style="display:none" />
+
+      <div class="status" style="margin-top:12px">
+        <span>Tile: <strong id="tileInfo">-</strong></span>
+        <span>Resource: <strong id="resourceInfo">-</strong></span>
+        <span>Qty: <strong id="qtyInfo">-</strong></span>
+        <span>Pop: <strong id="popInfo">0/0</strong></span>
+        <span>Step: <strong id="stepInfo">0</strong></span>
+      </div>
+    </section>
+
+    <section class="canvas-wrap">
+      <canvas id="gameCanvas" width="1024" height="1024"></canvas>
+    </section>
+  </main>
+
+  <script src="sprites.js"></script>
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const jsonFileInput = document.getElementById("jsonFileInput");
+    const speedInput = document.getElementById("simSpeed");
+    const speedValue = document.getElementById("speedValue");
+    const buildModeInput = document.getElementById("buildMode");
+    const buildValue = document.getElementById("buildValue");
+    const resourceFadeInput = document.getElementById("resourceFade");
+    const resourceFadeValue = document.getElementById("resourceFadeValue");
+    const tileInfo = document.getElementById("tileInfo");
+    const resourceInfo = document.getElementById("resourceInfo");
+    const qtyInfo = document.getElementById("qtyInfo");
+    const popInfo = document.getElementById("popInfo");
+    const stepInfo = document.getElementById("stepInfo");
+
+    const TILE_SIZE_PX = 8;
+    const DEFAULT_SIZE = 128;
+
+    let simPaused = false;
+    let simSpeed = Number(speedInput.value);
+    let resourceFade = Number(resourceFadeInput.value);
+    let buildMode = "none";
+    let stepAccumulator = 0;
+
+    const GameState = {
+      map: {
+        size: DEFAULT_SIZE,
+        tileSizeM: 2,
+        height: new Int8Array(DEFAULT_SIZE * DEFAULT_SIZE),
+        resources: new Int16Array(DEFAULT_SIZE * DEFAULT_SIZE),
+        resourcesQty: new Int16Array(DEFAULT_SIZE * DEFAULT_SIZE),
+        roads: new Uint8Array(DEFAULT_SIZE * DEFAULT_SIZE),
+        units: new Int16Array(DEFAULT_SIZE * DEFAULT_SIZE),
+        buildings: new Int16Array(DEFAULT_SIZE * DEFAULT_SIZE)
+      },
+      defs: {
+        terrainLevels: [],
+        resources: [],
+        units: [],
+        buildings: []
+      },
+      runtime: {
+        population: 0,
+        populationCap: 0,
+        available: 0,
+        steps: 0,
+        cityCenterIndex: -1,
+        unlockedBuildings: new Set(),
+        unitEntities: [],
+        buildingSites: [],
+        buildingAnchors: new Int32Array(DEFAULT_SIZE * DEFAULT_SIZE),
+        resources: {
+          wood: 0
+        }
+      }
+    };
+
+    const GameRules = {
+      build: {
+        startingBuildings: ["tent"],
+        prerequisites: { hut: ["tent"] },
+        startingPopulation: 3,
+        startingResources: { wood: 20 },
+        buildCosts: { hut: { wood: 10, workers: 1 } }
+      }
+    };
+
+    const Systems = {
+      tick(state, dt) {
+        Systems.resourceDecay(state, dt);
+      },
+      resourceDecay(state, dt) {
+        const qty = state.map.resourcesQty;
+        for (let i = 0; i < qty.length; i += 1) {
+          if (qty[i] <= 0) continue;
+          if ((i + Math.floor(dt * 1000)) % 800 === 0) {
+            qty[i] = Math.max(0, qty[i] - 1);
+            if (qty[i] === 0) state.map.resources[i] = 0;
+          }
+        }
+      },
+      populationGrowth(state, dt) {
+        stepAccumulator += dt;
+        const stepInterval = 0.5;
+        while (stepAccumulator >= stepInterval) {
+          stepAccumulator -= stepInterval;
+          state.runtime.steps += 1;
+        }
+      }
+    };
+
+    const DEFAULT_UNITS = [
+      { id: "none", name_th: "None", color: "#1c1f1d" },
+      { id: "villager", name_th: "ชาวบ้าน", color: "#c96a5a" },
+      { id: "worker", name_th: "แรงงาน", color: "#b46c8b" },
+      { id: "scout", name_th: "หน่วยสำรวจ", color: "#5aa6a9" }
+    ];
+
+    const DEFAULT_BUILDINGS = [
+      { id: "none", name_th: "None", color: "#1c1f1d", popUse: 0, popCap: 0, size: { w: 1, h: 1 } },
+      { id: "tent", name_th: "กระโจม", color: "#f25f2c", popUse: 0, popCap: 0, size: { w: 4, h: 4 } },
+      { id: "hut", name_th: "กระท่อม", color: "#f2c94c", popUse: 2, popCap: 3, size: { w: 1, h: 1 } }
+    ];
+
+    const ensureDefs = (defs, defaults) => {
+      if (!defs || defs.length === 0) return defaults;
+      const ids = new Set(defs.map((d) => d.id));
+      defaults.forEach((d) => {
+        if (!ids.has(d.id)) defs.push(d);
+      });
+      return defs;
+    };
+
+    const spawnUnit = (state, originIndex) => {
+      const size = state.map.size;
+      const ox = originIndex % size;
+      const oy = Math.floor(originIndex / size);
+      const unitIndex = state.defs.units.findIndex((u) => u.id === "villager");
+      const unitId = unitIndex >= 0 ? unitIndex : 1;
+      const entity = {
+        id: `u${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        typeIndex: unitId,
+        x: ox + 0.5 + (Math.random() - 0.5),
+        y: oy + 0.5 + (Math.random() - 0.5),
+        task: "idle",
+        targetIndex: -1,
+        arrived: false,
+        wanderTime: 0,
+        wanderTarget: null
+      };
+      state.runtime.unitEntities.push(entity);
+    };
+
+    const findNearbyResource = (state, x, y, radius) => {
+      const size = state.map.size;
+      const cx = Math.floor(x);
+      const cy = Math.floor(y);
+      const resources = state.map.resources;
+      const qty = state.map.resourcesQty;
+      for (let r = 1; r <= radius; r += 1) {
+        for (let dy = -r; dy <= r; dy += 1) {
+          for (let dx = -r; dx <= r; dx += 1) {
+            const nx = cx + dx;
+            const ny = cy + dy;
+            if (nx < 0 || ny < 0 || nx >= size || ny >= size) continue;
+            const idx = ny * size + nx;
+            if (resources[idx] > 0 && qty[idx] > 0) return idx;
+          }
+        }
+      }
+      return -1;
+    };
+
+    const RESOURCE_SPRITES = window.SPRITES?.RESOURCE_SPRITES || {};
+    const BUILDING_SPRITES = window.SPRITES?.BUILDING_SPRITES || {};
+
+    const SpriteFactory = (() => {
+      const cache = new Map();
+
+      const hashString = (text) => {
+        let h = 2166136261;
+        for (let i = 0; i < text.length; i += 1) {
+          h ^= text.charCodeAt(i);
+          h = Math.imul(h, 16777619);
+        }
+        return h >>> 0;
+      };
+
+      const rand2 = (x, y, seed) => {
+        let h = x * 374761393 + y * 668265263 + seed * 69069;
+        h = (h ^ (h >> 13)) * 1274126177;
+        return ((h ^ (h >> 16)) >>> 0) / 4294967296;
+      };
+
+      const resolveSpriteData = (sprite, desiredSize) => {
+        if (!sprite) return null;
+        if (Array.isArray(sprite)) {
+          return { data: sprite, size: sprite.length };
+        }
+        if (sprite.data && Array.isArray(sprite.data)) {
+          return { data: sprite.data, size: sprite.size || sprite.data.length };
+        }
+        if (sprite.sizes && typeof sprite.sizes === "object") {
+          const sizes = Object.keys(sprite.sizes).map((s) => Number(s)).filter((n) => Number.isFinite(n));
+          if (sizes.length === 0) return null;
+          let pick = sizes[0];
+          sizes.forEach((s) => {
+            if (desiredSize && Math.abs(s - desiredSize) < Math.abs(pick - desiredSize)) pick = s;
+          });
+          const data = sprite.sizes[pick];
+          if (Array.isArray(data)) return { data, size: pick };
+        }
+        return null;
+      };
+
+      const makeSprite = (key, baseColor, variant, shape, bitmap, sizePx) => {
+        const spriteInfo = shape === "bitmap" ? resolveSpriteData(bitmap, sizePx) : null;
+        const size = sizePx || spriteInfo?.size || TILE_SIZE_PX;
+        const cacheKey = `${key}:${variant}:${size}`;
+        if (cache.has(cacheKey)) return cache.get(cacheKey);
+        const c = document.createElement("canvas");
+        c.width = size;
+        c.height = size;
+        const g = c.getContext("2d");
+        g.imageSmoothingEnabled = false;
+        if (shape === "bitmap" && spriteInfo) {
+          g.clearRect(0, 0, size, size);
+          g.fillStyle = baseColor;
+          const scale = Math.max(1, Math.floor(size / spriteInfo.size));
+          for (let y = 0; y < spriteInfo.data.length; y += 1) {
+            const row = spriteInfo.data[y];
+            for (let x = 0; x < row.length; x += 1) {
+              if (row[x] === "1") {
+                g.fillRect(x * scale, y * scale, scale, scale);
+              }
+            }
+          }
+          cache.set(cacheKey, c);
+          return c;
+        }
+        g.fillStyle = baseColor;
+        g.fillRect(0, 0, size, size);
+
+        const seed = hashString(key) + variant * 31;
+        for (let y = 0; y < size; y += 1) {
+          for (let x = 0; x < size; x += 1) {
+            const r = rand2(x, y, seed);
+            if (shape === "tree" && r > 0.65) {
+              g.fillStyle = "rgba(0,0,0,0.25)";
+              g.fillRect(x, y, 1, 1);
+            }
+            if (shape === "ore" && r > 0.7) {
+              g.fillStyle = "rgba(255,255,255,0.25)";
+              g.fillRect(x, y, 1, 1);
+            }
+            if (shape === "unit" && r > 0.8) {
+              g.fillStyle = "rgba(0,0,0,0.35)";
+              g.fillRect(x, y, 1, 1);
+            }
+          }
+        }
+        cache.set(cacheKey, c);
+        return c;
+      };
+
+      return {
+        getTerrainSprite(level, variant) {
+          const color = level && level.color ? level.color : "#2b2f2c";
+          return makeSprite(`terrain-${level ? level.height : "x"}`, color, variant, "ground");
+        },
+        getResourceSprite(resource, variant) {
+          if (resource.sprite2d) {
+            return makeSprite(resource.id, resource.color, variant, "bitmap", resource.sprite2d, TILE_SIZE_PX);
+          }
+          const shape = resource.category === "mineral" ? "ore" : "tree";
+          return makeSprite(resource.id, resource.color, variant, shape);
+        },
+        getUnitSprite(unit) {
+          return makeSprite(unit.id, unit.color, 0, "unit");
+        },
+        getBuildingSprite(building) {
+          const sizePx = (building.size?.w || 1) * TILE_SIZE_PX;
+          if (building.sprite2d) {
+            return makeSprite(building.id, building.color, 1, "bitmap", building.sprite2d, sizePx);
+          }
+          return makeSprite(building.id, building.color, 1, "ore", null, sizePx);
+        }
+      };
+    })();
+
+    const hexToRgb = (hex) => {
+      if (!hex || typeof hex !== "string" || !hex.startsWith("#")) return { r: 43, g: 47, b: 44 };
+      const clean = hex.replace("#", "");
+      const num = parseInt(clean, 16);
+      if (Number.isNaN(num)) return { r: 43, g: 47, b: 44 };
+      return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+    };
+
+    const shadeColor = (hex, amount) => {
+      const c = hexToRgb(hex);
+      const clamp = (v) => Math.max(0, Math.min(255, v));
+      return `rgb(${clamp(c.r + amount)}, ${clamp(c.g + amount)}, ${clamp(c.b + amount)})`;
+    };
+
+    const FALLBACK_TERRAIN = ["#223a4d", "#5aa6a9", "#8ac37c", "#b5c07d", "#d3b56a", "#9f6a3f"];
+
+    const View = {
+      draw(state) {
+        const size = state.map.size;
+        const height = state.map.height;
+        const resources = state.map.resources;
+        const roads = state.map.roads;
+        const buildings = state.map.buildings;
+        const terrainLevels = state.defs.terrainLevels;
+        const resDefs = state.defs.resources;
+        const unitDefs = state.defs.units;
+        const buildingDefs = state.defs.buildings;
+        const anchors = state.runtime.buildingAnchors;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        for (let y = 0; y < size; y += 1) {
+          for (let x = 0; x < size; x += 1) {
+            const idx = y * size + x;
+            const level = terrainLevels.find((l) => l.height === height[idx]) || terrainLevels[0];
+            const fallback = FALLBACK_TERRAIN[height[idx]] || "#2b2f2c";
+            const terrainLevel = level ? { ...level, color: level.color || fallback } : { height: height[idx], color: fallback };
+            const variant = (x * 17 + y * 11) % 3;
+            const sprite = SpriteFactory.getTerrainSprite(terrainLevel, variant);
+            ctx.drawImage(sprite, x * TILE_SIZE_PX, y * TILE_SIZE_PX);
+
+            const roadLevel = roads[idx];
+            if (roadLevel > 0) {
+              ctx.fillStyle = `rgba(100, 70, 40, ${0.2 + roadLevel * 0.1})`;
+              ctx.fillRect(x * TILE_SIZE_PX, y * TILE_SIZE_PX, TILE_SIZE_PX, TILE_SIZE_PX);
+            }
+
+            const resIndex = resources[idx];
+            if (resIndex > 0) {
+              const resDef = resDefs[resIndex - 1];
+              if (resDef) {
+                const variant = (x + y) % 3;
+                const sprite = SpriteFactory.getResourceSprite(resDef, variant);
+                ctx.globalAlpha = resourceFade;
+                ctx.drawImage(sprite, x * TILE_SIZE_PX, y * TILE_SIZE_PX);
+                ctx.globalAlpha = 1;
+              }
+            }
+          }
+        }
+
+        // building layer on top
+        for (let y = 0; y < size; y += 1) {
+          for (let x = 0; x < size; x += 1) {
+            const idx = y * size + x;
+            const anchorIndex = anchors[idx];
+            if (anchorIndex === idx) {
+              const buildingIndex = buildings[idx];
+              if (buildingIndex > 0) {
+                const b = buildingDefs[buildingIndex];
+                if (b) {
+                  const sprite = SpriteFactory.getBuildingSprite(b);
+                  const w = (b.size?.w || 1) * TILE_SIZE_PX;
+                  const h = (b.size?.h || 1) * TILE_SIZE_PX;
+                  ctx.drawImage(sprite, x * TILE_SIZE_PX, y * TILE_SIZE_PX, w, h);
+                }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    const recomputePopulation = (state) => {
+      const units = state.runtime.unitEntities;
+      let pop = units.length;
+      let cap = 0;
+      let used = 0;
+      const buildings = state.map.buildings;
+      const buildingDefs = state.defs.buildings;
+      const owned = new Set();
+      for (let i = 0; i < buildings.length; i += 1) {
+        const idx = buildings[i];
+        if (idx <= 0 || !buildingDefs[idx]) continue;
+        const def = buildingDefs[idx];
+        cap += def.popCap || 0;
+        used += def.popUse || 0;
+        owned.add(def.id);
+        if (def.id === "tent") state.runtime.cityCenterIndex = i;
+      }
+      state.runtime.population = pop;
+      state.runtime.populationCap = cap;
+      state.runtime.available = Math.max(0, pop - used);
+
+      // unlock based on rules
+      const unlocked = new Set(GameRules.build.startingBuildings || []);
+      Object.entries(GameRules.build.prerequisites || {}).forEach(([buildingId, needs]) => {
+        const reqs = Array.isArray(needs) ? needs : [];
+        const ok = reqs.every((id) => owned.has(id));
+        if (ok) unlocked.add(buildingId);
+      });
+      state.runtime.unlockedBuildings = unlocked;
+    };
+
+    const refreshBuildOptions = () => {
+      buildModeInput.innerHTML = "";
+      const options = [{ id: "none", label: "None" }];
+      const order = ["tent", "hut"];
+      order.forEach((id) => {
+        const b = GameState.defs.buildings.find((item) => item.id === id);
+        if (!b) return;
+        if (!GameState.runtime.unlockedBuildings.has(b.id)) return;
+        options.push({ id: b.id, label: b.name_th || b.id });
+      });
+      GameState.defs.buildings.forEach((b) => {
+        if (b.id === "none") return;
+        if (order.includes(b.id)) return;
+        if (!GameState.runtime.unlockedBuildings.has(b.id)) return;
+        options.push({ id: b.id, label: b.name_th || b.id });
+      });
+      options.forEach((opt) => {
+        const option = document.createElement("option");
+        option.value = opt.id;
+        option.textContent = opt.label;
+        buildModeInput.appendChild(option);
+      });
+      const preferred = options.find((o) => o.id === "tent") ? "tent" : "none";
+      buildModeInput.value = preferred;
+      buildMode = preferred;
+      buildValue.textContent = options.find((o) => o.id === buildMode)?.label || "None";
+    };
+
+    const tryPlaceBuilding = (x, y) => {
+      if (buildMode === "none") return;
+      const size = GameState.map.size;
+      const buildingIndex = GameState.defs.buildings.findIndex((b) => b.id === buildMode);
+      if (buildingIndex <= 0) return;
+      const building = GameState.defs.buildings[buildingIndex];
+      const w = building.size?.w || 1;
+      const h = building.size?.h || 1;
+      if (x + w > size || y + h > size) return;
+
+      if (buildMode === "tent" && GameState.runtime.cityCenterIndex >= 0) return;
+
+      const cost = GameRules.build.buildCosts[buildMode];
+      if (cost) {
+        const woodNeed = cost.wood || 0;
+        const workersNeed = cost.workers || 0;
+        if ((GameState.runtime.resources.wood || 0) < woodNeed) return;
+        if (GameState.runtime.available < workersNeed) return;
+        GameState.runtime.resources.wood -= woodNeed;
+        GameState.runtime.available -= workersNeed;
+      }
+
+      for (let dy = 0; dy < h; dy += 1) {
+        for (let dx = 0; dx < w; dx += 1) {
+          const idx = (y + dy) * size + (x + dx);
+          if (GameState.map.height[idx] <= 1) return;
+          if (GameState.map.buildings[idx] !== 0) return;
+        }
+      }
+
+      for (let dy = 0; dy < h; dy += 1) {
+        for (let dx = 0; dx < w; dx += 1) {
+          const idx = (y + dy) * size + (x + dx);
+          GameState.runtime.buildingAnchors[idx] = y * size + x;
+        }
+      }
+
+      const idx = y * size + x;
+      GameState.map.buildings[idx] = buildingIndex;
+
+      if (buildMode === "tent") {
+        GameState.runtime.cityCenterIndex = idx;
+        GameState.runtime.population = GameRules.build.startingPopulation;
+        GameState.runtime.available = GameRules.build.startingPopulation;
+        GameState.runtime.resources = { ...GameRules.build.startingResources };
+      }
+      recomputePopulation(GameState);
+    };
+
+    const loadFromJson = (text) => {
+      const data = JSON.parse(text);
+      const world = data.world || data;
+      const runtimeData = data.runtime || world.runtime || {};
+      const size = world.size || DEFAULT_SIZE;
+      const tileSizeM = world.tile_size_m || world.tileSizeM || 2;
+
+      const height = new Int8Array(size * size);
+      const resources = new Int16Array(size * size);
+      const resourcesQty = new Int16Array(size * size);
+      const roads = new Uint8Array(size * size);
+      const units = new Int16Array(size * size);
+      const buildings = new Int16Array(size * size);
+
+      if (Array.isArray(world.data || world.height)) {
+        const source = world.data || world.height;
+        for (let i = 0; i < height.length; i += 1) height[i] = source[i] || 0;
+      }
+
+      if (world.resources) {
+        const resData = world.resources.data || [];
+        const qtyData = world.resources.qty || [];
+        for (let i = 0; i < resources.length; i += 1) {
+          resources[i] = resData[i] || 0;
+          resourcesQty[i] = qtyData[i] || 0;
+        }
+      }
+
+      if (world.roads && Array.isArray(world.roads.data)) {
+        for (let i = 0; i < roads.length; i += 1) roads[i] = world.roads.data[i] || 0;
+      }
+      if (world.units && Array.isArray(world.units.data)) {
+        for (let i = 0; i < units.length; i += 1) units[i] = world.units.data[i] || 0;
+      }
+      if (world.buildings && Array.isArray(world.buildings.data)) {
+        for (let i = 0; i < buildings.length; i += 1) buildings[i] = world.buildings.data[i] || 0;
+      }
+
+      GameState.map = { size, tileSizeM, height, resources, resourcesQty, roads, units, buildings };
+      GameState.defs.terrainLevels = world.levels || [];
+      GameState.defs.resources = (world.resources && world.resources.defs) ? world.resources.defs.map((r) => ({
+        ...r,
+        category: r.category || (r.id && r.id.includes("ore") ? "mineral" : "flora"),
+        sprite2d: r.sprite2d || RESOURCE_SPRITES[r.id]
+      })) : [];
+      GameState.defs.units = ensureDefs(world.units ? world.units.defs || [] : [], DEFAULT_UNITS);
+      GameState.defs.buildings = ensureDefs(world.buildings ? world.buildings.defs || [] : [], DEFAULT_BUILDINGS)
+        .map((b) => ({ ...b, sprite2d: b.sprite2d || BUILDING_SPRITES[b.id] }));
+
+      const hasRuntime = Object.keys(runtimeData).length > 0;
+      GameState.runtime.population = Number(runtimeData.population) || 0;
+      GameState.runtime.populationCap = Number(runtimeData.populationCap) || 0;
+      GameState.runtime.available = Number(runtimeData.available) || 0;
+      GameState.runtime.steps = Number(runtimeData.steps) || 0;
+      GameState.runtime.cityCenterIndex = Number.isFinite(runtimeData.cityCenterIndex) ? runtimeData.cityCenterIndex : -1;
+      GameState.runtime.unlockedBuildings = new Set(Array.isArray(runtimeData.unlockedBuildings) ? runtimeData.unlockedBuildings : GameRules.build.startingBuildings);
+      GameState.runtime.resources = runtimeData.resources ? { ...runtimeData.resources } : { ...GameRules.build.startingResources };
+      GameState.runtime.unitEntities = [];
+      GameState.runtime.buildingSites = [];
+      GameState.runtime.buildingAnchors = new Int32Array(size * size);
+      GameState.runtime.buildingAnchors.fill(-1);
+
+      for (let i = 0; i < buildings.length; i += 1) {
+        if (buildings[i] > 0) GameState.runtime.buildingAnchors[i] = i;
+      }
+
+      if (Array.isArray(data.units?.data)) {
+        for (let i = 0; i < units.length; i += 1) {
+          if (units[i] > 0) {
+            const x = i % size;
+            const y = Math.floor(i / size);
+            const entity = {
+              id: `u${i}`,
+              typeIndex: units[i],
+              x: x + 0.5,
+              y: y + 0.5,
+              task: "idle",
+              targetIndex: -1,
+              arrived: false,
+              wanderTime: 0,
+              wanderTarget: null
+            };
+            GameState.runtime.unitEntities.push(entity);
+          }
+        }
+      }
+
+      if (!hasRuntime) recomputePopulation(GameState);
+      refreshBuildOptions();
+
+      canvas.width = size * TILE_SIZE_PX;
+      canvas.height = size * TILE_SIZE_PX;
+      View.draw(GameState);
+    };
+
+    const loop = (() => {
+      let lastTime = performance.now();
+      return (time) => {
+        const dt = (time - lastTime) / 1000;
+        lastTime = time;
+        if (!simPaused) Systems.tick(GameState, dt * simSpeed);
+        View.draw(GameState);
+        popInfo.textContent = `${GameState.runtime.population}/${GameState.runtime.populationCap}`;
+        stepInfo.textContent = GameState.runtime.steps;
+        requestAnimationFrame(loop);
+      };
+    })();
+
+    canvas.addEventListener("pointermove", (event) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = Math.floor((event.clientX - rect.left) * scaleX / TILE_SIZE_PX);
+      const y = Math.floor((event.clientY - rect.top) * scaleY / TILE_SIZE_PX);
+      if (x < 0 || y < 0 || x >= GameState.map.size || y >= GameState.map.size) return;
+      const idx = y * GameState.map.size + x;
+      tileInfo.textContent = `${x},${y}`;
+      const resIndex = GameState.map.resources[idx];
+      if (resIndex > 0) {
+        const def = GameState.defs.resources[resIndex - 1];
+        resourceInfo.textContent = def ? def.name_th || def.name_en : "?";
+        qtyInfo.textContent = GameState.map.resourcesQty[idx] || 0;
+      } else {
+      resourceInfo.textContent = "-";
+      qtyInfo.textContent = "-";
+    }
+    });
+
+    canvas.addEventListener("pointerdown", (event) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = Math.floor((event.clientX - rect.left) * scaleX / TILE_SIZE_PX);
+      const y = Math.floor((event.clientY - rect.top) * scaleY / TILE_SIZE_PX);
+      if (x < 0 || y < 0 || x >= GameState.map.size || y >= GameState.map.size) return;
+      tryPlaceBuilding(x, y);
+      View.draw(GameState);
+    });
+
+    document.getElementById("loadJson").addEventListener("click", () => {
+      jsonFileInput.value = "";
+      jsonFileInput.click();
+    });
+
+    const exportJson = () => {
+      const runtime = {
+        steps: GameState.runtime.steps,
+        population: GameState.runtime.population,
+        populationCap: GameState.runtime.populationCap,
+        available: GameState.runtime.available,
+        cityCenterIndex: GameState.runtime.cityCenterIndex,
+        unlockedBuildings: Array.from(GameState.runtime.unlockedBuildings),
+        resources: GameState.runtime.resources
+      };
+      const data = {
+        meta: {
+          version: "1.0",
+          tile_size_m: GameState.map.tileSizeM
+        },
+        world: {
+          size: GameState.map.size,
+          levels: GameState.defs.terrainLevels,
+          data: Array.from(GameState.map.height),
+          resources: {
+            defs: GameState.defs.resources,
+            data: Array.from(GameState.map.resources),
+            qty: Array.from(GameState.map.resourcesQty)
+          },
+          roads: { data: Array.from(GameState.map.roads) },
+          units: { defs: GameState.defs.units, data: Array.from(GameState.map.units) },
+          buildings: { defs: GameState.defs.buildings, data: Array.from(GameState.map.buildings) }
+        },
+        runtime
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "map.json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    };
+
+    document.getElementById("saveJson").addEventListener("click", exportJson);
+
+    jsonFileInput.addEventListener("change", (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          loadFromJson(String(reader.result));
+        } catch (err) {
+          alert("อ่านไฟล์ JSON ไม่สำเร็จ");
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    document.getElementById("toggleSim").addEventListener("click", (event) => {
+      simPaused = !simPaused;
+      event.target.textContent = simPaused ? "Play" : "Pause";
+    });
+
+    document.getElementById("stepSim").addEventListener("click", () => {
+      Systems.tick(GameState, 1 / 60);
+      View.draw(GameState);
+    });
+
+    speedInput.addEventListener("input", (event) => {
+      simSpeed = Number(event.target.value);
+      speedValue.textContent = `${simSpeed.toFixed(1)}x`;
+    });
+
+    buildModeInput.addEventListener("change", (event) => {
+      buildMode = event.target.value;
+      const def = GameState.defs.buildings.find((b) => b.id === buildMode);
+      buildValue.textContent = def ? (def.name_th || def.id) : "None";
+    });
+
+    resourceFadeInput.addEventListener("input", (event) => {
+      resourceFade = Number(event.target.value);
+      resourceFadeValue.textContent = resourceFade.toFixed(2);
+    });
+
+    const defaultWorld = {
+      size: DEFAULT_SIZE,
+      tile_size_m: 2,
+      levels: [
+        { id: 0, name: "ปากน้ำ/ชายฝั่ง", height: 0, color: "#223a4d" },
+        { id: 1, name: "หนอง/บึง/พรุ", height: 1, color: "#5aa6a9" },
+        { id: 2, name: "ที่ราบลุ่ม/ทุ่ง", height: 2, color: "#8ac37c" },
+        { id: 3, name: "ดอน/โคก/เนิน", height: 3, color: "#b5c07d" },
+        { id: 4, name: "ที่ราบสูง", height: 4, color: "#d3b56a" },
+        { id: 5, name: "ภูเขา/ดอย", height: 5, color: "#9f6a3f" }
+      ],
+      data: new Array(DEFAULT_SIZE * DEFAULT_SIZE).fill(2),
+      resources: { defs: [], data: [], qty: [] },
+      roads: { data: [] },
+      units: { defs: [], data: [] },
+      buildings: { defs: [], data: [] }
+    };
+
+    const loadRules = async () => {
+      try {
+        const res = await fetch("rules.json", { cache: "no-store" });
+        if (!res.ok) throw new Error("rules not found");
+        const rules = await res.json();
+        if (rules.build_rules) {
+          GameRules.build.startingBuildings = rules.build_rules.starting_buildings || GameRules.build.startingBuildings;
+          GameRules.build.prerequisites = rules.build_rules.prerequisites || GameRules.build.prerequisites;
+          GameRules.build.startingPopulation = Number(rules.build_rules.starting_population) || GameRules.build.startingPopulation;
+          GameRules.build.startingResources = rules.build_rules.starting_resources || GameRules.build.startingResources;
+          GameRules.build.buildCosts = rules.build_rules.build_costs || GameRules.build.buildCosts;
+        }
+      } catch (err) {
+        // fallback to defaults
+      }
+    };
+
+    // bootstrap with rules + empty state
+    loadRules().then(() => {
+      loadFromJson(JSON.stringify(defaultWorld));
+    });
+
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
