@@ -397,6 +397,52 @@
                     </div>
                   </div>
 
+                  <div class="mt-5">
+                    <div class="clay-soft p-4 cat-card cat-2">
+                      <div class="flex items-center justify-between gap-3">
+                        <div class="font-bold">Done Chapter View</div>
+                        <div class="text-xs text-slate-500 mono" id="donechapter-status">รอข้อมูล</div>
+                      </div>
+                      <div class="mt-3 h-[280px]">
+                        <canvas class="chart-canvas" id="doneChapterChart"></canvas>
+                      </div>
+                      <div class="mt-3 panel p-4 text-xs text-slate-600">
+                        <div class="text-xs text-slate-500 mb-2">Raw</div>
+                        <pre id="donechapter-raw" class="whitespace-pre-wrap break-all">ยังไม่มีข้อมูล</pre>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="clay-soft p-4 cat-card cat-5">
+                      <div class="flex items-center justify-between gap-3">
+                        <div class="font-bold">Chatbot Speed</div>
+                        <div class="text-xs text-slate-500 mono" id="chatbot-speed-status">รอข้อมูล</div>
+                      </div>
+                      <div class="mt-3 h-[260px]">
+                        <canvas class="chart-canvas" id="chatbotSpeedChart"></canvas>
+                      </div>
+                      <div class="mt-3 panel p-4 text-xs text-slate-600">
+                        <div class="text-xs text-slate-500 mb-2">Raw</div>
+                        <pre id="chatbot-speed-raw" class="whitespace-pre-wrap break-all">ยังไม่มีข้อมูล</pre>
+                      </div>
+                    </div>
+
+                    <div class="clay-soft p-4 cat-card cat-3">
+                      <div class="flex items-center justify-between gap-3">
+                        <div class="font-bold">Chatbot Performance</div>
+                        <div class="text-xs text-slate-500 mono" id="chatbot-perf-status">รอข้อมูล</div>
+                      </div>
+                      <div class="mt-3 h-[260px]">
+                        <canvas class="chart-canvas" id="chatbotPerfChart"></canvas>
+                      </div>
+                      <div class="mt-3 panel p-4 text-xs text-slate-600">
+                        <div class="text-xs text-slate-500 mb-2">Raw</div>
+                        <pre id="chatbot-perf-raw" class="whitespace-pre-wrap break-all">ยังไม่มีข้อมูล</pre>
+                      </div>
+                    </div>
+                  </div>
+
                   <div class="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div class="clay-soft p-4 cat-card cat-2">
                       <div class="font-bold">สรุปผลรายคน</div>
@@ -642,6 +688,9 @@
         fetchCourseDetail();
         fetchBookrollMaxPage();
         fetchBookroll();
+        fetchDoneChapterView();
+        fetchChatbotSpeed();
+        fetchChatbotPerformance();
       });
     }
 
@@ -653,6 +702,18 @@
 
     const bookrollMaxPageUrl = (cid, uid) =>
       `https://sbs-backend.mooc.meca.in.th/stats/echart/bookrollMaxPage/${encodeURIComponent(cid)}/${encodeURIComponent(uid)}`;
+
+    const chatbotSpeedUrl = (cid, uid) =>
+      `https://sbs-backend.mooc.meca.in.th/stats/echart/chatbotSpeed/${encodeURIComponent(cid)}/${encodeURIComponent(uid)}`;
+
+    const chatbotPerformanceUrl = (cid, uid) =>
+      `https://sbs-backend.mooc.meca.in.th/stats/stats/echart/chatbotPerformance/${encodeURIComponent(cid)}/${encodeURIComponent(uid)}`;
+
+    const doneChapterVkUrl = (uid, cid) =>
+      `https://vk-analysis.learning.app.meca.in.th/analysis/donechapterview/${encodeURIComponent(uid)}/course/${encodeURIComponent(cid)}`;
+
+    const doneChapterAeUrl = (uid, cid) =>
+      `https://ae-backend.learning.app.meca.in.th/analysis/donechapterview/${encodeURIComponent(uid)}/course/${encodeURIComponent(cid)}`;
 
     const pickNumber = (obj, keys) => {
       for (const k of keys) {
@@ -842,6 +903,51 @@
       });
     };
 
+    const renderEchartToChart = (cfg, canvasId, fallbackLabel) => {
+      const ctx = document.getElementById(canvasId);
+      if (!ctx) return;
+      if (ctx._chartInstance) ctx._chartInstance.destroy();
+      const xAxis = Array.isArray(cfg?.xAxis) ? cfg.xAxis[0] : cfg?.xAxis;
+      const yAxis = Array.isArray(cfg?.yAxis) ? cfg.yAxis[0] : cfg?.yAxis;
+      const xIsCat = xAxis?.type === "category";
+      const yIsCat = yAxis?.type === "category";
+      const labels = (xIsCat ? xAxis?.data : yIsCat ? yAxis?.data : []) || [];
+      const series = Array.isArray(cfg?.series) ? cfg.series : [];
+      if (!labels.length || !series.length) {
+        ctx._chartInstance = new Chart(ctx, {
+          type: "bar",
+          data: { labels: ["ไม่มีข้อมูล"], datasets: [{ label: fallbackLabel, data: [0], backgroundColor: "#b7f1ec" }] },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+        return;
+      }
+      const colors = ["#1fb9b7", "#4fd0c8", "#b7f1ec", "#f6b86a", "#f56a6a", "#5f76c8", "#c59cff", "#18b879"];
+      const datasets = series.map((s, i) => ({
+        type: s.type === "line" ? "line" : "bar",
+        label: decodeIfMojibake(s.name) || `Series ${i + 1}`,
+        data: s.data || [],
+        backgroundColor: colors[i % colors.length],
+        borderColor: colors[i % colors.length],
+        borderWidth: s.type === "line" ? 2 : 0,
+        pointRadius: s.type === "line" ? 2 : 0,
+        stack: s.stack || undefined
+      }));
+      ctx._chartInstance = new Chart(ctx, {
+        type: "bar",
+        data: { labels: labels.map(decodeIfMojibake), datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: "bottom" } },
+          indexAxis: yIsCat ? "y" : "x",
+          scales: {
+            x: { stacked: !!series.find((s) => s.stack) },
+            y: { stacked: !!series.find((s) => s.stack), beginAtZero: true }
+          }
+        }
+      });
+    };
+
     const fetchBookroll = async () => {
       const statusEl = document.getElementById("bookroll-status");
       const rawEl = document.getElementById("bookroll-raw");
@@ -895,6 +1001,75 @@
       } catch (err) {
         if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
         console.warn("Bookroll MaxPage API error:", err);
+      }
+    };
+
+    const fetchChatbotSpeed = async () => {
+      const statusEl = document.getElementById("chatbot-speed-status");
+      const rawEl = document.getElementById("chatbot-speed-raw");
+      if (!userId || !courseId) {
+        if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
+        return;
+      }
+      if (statusEl) statusEl.textContent = "กำลังโหลด...";
+      try {
+        const res = await fetch(chatbotSpeedUrl(courseId, userId));
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        renderEchartToChart(data, "chatbotSpeedChart", "Chatbot Speed");
+        if (rawEl) rawEl.textContent = JSON.stringify(data, null, 2);
+        if (statusEl) statusEl.textContent = "โหลดสำเร็จ";
+      } catch (err) {
+        if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
+        if (rawEl) rawEl.textContent = err?.message || "เกิดข้อผิดพลาด";
+        console.warn("Chatbot Speed API error:", err);
+      }
+    };
+
+    const fetchChatbotPerformance = async () => {
+      const statusEl = document.getElementById("chatbot-perf-status");
+      const rawEl = document.getElementById("chatbot-perf-raw");
+      if (!userId || !courseId) {
+        if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
+        return;
+      }
+      if (statusEl) statusEl.textContent = "กำลังโหลด...";
+      try {
+        const res = await fetch(chatbotPerformanceUrl(courseId, userId));
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        renderEchartToChart(data, "chatbotPerfChart", "Chatbot Performance");
+        if (rawEl) rawEl.textContent = JSON.stringify(data, null, 2);
+        if (statusEl) statusEl.textContent = "โหลดสำเร็จ";
+      } catch (err) {
+        if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
+        if (rawEl) rawEl.textContent = err?.message || "เกิดข้อผิดพลาด";
+        console.warn("Chatbot Performance API error:", err);
+      }
+    };
+
+    const fetchDoneChapterView = async () => {
+      const statusEl = document.getElementById("donechapter-status");
+      const rawEl = document.getElementById("donechapter-raw");
+      if (!userId || !courseId) {
+        if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
+        return;
+      }
+      if (statusEl) statusEl.textContent = "กำลังโหลด...";
+      try {
+        let res = await fetch(doneChapterVkUrl(userId, courseId));
+        if (!res.ok) {
+          res = await fetch(doneChapterAeUrl(userId, courseId));
+        }
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        renderEchartToChart(data, "doneChapterChart", "Done Chapter");
+        if (rawEl) rawEl.textContent = JSON.stringify(data, null, 2);
+        if (statusEl) statusEl.textContent = "โหลดสำเร็จ";
+      } catch (err) {
+        if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
+        if (rawEl) rawEl.textContent = err?.message || "เกิดข้อผิดพลาด";
+        console.warn("Done Chapter API error:", err);
       }
     };
 
@@ -977,6 +1152,9 @@
     fetchCourseDetail();
     fetchBookrollMaxPage();
     fetchBookroll();
+    fetchDoneChapterView();
+    fetchChatbotSpeed();
+    fetchChatbotPerformance();
 
     const unitCtx = document.getElementById("unitChart");
     new Chart(unitCtx, {
