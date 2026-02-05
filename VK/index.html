@@ -502,6 +502,36 @@
       return res.json();
     };
 
+    const LMS_COURSE_LIST_URL = "https://sbs-backend.mooc.meca.in.th/lms";
+
+    const readCourseIdFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("courseid") || "";
+    };
+
+    const writeCourseIdToUrl = (courseid) => {
+      const url = new URL(window.location.href);
+      if (courseid) url.searchParams.set("courseid", courseid);
+      else url.searchParams.delete("courseid");
+      window.history.replaceState({}, document.title, url.toString());
+    };
+
+    const normalizeCourseList = (payload) => {
+      if (!payload) return [];
+      if (Array.isArray(payload)) return payload;
+      if (Array.isArray(payload.courses)) return payload.courses;
+      if (Array.isArray(payload.results)) return payload.results;
+      if (Array.isArray(payload.data)) return payload.data;
+      if (Array.isArray(payload.items)) return payload.items;
+      return [];
+    };
+
+    const getCourseId = (c) =>
+      (c && (c.course_key || c.courseKey || c.course_id || c.courseId || c.courseID || c.id || c.key || c.course)) || "";
+
+    const getCourseName = (c) =>
+      (c && (c.courseTitle || c.title || c.display_name || c.displayName || c.name || c.short_description || c.course)) || "ไม่ระบุชื่อ";
+
     const mock = {
       course: { title:"VK Test (25-01-30)", progress:0.74, schedule:"เริ่ม 20 ม.ค. 2026 • ปิด 30 ม.ค. 2026" },
       units: [
@@ -688,6 +718,41 @@
 
     const CourseOverview = ({goto}) => {
       const [open, setOpen] = useState({ u1:true, u2:false, u3:false });
+      const [courses, setCourses] = useState([]);
+      const [loadingCourses, setLoadingCourses] = useState(true);
+      const [courseError, setCourseError] = useState("");
+      const [selectedId, setSelectedId] = useState(() => readCourseIdFromUrl());
+
+      useEffect(() => {
+        let alive = true;
+        setLoadingCourses(true);
+        setCourseError("");
+        fetch(LMS_COURSE_LIST_URL)
+          .then(async (res) => {
+            if (!res.ok) {
+              const msg = await res.text();
+              throw new Error(msg || "โหลดรายการไม่สำเร็จ");
+            }
+            return res.json();
+          })
+          .then((data) => {
+            if (!alive) return;
+            setCourses(normalizeCourseList(data));
+          })
+          .catch((err) => {
+            if (!alive) return;
+            setCourseError(err?.message || "โหลดรายการไม่สำเร็จ");
+          })
+          .finally(() => {
+            if (alive) setLoadingCourses(false);
+          });
+        return () => { alive = false; };
+      }, []);
+
+      const selectedCourse = useMemo(() => {
+        if (!selectedId) return null;
+        return courses.find((c) => getCourseId(c) === selectedId) || null;
+      }, [courses, selectedId]);
 
       const StatusDot = ({s}) => {
         const map = { done:"dot-done", doing:"dot-doing", todo:"dot-todo", locked:"dot-locked" };
@@ -700,9 +765,64 @@
             <div class="clay p-5 sm:p-6">
           <div class="flex flex-col lg:flex-row lg:items-start gap-5">
             <div class="flex-1">
+              <div class="clay-soft p-4 mb-4">
+                <div class="flex flex-col lg:flex-row lg:items-center gap-3 justify-between">
+                  <div>
+                    <div class="text-sm text-slate-500">เลือกรายวิชา (ดึงจากระบบเดิม)</div>
+                    <div class="text-lg font-bold mt-1">Course List</div>
+                  </div>
+                  <div class="text-xs text-slate-500 mono">
+                    ${selectedId ? `courseid=${selectedId}` : "ยังไม่ได้เลือกรายวิชา"}
+                  </div>
+                </div>
+
+                <div class="mt-3 grid gap-3 lg:grid-cols-[1fr_auto] items-center">
+                  <div class="input-inset p-1">
+                    <select
+                      class="w-full bg-transparent px-3 py-2 outline-none text-sm"
+                      value=${selectedId}
+                      onChange=${(e) => {
+                        const next = e.target.value;
+                        setSelectedId(next);
+                        writeCourseIdToUrl(next);
+                      }}
+                    >
+                      <option value="">กรุณาเลือกรายวิชา</option>
+                      ${courses.map((c) => html`
+                        <option value=${getCourseId(c)}>${getCourseName(c)}</option>
+                      `)}
+                    </select>
+                  </div>
+                  <${ClayButton}
+                    variant="soft"
+                    small
+                    onClick=${() => {
+                      setLoadingCourses(true);
+                      setCourseError("");
+                      fetch(LMS_COURSE_LIST_URL)
+                        .then(async (res) => {
+                          if (!res.ok) {
+                            const msg = await res.text();
+                            throw new Error(msg || "โหลดรายการไม่สำเร็จ");
+                          }
+                          return res.json();
+                        })
+                        .then((data) => setCourses(normalizeCourseList(data)))
+                        .catch((err) => setCourseError(err?.message || "โหลดรายการไม่สำเร็จ"))
+                        .finally(() => setLoadingCourses(false));
+                    }}
+                  >รีเฟรชรายการ</${ClayButton}>
+                </div>
+
+                <div class="mt-2 text-xs text-slate-500">
+                  ${loadingCourses ? "กำลังโหลดรายการ..." : `พบ ${courses.length} รายวิชา`}
+                  ${courseError ? html`<span class="text-orange-600 ml-2">(${courseError})</span>` : null}
+                </div>
+              </div>
+
               <div class="flex items-start justify-between gap-3">
                 <div>
-                  <div class="text-2xl font-extrabold">${mock.course.title}</div>
+                  <div class="text-2xl font-extrabold">${selectedCourse ? getCourseName(selectedCourse) : mock.course.title}</div>
                   <div class="text-sm text-slate-500 mt-1">${mock.course.schedule}</div>
                 </div>
                 <${ClayButton} onClick=${() => goto("content")}>Start Course</${ClayButton}>
@@ -1203,7 +1323,13 @@
       `;
     };
 
-    const Results = () => html`
+    const Results = ({auth}) => {
+      const userId = auth?.userId ? encodeURIComponent(auth.userId) : "";
+      const params = new URLSearchParams(window.location.search);
+      const courseId = params.get("courseid");
+      const courseQ = courseId ? `&courseid=${encodeURIComponent(courseId)}` : "";
+      const iframeSrc = userId ? `dashboard.html?userId=${userId}${courseQ}` : "dashboard.html";
+      return html`
       <div class="page-screen">
         <div class="page-scroll">
           <div class="clay p-5 sm:p-6">
@@ -1220,41 +1346,26 @@
           </div>
         </div>
 
-        <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div class="clay-soft p-4 cat-card cat-2">
-            <div class="font-bold">Learning Speed</div>
-            <div class="mt-3">
-              <${Bar} value=${mock.results.speed} label="Speed score" />
-            </div>
-            <div class="mt-3 panel p-4 text-sm text-slate-600">
-              ตีความ: คะแนนความเร็วในการเรียนรู้ (mock) — ใช้แทน metric จริงได้
+        <div class="mt-4 clay-soft p-4 cat-card cat-5">
+          <div class="flex items-center justify-between gap-3">
+            <div class="font-bold">Dashboard Summary (iframe)</div>
+            <div class="text-xs text-slate-500 mono">
+              ${auth?.userId ? "user id: " + auth.userId : "ยังไม่ได้ login"}
             </div>
           </div>
-
-          <div class="clay-soft p-4 cat-card cat-3">
-            <div class="font-bold">Learning Performance</div>
-            <div class="mt-3">
-              <${Bar} value=${mock.results.performance} label="Performance score" />
-            </div>
-            <div class="mt-3 panel p-4 text-sm text-slate-600">
-              ตีความ: ผลสัมฤทธิ์รวม (mock) — เชื่อมกับคะแนน/ข้อสอบจริงภายหลัง
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-4 clay-soft p-4 cat-card cat-4">
-          <div class="font-bold">Notes</div>
-          <textarea class="mt-3 w-full input-inset p-4 outline-none text-sm"
-            rows="4"
-            placeholder="จดบันทึกการวิเคราะห์ (demo)"></textarea>
-          <div class="mt-3 flex justify-end">
-            <${ClayButton} variant="soft" onClick=${() => alert("Saved (demo)")}>บันทึก</${ClayButton}>
+          <div class="mt-3 panel p-2">
+            <iframe
+              title="dashboard"
+              class="w-full h-[820px] rounded-2xl"
+              src=${iframeSrc}
+            ></iframe>
           </div>
         </div>
           </div>
         </div>
       </div>
     `;
+    };
 
     const DataTable = () => {
       const rows = useMemo(() => ([
@@ -1391,7 +1502,7 @@
         if(route==="forum") return html`<${Forum} />`;
         if(route==="wiki") return html`<${Wiki} />`;
         if(route==="analytics") return html`<${Analytics} />`;
-        if(route==="results") return html`<${Results} />`;
+        if(route==="results") return html`<${Results} auth=${auth} />`;
         if(route==="table") return html`<${DataTable} />`;
         return html`
           <div class="page-screen">
