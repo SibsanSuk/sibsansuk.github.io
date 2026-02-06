@@ -1,0 +1,858 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Course Detail Viewer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700;800&family=Noto+Sans+Thai:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --bgA:#f7fbfb;
+      --bgB:#ffffff;
+      --surface:#ffffff;
+      --surface-2:#f4f7f9;
+      --ink:#102a2f;
+      --muted:#5b6b6f;
+      --border:#e3e8ee;
+      --brand-900:#0b4f55;
+      --brand-700:#138a92;
+      --brand-500:#1fb9b7;
+      --brand-100:#e0faf8;
+      --success:#18b879;
+      --warning:#f59e0b;
+      --danger:#f97316;
+      --rXL:24px; --rLG:18px; --rMD:14px;
+    }
+    *{ -webkit-tap-highlight-color: transparent; }
+    html, body{ height: 100%; }
+    body{
+      background:
+        radial-gradient(circle at 10% 5%, rgba(31,185,183,.08), transparent 40%),
+        radial-gradient(circle at 95% 15%, rgba(79,208,200,.10), transparent 45%),
+        linear-gradient(180deg, var(--bgA), var(--bgB));
+      color: var(--ink);
+      font-family: "Kanit", "Noto Sans Thai", system-ui, sans-serif;
+      margin: 0;
+      padding: 14px;
+    }
+    .frame{
+      border: 2px solid rgba(31,185,183,.35);
+      border-radius: 22px;
+      background: var(--surface);
+      box-shadow: 0 14px 30px rgba(15, 107, 114, .12);
+      overflow: hidden;
+      min-height: calc(100dvh - 28px);
+      display: flex;
+      flex-direction: column;
+    }
+    .clay{
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--rXL);
+      box-shadow: 0 8px 20px rgba(12, 34, 46, .05);
+    }
+    .clay-soft{
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--rLG);
+    }
+    .panel{
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--rLG);
+    }
+    .pill{
+      border-radius: 999px;
+      border: 1px solid rgba(15,107,114,.18);
+      box-shadow:
+        0 14px 22px rgba(12, 34, 46, .14),
+        0 5px 12px rgba(24, 164, 170, .14),
+        inset 0 2px 0 rgba(255,255,255,.75),
+        inset 0 -6px 12px rgba(0,0,0,.06);
+    }
+    .pill:active{ transform: translateY(1px); filter: brightness(.98); }
+    .grad-brand{ background: linear-gradient(90deg, var(--brand-700), var(--brand-500)); }
+    .grad-danger{ background: linear-gradient(90deg, #f97316, #fb923c); }
+    .chip{
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+    }
+    .mono{ font-feature-settings: "tnum" 1, "ss01" 1; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .tree-btn{
+      width: 100%;
+      text-align: left;
+      padding: 10px 12px;
+      border-radius: 16px;
+      border: 1px solid transparent;
+      color: var(--ink);
+      transition: background .15s ease, transform .12s ease, border-color .15s ease;
+    }
+    .tree-btn:hover{ background: rgba(224,250,248,.65); }
+    .tree-btn.active{
+      background: var(--brand-100);
+      border-color: rgba(31,185,183,.35);
+    }
+    details.tree > summary{
+      list-style: none;
+      cursor: pointer;
+    }
+    details.tree > summary::-webkit-details-marker{ display:none; }
+    .badge{
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 12px;
+      border: 1px solid rgba(0,0,0,.08);
+      background: rgba(79, 208, 200, .15);
+      color: #0b4f55;
+      white-space: nowrap;
+    }
+    .badge.kind-chapter{ background: rgba(31,185,183,.16); }
+    .badge.kind-sequential{ background: rgba(245,158,11,.16); color: #7c2d12; }
+    .badge.kind-vertical{ background: rgba(79,140,255,.16); color: #1e3a8a; }
+    .badge.kind-html{ background: rgba(24,184,121,.16); color: #065f46; }
+    .badge.tool-html{ background: rgba(24,184,121,.12); color: #065f46; }
+    .badge.tool-ae{ background: rgba(245,158,11,.14); color: #7c2d12; }
+    .badge.tool-bookroll{ background: rgba(79,140,255,.12); color: #1e3a8a; }
+    .badge.tool-video{ background: rgba(197,156,255,.16); color: #3b0764; }
+    .badge.tool-sim{ background: rgba(31,185,183,.16); color: #0b4f55; }
+    .badge.tool-chatbot{ background: rgba(245,106,106,.16); color: #7f1d1d; }
+    .badge.tool-iframe{ background: rgba(246,184,106,.18); color: #7c2d12; }
+    .badge.tool-mixed{ background: rgba(148,163,184,.22); color: #334155; }
+    .kv{
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+    @media (max-width: 900px){
+      body{ padding: 0; }
+      .frame{ border-radius: 0; min-height: 100dvh; }
+      .kv{ grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <header class="p-4 sm:p-5 clay">
+      <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-3">
+        <div>
+          <div class="text-sm text-slate-500">Course Detail Viewer</div>
+          <div class="mt-1 text-2xl font-extrabold" id="hdr-title">-</div>
+          <div class="mt-2 flex flex-wrap gap-2 items-center">
+            <span class="chip px-3 py-1.5 text-xs text-slate-700 mono">courseKey: <span id="hdr-key">-</span></span>
+            <span class="chip px-3 py-1.5 text-xs text-slate-700 mono">courseid: <span id="hdr-courseid">-</span></span>
+            <span class="chip px-3 py-1.5 text-xs text-slate-700 mono">userid: <span id="hdr-userid">-</span></span>
+            <span class="chip px-3 py-1.5 text-xs text-slate-700 mono">nodes: <span id="hdr-nodes">0</span></span>
+            <span class="chip px-3 py-1.5 text-xs text-slate-700 mono">chapters: <span id="hdr-chapters">0</span></span>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-2 w-full lg:w-[560px]">
+          <div class="panel p-2">
+            <div class="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-2">
+              <input id="input-courseid" class="panel px-3 py-2 text-sm outline-none bg-white" placeholder="กรอก courseid (courseKey)" />
+              <input id="input-userid" class="panel px-3 py-2 text-sm outline-none bg-white" placeholder="กรอก userid (optional)" />
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-2">
+              <input id="input-url" class="panel px-3 py-2 text-sm outline-none bg-white" placeholder="วาง URL API (อาจติด CORS) หรือปล่อยว่างเพื่อใช้ mock" />
+              <div class="flex gap-2">
+                <button id="btn-load" class="pill px-4 py-2 text-sm font-semibold tracking-wide text-white grad-brand">โหลด</button>
+                <button id="btn-mock" class="pill px-4 py-2 text-sm font-semibold tracking-wide text-white grad-brand">ใช้ mock</button>
+              </div>
+            </div>
+            <div class="mt-2 text-xs text-slate-500" id="load-status">ค่าเริ่มต้น: โหลดจาก <span class="mono">mock/courseDetail.json</span></div>
+          </div>
+
+          <details class="panel p-3 text-xs text-slate-600">
+            <summary class="cursor-pointer select-none text-xs text-slate-500 font-semibold">วาง JSON เอง (Paste JSON)</summary>
+            <textarea id="paste-json" class="mt-2 w-full panel p-3 outline-none text-xs mono" rows="7" placeholder='{"courseKey":"...","courseTitle":"...","children":[...]}'></textarea>
+            <div class="mt-2 flex gap-2">
+              <button id="btn-parse" class="pill px-3 py-2 text-xs font-semibold tracking-wide text-white grad-brand">แสดง JSON นี้</button>
+              <button id="btn-clear" class="pill px-3 py-2 text-xs font-semibold tracking-wide text-white grad-danger">ล้าง</button>
+            </div>
+          </details>
+        </div>
+      </div>
+    </header>
+
+    <main class="p-4 sm:p-5 flex-1 min-h-0">
+      <div class="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-4 h-full min-h-0">
+        <section class="clay-soft p-3 min-h-0">
+          <div class="flex items-center justify-between gap-2">
+            <div class="font-bold">โครงสร้าง</div>
+            <span class="text-xs text-slate-500 mono" id="tree-status">-</span>
+          </div>
+          <div class="mt-3 panel p-2">
+            <input id="tree-search" class="w-full bg-white panel px-3 py-2 outline-none text-sm" placeholder="ค้นหา title / id / kind..." />
+          </div>
+          <div id="tree" class="mt-3 grid gap-2 overflow-auto min-h-0" style="max-height: calc(100dvh - 290px);"></div>
+        </section>
+
+        <section class="clay-soft p-3 min-h-0">
+          <div class="flex items-center justify-between gap-2">
+            <div class="font-bold">รายละเอียด</div>
+            <span class="text-xs text-slate-500 mono" id="sel-status">ยังไม่ได้เลือก</span>
+          </div>
+
+          <div class="mt-3 panel p-4" id="inspector">
+            <div class="text-sm text-slate-600">คลิกที่รายการทางซ้ายเพื่อดูรายละเอียด</div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const DEFAULT_MOCK_URL = "mock/courseDetail.json";
+    const COURSE_API_BASE = "https://sbs-backend.mooc.meca.in.th/lms/";
+
+    const decodeIfMojibake = (text) => {
+      if (typeof text !== "string") return text;
+      if (!/[ÃÂà-ÿ]/.test(text)) return text;
+      try {
+        const bytes = new Uint8Array([...text].map((ch) => ch.charCodeAt(0)));
+        const decoded = new TextDecoder("utf-8").decode(bytes);
+        return decoded || text;
+      } catch {
+        return text;
+      }
+    };
+
+    const escapeHtml = (str) =>
+      String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
+    const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
+
+    const isImageDataUri = (s) =>
+      typeof s === "string" && /^data:image\/(png|jpe?g|gif|webp);base64,/i.test(s);
+
+    const isLikelyPngBase64 = (s) =>
+      typeof s === "string" && s.startsWith("iVBORw0KGgo") && s.length > 200;
+
+    const chapterSortKey = (rawTitle) => {
+      const title = String(rawTitle || "");
+      const act = title.match(/กิจกรรมที่\s*(\d+)/);
+      const lesson = title.match(/บทที่\s*(\d+)/);
+      const num = act ? Number(act[1]) : lesson ? Number(lesson[1]) : null;
+      if (/ก่อนเรียน/.test(title)) return { group: 0, num: 0, title };
+      if (num != null && Number.isFinite(num)) return { group: 0, num, title };
+      if (/หลังเรียน|ปลายหน่วย|ปลายบท/.test(title)) return { group: 2, num: 9999, title };
+      return { group: 1, num: 9999, title };
+    };
+
+    const countKinds = (node, acc) => {
+      if (!node) return;
+      const kind = node.kind;
+      if (kind) acc[kind] = (acc[kind] || 0) + 1;
+      const kids = node.children || [];
+      for (const k of kids) countKinds(k, acc);
+    };
+
+    const flatten = (root) => {
+      const out = [];
+      const walk = (node, path, parentPath) => {
+        if (!isObj(node)) return;
+        const kind = node.kind || (node.courseKey ? "course" : "node");
+        const title = decodeIfMojibake(node.courseTitle || node.title || node.fields?.title || "-");
+        const id = node.id || node.courseKey || "";
+        out.push({ node, path, parentPath, kind, title, id });
+        const kids = Array.isArray(node.children) ? node.children : [];
+        kids.forEach((c, i) => walk(c, `${path}.${i}`, path));
+      };
+      walk(root, "root", null);
+      return out;
+    };
+
+    let state = {
+      root: null,
+      flat: [],
+      selectedPath: null,
+      search: ""
+    };
+
+    const el = (id) => document.getElementById(id);
+
+    const readParams = () => {
+      const p = new URLSearchParams(window.location.search);
+      const courseid = p.get("courseid") || p.get("courseId") || "";
+      const userid = p.get("userid") || p.get("userId") || "";
+      return { courseid, userid };
+    };
+
+    const writeParams = ({ courseid, userid }) => {
+      const url = new URL(window.location.href);
+      if (courseid) url.searchParams.set("courseid", courseid);
+      else url.searchParams.delete("courseid");
+      if (userid) url.searchParams.set("userid", userid);
+      else url.searchParams.delete("userid");
+      window.history.replaceState({}, document.title, url.toString());
+    };
+
+    const buildCourseApiUrl = (courseid) => `${COURSE_API_BASE}${encodeURIComponent(courseid)}`;
+
+    let ctx = readParams();
+
+    const setHeader = (root) => {
+      el("hdr-key").textContent = root?.courseKey || "-";
+      el("hdr-title").textContent = decodeIfMojibake(root?.courseTitle || root?.title || "-");
+      const kinds = {};
+      countKinds(root, kinds);
+      el("hdr-nodes").textContent = String(state.flat.length);
+      el("hdr-chapters").textContent = String(kinds.chapter || 0);
+    };
+
+    const setContextChips = () => {
+      const courseidEl = el("hdr-courseid");
+      if (courseidEl) courseidEl.textContent = ctx.courseid || "-";
+      const useridEl = el("hdr-userid");
+      if (useridEl) useridEl.textContent = ctx.userid || "-";
+    };
+
+    const badgeHtml = (kind) => {
+      const k = String(kind || "node");
+      const cls =
+        k === "chapter" ? "badge kind-chapter" :
+        k === "sequential" ? "badge kind-sequential" :
+        k === "vertical" ? "badge kind-vertical" :
+        k === "html" ? "badge kind-html" :
+        "badge";
+      return `<span class="${cls}">${escapeHtml(k)}</span>`;
+    };
+
+    const collectKindsDeep = (node, set) => {
+      if (!node) return;
+      if (typeof node !== "object") return;
+      const kind = node.kind;
+      if (kind) set.add(kind);
+      const kids = node.children || [];
+      for (const k of kids) collectKindsDeep(k, set);
+    };
+
+    const collectTextDeep = (node, out, maxLen = 14000) => {
+      if (!node || out.text.length >= maxLen) return;
+      if (typeof node === "string") {
+        out.text += "\n" + node;
+        return;
+      }
+      if (typeof node !== "object") return;
+      const tryPush = (v) => {
+        if (typeof v === "string" && v) out.text += "\n" + v;
+      };
+      tryPush(node.kind);
+      tryPush(node.id);
+      tryPush(node.title);
+      if (node.fields && typeof node.fields === "object") {
+        ["display_name", "displayName", "title", "data", "url", "href", "src", "launch_url", "launchUrl"].forEach((k) => {
+          tryPush(node.fields?.[k]);
+        });
+        ["iframe_url", "iframeUrl", "iframe", "iframeURL", "aetool", "tool", "tool_type", "toolType"].forEach((k) => {
+          tryPush(node.fields?.[k]);
+        });
+      }
+      const kids = node.children || [];
+      for (const k of kids) collectTextDeep(k, out, maxLen);
+    };
+
+    const findAeToolMeta = (vertical) => {
+      const stack = Array.isArray(vertical?.children) ? vertical.children.slice() : [];
+      while (stack.length) {
+        const n = stack.shift();
+        if (!n || typeof n !== "object") continue;
+        if (n.kind === "aetool") {
+          const f = n.fields && typeof n.fields === "object" ? n.fields : {};
+          const aetool = typeof f.aetool === "string" ? f.aetool : "";
+          const iframeUrl = typeof f.iframe_url === "string" ? f.iframe_url : (typeof f.iframeUrl === "string" ? f.iframeUrl : "");
+          return { aetool, iframeUrl };
+        }
+        const kids = n.children || [];
+        if (Array.isArray(kids)) stack.push(...kids);
+      }
+      return null;
+    };
+
+    const inferVerticalTool = (vertical) => {
+      const kinds = new Set();
+      (vertical?.children || []).forEach((c) => collectKindsDeep(c, kinds));
+      kinds.delete("vertical");
+      kinds.delete("sequential");
+      kinds.delete("chapter");
+
+      // Pure HTML content inside this vertical.
+      if (kinds.has("html") && kinds.size === 1) {
+        return { label: "HTML", cls: "badge tool-html" };
+      }
+
+      // AE Tool: often shows up as LTI or mentions "AE Tool" in text/fields.
+      const bag = { text: "" };
+      (vertical?.children || []).forEach((c) => collectTextDeep(c, bag));
+      const t = decodeIfMojibake(bag.text).toLowerCase();
+      const isAeTool = kinds.has("lti") || t.includes("ae tool") || t.includes("aetool") || t.includes("ae-tool");
+      if (isAeTool) {
+        const meta = findAeToolMeta(vertical);
+        const aet = (meta?.aetool || "").toLowerCase();
+        if (aet === "bookroll") return { label: "AE Tool: BookRoll", cls: "badge tool-bookroll" };
+        if (aet === "video") return { label: "AE Tool: Video", cls: "badge tool-video" };
+        if (aet === "simulator") return { label: "AE Tool: Simulator", cls: "badge tool-sim" };
+        if (aet === "chatbot") return { label: "AE Tool: Chatbot", cls: "badge tool-chatbot" };
+        if (aet === "iframe") return { label: "AE Tool: Iframe", cls: "badge tool-iframe" };
+
+        const isBookroll = t.includes("bookroll") || t.includes("br_") || t.includes("thaidlt.com");
+        if (isBookroll) return { label: "AE Tool: BookRoll", cls: "badge tool-bookroll" };
+
+        const isVideo =
+          kinds.has("video") ||
+          t.includes("video") ||
+          t.includes("youtube.com") ||
+          t.includes("youtu.be") ||
+          t.includes("vimeo.com") ||
+          t.includes("mp4") ||
+          t.includes("m3u8");
+        if (isVideo) return { label: "AE Tool: Video", cls: "badge tool-video" };
+
+        const isSimulator =
+          t.includes("kidbright simulator") ||
+          (t.includes("kidbright") && t.includes("simulator")) ||
+          t.includes("simulator");
+        if (isSimulator) return { label: "AE Tool: Simulator", cls: "badge tool-sim" };
+
+        return { label: "AE Tool", cls: "badge tool-ae" };
+      }
+
+      if (kinds.size) return { label: `Mixed: ${Array.from(kinds).join("+")}`, cls: "badge tool-mixed" };
+      return { label: "Unknown", cls: "badge tool-mixed" };
+    };
+
+    const toolBadgeHtml = (path, node, kind) => {
+      if (kind !== "vertical") return "";
+      state.verticalToolCache ||= new Map();
+      if (state.verticalToolCache.has(path)) return state.verticalToolCache.get(path);
+      const tool = inferVerticalTool(node);
+      const html = tool ? `<span class="${tool.cls}">${escapeHtml(tool.label)}</span>` : "";
+      state.verticalToolCache.set(path, html);
+      return html;
+    };
+
+    const matchesSearch = (row, q) => {
+      if (!q) return true;
+      const s = q.toLowerCase();
+      return (
+        (row.title || "").toLowerCase().includes(s) ||
+        (row.id || "").toLowerCase().includes(s) ||
+        (row.kind || "").toLowerCase().includes(s)
+      );
+    };
+
+    const renderTree = () => {
+      const treeEl = el("tree");
+      if (!state.root) {
+        treeEl.innerHTML = `<div class="panel p-4 text-sm text-slate-600">ยังไม่มีข้อมูล</div>`;
+        el("tree-status").textContent = "-";
+        return;
+      }
+
+      const q = state.search.trim();
+      const chaptersRaw = Array.isArray(state.root.children) ? state.root.children : [];
+      const chapters = chaptersRaw
+        .map((ch, origIdx) => {
+          const title = decodeIfMojibake(ch.title || ch.fields?.title || `บท ${origIdx + 1}`);
+          return { ch, origIdx, title, k: chapterSortKey(title) };
+        })
+        .sort((a, b) => {
+          if (a.k.group !== b.k.group) return a.k.group - b.k.group;
+          if (a.k.num !== b.k.num) return a.k.num - b.k.num;
+          if (a.k.title < b.k.title) return -1;
+          if (a.k.title > b.k.title) return 1;
+          return a.origIdx - b.origIdx;
+        });
+      const filteredFlat = state.flat.filter((r) => matchesSearch(r, q));
+      el("tree-status").textContent = q ? `ผลค้นหา: ${filteredFlat.length}` : `บท: ${chapters.length}`;
+
+      const chapterRows = chapters.map(({ ch, origIdx }) => {
+        const path = `root.${origIdx}`;
+        const row = state.flat.find((r) => r.path === path);
+        const title = row?.title || decodeIfMojibake(ch.title || ch.fields?.title || `บท ${origIdx + 1}`);
+        const kind = row?.kind || ch.kind || "chapter";
+        if (q && !matchesSearch({ title, id: ch.id || "", kind }, q)) {
+          // If chapter doesn't match, still show it if any descendant matches.
+          const anyChild = filteredFlat.some((r) => r.path.startsWith(path + "."));
+          if (!anyChild) return "";
+        }
+        const kids = Array.isArray(ch.children) ? ch.children : [];
+        const kidCount = kids.length;
+        const active = state.selectedPath === path ? "active" : "";
+        return `
+          <details class="tree panel p-2" ${kidCount ? "" : "open"}>
+            <summary class="flex items-center justify-between gap-2">
+              <button class="tree-btn ${active}" data-path="${escapeHtml(path)}">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="font-semibold">${escapeHtml(title)}</div>
+                  ${badgeHtml(kind)}
+                </div>
+                <div class="mt-1 text-xs text-slate-500 mono">${escapeHtml(ch.id || "")}</div>
+              </button>
+              <div class="text-xs text-slate-500 mono">${kidCount ? `${kidCount} ชิ้น` : ""}</div>
+            </summary>
+            ${kidCount ? `<div class="mt-2 grid gap-2 pl-1">${renderSubtree(path, ch, q, 1)}</div>` : ""}
+          </details>
+        `;
+      }).filter(Boolean).join("");
+
+      treeEl.innerHTML = chapterRows || `<div class="panel p-4 text-sm text-slate-600">ไม่พบผลลัพธ์</div>`;
+    };
+
+    const renderSubtree = (parentPath, parentNode, q, depth) => {
+      const kids = Array.isArray(parentNode.children) ? parentNode.children : [];
+      if (!kids.length) return "";
+
+      return kids.map((k, i) => {
+        const path = `${parentPath}.${i}`;
+        const row = state.flat.find((r) => r.path === path);
+        const title = row?.title || decodeIfMojibake(k.title || k.fields?.title || "-");
+        const kind = row?.kind || k.kind || "node";
+        const id = k.id || "";
+        const childKids = Array.isArray(k.children) ? k.children : [];
+
+        const selfMatch = matchesSearch({ title, id, kind }, q);
+        const anyChild = !q ? true : state.flat.some((r) => r.path.startsWith(path + ".") && matchesSearch(r, q));
+        if (q && !selfMatch && !anyChild) return "";
+
+        const active = state.selectedPath === path ? "active" : "";
+        const pad = Math.min(depth * 8, 24);
+        const showAsLeaf = !childKids.length;
+        if (showAsLeaf) {
+          return `
+            <button class="tree-btn ${active}" style="padding-left:${12 + pad}px" data-path="${escapeHtml(path)}">
+              <div class="flex items-center justify-between gap-2">
+                <div class="truncate">${escapeHtml(title)}</div>
+                <div class="flex items-center gap-2">
+                  ${badgeHtml(kind)}
+                  ${toolBadgeHtml(path, k, kind)}
+                </div>
+              </div>
+              ${id ? `<div class="mt-1 text-xs text-slate-500 mono">${escapeHtml(id)}</div>` : ""}
+            </button>
+          `;
+        }
+
+        return `
+          <details class="tree panel p-2">
+            <summary>
+              <button class="tree-btn ${active}" style="padding-left:${12 + pad}px" data-path="${escapeHtml(path)}">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="font-semibold">${escapeHtml(title)}</div>
+                  <div class="flex items-center gap-2">
+                    ${badgeHtml(kind)}
+                    ${toolBadgeHtml(path, k, kind)}
+                  </div>
+                </div>
+                ${id ? `<div class="mt-1 text-xs text-slate-500 mono">${escapeHtml(id)}</div>` : ""}
+              </button>
+            </summary>
+            <div class="mt-2 grid gap-2">
+              ${renderSubtree(path, k, q, depth + 1)}
+            </div>
+          </details>
+        `;
+      }).filter(Boolean).join("");
+    };
+
+    const pickByPath = (path) => {
+      const parts = String(path || "").split(".").slice(1); // drop "root"
+      let cur = state.root;
+      for (const p of parts) {
+        const idx = Number(p);
+        if (!Number.isFinite(idx)) return null;
+        cur = cur?.children?.[idx];
+        if (!cur) return null;
+      }
+      return cur;
+    };
+
+    const summarizeNode = (node) => {
+      const kind = node?.kind || (node?.courseKey ? "course" : "node");
+      const title = decodeIfMojibake(node?.courseTitle || node?.title || node?.fields?.title || "-");
+      const id = node?.id || node?.courseKey || "-";
+      const kids = Array.isArray(node?.children) ? node.children.length : 0;
+      const fields = isObj(node?.fields) ? Object.keys(node.fields).length : 0;
+      return { kind, title, id, kids, fields };
+    };
+
+    const renderInspector = () => {
+      const inspector = el("inspector");
+      const sel = pickByPath(state.selectedPath);
+      if (!sel) {
+        el("sel-status").textContent = "ยังไม่ได้เลือก";
+        inspector.innerHTML = `<div class="text-sm text-slate-600">คลิกที่รายการทางซ้ายเพื่อดูรายละเอียด</div>`;
+        return;
+      }
+      const s = summarizeNode(sel);
+      el("sel-status").textContent = `${s.kind} • ${s.kids} children`;
+
+      const fields = isObj(sel.fields) ? sel.fields : null;
+      const fieldRows = fields ? Object.entries(fields).map(([k, v]) => {
+        const key = escapeHtml(k);
+
+        if (isImageDataUri(v) || isLikelyPngBase64(v)) {
+          const src = isImageDataUri(v) ? v : `data:image/png;base64,${v}`;
+          return `
+            <div class="panel p-3">
+              <div class="text-xs text-slate-500 mono">${key}</div>
+              <details class="mt-2 panel p-3">
+                <summary class="cursor-pointer select-none text-sm font-semibold text-slate-700">ดูรูปที่แนบมา (base64)</summary>
+                <div class="mt-3">
+                  <img src="${escapeHtml(src)}" alt="embedded image" class="panel" style="max-height: 280px; width: 100%; object-fit: contain; background: #fff;" />
+                </div>
+                <pre class="mt-3 text-xs mono whitespace-pre-wrap break-all text-slate-700">${escapeHtml(String(v).slice(0, 1200))}${String(v).length > 1200 ? "..." : ""}</pre>
+              </details>
+            </div>
+          `;
+        }
+
+        const isLong = typeof v === "string" && v.length > 500;
+        const show = isLong ? (v.slice(0, 500) + "...") : v;
+        const rendered = escapeHtml(typeof show === "string" ? decodeIfMojibake(show) : JSON.stringify(show));
+        const full = typeof v === "string" ? decodeIfMojibake(v) : JSON.stringify(v, null, 2);
+        const showFull = isLong;
+        return `
+          <div class="panel p-3">
+            <div class="text-xs text-slate-500 mono">${key}</div>
+            <div class="mt-1 text-sm text-slate-700 break-words">${rendered}</div>
+            ${showFull ? `
+              <details class="mt-2 panel p-3">
+                <summary class="cursor-pointer select-none text-xs font-semibold text-slate-600">แสดงทั้งหมด</summary>
+                <pre class="mt-2 text-xs mono whitespace-pre-wrap break-all text-slate-700">${escapeHtml(full)}</pre>
+              </details>
+            ` : ""}
+          </div>
+        `;
+      }).join("") : `<div class="text-sm text-slate-600">ไม่มี fields</div>`;
+
+      const kids = Array.isArray(sel.children) ? sel.children : [];
+      const kidList = kids.length ? `
+        <div class="mt-4 kv">
+          <div class="text-sm font-bold text-slate-700">Children</div>
+          <div class="grid gap-2">
+            ${kids.slice(0, 80).map((c, i) => {
+              const kind = c?.kind || "node";
+              const title = decodeIfMojibake(c?.title || c?.fields?.title || "-");
+              const id = c?.id || "";
+              const nextPath = `${state.selectedPath}.${i}`;
+              const gkids = Array.isArray(c?.children) ? c.children : [];
+              return `
+                <div class="panel p-2">
+                  <button class="tree-btn ${state.selectedPath === nextPath ? "active" : ""}" data-path="${escapeHtml(nextPath)}">
+                    <div class="flex items-center justify-between gap-2">
+                      <div class="truncate">${escapeHtml(title)}</div>
+                      <div class="flex items-center gap-2">
+                        ${badgeHtml(kind)}
+                        ${toolBadgeHtml(nextPath, c, kind)}
+                      </div>
+                    </div>
+                    ${id ? `<div class="mt-1 text-xs text-slate-500 mono">${escapeHtml(id)}</div>` : ""}
+                  </button>
+
+                  ${gkids.length ? `
+                    <details class="mt-2 panel p-3">
+                      <summary class="cursor-pointer select-none text-xs text-slate-600 font-semibold">
+                        แสดงรายการย่อย (อีก 1 ชั้น) • ${gkids.length} รายการ
+                      </summary>
+                      <div class="mt-2 grid gap-2">
+                        ${gkids.slice(0, 40).map((gc, j) => {
+                          const gk = gc?.kind || "node";
+                          const gt = decodeIfMojibake(gc?.title || gc?.fields?.title || "-");
+                          const gid = gc?.id || "";
+                          const gpath = `${nextPath}.${j}`;
+                          return `
+                            <button class="tree-btn panel" data-path="${escapeHtml(gpath)}">
+                              <div class="flex items-center justify-between gap-2">
+                                <div class="truncate">${escapeHtml(gt)}</div>
+                                <div class="flex items-center gap-2">
+                                  ${badgeHtml(gk)}
+                                  ${toolBadgeHtml(gpath, gc, gk)}
+                                </div>
+                              </div>
+                              ${gid ? `<div class="mt-1 text-xs text-slate-500 mono">${escapeHtml(gid)}</div>` : ""}
+                            </button>
+                          `;
+                        }).join("")}
+                        ${gkids.length > 40 ? `<div class="text-xs text-slate-500">แสดง 40 จาก ${gkids.length} รายการ</div>` : ""}
+                      </div>
+                    </details>
+                  ` : ""}
+                </div>
+              `;
+            }).join("")}
+            ${kids.length > 80 ? `<div class="text-xs text-slate-500">แสดง ${80} จาก ${kids.length} รายการ</div>` : ""}
+          </div>
+        </div>
+      ` : "";
+
+      const childKinds = {};
+      countKinds(sel, childKinds);
+      const kindPills = Object.keys(childKinds)
+        .sort()
+        .map((k) => `<span class="chip px-3 py-1 text-xs text-slate-700 mono">${escapeHtml(k)}: ${childKinds[k]}</span>`)
+        .join("");
+
+      inspector.innerHTML = `
+        <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-3">
+          <div>
+            <div class="text-xs text-slate-500">Title</div>
+            <div class="text-xl font-extrabold">${escapeHtml(s.title)}</div>
+            <div class="mt-2 flex flex-wrap gap-2 items-center">
+              ${badgeHtml(s.kind)}
+              <span class="chip px-3 py-1 text-xs text-slate-700 mono">id: ${escapeHtml(s.id)}</span>
+              <span class="chip px-3 py-1 text-xs text-slate-700 mono">children: ${s.kids}</span>
+              <span class="chip px-3 py-1 text-xs text-slate-700 mono">fields: ${s.fields}</span>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            ${kindPills || `<span class="chip px-3 py-1 text-xs text-slate-700 mono">no kinds</span>`}
+          </div>
+        </div>
+
+        <div class="mt-4 kv">
+          <div class="text-sm font-bold text-slate-700">Fields</div>
+          <div class="grid gap-2">${fieldRows}</div>
+        </div>
+
+        ${kidList}
+
+        <details class="mt-4 panel p-4">
+          <summary class="cursor-pointer select-none text-sm font-bold text-slate-700">Raw JSON (node)</summary>
+          <pre class="mt-3 text-xs mono whitespace-pre-wrap break-all text-slate-700">${escapeHtml(JSON.stringify(sel, null, 2))}</pre>
+        </details>
+      `;
+    };
+
+    const setData = (root, sourceLabel) => {
+      state.root = root;
+      state.flat = flatten(root);
+      state.selectedPath = "root";
+      state.verticalToolCache = new Map();
+      setHeader(root);
+      setContextChips();
+      el("load-status").textContent = sourceLabel;
+      renderTree();
+      renderInspector();
+    };
+
+    const loadFromUrl = async (url) => {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      return res.json();
+    };
+
+    const loadMock = async () => {
+      const data = await loadFromUrl(DEFAULT_MOCK_URL);
+      setData(data, `โหลดจาก mock: ${DEFAULT_MOCK_URL}`);
+    };
+
+    // Event wiring
+    el("btn-mock").addEventListener("click", () => loadMock().catch((e) => {
+      el("load-status").textContent = `โหลด mock ไม่สำเร็จ: ${e?.message || e}`;
+    }));
+
+    el("btn-load").addEventListener("click", async () => {
+      const nextCourseId = el("input-courseid").value.trim();
+      const nextUserId = el("input-userid").value.trim();
+      ctx = { courseid: nextCourseId, userid: nextUserId };
+      writeParams(ctx);
+      setContextChips();
+
+      let url = el("input-url").value.trim();
+      if (!url && ctx.courseid) url = buildCourseApiUrl(ctx.courseid);
+      if (!url) { await loadMock(); return; }
+      try {
+        el("load-status").textContent = "กำลังโหลด...";
+        const data = await loadFromUrl(url);
+        setData(data, `โหลดจาก URL: ${url}`);
+      } catch (e) {
+        el("load-status").textContent = `โหลด URL ไม่สำเร็จ (อาจติด CORS): ${e?.message || e}`;
+      }
+    });
+
+    el("btn-parse").addEventListener("click", () => {
+      const raw = el("paste-json").value.trim();
+      if (!raw) return;
+      try {
+        const data = JSON.parse(raw);
+        setData(data, "โหลดจาก Paste JSON");
+      } catch (e) {
+        el("load-status").textContent = `JSON ไม่ถูกต้อง: ${e?.message || e}`;
+      }
+    });
+
+    el("btn-clear").addEventListener("click", () => { el("paste-json").value = ""; });
+
+    el("tree").addEventListener("click", (e) => {
+      const btn = e.target?.closest?.("[data-path]");
+      if (!btn) return;
+      const path = btn.getAttribute("data-path");
+      state.selectedPath = path;
+      renderTree();
+      renderInspector();
+    });
+
+    el("inspector").addEventListener("click", (e) => {
+      const btn = e.target?.closest?.("[data-path]");
+      if (!btn) return;
+      const path = btn.getAttribute("data-path");
+      state.selectedPath = path;
+      renderTree();
+      renderInspector();
+    });
+
+    el("tree-search").addEventListener("input", (e) => {
+      state.search = e.target.value || "";
+      renderTree();
+    });
+
+    // Init inputs from URL params + keep URL in sync for easy copy/share.
+    el("input-courseid").value = ctx.courseid;
+    el("input-userid").value = ctx.userid;
+    if (ctx.courseid) el("input-url").value = buildCourseApiUrl(ctx.courseid);
+    setContextChips();
+
+    el("input-courseid").addEventListener("input", (e) => {
+      ctx.courseid = (e.target.value || "").trim();
+      if (ctx.courseid) el("input-url").value = buildCourseApiUrl(ctx.courseid);
+      writeParams(ctx);
+      setContextChips();
+    });
+
+    el("input-userid").addEventListener("input", (e) => {
+      ctx.userid = (e.target.value || "").trim();
+      writeParams(ctx);
+      setContextChips();
+    });
+
+    // Auto-load on start: prefer courseid -> API URL, else mock.
+    (async () => {
+      if (ctx.courseid) {
+        const url = buildCourseApiUrl(ctx.courseid);
+        try {
+          el("load-status").textContent = "กำลังโหลด...";
+          const data = await loadFromUrl(url);
+          setData(data, `โหลดจาก URL: ${url}`);
+          return;
+        } catch (e) {
+          el("load-status").textContent = `โหลด URL ไม่สำเร็จ (อาจติด CORS): ${e?.message || e} • ใช้ mock แทน`;
+        }
+      }
+      await loadMock();
+    })().catch((e) => {
+      el("load-status").textContent = `โหลดไม่สำเร็จ: ${e?.message || e}`;
+    });
+  </script>
+</body>
+</html>

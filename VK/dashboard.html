@@ -408,6 +408,26 @@
                     </div>
                   </div>
 
+                  <div class="mt-5">
+                    <div class="clay-soft p-4 cat-card cat-4">
+                      <div class="flex items-start justify-between gap-3">
+                        <div>
+                          <div class="font-bold">หัวข้อการเรียนรู้</div>
+                          <div class="mt-1 text-sm text-slate-600">เลือกบทเพื่อดูรายละเอียดการใช้เครื่องมือและผลการเรียนรู้รายบท</div>
+                        </div>
+                        <div class="text-xs text-slate-500 mono" id="topic-status">รอข้อมูล</div>
+                      </div>
+
+                      <div class="mt-3 panel p-2">
+                        <div id="topic-tabs" class="flex flex-wrap gap-2"></div>
+                      </div>
+
+                      <div class="mt-3 panel p-4" id="topic-detail">
+                        <div class="text-sm text-slate-600">ยังไม่ได้เลือกบท</div>
+                      </div>
+                    </div>
+                  </div>
+
                   <div class="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div class="clay-soft p-4 cat-card cat-5">
                       <div class="flex items-center justify-between gap-3">
@@ -699,6 +719,18 @@
       });
     }
 
+    const topicTabsEl = document.getElementById("topic-tabs");
+    if (topicTabsEl) {
+      topicTabsEl.addEventListener("click", (e) => {
+        const btn = e.target?.closest?.("[data-topic-idx]");
+        if (!btn) return;
+        const idx = Number(btn.getAttribute("data-topic-idx"));
+        if (!Number.isFinite(idx)) return;
+        window.topicIndex = idx;
+        renderTopicTabsAndDetail();
+      });
+    }
+
     const bookrollUrl = (uid, cid) =>
       `https://bookroll.thaidlt.com/meca/student/BR_activity?userID=${encodeURIComponent(uid)}&usageId=${encodeURIComponent(cid)}`;
 
@@ -798,7 +830,7 @@
     const renderCourseOutline = (data) => {
       const outlineEl = document.getElementById("course-outline");
       if (!outlineEl) return;
-      const chapters = Array.isArray(data?.children) ? data.children : [];
+      const chapters = getSortedChapters(data);
       if (!chapters.length) {
         outlineEl.textContent = "-";
         return;
@@ -818,11 +850,49 @@
       outlineEl.innerHTML = rows.join("");
     };
 
-    const getCourseChapterTitles = (data) => {
+    const chapterSortKey = (rawTitle) => {
+      const titleRaw = String(rawTitle || "");
+      const title = titleRaw
+        .replace(/[๐-๙]/g, (d) => "๐๑๒๓๔๕๖๗๘๙".indexOf(d))
+        .trim();
+
+      // Try to pick the intended sequence from the human-readable prefix.
+      // Supports "กิจกรรมที่ 2", "บทที่ 3", "หน่วยที่ 1", "ใบกิจกรรมที่ 4.1", "ใบความรู้ที่ 2.2", etc.
+      const m = title.match(/(?:กิจกรรมที่|บทที่|หน่วยที่|ใบกิจกรรมที่|ใบความรู้ที่)\s*(\d+(?:\.\d+)*)/);
+      const num = m ? Number(m[1]) : null;
+
+      // group: lower first
+      // 0: pre-test/numbered lessons
+      // 1: other items
+      // 2: post-test
+      if (/ก่อนเรียน/.test(title)) return { group: 0, num: 0, title };
+      if (num != null && Number.isFinite(num)) return { group: 0, num, title };
+      if (/หลังเรียน|ปลายหน่วย|ปลายบท/.test(title)) return { group: 2, num: 9999, title };
+      return { group: 1, num: 9999, title };
+    };
+
+    const getSortedChapters = (data) => {
       const chapters = Array.isArray(data?.children) ? data.children : [];
       return chapters
         .filter((c) => !c.kind || c.kind === "chapter")
-        .map((c, idx) => decodeIfMojibake(c.title || c.fields?.title || `บทที่ ${idx + 1}`));
+        .map((c, idx) => {
+          const title = decodeIfMojibake(c.title || c.fields?.title || `บทที่ ${idx + 1}`);
+          return { c, idx, title, k: chapterSortKey(title) };
+        })
+        .sort((a, b) => {
+          if (a.k.group !== b.k.group) return a.k.group - b.k.group;
+          if (a.k.num !== b.k.num) return a.k.num - b.k.num;
+          // stabilize for non-numbered items
+          if (a.k.title < b.k.title) return -1;
+          if (a.k.title > b.k.title) return 1;
+          return a.idx - b.idx;
+        })
+        .map((x) => x.c);
+    };
+
+    const getCourseChapterTitles = (data) => {
+      const chapters = getSortedChapters(data);
+      return chapters.map((c, idx) => decodeIfMojibake(c.title || c.fields?.title || `บทที่ ${idx + 1}`));
     };
 
     const applyCategoryLabels = (cfg, labels) => {
@@ -854,6 +924,228 @@
         });
       }
       return next;
+    };
+
+    const getSeriesAt = (cfg, idx, preferNameIncludes) => {
+      const series = Array.isArray(cfg?.series) ? cfg.series : [];
+      if (!series.length) return null;
+      let s = series[0];
+      if (preferNameIncludes) {
+        const found = series.find((x) => (x?.name || "").toLowerCase().includes(preferNameIncludes.toLowerCase()));
+        if (found) s = found;
+      }
+      const arr = Array.isArray(s?.data) ? s.data : [];
+      const v = arr[idx];
+      return Number.isFinite(v) ? v : (typeof v === "string" ? Number(v) : null);
+    };
+
+    const pickTitle = (node, fallback) => decodeIfMojibake(node?.title || node?.fields?.title || fallback || "-");
+
+    const sortKeyFromTitle = (rawTitle) => {
+      const t = String(rawTitle || "")
+        .replace(/[๐-๙]/g, (d) => "๐๑๒๓๔๕๖๗๘๙".indexOf(d))
+        .trim();
+      const m = t.match(/(\d+(?:\.\d+)*)/);
+      const n = m ? Number(m[1]) : null;
+      return { has: n != null && Number.isFinite(n), n: n ?? 9999, t };
+    };
+
+    const sortByTitleNumber = (arr) =>
+      (arr || []).slice().sort((a, b) => {
+        const ka = sortKeyFromTitle(pickTitle(a));
+        const kb = sortKeyFromTitle(pickTitle(b));
+        if (ka.has !== kb.has) return ka.has ? -1 : 1;
+        if (ka.n !== kb.n) return ka.n - kb.n;
+        if (ka.t < kb.t) return -1;
+        if (ka.t > kb.t) return 1;
+        return 0;
+      });
+
+    const collectKindsDeep = (node, set) => {
+      if (!node) return;
+      const kind = node.kind;
+      if (kind) set.add(kind);
+      const kids = node.children || [];
+      for (const k of kids) collectKindsDeep(k, set);
+    };
+
+    const collectTextDeep = (node, out, maxLen = 16000) => {
+      if (!node || out.text.length >= maxLen) return;
+      if (typeof node === "string") {
+        out.text += "\n" + node;
+        return;
+      }
+      if (typeof node !== "object") return;
+      const tryPush = (v) => {
+        if (typeof v === "string" && v) out.text += "\n" + v;
+      };
+      tryPush(node.kind);
+      tryPush(node.id);
+      tryPush(node.title);
+      if (node.fields && typeof node.fields === "object") {
+        // Common places where tool identifiers/URLs exist.
+        ["display_name", "displayName", "title", "data", "url", "href", "src", "launch_url", "launchUrl"].forEach((k) => {
+          tryPush(node.fields?.[k]);
+        });
+      }
+      const kids = node.children || [];
+      for (const k of kids) collectTextDeep(k, out, maxLen);
+    };
+
+    const inferAeToolSubtype = (vertical) => {
+      const bag = { text: "" };
+      (vertical?.children || []).forEach((c) => collectTextDeep(c, bag));
+      const t = decodeIfMojibake(bag.text).toLowerCase();
+      if (!t) return null;
+
+      if (t.includes("bookroll") || t.includes("br_") || t.includes("thaidlt.com")) return "BookRoll";
+      if (t.includes("kidbright simulator") || (t.includes("kidbright") && t.includes("sim"))) return "KidBright Simulator";
+      if (t.includes("mqtt")) return "MQTT Tool";
+      return null;
+    };
+
+    const inferVerticalTool = (vertical) => {
+      const kinds = new Set();
+      (vertical?.children || []).forEach((c) => collectKindsDeep(c, kinds));
+      // remove container kinds if present
+      kinds.delete("vertical");
+      kinds.delete("sequential");
+      kinds.delete("chapter");
+
+      const title = pickTitle(vertical, "");
+      const titleLc = title.toLowerCase();
+      const isAeTool = titleLc.includes("ae tool") || titleLc.includes("aetool") || titleLc.includes("ae-tool");
+
+      const subtype = inferAeToolSubtype(vertical);
+      if (isAeTool) return { label: "AE Tool", sublabel: subtype, tone: "badge kind-sequential" };
+      if (kinds.has("lti")) return { label: "AE Tool (LTI)", sublabel: subtype, tone: "badge kind-sequential" };
+      if (kinds.has("problem")) return { label: "แบบทดสอบ (problem)", tone: "badge kind-vertical" };
+      if (kinds.has("video")) return { label: "วิดีโอ", tone: "badge kind-vertical" };
+      if (kinds.has("openassessment")) return { label: "ประเมินผล (OA)", tone: "badge kind-vertical" };
+      if (kinds.has("discussion")) return { label: "อภิปราย", tone: "badge kind-vertical" };
+      if (kinds.has("html") && kinds.size === 1) return { label: "อ่านเนื้อหา (HTML)", tone: "badge kind-html" };
+      if (kinds.size) return { label: `Mixed: ${Array.from(kinds).join("+")}`, tone: "badge" };
+      return { label: "ไม่ทราบประเภท", tone: "badge" };
+    };
+
+    const renderChapterTools = (chapterNode) => {
+      if (!chapterNode) return `<div class="text-sm text-slate-600">ยังไม่พบข้อมูลบท</div>`;
+      const sequentials = sortByTitleNumber((chapterNode.children || []).filter((c) => c?.kind === "sequential"));
+      if (!sequentials.length) return `<div class="text-sm text-slate-600">บทนี้ไม่มีรายการย่อย</div>`;
+
+      const blocks = sequentials.map((seq, sIdx) => {
+        const seqTitle = pickTitle(seq, `Sequential ${sIdx + 1}`);
+        const verticals = sortByTitleNumber((seq.children || []).filter((c) => c?.kind === "vertical"));
+        const vHtml = verticals.map((v, vIdx) => {
+          const vTitle = pickTitle(v, `Vertical ${vIdx + 1}`);
+          const tool = inferVerticalTool(v);
+          const sub = tool.sublabel ? `<span class="badge ml-2">${escapeHtml(tool.sublabel)}</span>` : "";
+          return `
+            <div class="panel p-3">
+              <div class="flex items-start justify-between gap-2">
+                <div class="font-medium">${escapeHtml(vTitle)}</div>
+                <div class="flex items-center gap-2 justify-end">
+                  <span class="${tool.tone}">${escapeHtml(tool.label)}</span>${sub}
+                </div>
+              </div>
+              ${v?.id ? `<div class="mt-1 text-xs text-slate-500 mono break-all">${escapeHtml(v.id)}</div>` : ""}
+            </div>
+          `;
+        }).join("");
+
+        return `
+          <div class="panel p-4">
+            <div class="flex items-center justify-between gap-2">
+              <div class="font-bold">${escapeHtml(seqTitle)}</div>
+              <div class="text-xs text-slate-500 mono">${verticals.length} vertical</div>
+            </div>
+            ${seq?.id ? `<div class="mt-1 text-xs text-slate-500 mono break-all">${escapeHtml(seq.id)}</div>` : ""}
+            <div class="mt-3 grid gap-2">
+              ${vHtml || `<div class="text-sm text-slate-600">ไม่มี vertical</div>`}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      return `<div class="grid gap-3">${blocks}</div>`;
+    };
+
+    const renderTopicTabsAndDetail = () => {
+      const statusEl = document.getElementById("topic-status");
+      const tabsEl = document.getElementById("topic-tabs");
+      const detailEl = document.getElementById("topic-detail");
+      if (!tabsEl || !detailEl) return;
+
+      const titles = getCourseChapterTitles(window.courseDetailData);
+      const chapters = getSortedChapters(window.courseDetailData);
+      if (!titles.length) {
+        if (statusEl) statusEl.textContent = "ไม่มีบท";
+        tabsEl.innerHTML = "";
+        detailEl.innerHTML = `<div class="text-sm text-slate-600">ยังไม่มีข้อมูลบทเรียน</div>`;
+        return;
+      }
+
+      if (statusEl) statusEl.textContent = `มี ${titles.length} บท`;
+      window.topicIndex = Math.min(Math.max(Number(window.topicIndex || 0), 0), titles.length - 1);
+
+      const tabHtml = titles.map((t, i) => {
+        const active = i === window.topicIndex;
+        const cls = active
+          ? "pill px-3 py-2 text-sm font-semibold text-white grad-brand"
+          : "ghost px-3 py-2 text-sm text-slate-700";
+        return `<button class="${cls}" data-topic-idx="${i}">${escapeHtml(`บท ${i + 1}: ${t}`)}</button>`;
+      }).join("");
+      tabsEl.innerHTML = tabHtml;
+
+      const idx = window.topicIndex;
+      const chapterTitle = titles[idx];
+      const chapterNode = chapters[idx] || null;
+
+      const doneV = getSeriesAt(window.doneChapterData, idx) ?? 0;
+      const doneText = doneV > 0 ? "ผ่านแล้ว" : "ยังไม่ผ่าน";
+      const doneTone = doneV > 0 ? "grad-success text-white" : "btn-soft";
+
+      const speedAvg = getSeriesAt(window.chatbotSpeedData, idx, "average");
+      const speedYou = getSeriesAt(window.chatbotSpeedData, idx, "your");
+      const perfAvg = getSeriesAt(window.chatbotPerfData, idx, "average");
+      const perfYou = getSeriesAt(window.chatbotPerfData, idx, "your");
+
+      const pct = (v) => (v == null || Number.isNaN(v)) ? "-" : `${Math.round(v)}%`;
+      const bar = (v) => {
+        const n = v == null || Number.isNaN(v) ? 0 : Math.max(0, Math.min(100, Number(v)));
+        return `<div class="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden"><div class="h-full grad-brand" style="width:${n}%"></div></div>`;
+      };
+
+      detailEl.innerHTML = `
+        <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-3">
+          <div>
+            <div class="text-xs text-slate-500">รายละเอียดบทที่ ${idx + 1}</div>
+            <div class="text-lg font-extrabold">${escapeHtml(chapterTitle)}</div>
+          </div>
+          <div class="pill px-4 py-2 text-sm font-semibold tracking-wide ${doneTone}">${escapeHtml(doneText)}</div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div class="panel p-4">
+            <div class="text-sm font-bold">Learning Speed</div>
+            <div class="mt-2 text-sm text-slate-600">Your: <span class="mono font-bold">${escapeHtml(pct(speedYou))}</span> • Avg: <span class="mono">${escapeHtml(pct(speedAvg))}</span></div>
+            ${bar(speedYou)}
+          </div>
+          <div class="panel p-4">
+            <div class="text-sm font-bold">Learning Performance</div>
+            <div class="mt-2 text-sm text-slate-600">Your: <span class="mono font-bold">${escapeHtml(pct(perfYou))}</span> • Avg: <span class="mono">${escapeHtml(pct(perfAvg))}</span></div>
+            ${bar(perfYou)}
+          </div>
+        </div>
+
+        <div class="mt-3 panel p-4">
+          <div class="text-sm font-bold">รายการย่อยในบทนี้ (Sequential / Vertical)</div>
+          <div class="mt-2 text-sm text-slate-600">ดูประเภทเครื่องมือจาก component ที่อยู่ในแต่ละ vertical</div>
+          <div class="mt-3">
+            ${renderChapterTools(chapterNode)}
+          </div>
+        </div>
+      `;
     };
 
     const fetchCourseDetail = async () => {
@@ -910,6 +1202,22 @@
             if (rawEl) rawEl.textContent = JSON.stringify(relabeled, null, 2);
           }
         }
+
+        // Re-label speed/perf charts (if loaded) to match the course outline, then refresh tabs.
+        const chapterLabels = getCourseChapterTitles(data);
+        if (window.chatbotSpeedData && chapterLabels.length) {
+          window.chatbotSpeedData = applyCategoryLabels(window.chatbotSpeedData, chapterLabels);
+          renderEchartToChart(window.chatbotSpeedData, "chatbotSpeedChart", "Chatbot Speed");
+          const rawEl = document.getElementById("chatbot-speed-raw");
+          if (rawEl) rawEl.textContent = JSON.stringify(window.chatbotSpeedData, null, 2);
+        }
+        if (window.chatbotPerfData && chapterLabels.length) {
+          window.chatbotPerfData = applyCategoryLabels(window.chatbotPerfData, chapterLabels);
+          renderEchartToChart(window.chatbotPerfData, "chatbotPerfChart", "Chatbot Performance");
+          const rawEl = document.getElementById("chatbot-perf-raw");
+          if (rawEl) rawEl.textContent = JSON.stringify(window.chatbotPerfData, null, 2);
+        }
+        renderTopicTabsAndDetail();
 
         if (statusEl) statusEl.textContent = USE_MOCK_API ? `ใช้ข้อมูลจำลอง (${srcUrl})` : "โหลดสำเร็จ";
       } catch (err) {
@@ -1182,15 +1490,20 @@
           if (!res.ok) throw new Error(await res.text());
           data = await res.json();
         }
-        renderEchartToChart(data, "chatbotSpeedChart", "Chatbot Speed");
+        window.chatbotSpeedData = data;
+        const labels = getCourseChapterTitles(window.courseDetailData);
+        const relabeled = labels.length ? applyCategoryLabels(data, labels) : data;
+        window.chatbotSpeedData = relabeled;
+        renderEchartToChart(relabeled, "chatbotSpeedChart", "Chatbot Speed");
         if (summaryEl) {
-          const series = data?.series?.[0]?.data || [];
+          const series = relabeled?.series?.[0]?.data || [];
           const nums = series.map((v) => Number(v) || 0);
           const avg = nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : 0;
           summaryEl.textContent = nums.length ? `ค่าเฉลี่ยความเร็ว: ${avg}` : "ยังไม่มีข้อมูล";
         }
-        if (rawEl) rawEl.textContent = JSON.stringify(data, null, 2);
+        if (rawEl) rawEl.textContent = JSON.stringify(relabeled, null, 2);
         if (statusEl) statusEl.textContent = USE_MOCK_API ? `ใช้ข้อมูลจำลอง (${srcUrl})` : "โหลดสำเร็จ";
+        renderTopicTabsAndDetail();
       } catch (err) {
         if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
         if (rawEl) rawEl.textContent = err?.message || "เกิดข้อผิดพลาด";
@@ -1224,15 +1537,20 @@
           if (!res.ok) throw new Error(await res.text());
           data = await res.json();
         }
-        renderEchartToChart(data, "chatbotPerfChart", "Chatbot Performance");
+        window.chatbotPerfData = data;
+        const labels = getCourseChapterTitles(window.courseDetailData);
+        const relabeled = labels.length ? applyCategoryLabels(data, labels) : data;
+        window.chatbotPerfData = relabeled;
+        renderEchartToChart(relabeled, "chatbotPerfChart", "Chatbot Performance");
         if (summaryEl) {
-          const series = data?.series?.[0]?.data || [];
+          const series = relabeled?.series?.[0]?.data || [];
           const nums = series.map((v) => Number(v) || 0);
           const avg = nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : 0;
           summaryEl.textContent = nums.length ? `ค่าเฉลี่ยผลการตอบ: ${avg}` : "ยังไม่มีข้อมูล";
         }
-        if (rawEl) rawEl.textContent = JSON.stringify(data, null, 2);
+        if (rawEl) rawEl.textContent = JSON.stringify(relabeled, null, 2);
         if (statusEl) statusEl.textContent = USE_MOCK_API ? `ใช้ข้อมูลจำลอง (${srcUrl})` : "โหลดสำเร็จ";
+        renderTopicTabsAndDetail();
       } catch (err) {
         if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
         if (rawEl) rawEl.textContent = err?.message || "เกิดข้อผิดพลาด";
@@ -1272,6 +1590,7 @@
         renderEchartToChart(relabeled, "doneChapterChart", "Done Chapter");
         if (rawEl) rawEl.textContent = JSON.stringify(relabeled, null, 2);
         if (statusEl) statusEl.textContent = USE_MOCK_API ? `ใช้ข้อมูลจำลอง (${srcUrl})` : "โหลดสำเร็จ";
+        renderTopicTabsAndDetail();
       } catch (err) {
         if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
         if (rawEl) rawEl.textContent = err?.message || "เกิดข้อผิดพลาด";
