@@ -431,6 +431,139 @@
       return { label: "Unknown", cls: "badge tool-mixed" };
     };
 
+    const pickTitle = (node, fallback) =>
+      decodeIfMojibake(node?.title || node?.fields?.title || fallback || "-");
+
+    const normalizeThaiDigits = (s) =>
+      String(s || "").replace(/[๐-๙]/g, (d) => "๐๑๒๓๔๕๖๗๘๙".indexOf(d));
+
+    const sortKeyFromTitle = (rawTitle) => {
+      const t = normalizeThaiDigits(rawTitle).trim();
+      const m = t.match(/(\d+(?:\.\d+)*)/);
+      const n = m ? Number(m[1]) : null;
+      const has = n != null && Number.isFinite(n);
+      return { has, n: has ? n : 9999, t };
+    };
+
+    const sortByTitleNumber = (arr) =>
+      (arr || []).slice().sort((a, b) => {
+        const ka = sortKeyFromTitle(pickTitle(a));
+        const kb = sortKeyFromTitle(pickTitle(b));
+        if (ka.has !== kb.has) return ka.has ? -1 : 1;
+        if (ka.n !== kb.n) return ka.n - kb.n;
+        if (ka.t < kb.t) return -1;
+        if (ka.t > kb.t) return 1;
+        return 0;
+      });
+
+    const contentGroup = (rawTitle) => {
+      const t = normalizeThaiDigits(rawTitle);
+      if (t.includes("จุดประสงค์")) return 10;
+      if (t.includes("ตัวชี้วัด")) return 20;
+      if (t.includes("สาระการเรียนรู้")) return 30;
+      if (t.includes("สื่อ") || t.includes("แหล่งเรียนรู้")) return 40;
+      if (t.includes("ข้อแนะนำ")) return 50;
+      if (t.includes("คำชี้แจง")) return 60;
+      if (t.includes("วิดีโอ")) return 70;
+      if (t.includes("ใบความรู้")) return 80;
+      if (t.includes("ใบกิจกรรม")) return 90;
+      if (t.includes("คำถาม") || t.includes("แบบทดสอบ")) return 100;
+      return 999;
+    };
+
+    const sortByContentOrder = (items, getTitle) =>
+      (items || []).slice().sort((a, b) => {
+        const ta = getTitle(a);
+        const tb = getTitle(b);
+        const ga = contentGroup(ta);
+        const gb = contentGroup(tb);
+        if (ga !== gb) return ga - gb;
+        const na = sortKeyFromTitle(ta);
+        const nb = sortKeyFromTitle(tb);
+        if (na.has !== nb.has) return na.has ? -1 : 1;
+        if (na.n !== nb.n) return na.n - nb.n;
+        if (na.t < nb.t) return -1;
+        if (na.t > nb.t) return 1;
+        return 0;
+      });
+
+    const getSortedChaptersWithPaths = () => {
+      const chaptersRaw = Array.isArray(state.root?.children) ? state.root.children : [];
+      return chaptersRaw
+        .map((ch, origIdx) => {
+          const title = pickTitle(ch, `บท ${origIdx + 1}`);
+          return { ch, origIdx, title, k: chapterSortKey(title), path: `root.${origIdx}` };
+        })
+        .sort((a, b) => {
+          if (a.k.group !== b.k.group) return a.k.group - b.k.group;
+          if (a.k.num !== b.k.num) return a.k.num - b.k.num;
+          if (a.k.title < b.k.title) return -1;
+          if (a.k.title > b.k.title) return 1;
+          return a.origIdx - b.origIdx;
+        });
+    };
+
+    const renderSequenceExpanded = (chapterNode, chapterPath) => {
+      const seqs = sortByContentOrder(
+        (chapterNode?.children || []).map((n, idx) => ({ n, idx })).filter(({ n }) => n?.kind === "sequential"),
+        (x) => pickTitle(x.n)
+      );
+      if (!seqs.length) return `<div class="text-sm text-slate-600">บทนี้ไม่มี sequential</div>`;
+
+      const blocks = seqs.map(({ n: seq, idx }, sIdx) => {
+        const seqTitle = pickTitle(seq, `Sequential ${sIdx + 1}`);
+        const seqPath = `${chapterPath}.${idx}`;
+        const verts = sortByContentOrder(
+          (seq?.children || []).map((v, vidx) => ({ v, vidx })).filter(({ v }) => v?.kind === "vertical"),
+          (x) => pickTitle(x.v)
+        );
+
+        const vHtml = verts.map(({ v, vidx }, vIdx) => {
+          const vTitle = pickTitle(v, `Vertical ${vIdx + 1}`);
+          const vPath = `${seqPath}.${vidx}`;
+          return `
+            <button class="tree-btn panel" data-path="${escapeHtml(vPath)}">
+              <div class="flex items-start justify-between gap-2">
+                <div class="font-medium">${escapeHtml(vTitle)}</div>
+                <div class="flex items-center gap-2">
+                  <span class="badge kind-vertical">vertical</span>
+                  ${toolBadgeHtml(vPath, v, "vertical")}
+                </div>
+              </div>
+              ${v?.id ? `<div class="mt-1 text-xs text-slate-500 mono break-all">${escapeHtml(v.id)}</div>` : ""}
+            </button>
+          `;
+        }).join("");
+
+        return `
+          <details class="panel p-3" open>
+            <summary class="cursor-pointer select-none">
+              <button class="tree-btn" data-path="${escapeHtml(seqPath)}">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="font-bold">${escapeHtml(seqTitle)}</div>
+                  <div class="flex items-center gap-2">
+                    <span class="badge kind-sequential">sequential</span>
+                    <span class="chip px-3 py-1 text-xs text-slate-700 mono">${verts.length} vertical</span>
+                  </div>
+                </div>
+                ${seq?.id ? `<div class="mt-1 text-xs text-slate-500 mono break-all">${escapeHtml(seq.id)}</div>` : ""}
+              </button>
+            </summary>
+            <div class="mt-2 grid gap-2">
+              ${vHtml || `<div class="text-sm text-slate-600">ไม่มี vertical</div>`}
+            </div>
+          </details>
+        `;
+      }).join("");
+
+      return `
+        <div class="mt-4">
+          <div class="text-sm font-bold text-slate-700">Sequential (คลี่ให้เห็น Vertical)</div>
+          <div class="mt-2 grid gap-3">${blocks}</div>
+        </div>
+      `;
+    };
+
     const toolBadgeHtml = (path, node, kind) => {
       if (kind !== "vertical") return "";
       state.verticalToolCache ||= new Map();
@@ -637,7 +770,9 @@
       }).join("") : `<div class="text-sm text-slate-600">ไม่มี fields</div>`;
 
       const kids = Array.isArray(sel.children) ? sel.children : [];
-      const kidList = kids.length ? `
+      const kidList = (s.kind === "chapter")
+        ? renderSequenceExpanded(sel, state.selectedPath)
+        : (kids.length ? `
         <div class="mt-4 kv">
           <div class="text-sm font-bold text-slate-700">Children</div>
           <div class="grid gap-2">
@@ -694,7 +829,7 @@
             ${kids.length > 80 ? `<div class="text-xs text-slate-500">แสดง ${80} จาก ${kids.length} รายการ</div>` : ""}
           </div>
         </div>
-      ` : "";
+      ` : "");
 
       const childKinds = {};
       countKinds(sel, childKinds);
@@ -737,7 +872,8 @@
     const setData = (root, sourceLabel) => {
       state.root = root;
       state.flat = flatten(root);
-      state.selectedPath = "root";
+      const sorted = getSortedChaptersWithPaths();
+      state.selectedPath = sorted.length ? sorted[0].path : "root";
       state.verticalToolCache = new Map();
       setHeader(root);
       setContextChips();
