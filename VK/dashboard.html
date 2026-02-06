@@ -392,10 +392,12 @@
                           <div class="mt-1 text-2xl font-black mono text-brand-soft" id="br-progress">-</div>
                         </div>
                       </div>
-                      <div class="mt-3 panel p-4 text-xs text-slate-600">
-                        <div class="text-xs text-slate-500 mb-2">Raw</div>
-                        <pre id="bookroll-raw" class="whitespace-pre-wrap break-all">ยังไม่มีข้อมูล</pre>
-                      </div>
+                      <details class="mt-3 panel p-4 text-xs text-slate-600">
+                        <summary class="cursor-pointer select-none text-xs text-slate-500 font-semibold">
+                          ดูข้อมูลดิบ (JSON)
+                        </summary>
+                        <pre id="bookroll-raw" class="mt-2 whitespace-pre-wrap break-all">ยังไม่มีข้อมูล</pre>
+                      </details>
                     </div>
                   </div>
 
@@ -408,10 +410,12 @@
                       <div class="mt-3 h-[280px]">
                         <canvas class="chart-canvas" id="doneChapterChart"></canvas>
                       </div>
-                      <div class="mt-3 panel p-4 text-xs text-slate-600">
-                        <div class="text-xs text-slate-500 mb-2">Raw</div>
-                        <pre id="donechapter-raw" class="whitespace-pre-wrap break-all">ยังไม่มีข้อมูล</pre>
-                      </div>
+                      <details class="mt-3 panel p-4 text-xs text-slate-600">
+                        <summary class="cursor-pointer select-none text-xs text-slate-500 font-semibold">
+                          ดูข้อมูลดิบ (JSON)
+                        </summary>
+                        <pre id="donechapter-raw" class="mt-2 whitespace-pre-wrap break-all">ยังไม่มีข้อมูล</pre>
+                      </details>
                     </div>
                   </div>
 
@@ -425,10 +429,12 @@
                       <div class="mt-3 h-[260px]">
                         <canvas class="chart-canvas" id="chatbotSpeedChart"></canvas>
                       </div>
-                      <div class="mt-3 panel p-4 text-xs text-slate-600">
-                        <div class="text-xs text-slate-500 mb-2">Raw</div>
-                        <pre id="chatbot-speed-raw" class="whitespace-pre-wrap break-all">ยังไม่มีข้อมูล</pre>
-                      </div>
+                      <details class="mt-3 panel p-4 text-xs text-slate-600">
+                        <summary class="cursor-pointer select-none text-xs text-slate-500 font-semibold">
+                          ดูข้อมูลดิบ (JSON)
+                        </summary>
+                        <pre id="chatbot-speed-raw" class="mt-2 whitespace-pre-wrap break-all">ยังไม่มีข้อมูล</pre>
+                      </details>
                     </div>
 
                     <div class="clay-soft p-4 cat-card cat-3">
@@ -440,10 +446,12 @@
                       <div class="mt-3 h-[260px]">
                         <canvas class="chart-canvas" id="chatbotPerfChart"></canvas>
                       </div>
-                      <div class="mt-3 panel p-4 text-xs text-slate-600">
-                        <div class="text-xs text-slate-500 mb-2">Raw</div>
-                        <pre id="chatbot-perf-raw" class="whitespace-pre-wrap break-all">ยังไม่มีข้อมูล</pre>
-                      </div>
+                      <details class="mt-3 panel p-4 text-xs text-slate-600">
+                        <summary class="cursor-pointer select-none text-xs text-slate-500 font-semibold">
+                          ดูข้อมูลดิบ (JSON)
+                        </summary>
+                        <pre id="chatbot-perf-raw" class="mt-2 whitespace-pre-wrap break-all">ยังไม่มีข้อมูล</pre>
+                      </details>
                     </div>
                   </div>
 
@@ -499,6 +507,7 @@
   </div>
 
   <script>
+    const USE_MOCK_API = true;
     const OIDC = {
       authorizationEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/auth",
       tokenEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/token",
@@ -719,6 +728,35 @@
     const doneChapterAeUrl = (uid, cid) =>
       `https://ae-backend.learning.app.meca.in.th/analysis/donechapterview/${encodeURIComponent(uid)}/course/${encodeURIComponent(cid)}`;
 
+    const mockUrl = {
+      course: "mock/courseDetail.json",
+      bookrollMaxPage: "mock/bookrollMaxPage.json",
+      bookrollActivity: "mock/bookrollActivity.json",
+      chatbotSpeed: "mock/chatbotSpeed.json",
+      chatbotPerformance: "mock/chatbotPerformance.json",
+      doneChapter: "mock/doneChapterView.json",
+    };
+
+    const fetchMockJson = async (relPath) => {
+      const clean = String(relPath || "").replace(/^\/+/, "");
+      const candidates = [
+        clean,
+        "/" + clean,
+        "/VK/" + clean,
+      ];
+      let lastErr = null;
+      for (const u of candidates) {
+        try {
+          const res = await fetch(u);
+          if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+          return { data: await res.json(), url: u };
+        } catch (e) {
+          lastErr = e;
+        }
+      }
+      throw lastErr || new Error("mock fetch failed");
+    };
+
     const isLikelyCourseId = (cid) =>
       typeof cid === "string" && cid.includes("course-v1:");
 
@@ -796,19 +834,28 @@
       const seqEl = document.getElementById("course-seq");
       const vertEl = document.getElementById("course-vert");
       const htmlEl = document.getElementById("course-html");
-      if (!courseId) {
-        if (statusEl) statusEl.textContent = "ขาด courseid";
-        return;
-      }
-      if (!isLikelyCourseId(courseId)) {
-        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
-        return;
+      if (!USE_MOCK_API) {
+        if (!courseId) {
+          if (statusEl) statusEl.textContent = "ขาด courseid";
+          return;
+        }
+        if (!isLikelyCourseId(courseId)) {
+          if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
+          return;
+        }
       }
       if (statusEl) statusEl.textContent = "กำลังโหลด...";
       try {
-        const res = await fetch(courseUrl(courseId));
-        if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
+        let data, srcUrl;
+        if (USE_MOCK_API) {
+          const out = await fetchMockJson(mockUrl.course);
+          data = out.data;
+          srcUrl = out.url;
+        } else {
+          const res = await fetch(courseUrl(courseId));
+          if (!res.ok) throw new Error(await res.text());
+          data = await res.json();
+        }
         const title = decodeIfMojibake(data.courseTitle || data.title || "-");
         const key = data.courseKey || data.course_key || courseId;
         if (titleEl) titleEl.textContent = title;
@@ -820,7 +867,7 @@
         if (vertEl) vertEl.textContent = acc.vertical;
         if (htmlEl) htmlEl.textContent = acc.html;
         renderCourseOutline(data);
-        if (statusEl) statusEl.textContent = "โหลดสำเร็จ";
+        if (statusEl) statusEl.textContent = USE_MOCK_API ? `ใช้ข้อมูลจำลอง (${srcUrl})` : "โหลดสำเร็จ";
       } catch (err) {
         if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
         console.warn("Course API error:", err);
@@ -979,19 +1026,28 @@
       const totalEl = document.getElementById("br-pages-total");
       const progressEl = document.getElementById("br-progress");
       const summaryEl = document.getElementById("bookroll-activity-summary");
-      if (!userId || !courseId) {
-        if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
-        return;
-      }
-      if (!isLikelyCourseId(courseId)) {
-        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
-        return;
+      if (!USE_MOCK_API) {
+        if (!userId || !courseId) {
+          if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
+          return;
+        }
+        if (!isLikelyCourseId(courseId)) {
+          if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
+          return;
+        }
       }
       if (statusEl) statusEl.textContent = "กำลังโหลด...";
       try {
-        const res = await fetch(bookrollUrl(userId, courseId));
-        if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
+        let data, srcUrl;
+        if (USE_MOCK_API) {
+          const out = await fetchMockJson(mockUrl.bookrollActivity);
+          data = out.data;
+          srcUrl = out.url;
+        } else {
+          const res = await fetch(bookrollUrl(userId, courseId));
+          if (!res.ok) throw new Error(await res.text());
+          data = await res.json();
+        }
         window.bookrollData = data;
         renderBookrollChart(data);
         if (summaryEl) {
@@ -1013,7 +1069,7 @@
             progressEl.textContent = "-";
           }
         }
-        if (statusEl) statusEl.textContent = "โหลดสำเร็จ";
+        if (statusEl) statusEl.textContent = USE_MOCK_API ? `ใช้ข้อมูลจำลอง (${srcUrl})` : "โหลดสำเร็จ";
         if (rawEl) rawEl.textContent = JSON.stringify(data, null, 2);
       } catch (err) {
         if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
@@ -1025,35 +1081,34 @@
     const fetchBookrollMaxPage = async () => {
       const statusEl = document.getElementById("bookroll-maxpage-status");
       const summaryEl = document.getElementById("bookroll-maxpage-summary");
-      if (!userId || !courseId) {
-        if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
-        return;
-      }
-      if (!isLikelyCourseId(courseId)) {
-        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
-        return;
+      if (!USE_MOCK_API) {
+        if (!userId || !courseId) {
+          if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
+          return;
+        }
+        if (!isLikelyCourseId(courseId)) {
+          if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
+          return;
+        }
       }
       if (statusEl) statusEl.textContent = "กำลังโหลด...";
       try {
-        let res = await fetch(bookrollMaxPageUrl(courseId, userId));
-        if (!res.ok) throw new Error(await res.text());
-        let data = await res.json();
+        let data, srcUrl;
+        if (USE_MOCK_API) {
+          const out = await fetchMockJson(mockUrl.bookrollMaxPage);
+          data = out.data;
+          srcUrl = out.url;
+        } else {
+          const res = await fetch(bookrollMaxPageUrl(courseId, userId));
+          if (!res.ok) throw new Error(await res.text());
+          data = await res.json();
+        }
         renderBookrollMaxPageChart(data);
         if (summaryEl) summaryEl.textContent = summarizeMaxPage(data);
-        if (statusEl) statusEl.textContent = "โหลดสำเร็จ";
+        if (statusEl) statusEl.textContent = USE_MOCK_API ? `ใช้ข้อมูลจำลอง (${srcUrl})` : "โหลดสำเร็จ";
       } catch (err) {
-        try {
-          const res = await fetch("mock/bookrollMaxPage.json");
-          if (!res.ok) throw new Error(await res.text());
-          const data = await res.json();
-          renderBookrollMaxPageChart(data);
-          if (summaryEl) summaryEl.textContent = summarizeMaxPage(data);
-          if (statusEl) statusEl.textContent = "ใช้ข้อมูลจำลอง";
-        } catch (mockErr) {
-          if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
-          console.warn("Bookroll MaxPage API error:", err);
-          console.warn("Bookroll MaxPage mock error:", mockErr);
-        }
+        if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
+        console.warn("Bookroll MaxPage API error:", err);
       }
     };
 
@@ -1061,19 +1116,28 @@
       const statusEl = document.getElementById("chatbot-speed-status");
       const rawEl = document.getElementById("chatbot-speed-raw");
       const summaryEl = document.getElementById("chatbot-speed-summary");
-      if (!userId || !courseId) {
-        if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
-        return;
-      }
-      if (!isLikelyCourseId(courseId)) {
-        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
-        return;
+      if (!USE_MOCK_API) {
+        if (!userId || !courseId) {
+          if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
+          return;
+        }
+        if (!isLikelyCourseId(courseId)) {
+          if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
+          return;
+        }
       }
       if (statusEl) statusEl.textContent = "กำลังโหลด...";
       try {
-        const res = await fetch(chatbotSpeedUrl(courseId, userId));
-        if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
+        let data, srcUrl;
+        if (USE_MOCK_API) {
+          const out = await fetchMockJson(mockUrl.chatbotSpeed);
+          data = out.data;
+          srcUrl = out.url;
+        } else {
+          const res = await fetch(chatbotSpeedUrl(courseId, userId));
+          if (!res.ok) throw new Error(await res.text());
+          data = await res.json();
+        }
         renderEchartToChart(data, "chatbotSpeedChart", "Chatbot Speed");
         if (summaryEl) {
           const series = data?.series?.[0]?.data || [];
@@ -1082,7 +1146,7 @@
           summaryEl.textContent = nums.length ? `ค่าเฉลี่ยความเร็ว: ${avg}` : "ยังไม่มีข้อมูล";
         }
         if (rawEl) rawEl.textContent = JSON.stringify(data, null, 2);
-        if (statusEl) statusEl.textContent = "โหลดสำเร็จ";
+        if (statusEl) statusEl.textContent = USE_MOCK_API ? `ใช้ข้อมูลจำลอง (${srcUrl})` : "โหลดสำเร็จ";
       } catch (err) {
         if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
         if (rawEl) rawEl.textContent = err?.message || "เกิดข้อผิดพลาด";
@@ -1094,19 +1158,28 @@
       const statusEl = document.getElementById("chatbot-perf-status");
       const rawEl = document.getElementById("chatbot-perf-raw");
       const summaryEl = document.getElementById("chatbot-perf-summary");
-      if (!userId || !courseId) {
-        if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
-        return;
-      }
-      if (!isLikelyCourseId(courseId)) {
-        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
-        return;
+      if (!USE_MOCK_API) {
+        if (!userId || !courseId) {
+          if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
+          return;
+        }
+        if (!isLikelyCourseId(courseId)) {
+          if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
+          return;
+        }
       }
       if (statusEl) statusEl.textContent = "กำลังโหลด...";
       try {
-        const res = await fetch(chatbotPerformanceUrl(courseId, userId));
-        if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
+        let data, srcUrl;
+        if (USE_MOCK_API) {
+          const out = await fetchMockJson(mockUrl.chatbotPerformance);
+          data = out.data;
+          srcUrl = out.url;
+        } else {
+          const res = await fetch(chatbotPerformanceUrl(courseId, userId));
+          if (!res.ok) throw new Error(await res.text());
+          data = await res.json();
+        }
         renderEchartToChart(data, "chatbotPerfChart", "Chatbot Performance");
         if (summaryEl) {
           const series = data?.series?.[0]?.data || [];
@@ -1115,7 +1188,7 @@
           summaryEl.textContent = nums.length ? `ค่าเฉลี่ยผลการตอบ: ${avg}` : "ยังไม่มีข้อมูล";
         }
         if (rawEl) rawEl.textContent = JSON.stringify(data, null, 2);
-        if (statusEl) statusEl.textContent = "โหลดสำเร็จ";
+        if (statusEl) statusEl.textContent = USE_MOCK_API ? `ใช้ข้อมูลจำลอง (${srcUrl})` : "โหลดสำเร็จ";
       } catch (err) {
         if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
         if (rawEl) rawEl.textContent = err?.message || "เกิดข้อผิดพลาด";
@@ -1126,25 +1199,31 @@
     const fetchDoneChapterView = async () => {
       const statusEl = document.getElementById("donechapter-status");
       const rawEl = document.getElementById("donechapter-raw");
-      if (!userId || !courseId) {
-        if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
-        return;
-      }
-      if (!isLikelyCourseId(courseId)) {
-        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
-        return;
+      if (!USE_MOCK_API) {
+        if (!userId || !courseId) {
+          if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
+          return;
+        }
+        if (!isLikelyCourseId(courseId)) {
+          if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
+          return;
+        }
       }
       if (statusEl) statusEl.textContent = "กำลังโหลด...";
       try {
-        let res = await fetch(doneChapterVkUrl(userId, courseId));
-        if (!res.ok) {
-          res = await fetch(doneChapterAeUrl(userId, courseId));
+        let data, srcUrl;
+        if (USE_MOCK_API) {
+          const out = await fetchMockJson(mockUrl.doneChapter);
+          data = out.data;
+          srcUrl = out.url;
+        } else {
+          const res = await fetch(doneChapterVkUrl(userId, courseId));
+          if (!res.ok) throw new Error(await res.text());
+          data = await res.json();
         }
-        if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
         renderEchartToChart(data, "doneChapterChart", "Done Chapter");
         if (rawEl) rawEl.textContent = JSON.stringify(data, null, 2);
-        if (statusEl) statusEl.textContent = "โหลดสำเร็จ";
+        if (statusEl) statusEl.textContent = USE_MOCK_API ? `ใช้ข้อมูลจำลอง (${srcUrl})` : "โหลดสำเร็จ";
       } catch (err) {
         if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
         if (rawEl) rawEl.textContent = err?.message || "เกิดข้อผิดพลาด";
