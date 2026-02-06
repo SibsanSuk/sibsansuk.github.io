@@ -12,6 +12,18 @@ https://bookroll.thaidlt.com/meca/student/BR_readingPage?userID=d23c25da-0d2c-42
 
 https://sbs-backend.mooc.meca.in.th/lms/course-v1:NECTEC+CODING_06+NECTEC_000026
 
+
+https://ae-backend.learning.app.meca.in.th/analysis/donechapterview/d23c25da-0d2c-4217-9e99-9be650a8712e/course/course-v1:NECTEC+CODING_06+NECTEC_000026
+
+
+
+https://sbs-backend.mooc.meca.in.th/stats/echart/bookrollMaxPage/d23c25da-0d2c-4217-9e99-9be650a8712e/course-v1:NECTEC+CODING_06+NECTEC_000026
+
+
+
+course-v1:ETDA+ETDA_DIGITALCITIZEN_PLUS+ETDA_000001
+
+
 api เดิมที่ใช้อยู่
 
 

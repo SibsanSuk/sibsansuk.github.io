@@ -715,6 +715,9 @@
     const doneChapterAeUrl = (uid, cid) =>
       `https://ae-backend.learning.app.meca.in.th/analysis/donechapterview/${encodeURIComponent(uid)}/course/${encodeURIComponent(cid)}`;
 
+    const isLikelyCourseId = (cid) =>
+      typeof cid === "string" && cid.includes("course-v1:");
+
     const pickNumber = (obj, keys) => {
       for (const k of keys) {
         const v = obj?.[k];
@@ -791,6 +794,10 @@
       const htmlEl = document.getElementById("course-html");
       if (!courseId) {
         if (statusEl) statusEl.textContent = "ขาด courseid";
+        return;
+      }
+      if (!isLikelyCourseId(courseId)) {
+        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
         return;
       }
       if (statusEl) statusEl.textContent = "กำลังโหลด...";
@@ -958,6 +965,10 @@
         if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
         return;
       }
+      if (!isLikelyCourseId(courseId)) {
+        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
+        return;
+      }
       if (statusEl) statusEl.textContent = "กำลังโหลด...";
       try {
         const res = await fetch(bookrollUrl(userId, courseId));
@@ -991,6 +1002,10 @@
         if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
         return;
       }
+      if (!isLikelyCourseId(courseId)) {
+        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
+        return;
+      }
       if (statusEl) statusEl.textContent = "กำลังโหลด...";
       try {
         const res = await fetch(bookrollMaxPageUrl(courseId, userId));
@@ -1009,6 +1024,10 @@
       const rawEl = document.getElementById("chatbot-speed-raw");
       if (!userId || !courseId) {
         if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
+        return;
+      }
+      if (!isLikelyCourseId(courseId)) {
+        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
         return;
       }
       if (statusEl) statusEl.textContent = "กำลังโหลด...";
@@ -1033,6 +1052,10 @@
         if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
         return;
       }
+      if (!isLikelyCourseId(courseId)) {
+        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
+        return;
+      }
       if (statusEl) statusEl.textContent = "กำลังโหลด...";
       try {
         const res = await fetch(chatbotPerformanceUrl(courseId, userId));
@@ -1053,6 +1076,10 @@
       const rawEl = document.getElementById("donechapter-raw");
       if (!userId || !courseId) {
         if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
+        return;
+      }
+      if (!isLikelyCourseId(courseId)) {
+        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
         return;
       }
       if (statusEl) statusEl.textContent = "กำลังโหลด...";
