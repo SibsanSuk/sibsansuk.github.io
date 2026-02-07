@@ -2,12 +2,20 @@ https://lms.mooc.meca.in.th/courses/course-v1:NECTEC+CODING_06+NECTEC_000026/cou
 
 
 userid สำหรับทดสอบ : d23c25da-0d2c-4217-9e99-9be650a8712e
-courseid สำหรับทดสอบ : course-v1:NECTEC+CODING_06+NECTEC_000026
+courseid สำหรับทดสอบ : course-v1:NECTEC+CODING_01+NECTEC_000013
 
 https://bookroll.thaidlt.com/meca/student/BR_activity?userID=d23c25da-0d2c-4217-9e99-9be650a8712e&usageId=course-v1:NECTEC+CODING_06+NECTEC_000026
 
 
 https://bookroll.thaidlt.com/meca/student/BR_readingPage?userID=d23c25da-0d2c-4217-9e99-9be650a8712e&usageId=course-v1:NECTEC+CODING_06+NECTEC_000026
+
+
+Book Roll :V2:
+ได้ทั้งคู่เลยครับ
+https://bookroll.thaidlt.com/meca/student/BR_activity?userID=d23c25da-0d2c-4217-9e99-9be650a8712e&usageId=course-v1:NECTEC+CODING_01+NECTEC_000013
+
+
+https://bookroll.thaidlt.com/meca/student/BR_readingPage?userID=d23c25da-0d2c-4217-9e99-9be650a8712e&usageId=course-v1:NECTEC+CODING_01+NECTEC_000013
 
 
 https://sbs-backend.mooc.meca.in.th/lms/course-v1:NECTEC+CODING_06+NECTEC_000026

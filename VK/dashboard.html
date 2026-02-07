@@ -39,8 +39,15 @@
       --cat-4:#5f76c8;
       --cat-5:#c59cff;
       --rXL:24px; --rLG:18px; --rMD:14px;
+      --focus-ring:0 0 0 4px rgba(31,185,183,.18);
+      --shadow-sm:0 6px 14px rgba(12,34,46,.07);
+      --shadow-md:0 12px 26px rgba(12,34,46,.10);
+      --shadow-lg:0 18px 34px rgba(12,34,46,.14);
     }
-    *{ -webkit-tap-highlight-color: transparent; }
+    *{
+      -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
+    }
     html, body{ height: 100%; }
     body{
       background:
@@ -51,14 +58,15 @@
       font-family: "Kanit", "Noto Sans Thai", "Segoe UI", system-ui, sans-serif;
       margin: 0;
       padding: 16px 12px;
+      line-height: 1.45;
       overscroll-behavior: none;
       overflow: hidden;
     }
     .app-frame{
-      border: 3px solid var(--brand-500);
+      border: 2px solid rgba(31,185,183,.72);
       border-radius: 28px;
       background: var(--surface);
-      box-shadow: 0 14px 30px rgba(15, 107, 114, .12);
+      box-shadow: var(--shadow-lg);
       overflow: hidden;
       height: calc(100dvh - 32px);
       display: flex;
@@ -105,38 +113,112 @@
       overflow: auto;
       padding-right: 2px;
     }
+    .page-scroll::-webkit-scrollbar{ width: 9px; height: 9px; }
+    .page-scroll::-webkit-scrollbar-thumb{
+      background: linear-gradient(180deg, rgba(31,185,183,.42), rgba(31,185,183,.24));
+      border-radius: 999px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+    .page-scroll::-webkit-scrollbar-track{ background: transparent; }
     .clay{
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--rXL);
-      box-shadow: 0 8px 20px rgba(12, 34, 46, .05);
+      box-shadow: var(--shadow-sm);
     }
     .clay-soft{
       background: var(--surface-2);
       border: 1px solid var(--border);
       border-radius: var(--rLG);
-      box-shadow: none;
+      box-shadow: 0 1px 0 rgba(255,255,255,.72);
     }
     .panel{
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--rLG);
+      box-shadow: 0 1px 0 rgba(255,255,255,.72);
+    }
+    /* Interactive form fields should have depth (input/textarea) */
+    .field{
+      background: linear-gradient(180deg, #ffffff, #eef7f7);
+      border-color: rgba(16, 42, 47, .14);
+      box-shadow:
+        inset 0 3px 6px rgba(16, 42, 47, .18),
+        inset 0 1px 0 rgba(255, 255, 255, .85),
+        0 10px 18px rgba(12, 34, 46, .08);
+    }
+    .field:focus{
+      outline: none;
+      border-color: rgba(31,185,183,.72);
+      box-shadow:
+        0 0 0 5px rgba(31,185,183,.18),
+        0 12px 22px rgba(12, 34, 46, .10),
+        inset 0 3px 6px rgba(16, 42, 47, .18),
+        inset 0 1px 0 rgba(255, 255, 255, .85);
     }
     .pill{
+      position: relative;
+      overflow: hidden;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.55);
+      backdrop-filter: blur(7px) saturate(1.25);
+      -webkit-backdrop-filter: blur(7px) saturate(1.25);
+      box-shadow:
+        0 12px 20px rgba(12, 34, 46, .20),
+        0 6px 10px rgba(12, 34, 46, .14),
+        inset 0 2px 0 rgba(255,255,255,.72),
+        inset 0 -12px 18px rgba(0,0,0,.14);
+      transition: transform .14s ease, box-shadow .2s ease, filter .2s ease;
+    }
+    .pill::before{
+      content: "";
+      position: absolute;
+      inset: -1px;
+      background:
+        radial-gradient(120% 85% at 22% 8%,
+          rgba(255,255,255,.62) 0%,
+          rgba(255,255,255,.26) 36%,
+          rgba(255,255,255,0) 70%);
+      opacity: .92;
+      pointer-events: none;
+    }
+    .pill::after{
+      content: "";
+      position: absolute;
+      inset: 1px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.22);
+      opacity: .9;
+      pointer-events: none;
+    }
+    .pill > span{ position: relative; z-index: 1; }
+    /* Non-interactive data pills (status/%). Keep them readable but flat (no "button" depth). */
+    .info-pill{
       border-radius: 999px;
       border: 1px solid rgba(15,107,114,.18);
+      box-shadow: none !important;
+    }
+    .pill:hover{
+      transform: translateY(-1px);
       box-shadow:
-        0 18px 30px rgba(12, 34, 46, .18),
-        0 6px 16px rgba(24, 164, 170, .18),
+        0 16px 26px rgba(12, 34, 46, .22),
+        0 8px 14px rgba(12, 34, 46, .16),
         inset 0 2px 0 rgba(255,255,255,.75),
-        inset 0 -6px 12px rgba(0,0,0,.08);
+        inset 0 -12px 18px rgba(0,0,0,.14);
     }
     .pill:active{ transform: translateY(1px); filter: brightness(.98); }
     .ghost{
       background: #ffffff;
       border: 1px solid var(--border);
-      box-shadow: 0 12px 20px rgba(12, 34, 46, .14), inset 0 1px 0 rgba(255,255,255,.7);
+      box-shadow: 0 8px 16px rgba(12, 34, 46, .11), inset 0 1px 0 rgba(255,255,255,.7);
       border-radius: 999px;
+      transition: transform .14s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+    .ghost:hover{
+      transform: translateY(-1px);
+      border-color: rgba(15,107,114,.18);
+      box-shadow: 0 12px 18px rgba(12,34,46,.14), inset 0 1px 0 rgba(255,255,255,.75);
     }
     .chip{
       background: var(--surface-2);
@@ -179,6 +261,16 @@
       height: 100%;
       display: block;
     }
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible{
+      outline: none;
+      box-shadow: var(--focus-ring);
+    }
+    .unit-details > summary{ list-style: none; }
+    .unit-details > summary::-webkit-details-marker{ display: none; }
+    .unit-details[open] .unit-caret{ transform: rotate(180deg); }
 
     @media (max-width: 1024px){
       body{
@@ -195,6 +287,11 @@
       }
       .app-content{ padding: 10px; }
       .app-shell{ gap: 0; }
+    }
+    @media (max-width: 640px){
+      .app-content{ padding: 8px; }
+      .clay{ border-radius: 18px; }
+      .clay-soft, .panel{ border-radius: 14px; }
     }
     @media (orientation: portrait){
       .page-scroll{ padding-bottom: 12px; }
@@ -215,31 +312,33 @@
                     <div>
                       <div class="text-2xl font-extrabold">Dashboard สรุปผลการเรียน</div>
                       <div class="mt-2"><span class="cat-pill cat-5">Student Analytics</span></div>
-                      <div class="text-sm text-slate-500">อัปเดตล่าสุด: 3 ก.พ. 2026 • หลักสูตร VK Test (25-01-30)</div>
+                      <div class="text-sm text-slate-500">
+                        อัปเดตล่าสุด: 3 ก.พ. 2026 • หลักสูตร <span id="header-course-title">-</span>
+                      </div>
                       <div class="mt-2 text-xs text-slate-500 mono">
                         userId: <span id="current-userid">-</span> • courseId: <span id="current-courseid">-</span>
                       </div>
                       <div class="mt-3 grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto] gap-2">
                         <input
                           id="input-userid"
-                          class="panel px-3 py-2 text-sm outline-none bg-white"
+                          class="panel field px-3 py-2 text-sm outline-none"
                           placeholder="กรอก userId"
                         />
                         <input
                           id="input-courseid"
-                          class="panel px-3 py-2 text-sm outline-none bg-white"
+                          class="panel field px-3 py-2 text-sm outline-none"
                           placeholder="กรอก courseId"
                         />
                         <button
                           id="btn-load"
                           class="pill text-sm px-4 py-2 font-semibold tracking-wide text-white grad-brand"
-                        >ดึงข้อมูล</button>
+                        ><span>ดึงข้อมูล</span></button>
                       </div>
                     </div>
                     <div class="flex items-center gap-2">
-                      <button id="btn-login" class="pill text-sm px-4 py-3 font-semibold tracking-wide text-white grad-brand">Login</button>
-                      <button id="btn-logout" class="pill text-sm px-4 py-3 font-semibold tracking-wide text-white grad-danger">Logout</button>
-                      <button class="pill text-sm px-4 py-3 font-semibold tracking-wide text-white grad-brand">Export</button>
+                      <button id="btn-login" class="pill text-sm px-4 py-3 font-semibold tracking-wide text-white grad-brand"><span>Login</span></button>
+                      <button id="btn-logout" class="pill text-sm px-4 py-3 font-semibold tracking-wide text-white grad-danger"><span>Logout</span></button>
+                      <button class="pill text-sm px-4 py-3 font-semibold tracking-wide text-white grad-brand"><span>Export</span></button>
                     </div>
                   </div>
 
@@ -368,47 +467,6 @@
                   </div>
 
                   <div class="mt-5">
-                    <div class="clay-soft p-4 cat-card cat-2">
-                      <div class="flex items-center justify-between gap-3">
-                        <div class="font-bold">Course Detail</div>
-                        <div class="text-xs text-slate-500 mono" id="course-status">รอข้อมูล</div>
-                      </div>
-                      <div class="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3 text-sm">
-                        <div class="panel p-3">
-                          <div class="text-xs text-slate-500">Course Title</div>
-                          <div class="mt-1 font-semibold" id="course-title">-</div>
-                        </div>
-                        <div class="panel p-3">
-                          <div class="text-xs text-slate-500">Course Key</div>
-                          <div class="mt-1 mono break-all" id="course-key">-</div>
-                        </div>
-                      </div>
-                      <div class="mt-3 grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
-                        <div class="panel p-3">
-                          <div class="text-xs text-slate-500">Chapter</div>
-                          <div class="mt-1 text-xl font-black mono text-brand-soft" id="course-chapter">-</div>
-                        </div>
-                        <div class="panel p-3">
-                          <div class="text-xs text-slate-500">Sequential</div>
-                          <div class="mt-1 text-xl font-black mono text-brand-soft" id="course-seq">-</div>
-                        </div>
-                        <div class="panel p-3">
-                          <div class="text-xs text-slate-500">Vertical</div>
-                          <div class="mt-1 text-xl font-black mono text-brand-soft" id="course-vert">-</div>
-                        </div>
-                        <div class="panel p-3">
-                          <div class="text-xs text-slate-500">HTML</div>
-                          <div class="mt-1 text-xl font-black mono text-brand-soft" id="course-html">-</div>
-                        </div>
-                      </div>
-                      <div class="mt-3 panel p-4 text-sm">
-                        <div class="text-xs text-slate-500 mb-2">โครงสร้างบท (Chapter)</div>
-                        <div id="course-outline" class="grid gap-2 text-slate-700">-</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="mt-5">
                     <div class="clay-soft p-4 cat-card cat-4">
                       <div class="flex items-start justify-between gap-3">
                         <div>
@@ -418,12 +476,18 @@
                         <div class="text-xs text-slate-500 mono" id="topic-status">รอข้อมูล</div>
                       </div>
 
-                      <div class="mt-3 panel p-2">
+                      <!-- Legacy (tabs) kept for fallback, but hidden in the current UI -->
+                      <div class="mt-3 panel p-2 hidden">
                         <div id="topic-tabs" class="flex flex-wrap gap-2"></div>
                       </div>
 
-                      <div class="mt-3 panel p-4" id="topic-detail">
+                      <div class="mt-3 panel p-4 hidden" id="topic-detail">
                         <div class="text-sm text-slate-600">ยังไม่ได้เลือกบท</div>
+                      </div>
+
+                      <!-- New: per-unit accordion list -->
+                      <div class="mt-3 grid gap-4" id="topic-units">
+                        <div class="text-sm text-slate-600">รอข้อมูลบทเรียน...</div>
                       </div>
                     </div>
                   </div>
@@ -494,11 +558,11 @@
                     <div class="clay-soft p-4 cat-card cat-4">
                       <div class="font-bold">บันทึกการวิเคราะห์</div>
                       <textarea
-                        class="mt-3 w-full panel p-4 outline-none text-sm"
+                        class="mt-3 w-full panel field p-4 outline-none text-sm"
                         rows="6"
                         placeholder="จดบันทึกการวิเคราะห์ (demo)"></textarea>
                       <div class="mt-3 flex justify-end">
-                        <button class="pill text-sm px-4 py-3 font-semibold tracking-wide text-white grad-success">บันทึก</button>
+                        <button class="pill text-sm px-4 py-3 font-semibold tracking-wide text-white grad-success"><span>บันทึก</span></button>
                       </div>
                     </div>
                   </div>
@@ -516,8 +580,10 @@
   </div>
 
   <script>
-    const USE_MOCK_API = true;
-    const SHOW_BOOKROLL = false;
+    const qs = new URLSearchParams(window.location.search);
+    // Default: use real APIs. Add `?mock=1` for CORS-free demos (loads `mock/*.json`).
+    const USE_MOCK_API = qs.get("mock") === "1";
+    const SHOW_BOOKROLL = qs.get("bookroll") === "1";
     const OIDC = {
       authorizationEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/auth",
       tokenEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/token",
@@ -689,6 +755,8 @@
     const syncHeader = () => {
       if (currentUserEl) currentUserEl.textContent = userId || "-";
       if (currentCourseEl) currentCourseEl.textContent = courseId || "-";
+      const headerCourseTitleEl = document.getElementById("header-course-title");
+      if (headerCourseTitleEl) headerCourseTitleEl.textContent = decodeIfMojibake(window.courseDetailData?.courseTitle) || "-";
       const courseEl = document.getElementById("course-id");
       if (courseEl) courseEl.textContent = courseId || "VK Test (25-01-30)";
       if (userId) {
@@ -961,6 +1029,37 @@
         return 0;
       });
 
+    const contentGroup = (rawTitle) => {
+      const t = String(rawTitle || "");
+      if (t.includes("จุดประสงค์")) return 10;
+      if (t.includes("ตัวชี้วัด")) return 20;
+      if (t.includes("สาระการเรียนรู้")) return 30;
+      if (t.includes("สื่อ") || t.includes("แหล่งเรียนรู้")) return 40;
+      if (t.includes("ข้อแนะนำ")) return 50;
+      if (t.includes("คำชี้แจง")) return 60;
+      if (t.includes("วิดีโอ")) return 70;
+      if (t.includes("ใบความรู้")) return 80;
+      if (t.includes("ใบกิจกรรม")) return 90;
+      if (t.includes("คำถาม") || t.includes("แบบทดสอบ")) return 100;
+      return 999;
+    };
+
+    const sortByContentOrder = (items, getTitle) =>
+      (items || []).slice().sort((a, b) => {
+        const ta = getTitle(a);
+        const tb = getTitle(b);
+        const ga = contentGroup(ta);
+        const gb = contentGroup(tb);
+        if (ga !== gb) return ga - gb;
+        const na = sortKeyFromTitle(ta);
+        const nb = sortKeyFromTitle(tb);
+        if (na.has !== nb.has) return na.has ? -1 : 1;
+        if (na.n !== nb.n) return na.n - nb.n;
+        if (na.t < nb.t) return -1;
+        if (na.t > nb.t) return 1;
+        return 0;
+      });
+
     const collectKindsDeep = (node, set) => {
       if (!node) return;
       const kind = node.kind;
@@ -1097,9 +1196,15 @@
         const speedYou = getSeriesAt(window.chatbotSpeedData, chapterIdx, "your");
         const perfYou = getSeriesAt(window.chatbotPerfData, chapterIdx, "your");
 
-        const sequentials = sortByTitleNumber((chapterNode?.children || []).filter((c) => c?.kind === "sequential"));
+        const sequentials = sortByContentOrder(
+          (chapterNode?.children || []).filter((c) => c?.kind === "sequential"),
+          (x) => pickTitle(x, "")
+        );
         const seqItems = sequentials.map((seq, sIdx) => {
-          const verticals = sortByTitleNumber((seq?.children || []).filter((c) => c?.kind === "vertical"));
+          const verticals = sortByContentOrder(
+            (seq?.children || []).filter((c) => c?.kind === "vertical"),
+            (x) => pickTitle(x, "")
+          );
           const verts = verticals.map((v, vIdx) => {
             const tool = inferVerticalTool(v);
             const pct = computeVerticalProgress({
@@ -1174,11 +1279,17 @@
       const chapter = (Number.isFinite(chapterIdx) ? model?.chapters?.[chapterIdx] : null) || null;
       const sequentials = chapter
         ? chapter.sequentials
-        : sortByTitleNumber((chapterNode.children || []).filter((c) => c?.kind === "sequential")).map((seq, sIdx) => ({
+        : sortByContentOrder(
+          (chapterNode.children || []).filter((c) => c?.kind === "sequential"),
+          (x) => pickTitle(x, "")
+        ).map((seq, sIdx) => ({
           idx: sIdx,
           id: seq?.id || "",
           title: pickTitle(seq, `Sequential ${sIdx + 1}`),
-          verticals: sortByTitleNumber((seq?.children || []).filter((c) => c?.kind === "vertical")).map((v, vIdx) => ({
+          verticals: sortByContentOrder(
+            (seq?.children || []).filter((c) => c?.kind === "vertical"),
+            (x) => pickTitle(x, "")
+          ).map((v, vIdx) => ({
             idx: vIdx,
             id: v?.id || "",
             title: pickTitle(v, `Vertical ${vIdx + 1}`),
@@ -1239,14 +1350,16 @@
       const statusEl = document.getElementById("topic-status");
       const tabsEl = document.getElementById("topic-tabs");
       const detailEl = document.getElementById("topic-detail");
-      if (!tabsEl || !detailEl) return;
+      const unitsEl = document.getElementById("topic-units");
+      if (!unitsEl && (!tabsEl || !detailEl)) return;
 
       const titles = getCourseChapterTitles(window.courseDetailData);
       const chapters = getSortedChapters(window.courseDetailData);
       if (!titles.length) {
         if (statusEl) statusEl.textContent = "ไม่มีบท";
-        tabsEl.innerHTML = "";
-        detailEl.innerHTML = `<div class="text-sm text-slate-600">ยังไม่มีข้อมูลบทเรียน</div>`;
+        if (tabsEl) tabsEl.innerHTML = "";
+        if (detailEl) detailEl.innerHTML = `<div class="text-sm text-slate-600">ยังไม่มีข้อมูลบทเรียน</div>`;
+        if (unitsEl) unitsEl.innerHTML = `<div class="text-sm text-slate-600">ยังไม่มีข้อมูลบทเรียน</div>`;
         return;
       }
 
@@ -1255,6 +1368,107 @@
 
       window.progressModel = buildProgressModel();
       updateOverviewFromModel(window.progressModel);
+
+      // New UI: Unit accordion list (preferred)
+      if (unitsEl && window.progressModel) {
+        const model = window.progressModel;
+        const palette = [
+          { strip: "bg-rose-400", pill: "bg-rose-50 text-rose-800 border border-rose-100" },
+          { strip: "bg-amber-400", pill: "bg-amber-50 text-amber-800 border border-amber-100" },
+          { strip: "bg-emerald-400", pill: "bg-emerald-50 text-emerald-800 border border-emerald-100" },
+          { strip: "bg-sky-400", pill: "bg-sky-50 text-sky-800 border border-sky-100" },
+          { strip: "bg-violet-400", pill: "bg-violet-50 text-violet-800 border border-violet-100" },
+          { strip: "bg-pink-400", pill: "bg-pink-50 text-pink-800 border border-pink-100" },
+        ];
+
+        const displayKind = (tool) => {
+          const label = String(tool?.label || "").trim();
+          const sub = String(tool?.sublabel || "").trim();
+          if (/แบบทดสอบ/i.test(label) || /problem/i.test(label)) return "QUIZ";
+          if (/อ่านเนื้อหา/i.test(label) || /html/i.test(label)) return "HTML";
+          if (/วิดีโอ/i.test(label) || /video/i.test(label)) return "VIDEO";
+          if (/ae tool/i.test(label) || /aetool/i.test(label)) return (sub || "AETOOL").toUpperCase();
+          if (!label) return "UNKNOWN";
+          return label.toUpperCase();
+        };
+
+        const shortId = (id) => {
+          const s = String(id || "");
+          const m = s.match(/(?:block@)([^+]+)/);
+          if (m?.[1]) return m[1];
+          if (s.length <= 18) return s;
+          return s.slice(-18);
+        };
+
+        const statusFromPct = (pct) => {
+          const n = clamp(Number(pct) || 0, 0, 100);
+          if (n >= 100) return { dot: "bg-emerald-500", badge: "grad-success text-white", text: "ผ่านแล้ว" };
+          if (n > 0) return { dot: "bg-blue-500", badge: "bg-blue-100 text-blue-700 border border-blue-200", text: "กำลังทำ" };
+          return { dot: "bg-slate-400", badge: "bg-slate-100 text-slate-500 border border-slate-200", text: "ยังไม่เริ่ม" };
+        };
+
+        const unitHtml = model.chapters.map((ch, i) => {
+          const accent = palette[i % palette.length];
+          const items = (ch.sequentials || []).flatMap((s) => (s.verticals || []).map((v) => ({
+            ...v,
+            seqTitle: s.title || ""
+          })));
+          const openAttr = i === 0 ? " open" : "";
+          const countText = `(${items.length} รายการ)`;
+          const pct = clamp(Number(ch.chapterPct) || 0, 0, 100);
+          const pctBadge =
+            pct >= 100 ? "grad-success text-white" :
+            pct >= 50 ? "bg-amber-100 text-amber-800 border border-amber-200" :
+            pct > 0 ? "bg-sky-100 text-sky-800 border border-sky-200" :
+            "bg-slate-100 text-slate-500 border border-slate-200";
+
+          const itemsHtml = items.map((it) => {
+            const st = statusFromPct(it.pct);
+            const kind = displayKind(it.tool);
+            const sid = shortId(it.id);
+            const subtitle = `${kind} • ID: ${sid}`;
+            return `
+              <div class="panel p-4 flex items-center justify-between gap-4">
+                <div class="flex items-start gap-4 min-w-0">
+                  <div class="mt-2 w-4 h-4 rounded-full ${st.dot} shrink-0"></div>
+                  <div class="min-w-0">
+                    <div class="text-lg font-bold truncate" title="${escapeHtml(it.title || "")}">${escapeHtml(it.title || "-")}</div>
+                    <div class="mt-1 text-slate-500 font-semibold mono text-sm break-all" title="${escapeHtml(it.id || "")}">${escapeHtml(subtitle)}</div>
+                  </div>
+                </div>
+                <div class="shrink-0 flex items-center gap-3">
+                  <div class="info-pill px-4 py-2 text-sm font-semibold tracking-wide ${st.badge}">${escapeHtml(st.text)}</div>
+                </div>
+              </div>
+            `;
+          }).join("") || `<div class="panel p-4 text-sm text-slate-600">ยังไม่มีรายการย่อย</div>`;
+
+          return `
+            <div class="panel p-0 overflow-hidden">
+              <div class="flex">
+                <div class="w-2 ${accent.strip}"></div>
+                <details class="unit-details flex-1 p-4"${openAttr}>
+                  <summary class="cursor-pointer select-none flex items-center justify-between gap-4">
+                    <div class="flex items-center gap-4 flex-wrap">
+                      <div class="text-lg font-extrabold text-slate-800">${escapeHtml(ch.title || `บทที่ ${i + 1}`)}</div>
+                      <div class="text-slate-500 font-semibold text-lg">${escapeHtml(countText)}</div>
+                      <div class="info-pill px-3 py-2 text-sm font-bold ${pctBadge}">${escapeHtml(`${pct}%`)}</div>
+                    </div>
+                    <div class="unit-caret text-slate-400 transition-transform">▼</div>
+                  </summary>
+
+                  <div class="mt-4 grid gap-3">
+                    ${itemsHtml}
+                  </div>
+                </details>
+              </div>
+            </div>
+          `;
+        }).join("");
+
+        unitsEl.innerHTML = unitHtml;
+        return;
+      }
 
       const tabHtml = titles.map((t, i) => {
         const active = i === window.topicIndex;
@@ -1265,7 +1479,7 @@
         const suffix = Number.isFinite(pct) ? ` • ${pct}%` : "";
         return `<button class="${cls}" data-topic-idx="${i}">${escapeHtml(`บท ${i + 1}: ${t}${suffix}`)}</button>`;
       }).join("");
-      tabsEl.innerHTML = tabHtml;
+      if (tabsEl) tabsEl.innerHTML = tabHtml;
 
       const idx = window.topicIndex;
       const chapterTitle = titles[idx];
@@ -1286,13 +1500,14 @@
         return `<div class="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden"><div class="h-full grad-brand" style="width:${n}%"></div></div>`;
       };
 
+      if (!detailEl) return;
       detailEl.innerHTML = `
         <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-3">
           <div>
             <div class="text-xs text-slate-500">รายละเอียดบทที่ ${idx + 1}</div>
             <div class="text-lg font-extrabold">${escapeHtml(chapterTitle)}</div>
           </div>
-          <div class="pill px-4 py-2 text-sm font-semibold tracking-wide ${doneTone}">${escapeHtml(doneText)}</div>
+          <div class="info-pill px-4 py-2 text-sm font-semibold tracking-wide ${doneTone}">${escapeHtml(doneText)}</div>
         </div>
 
         <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -1352,6 +1567,8 @@
         const key = data.courseKey || data.course_key || courseId;
         if (titleEl) titleEl.textContent = title;
         if (keyEl) keyEl.textContent = key;
+        const headerCourseTitleEl = document.getElementById("header-course-title");
+        if (headerCourseTitleEl) headerCourseTitleEl.textContent = title;
         window.courseDetailData = data;
         const acc = { chapter: 0, sequential: 0, vertical: 0, html: 0 };
         countKinds(data, acc);

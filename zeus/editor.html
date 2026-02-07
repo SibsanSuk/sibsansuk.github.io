@@ -70,6 +70,10 @@
     .tool-section {
       display: grid;
       gap: 14px;
+      align-content: start;
+      max-height: calc(100vh - 140px);
+      overflow: auto;
+      padding-right: 4px;
     }
 
     .tool-section h2 {
@@ -77,6 +81,23 @@
       letter-spacing: 1px;
       text-transform: uppercase;
       color: var(--muted);
+    }
+
+    .step-block {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+    }
+
+    .step-title {
+      font-size: 13px;
+      letter-spacing: 0.4px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
     }
 
     .brush-list {
@@ -157,6 +178,14 @@
       gap: 10px;
     }
 
+    .button-row.primary {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .button-row.utility {
+      grid-template-columns: 1fr 1fr;
+    }
+
     button.action {
       border: none;
       border-radius: 10px;
@@ -190,6 +219,40 @@
       gap: 8px;
       align-items: center;
       justify-content: space-between;
+    }
+
+    .mode-strip {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(0, 0, 0, 0.25);
+    }
+
+    .mode-strip label {
+      font-size: 12px;
+      color: var(--muted);
+      display: grid;
+      gap: 6px;
+    }
+
+    .mode-strip .label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mode-strip select {
+      width: 100%;
+      background: var(--panel-2);
+      color: var(--ink);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 10px;
+      padding: 8px 10px;
     }
 
     .canvas-toolbar .legend {
@@ -229,6 +292,10 @@
       flex-wrap: wrap;
       font-size: 13px;
       color: var(--muted);
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.03);
     }
 
     .status strong {
@@ -250,6 +317,12 @@
         grid-template-columns: 1fr;
       }
 
+      .button-row.primary,
+      .button-row.utility,
+      .mode-strip {
+        grid-template-columns: 1fr;
+      }
+
       canvas {
         width: min(92vw, 640px);
         height: min(92vw, 640px);
@@ -265,128 +338,121 @@
 
   <main>
     <section class="panel tool-section">
-      <h2>Terrain Levels</h2>
-      <div class="brush-list" id="brushList"></div>
+      <h2>World Builder</h2>
 
-      <div class="controls">
-        <label>
-          Brush size
-          <span class="value-pill" id="brushSizeValue">1</span>
-        </label>
-        <input type="range" id="brushSize" min="1" max="8" value="1" />
+      <div class="step-block">
+        <div class="step-title">Step 1: Terrain</div>
+        <div class="brush-list" id="brushList"></div>
+        <div class="controls">
+          <label>
+            Brush size
+            <span class="value-pill" id="brushSizeValue">1</span>
+          </label>
+          <input type="range" id="brushSize" min="1" max="8" value="1" />
 
-        <label>
-          Perlin seed
-          <span class="value-pill" id="seedValue">1337</span>
-        </label>
-        <input type="range" id="perlinSeed" min="1" max="99999" value="1337" />
+          <label>
+            Perlin seed
+            <span class="value-pill" id="seedValue">1337</span>
+          </label>
+          <input type="range" id="perlinSeed" min="1" max="99999" value="1337" />
 
-        <label>
-          Perlin scale
-          <span class="value-pill" id="scaleValue">18</span>
-        </label>
-        <input type="range" id="perlinScale" min="6" max="48" value="18" />
+          <label>
+            Perlin scale
+            <span class="value-pill" id="scaleValue">18</span>
+          </label>
+          <input type="range" id="perlinScale" min="6" max="48" value="18" />
 
-        <label>
-          Levels low
-          <span class="value-pill" id="levelLowValue">0</span>
-        </label>
-        <input type="range" id="levelLow" min="0" max="5" value="0" />
+          <label>
+            Levels low
+            <span class="value-pill" id="levelLowValue">0</span>
+          </label>
+          <input type="range" id="levelLow" min="0" max="5" value="0" />
 
-        <label>
-          Levels mid
-          <span class="value-pill" id="levelMidValue">0.50</span>
-        </label>
-        <input type="range" id="levelMid" min="0.05" max="0.95" step="0.05" value="0.5" />
+          <label>
+            Levels mid
+            <span class="value-pill" id="levelMidValue">0.50</span>
+          </label>
+          <input type="range" id="levelMid" min="0.05" max="0.95" step="0.05" value="0.5" />
 
-        <label>
-          Levels high
-          <span class="value-pill" id="levelHighValue">5</span>
-        </label>
-        <input type="range" id="levelHigh" min="0" max="5" value="5" />
-
-        <label>
-          Ramp density
-          <span class="value-pill" id="rampValue">0.08</span>
-        </label>
-        <input type="range" id="rampDensity" min="0.02" max="0.3" step="0.01" value="0.08" />
-
-        <label>
-          Resource type
-          <span class="value-pill" id="resourceValue">ป่าไม้</span>
-        </label>
-        <select id="resourceType"></select>
-
-        <label>
-          Resource amount
-          <span class="value-pill" id="resourceAmountValue">25%</span>
-        </label>
-        <input type="range" id="resourceAmount" min="0" max="100" value="25" />
-
-        <label>
-          Resource opacity
-          <span class="value-pill" id="resourceOpacityValue">0.70</span>
-        </label>
-        <input type="range" id="resourceOpacity" min="0" max="1" step="0.05" value="0.7" />
-
-        <label>
-          Road level
-          <span class="value-pill" id="roadValue">0</span>
-        </label>
-        <input type="range" id="roadLevel" min="0" max="5" value="0" />
-
-        <label>
-          Unit type
-          <span class="value-pill" id="unitValue">None</span>
-        </label>
-        <select id="unitType"></select>
-
-        <label>
-          Building type
-          <span class="value-pill" id="buildingValue">None</span>
-        </label>
-        <select id="buildingType"></select>
-
-        <label>
-          Edit mode
-          <span class="value-pill" id="editModeValue">Height</span>
-        </label>
-        <select id="editMode">
-          <option value="height">Height</option>
-          <option value="ramp">Ramp</option>
-          <option value="road">Road</option>
-          <option value="unit">Unit</option>
-          <option value="building">Building</option>
-        </select>
-
-        <label>
-          View layer
-          <span class="value-pill" id="viewValue">Height</span>
-        </label>
-        <select id="viewLayer">
-          <option value="height">Height</option>
-          <option value="walk">Walk</option>
-          <option value="resource">Resource</option>
-          <option value="resource-overlay">Height + Resource</option>
-          <option value="road">Road</option>
-          <option value="unit">Unit</option>
-          <option value="building">Building</option>
-        </select>
-
-        <label>
-          Overlay opacity
-          <span class="value-pill" id="overlayValue">0.35</span>
-        </label>
-        <input type="range" id="overlayOpacity" min="0" max="1" step="0.05" value="0.35" />
+          <label>
+            Levels high
+            <span class="value-pill" id="levelHighValue">5</span>
+          </label>
+          <input type="range" id="levelHigh" min="0" max="5" value="5" />
+        </div>
+        <div class="button-row primary">
+          <button class="action secondary" id="genPerlin">Gen Terrain</button>
+          <button class="action" id="fillAll">Fill Selected</button>
+        </div>
       </div>
 
-      <div class="button-row">
-        <button class="action" id="fillAll">Fill All</button>
-        <button class="action secondary" id="genPerlin">Gen Perlin</button>
-        <button class="action secondary" id="genResource">Gen Resource</button>
-        <button class="action secondary" id="loadJson">Load JSON</button>
-        <button class="action secondary" id="clearMap">Reset Map</button>
-        <button class="action secondary" id="exportJson">Export JSON</button>
+      <div class="step-block">
+        <div class="step-title">Step 2: Movement</div>
+        <div class="controls">
+          <label>
+            Ramp density
+            <span class="value-pill" id="rampValue">0.08</span>
+          </label>
+          <input type="range" id="rampDensity" min="0.02" max="0.3" step="0.01" value="0.08" />
+        </div>
+      </div>
+
+      <div class="step-block">
+        <div class="step-title">Step 3: Resources</div>
+        <div class="controls">
+          <label>
+            Resource type
+            <span class="value-pill" id="resourceValue">ป่าไม้</span>
+          </label>
+          <select id="resourceType"></select>
+
+          <label>
+            Resource amount
+            <span class="value-pill" id="resourceAmountValue">25%</span>
+          </label>
+          <input type="range" id="resourceAmount" min="0" max="100" value="25" />
+
+          <label>
+            Resource opacity
+            <span class="value-pill" id="resourceOpacityValue">0.70</span>
+          </label>
+          <input type="range" id="resourceOpacity" min="0" max="1" step="0.05" value="0.7" />
+        </div>
+        <div class="button-row primary">
+          <button class="action secondary" id="genResource">Scatter Resource</button>
+          <button class="action secondary" id="clearMap">Reset Map</button>
+        </div>
+      </div>
+
+      <div class="step-block">
+        <div class="step-title">Step 4: City Layer</div>
+        <div class="controls">
+          <label>
+            Road level
+            <span class="value-pill" id="roadValue">0</span>
+          </label>
+          <input type="range" id="roadLevel" min="0" max="5" value="0" />
+
+          <label>
+            Unit type
+            <span class="value-pill" id="unitValue">None</span>
+          </label>
+          <select id="unitType"></select>
+
+          <label>
+            Building type
+            <span class="value-pill" id="buildingValue">None</span>
+          </label>
+          <select id="buildingType"></select>
+        </div>
+      </div>
+
+      <div class="step-block">
+        <div class="step-title">Save / Load</div>
+        <div class="button-row utility">
+          <button class="action secondary" id="loadJson">Load JSON</button>
+          <button class="action secondary" id="exportJson">Export JSON</button>
+        </div>
       </div>
 
       <input type="file" id="jsonFileInput" accept="application/json" style="display:none" />
@@ -396,6 +462,43 @@
 
     <section class="canvas-wrap">
       <div class="canvas-toolbar">
+        <div class="mode-strip">
+          <label>
+            <span class="label-row">
+              Edit mode
+              <span class="value-pill" id="editModeValue">Height</span>
+            </span>
+            <select id="editMode">
+              <option value="height">Height</option>
+              <option value="ramp">Ramp</option>
+              <option value="road">Road</option>
+              <option value="unit">Unit</option>
+              <option value="building">Building</option>
+            </select>
+          </label>
+          <label>
+            <span class="label-row">
+              View layer
+              <span class="value-pill" id="viewValue">Height</span>
+            </span>
+            <select id="viewLayer">
+              <option value="height">Height</option>
+              <option value="walk">Walk</option>
+              <option value="resource">Resource</option>
+              <option value="resource-overlay">Height + Resource</option>
+              <option value="road">Road</option>
+              <option value="unit">Unit</option>
+              <option value="building">Building</option>
+            </select>
+          </label>
+          <label>
+            <span class="label-row">
+              Grid opacity
+              <span class="value-pill" id="overlayValue">0.35</span>
+            </span>
+            <input type="range" id="overlayOpacity" min="0" max="1" step="0.05" value="0.35" />
+          </label>
+        </div>
         <div class="legend">
           <span id="heightLegendGroup">
             <span style="font-weight:600">Height</span>

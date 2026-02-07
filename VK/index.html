@@ -41,8 +41,15 @@
       --cat-4:#5f76c8;
       --cat-5:#c59cff;
       --rXL:24px; --rLG:18px; --rMD:14px;
+      --focus-ring:0 0 0 4px rgba(31,185,183,.18);
+      --shadow-sm:0 6px 14px rgba(12,34,46,.07);
+      --shadow-md:0 12px 26px rgba(12,34,46,.10);
+      --shadow-lg:0 18px 34px rgba(12,34,46,.14);
     }
-    *{ -webkit-tap-highlight-color: transparent; }
+    *{
+      -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
+    }
     html, body{ height: 100%; }
     body{
       background:
@@ -53,14 +60,15 @@
       font-family: "Kanit", "Noto Sans Thai", "Segoe UI", system-ui, sans-serif;
       margin: 0;
       padding: 16px 12px;
+      line-height: 1.45;
       overscroll-behavior: none;
       overflow: hidden;
     }
     .app-frame{
-      border: 3px solid var(--brand-500);
+      border: 2px solid rgba(31,185,183,.72);
       border-radius: 28px;
       background: var(--surface);
-      box-shadow: 0 14px 30px rgba(15, 107, 114, .12);
+      box-shadow: var(--shadow-lg);
       overflow: hidden;
       height: calc(100dvh - 32px);
       display: flex;
@@ -87,10 +95,10 @@
     }
     .sidebar{
       width: 280px;
-      background: linear-gradient(180deg, rgba(31,185,183,.12), rgba(255,255,255,1));
+      background: linear-gradient(180deg, rgba(31,185,183,.14), rgba(255,255,255,.96));
       border: 1px solid var(--border);
       border-radius: var(--rLG);
-      box-shadow: 0 8px 18px rgba(24, 164, 170, .12);
+      box-shadow: var(--shadow-md);
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -131,12 +139,17 @@
       gap: 10px;
       padding: 12px 12px;
       border-radius: 16px;
-      transition: background .2s ease, transform .12s ease;
+      border: 1px solid transparent;
+      transition: background .2s ease, transform .12s ease, border-color .2s ease, color .2s ease;
       color: var(--muted);
       font-weight: 600;
       text-align: left;
     }
-    .sidebar-btn:hover{ background: rgba(255,255,255,.7); }
+    .sidebar-btn:hover{
+      background: rgba(255,255,255,.8);
+      border-color: rgba(15,107,114,.12);
+      color: var(--ink);
+    }
     .sidebar-btn.active{
       background: var(--brand-100);
       color: var(--brand-800);
@@ -184,6 +197,14 @@
       box-shadow: 0 10px 16px rgba(12, 34, 46, .12);
       transform: translateY(-2px);
     }
+    .page-scroll::-webkit-scrollbar{ width: 9px; height: 9px; }
+    .page-scroll::-webkit-scrollbar-thumb{
+      background: linear-gradient(180deg, rgba(31,185,183,.42), rgba(31,185,183,.24));
+      border-radius: 999px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+    .page-scroll::-webkit-scrollbar-track{ background: transparent; }
     .sidebar-toggle{ display: grid; }
     .app-main{
       flex: 1;
@@ -214,18 +235,19 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--rXL);
-      box-shadow: 0 8px 20px rgba(12, 34, 46, .05);
+      box-shadow: var(--shadow-sm);
     }
     .clay-soft{
       background: var(--surface-2);
       border: 1px solid var(--border);
       border-radius: var(--rLG);
-      box-shadow: none;
+      box-shadow: 0 1px 0 rgba(255,255,255,.72);
     }
     .panel{
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--rLG);
+      box-shadow: 0 1px 0 rgba(255,255,255,.72);
     }
     .input-inset{
       background: #ffffff;
@@ -241,24 +263,32 @@
       border-radius: 999px;
       border: 1px solid rgba(15,107,114,.18);
       box-shadow:
-        0 18px 30px rgba(12, 34, 46, .18),
-        0 6px 16px rgba(24, 164, 170, .18),
+        0 12px 20px rgba(12, 34, 46, .16),
+        0 6px 12px rgba(24, 164, 170, .16),
         inset 0 2px 0 rgba(255,255,255,.75),
         inset 0 -6px 12px rgba(0,0,0,.08);
+      transition: transform .14s ease, box-shadow .2s ease, filter .2s ease;
     }
     .pill:hover{
       box-shadow:
-        0 20px 34px rgba(12, 34, 46, .20),
-        0 10px 22px rgba(24, 164, 170, .22),
+        0 16px 26px rgba(12, 34, 46, .20),
+        0 10px 20px rgba(24, 164, 170, .20),
         inset 0 2px 0 rgba(255,255,255,.8),
         inset 0 -8px 14px rgba(0,0,0,.10);
+      transform: translateY(-1px);
     }
     .pill:active{ transform: translateY(1px); filter: brightness(.98); }
     .ghost{
       background: #ffffff;
       border: 1px solid var(--border);
-      box-shadow: 0 12px 20px rgba(12, 34, 46, .14), inset 0 1px 0 rgba(255,255,255,.7);
+      box-shadow: 0 8px 16px rgba(12, 34, 46, .11), inset 0 1px 0 rgba(255,255,255,.7);
       border-radius: 999px;
+      transition: transform .14s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+    .ghost:hover{
+      transform: translateY(-1px);
+      border-color: rgba(15,107,114,.18);
+      box-shadow: 0 12px 18px rgba(12,34,46,.14), inset 0 1px 0 rgba(255,255,255,.75);
     }
     .tabActive{
       border: 1px solid var(--brand-200);
@@ -336,6 +366,13 @@
       height: 100%;
       display: block;
     }
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible{
+      outline: none;
+      box-shadow: var(--focus-ring);
+    }
 
     @media (max-width: 1024px){
       body{
@@ -352,6 +389,12 @@
       }
       .app-content{ padding: 10px; }
       .app-shell{ gap: 0; }
+    }
+    @media (max-width: 640px){
+      .app-content{ padding: 8px; }
+      .clay{ border-radius: 18px; }
+      .clay-soft, .panel{ border-radius: 14px; }
+      .bottom-tab{ font-size: 10px; }
     }
     @media (orientation: portrait){
       .sidebar{ display: none; }
