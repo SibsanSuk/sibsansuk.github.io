@@ -1,19 +1,77 @@
 {
   "version": "1.0",
-  "build_rules": {
+  "building_rules": {
     "starting_buildings": ["tent"],
     "prerequisites": {
-      "hut": ["tent"]
-    },
-    "starting_population": 3,
-    "starting_resources": {
-      "wood": 20
+      "hut": ["tent"],
+      "lumberyard": ["tent"],
+      "hunter": ["tent"],
+      "storage": ["tent"]
     },
     "build_costs": {
       "hut": {
         "wood": 10,
         "workers": 1
+      },
+      "lumberyard": {
+        "wood": 8,
+        "workers": 1
+      },
+      "hunter": {
+        "wood": 10,
+        "workers": 1
+      },
+      "storage": {
+        "wood": 12,
+        "workers": 1
       }
     }
+  },
+  "population_rules": {
+    "hut_capacity": 2,
+    "hut_growth_weeks": 1,
+    "food_per_person_per_day": 2
+  },
+  "unit_rules": {
+    "starting_population": 5,
+    "free_worker_food_gather_per_day": 4,
+    "starvation_weeks_to_die": 4,
+    "movement": {
+      "villager_walk_mph": 72,
+      "villager_wander_mph": 48,
+      "lumberjack_walk_mph": 64
+    }
+  },
+  "happiness_rules": {
+    "threshold": 50,
+    "gain_when_fed": 12,
+    "loss_when_starving": 24
+  },
+  "economy_rules": {
+    "starting_resources": {
+      "wood": 20,
+      "food": 0
+    },
+    "lumberyard_steps": 4,
+    "lumberyard_yield": 1,
+    "lumberyard_workers": 1,
+    "workplace_meals_per_worker_per_day": 3,
+    "hunter_workers": 1,
+    "hunter_food_per_hunt": 12,
+    "hunter_food_per_day": 12,
+    "hunter_haul_per_trip": 10,
+    "hunter_hut_food_cap": 20,
+    "hunter_stock_buffer_days": 2
+  },
+  "time_rules": {
+    "hours_per_day": 24,
+    "days_per_week": 7,
+    "hour_tick_seconds": 0.35
+  },
+  "storage_rules": {
+    "tent_food_cap": 20,
+    "tent_wood_cap": 20,
+    "storage_food_bonus": 50,
+    "storage_wood_bonus": 50
   }
 }
