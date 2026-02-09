@@ -1,4 +1,4 @@
-export const createGameView = ({ canvas, tileSizePx, getResourceFade }) => {
+export const createGameView = ({ canvas, tileSizePx, getResourceFade, ui = {} }) => {
   const ctx = canvas.getContext('2d');
     const RESOURCE_SPRITES = window.SPRITES?.RESOURCE_SPRITES || {};
     const BUILDING_SPRITES = window.SPRITES?.BUILDING_SPRITES || {};
@@ -228,5 +228,44 @@ export const createGameView = ({ canvas, tileSizePx, getResourceFade }) => {
       }
     };
 
-  return { draw: View.draw };
+    const setText = (el, value) => {
+      if (!el) return;
+      el.textContent = String(value);
+    };
+
+    const updateHud = (hud) => {
+      if (!hud || typeof hud !== "object") return;
+      setText(ui.woodHud, hud.wood ?? "0");
+      setText(ui.foodHud, hud.food ?? "0");
+      setText(ui.happyHud, hud.happy ?? "0");
+      setText(ui.popHud, hud.pop ?? "0/0");
+      setText(ui.freeHud, hud.free ?? "0");
+      setText(ui.hutHud, hud.hut ?? "0");
+      setText(ui.lumberHud, hud.lumber ?? "0");
+    };
+
+    const updateStatus = (status) => {
+      if (!status || typeof status !== "object") return;
+      setText(ui.popInfo, status.pop ?? "");
+      setText(ui.stepInfo, status.step ?? "");
+    };
+
+    const updateTileInfo = (tile) => {
+      if (!tile || typeof tile !== "object") return;
+      setText(ui.tileInfo, tile.position ?? "-");
+      setText(ui.resourceInfo, tile.resource ?? "-");
+      setText(ui.qtyInfo, tile.qty ?? "-");
+    };
+
+    const setPauseLabel = (paused) => {
+      setText(ui.toggleSimButton, paused ? "Play" : "Pause");
+    };
+
+  return {
+    draw: View.draw,
+    updateHud,
+    updateStatus,
+    updateTileInfo,
+    setPauseLabel
+  };
 };

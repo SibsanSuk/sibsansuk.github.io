@@ -1,0 +1,1151 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LBT Risk Awareness Trainer (Single File)</title>
+  <style>
+    :root {
+      --bg: #e8eef5;
+      --ink: #0f172a;
+      --panel: rgba(255, 255, 255, 0.92);
+      --accent: #0369a1;
+      --warn: #b45309;
+      --danger: #b91c1c;
+      --good: #0f766e;
+      --muted: #475569;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: "Noto Sans Thai", "Prompt", "Kanit", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    #renderCanvas {
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      display: block;
+      background: linear-gradient(180deg, #cde4f7 0%, #e8eef5 100%);
+    }
+
+    .hud {
+      position: fixed;
+      left: 14px;
+      top: 14px;
+      width: min(440px, calc(100vw - 28px));
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: var(--panel);
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+      z-index: 3;
+    }
+
+    .hud h1 {
+      font-size: clamp(16px, 2vw, 20px);
+      margin-bottom: 6px;
+    }
+
+    .hud p {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .hud .badge {
+      display: inline-block;
+      margin-top: 6px;
+      margin-bottom: 8px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #075985;
+      background: rgba(14, 165, 233, 0.16);
+    }
+
+    #statusText {
+      margin-top: 8px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    #awarenessText {
+      margin-top: 5px;
+      color: var(--accent);
+    }
+
+    .right-panel {
+      position: fixed;
+      right: 14px;
+      top: 14px;
+      width: min(270px, calc(100vw - 28px));
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      background: var(--panel);
+      z-index: 3;
+    }
+
+    .bar-wrap {
+      margin-bottom: 8px;
+    }
+
+    .bar-wrap:last-child {
+      margin-bottom: 0;
+    }
+
+    .bar-label {
+      font-size: 12px;
+      margin-bottom: 4px;
+      color: #334155;
+    }
+
+    .bar-rail {
+      height: 8px;
+      border-radius: 999px;
+      background: #cbd5e1;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 8px;
+      width: 0%;
+      border-radius: 999px;
+      transition: width 90ms linear;
+      background: #0ea5e9;
+    }
+
+    .controls {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+    }
+
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      color: #0b1220;
+      background: #e2e8f0;
+    }
+
+    button.primary {
+      color: #fff;
+      background: #0284c7;
+    }
+
+    #vignette {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 130ms linear;
+      z-index: 2;
+      background: radial-gradient(circle at center, rgba(0, 0, 0, 0) 45%, rgba(245, 158, 11, 0.35) 100%);
+    }
+
+    .dialog-backdrop {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.36);
+      z-index: 4;
+      padding: 12px;
+    }
+
+    .dialog {
+      width: min(560px, 100%);
+      border-radius: 14px;
+      border: 1px solid rgba(15, 23, 42, 0.15);
+      background: #fff;
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.2);
+      padding: 14px;
+    }
+
+    .dialog h3 {
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .dialog p {
+      font-size: 14px;
+      margin-bottom: 10px;
+      color: #334155;
+    }
+
+    .dialog-options {
+      display: grid;
+      gap: 8px;
+    }
+
+    .dialog-options button {
+      text-align: left;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      color: #0f172a;
+      padding: 10px;
+      font-weight: 600;
+    }
+
+    @media (max-width: 900px) {
+      .right-panel {
+        top: auto;
+        bottom: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <aside class="hud">
+    <h1>LBT Risk Awareness Trainer</h1>
+    <p>โปรโตไทป์งานวิจัย: เน้นวัดการรับรู้ความเสี่ยง (Risk Awareness) โดยยังบังคับลำดับการฝึกทีละขั้น</p>
+    <span class="badge">Single-file: HTML + JavaScript only</span>
+    <p id="statusText">สถานะ: เริ่มขั้น Positioning</p>
+    <p id="awarenessText">Awareness: รักษาระยะปลอดภัยและเข้าเป้าทีละขั้น</p>
+    <div class="controls">
+      <button id="exportBtn" class="primary">Export JSON</button>
+      <button id="resetBtn">Reset Session</button>
+    </div>
+  </aside>
+
+  <aside class="right-panel">
+    <div class="bar-wrap">
+      <div class="bar-label">Stability</div>
+      <div class="bar-rail"><div id="stabilityFill" class="bar-fill"></div></div>
+    </div>
+    <div class="bar-wrap">
+      <div class="bar-label">Pull Smoothness</div>
+      <div class="bar-rail"><div id="pullFill" class="bar-fill"></div></div>
+    </div>
+    <div class="bar-wrap">
+      <div class="bar-label">Current Step</div>
+      <div id="stepLabel" style="font-size:13px;font-weight:700;color:#0f172a">Positioning</div>
+    </div>
+  </aside>
+
+  <div id="vignette"></div>
+
+  <div id="dialogBackdrop" class="dialog-backdrop">
+    <div class="dialog">
+      <h3>Reflection Check</h3>
+      <p id="dialogQuestion"></p>
+      <div id="dialogOptions" class="dialog-options"></div>
+    </div>
+  </div>
+
+  <canvas id="renderCanvas"></canvas>
+
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+  <script>
+    const CONFIG = {
+      dragThresholdPx: 12,
+      minDragMs: 120,
+      snapRadius: 0.44,
+      positioningDwellMs: 500,
+      attachDwellMs: 700,
+      hookDwellMs: 650,
+      warningRadius: 2.2,
+      dangerRadius: 1.25,
+      dangerNudgeCountThreshold: 2,
+      dangerNudgeWindowMs: 8000,
+      timeInRedNudgeMs: 2400,
+      pullTargetDistance: 2.15,
+      pullStopSpeedThreshold: 0.035,
+      pullRedSpeedMin: 2.75,
+      pullRedSpeedDurationMs: 2000,
+      resistanceFactor: 0.32,
+      maxOffAxisDot: 0.8,
+      beepCooldownMs: 850
+    };
+
+    const QUESTIONS = [
+      {
+        id: "danger-zone-repeat",
+        question: "คุณเข้าเขตอันตรายซ้ำ อะไรคือการตอบสนองที่ปลอดภัยที่สุดตอนนี้?",
+        options: [
+          "หยุดและถอย LBT ออกจากเขตแดงก่อน",
+          "รีบดึงต่อให้จบขั้นตอน",
+          "เปลี่ยนมุมกล้องแล้วดันเข้าไปใหม่"
+        ],
+        correctOption: 0
+      },
+      {
+        id: "pull-speed-red",
+        question: "ความเร็วอยู่ในโซนแดงต่อเนื่อง ควรทำอย่างไรเพื่อลดความเสี่ยง?",
+        options: [
+          "คุมแรงดึงให้สม่ำเสมอในโซนเขียว",
+          "เร่งให้สุดเพื่อลดเวลา",
+          "หยุดกลางทางแล้วค่อยลากต่อ"
+        ],
+        correctOption: 0
+      },
+      {
+        id: "stop-midway",
+        question: "ถ้าหยุดกลางคันระหว่างดึง ต้องระวังผลกระทบใด?",
+        options: [
+          "เสี่ยงเกิด arc/spark จึงควรตั้งหลักใหม่",
+          "ไม่มีผล ดึงต่อได้ทันที",
+          "ระบบชดเชยความเสี่ยงให้อัตโนมัติ"
+        ],
+        correctOption: 0
+      },
+      {
+        id: "pull-before-hook",
+        question: "ถ้าพยายามดึงก่อน hook สำเร็จ ควรแก้อย่างไร?",
+        options: [
+          "กลับไป hook ให้ lock และนิ่งก่อน",
+          "ดึงต่อเพื่อทดสอบแรง",
+          "ข้ามไป detaching"
+        ],
+        correctOption: 0
+      }
+    ];
+
+    const Step = {
+      Positioning: "Positioning",
+      Attaching: "Attaching",
+      Hooking: "Hooking",
+      Pulling: "Pulling",
+      Detaching: "Detaching",
+      Completed: "Completed"
+    };
+
+    const STEP_ORDER = [
+      Step.Positioning,
+      Step.Attaching,
+      Step.Hooking,
+      Step.Pulling,
+      Step.Detaching,
+      Step.Completed
+    ];
+
+    const ui = {
+      status: document.getElementById("statusText"),
+      awareness: document.getElementById("awarenessText"),
+      stability: document.getElementById("stabilityFill"),
+      pull: document.getElementById("pullFill"),
+      step: document.getElementById("stepLabel"),
+      vignette: document.getElementById("vignette"),
+      exportBtn: document.getElementById("exportBtn"),
+      resetBtn: document.getElementById("resetBtn"),
+      dialogBackdrop: document.getElementById("dialogBackdrop"),
+      dialogQuestion: document.getElementById("dialogQuestion"),
+      dialogOptions: document.getElementById("dialogOptions")
+    };
+
+    function toneColor(tone) {
+      if (tone === "danger") return "#b91c1c";
+      if (tone === "warn") return "#b45309";
+      if (tone === "good") return "#0f766e";
+      return "#0369a1";
+    }
+
+    function setStatus(text) {
+      ui.status.textContent = "สถานะ: " + text;
+    }
+
+    function setAwareness(text, tone) {
+      ui.awareness.textContent = "Awareness: " + text;
+      ui.awareness.style.color = toneColor(tone || "info");
+    }
+
+    function setBar(el, value01) {
+      const v = Math.max(0, Math.min(1, value01));
+      el.style.width = (v * 100) + "%";
+      el.style.background = v > 0.8 ? "#16a34a" : v > 0.45 ? "#eab308" : "#ef4444";
+    }
+
+    function flashWarning() {
+      ui.vignette.style.opacity = "1";
+      ui.vignette.style.background = "radial-gradient(circle at center, rgba(0,0,0,0) 45%, rgba(245,158,11,0.35) 100%)";
+      setTimeout(() => {
+        ui.vignette.style.opacity = "0";
+      }, 190);
+    }
+
+    function showDangerVignette() {
+      ui.vignette.style.opacity = "1";
+      ui.vignette.style.background = "radial-gradient(circle at center, rgba(0,0,0,0) 40%, rgba(220,38,38,0.56) 100%)";
+    }
+
+    function clearVignette() {
+      ui.vignette.style.opacity = "0";
+    }
+
+    function createAudioSystem() {
+      let ctx = null;
+      let lastBeepAt = 0;
+      function ensure() {
+        if (!ctx) ctx = new AudioContext();
+        return ctx;
+      }
+      function beep(freq, durationMs) {
+        const now = performance.now();
+        if (now - lastBeepAt < CONFIG.beepCooldownMs) return false;
+        lastBeepAt = now;
+        const ac = ensure();
+        const osc = ac.createOscillator();
+        const gain = ac.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        gain.gain.value = 0.0001;
+        gain.gain.exponentialRampToValueAtTime(0.16, ac.currentTime + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + durationMs / 1000);
+        osc.connect(gain);
+        gain.connect(ac.destination);
+        osc.start();
+        osc.stop(ac.currentTime + durationMs / 1000 + 0.02);
+        return true;
+      }
+      return {
+        beep: () => beep(770, 110),
+        softBeep: () => beep(620, 90),
+        spark: () => beep(220, 260)
+      };
+    }
+
+    function createMetrics() {
+      const startMs = performance.now();
+      const events = [];
+      const samples = [];
+      const responses = [];
+      const counters = {
+        yellowWarningsCount: 0,
+        redDangerCount: 0,
+        timeInYellowMs: 0,
+        timeInRedMs: 0,
+        beepCount: 0,
+        nudgeDialogCount: 0,
+        wrongDirectionCount: 0,
+        accidentClickCount: 0,
+        stopMidwayCount: 0
+      };
+      return {
+        logEvent(step, type, data) {
+          events.push({ t: performance.now(), step, type, data: data || null });
+        },
+        sample(step, pos, speed, direction) {
+          samples.push({
+            t: performance.now(),
+            step,
+            x: pos.x,
+            y: pos.y,
+            z: pos.z,
+            speed,
+            direction: { x: direction.x, y: direction.y, z: direction.z }
+          });
+        },
+        inc(name, durationMs) {
+          counters[name] += 1;
+          if (name === "yellowWarningsCount") counters.timeInYellowMs += durationMs || 0;
+          if (name === "redDangerCount") counters.timeInRedMs += durationMs || 0;
+        },
+        addResponse(payload) {
+          responses.push(payload);
+        },
+        riskScore() {
+          let score = 100;
+          score -= Math.min(35, counters.redDangerCount * 5 + counters.timeInRedMs / 350);
+          score -= Math.min(20, counters.yellowWarningsCount * 2 + counters.timeInYellowMs / 600);
+          score -= Math.min(15, counters.stopMidwayCount * 7 + counters.wrongDirectionCount * 2);
+          const bonus = responses.reduce((sum, row) => sum + (typeof row.correctOption === "number" && row.chosenOption === row.correctOption ? 2 : 0), 0);
+          return Math.max(0, Math.min(100, score + bonus));
+        },
+        export(stepStats) {
+          return {
+            generatedAt: new Date().toISOString(),
+            sessionDurationMs: performance.now() - startMs,
+            counters,
+            steps: stepStats,
+            reflectionResponses: responses,
+            events,
+            samples,
+            scores: {
+              riskAwareness: this.riskScore()
+            }
+          };
+        }
+      };
+    }
+
+    function createReflectionDialog(onSubmit) {
+      let open = false;
+      let openedAt = 0;
+      let active = null;
+
+      function show(questionId) {
+        if (open) return;
+        const q = QUESTIONS.find((item) => item.id === questionId);
+        if (!q) return;
+
+        active = q;
+        open = true;
+        openedAt = performance.now();
+        ui.dialogQuestion.textContent = q.question;
+        ui.dialogOptions.innerHTML = "";
+
+        q.options.forEach((text, idx) => {
+          const btn = document.createElement("button");
+          btn.textContent = text;
+          btn.onclick = () => {
+            const payload = {
+              questionId: q.id,
+              chosenOption: idx,
+              correctOption: q.correctOption,
+              responseTimeMs: performance.now() - openedAt
+            };
+            ui.dialogBackdrop.style.display = "none";
+            open = false;
+            active = null;
+            onSubmit(payload);
+          };
+          ui.dialogOptions.appendChild(btn);
+        });
+
+        ui.dialogBackdrop.style.display = "flex";
+      }
+
+      return {
+        show,
+        isOpen: () => open
+      };
+    }
+
+    function createStepManager() {
+      const stats = {};
+      STEP_ORDER.forEach((step) => {
+        stats[step] = {
+          enteredAtMs: 0,
+          finishedAtMs: null,
+          warnings: 0,
+          errors: 0,
+          yellowCount: 0,
+          redCount: 0,
+          timeInYellowMs: 0,
+          timeInRedMs: 0,
+          passed: step === Step.Completed
+        };
+      });
+
+      let current = Step.Positioning;
+      stats[current].enteredAtMs = performance.now();
+
+      return {
+        get: () => current,
+        stat: () => stats,
+        addWarning() {
+          stats[current].warnings += 1;
+        },
+        addError() {
+          stats[current].errors += 1;
+        },
+        addRisk(kind, durationMs) {
+          if (kind === "warning") {
+            stats[current].yellowCount += 1;
+            stats[current].timeInYellowMs += durationMs;
+          } else {
+            stats[current].redCount += 1;
+            stats[current].timeInRedMs += durationMs;
+          }
+        },
+        advanceIf(step) {
+          if (current !== step) return current;
+          const idx = STEP_ORDER.indexOf(current);
+          if (idx < 0 || idx >= STEP_ORDER.length - 1) return current;
+          stats[current].finishedAtMs = performance.now();
+          stats[current].passed = true;
+          current = STEP_ORDER[idx + 1];
+          stats[current].enteredAtMs = performance.now();
+          ui.step.textContent = current;
+          return current;
+        },
+        snapshot() {
+          const now = performance.now();
+          const copy = {};
+          STEP_ORDER.forEach((step) => {
+            const s = stats[step];
+            copy[step] = {
+              ...s,
+              durationMs: Math.max(0, (s.finishedAtMs || now) - s.enteredAtMs)
+            };
+          });
+          return copy;
+        }
+      };
+    }
+
+    const canvas = document.getElementById("renderCanvas");
+    const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+
+    function startApp() {
+      const metrics = createMetrics();
+      const audio = createAudioSystem();
+      const steps = createStepManager();
+      const dialog = createReflectionDialog((payload) => {
+        metrics.addResponse(payload);
+        metrics.logEvent(steps.get(), "reflection-answer", payload);
+      });
+
+      const scene = new BABYLON.Scene(engine);
+      scene.clearColor = new BABYLON.Color4(0.86, 0.92, 0.97, 1);
+
+      const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2.2, Math.PI / 3.1, 16, new BABYLON.Vector3(0, 3.5, 0), scene);
+      camera.attachControl(canvas, true);
+      camera.lowerRadiusLimit = 7;
+      camera.upperRadiusLimit = 26;
+      camera.wheelDeltaPercentage = 0.01;
+
+      new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0.2, 1, 0), scene).intensity = 0.82;
+
+      const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 40, height: 40 }, scene);
+      const groundMat = new BABYLON.StandardMaterial("groundMat", scene);
+      groundMat.diffuseColor = new BABYLON.Color3(0.6, 0.74, 0.58);
+      groundMat.specularColor = BABYLON.Color3.Black();
+      ground.material = groundMat;
+
+      const poleFallback = BABYLON.MeshBuilder.CreateCylinder("poleFallback", { height: 9, diameterTop: 0.38, diameterBottom: 0.54, tessellation: 20 }, scene);
+      poleFallback.position.y = 4.5;
+
+      const crossArmFallback = BABYLON.MeshBuilder.CreateBox("crossArmFallback", { width: 4.2, height: 0.18, depth: 0.18 }, scene);
+      crossArmFallback.position = new BABYLON.Vector3(0, 7.55, 0);
+
+      const attachmentHook = BABYLON.MeshBuilder.CreateSphere("attachmentHook", { diameter: 0.22 }, scene);
+      attachmentHook.position = new BABYLON.Vector3(1.45, 7.3, 0.14);
+      const attachmentMat = new BABYLON.StandardMaterial("attachmentMat", scene);
+      attachmentMat.diffuseColor = new BABYLON.Color3(0.94, 0.74, 0.16);
+      attachmentHook.material = attachmentMat;
+
+      const pullRing = BABYLON.MeshBuilder.CreateTorus("pullRing", { diameter: 0.35, thickness: 0.05, tessellation: 32 }, scene);
+      pullRing.position = new BABYLON.Vector3(2.05, 7.2, 0);
+      pullRing.rotation.y = Math.PI / 2;
+      const ringMat = new BABYLON.StandardMaterial("ringMat", scene);
+      ringMat.diffuseColor = new BABYLON.Color3(0.99, 0.74, 0.11);
+      ringMat.emissiveColor = new BABYLON.Color3(0.15, 0.09, 0.01);
+      pullRing.material = ringMat;
+
+      const positioningArea = BABYLON.MeshBuilder.CreateSphere("positioningArea", { diameter: 0.26 }, scene);
+      positioningArea.position = new BABYLON.Vector3(0.55, 4.75, 0.2);
+      positioningArea.visibility = 0.22;
+
+      const safeExit = BABYLON.MeshBuilder.CreateSphere("safeExit", { diameter: 0.3 }, scene);
+      safeExit.position = new BABYLON.Vector3(-1.35, 4.2, -0.1);
+      safeExit.visibility = 0.22;
+
+      const lbt = new BABYLON.TransformNode("lbt", scene);
+      lbt.position = new BABYLON.Vector3(-3, 1.15, 0);
+
+      const lbtHandleFallback = BABYLON.MeshBuilder.CreateCylinder("lbtHandleFallback", { height: 4.9, diameter: 0.08 }, scene);
+      lbtHandleFallback.rotation.z = Math.PI / 2;
+      lbtHandleFallback.parent = lbt;
+      lbtHandleFallback.isPickable = true;
+
+      const lbtHookFallback = BABYLON.MeshBuilder.CreateTorus("lbtHookFallback", { diameter: 0.62, thickness: 0.07, tessellation: 32 }, scene);
+      lbtHookFallback.position = new BABYLON.Vector3(2.45, 0, 0);
+      lbtHookFallback.rotation.y = Math.PI / 2;
+      lbtHookFallback.parent = lbt;
+      lbtHookFallback.isPickable = true;
+
+      const lbtEndFallback = BABYLON.MeshBuilder.CreateSphere("lbtEndFallback", { diameter: 0.17 }, scene);
+      lbtEndFallback.position = new BABYLON.Vector3(-2.45, 0, 0);
+      lbtEndFallback.parent = lbt;
+      lbtEndFallback.isPickable = true;
+
+      const lbtHookLocator = BABYLON.MeshBuilder.CreateSphere("lbtHookLocator", { diameter: 0.08 }, scene);
+      lbtHookLocator.parent = lbt;
+      lbtHookLocator.position = new BABYLON.Vector3(2.45, 0, 0);
+      lbtHookLocator.isVisible = false;
+      lbtHookLocator.isPickable = false;
+
+      const lbtMat = new BABYLON.StandardMaterial("lbtMat", scene);
+      lbtMat.diffuseColor = new BABYLON.Color3(0.11, 0.37, 0.67);
+      lbtHandleFallback.material = lbtMat;
+      lbtHookFallback.material = lbtMat;
+      lbtEndFallback.material = lbtMat;
+
+      const helperPlane = BABYLON.Plane.FromPositionAndNormal(new BABYLON.Vector3(0, 1.15, 0), new BABYLON.Vector3(0, 1, 0));
+      const pullDirection = pullRing.position.subtract(attachmentHook.position).normalize();
+
+      const riskZones = [
+        { id: "fuse-line", center: pullRing.position.add(new BABYLON.Vector3(0, 0.4, 0)), warning: CONFIG.warningRadius, danger: CONFIG.dangerRadius },
+        { id: "top-wire", center: new BABYLON.Vector3(0, 8.2, 0), warning: 2.4, danger: 1.5 }
+      ];
+
+      const draggableMeshes = new Set([lbtHandleFallback, lbtHookFallback, lbtEndFallback]);
+      let dragging = false;
+      let dragOffset = BABYLON.Vector3.Zero();
+      let pointerDownAt = 0;
+      let pointerDownXY = { x: 0, y: 0 };
+      let prevPos = lbt.position.clone();
+      let prevSampleAt = performance.now();
+
+      let dwellStartMs = null;
+      let attached = false;
+      let hooked = false;
+      let pullStarted = false;
+      let pullStartPos = null;
+      let detachingTwisted = false;
+      let twistAccum = 0;
+      let lastDangerEvents = [];
+      let dangerSinceMs = null;
+      let pullRedSinceMs = null;
+
+      function getHookPos() {
+        return lbtHookLocator.getAbsolutePosition();
+      }
+
+      function collectBounds(meshes) {
+        if (!meshes.length) {
+          return null;
+        }
+        let min = new BABYLON.Vector3(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY);
+        let max = new BABYLON.Vector3(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY);
+        for (const mesh of meshes) {
+          const info = mesh.getBoundingInfo();
+          const mMin = info.boundingBox.minimumWorld;
+          const mMax = info.boundingBox.maximumWorld;
+          min = BABYLON.Vector3.Minimize(min, mMin);
+          max = BABYLON.Vector3.Maximize(max, mMax);
+        }
+        return { min, max, size: max.subtract(min) };
+      }
+
+      function setHookLocatorFromModel(modelRoot) {
+        const meshes = modelRoot.getChildMeshes();
+        const bounds = collectBounds(meshes);
+        if (!bounds) return;
+        const center = bounds.min.add(bounds.max).scale(0.5);
+        const local = center.subtract(modelRoot.getAbsolutePosition());
+        local.x = (bounds.max.x - modelRoot.getAbsolutePosition().x) - 0.05;
+        local.y *= 0.95;
+        lbtHookLocator.position = local;
+      }
+
+      async function loadModel(fileName, rootNode, options) {
+        const container = await BABYLON.SceneLoader.LoadAssetContainerAsync("./", fileName, scene);
+        container.addAllToScene();
+        const modelRoot = container.createRootMesh();
+        modelRoot.parent = rootNode;
+        modelRoot.position = BABYLON.Vector3.Zero();
+        modelRoot.rotation = BABYLON.Vector3.Zero();
+        modelRoot.scaling = new BABYLON.Vector3(1, 1, 1);
+
+        const meshes = modelRoot.getChildMeshes();
+        if (meshes.length) {
+          const bounds = collectBounds(meshes);
+          if (bounds) {
+            const sourceSize = options.fitAxis === "y" ? Math.max(0.01, bounds.size.y) : Math.max(0.01, Math.max(bounds.size.x, bounds.size.y, bounds.size.z));
+            const scale = options.targetSize / sourceSize;
+            modelRoot.scaling = new BABYLON.Vector3(scale, scale, scale);
+          }
+        }
+
+        if (options.onLoaded) {
+          options.onLoaded(modelRoot);
+        }
+      }
+
+      function pickDragPoint() {
+        const ray = scene.createPickingRay(scene.pointerX, scene.pointerY, BABYLON.Matrix.Identity(), camera);
+        const distance = ray.intersectsPlane(helperPlane);
+        if (distance === null) return null;
+        return ray.origin.add(ray.direction.scale(distance));
+      }
+
+      function snapHookTo(target, radius) {
+        const hookPos = getHookPos();
+        const distance = BABYLON.Vector3.Distance(hookPos, target);
+        if (distance > radius) return false;
+        const offset = lbt.position.subtract(hookPos);
+        lbt.position = target.add(offset);
+        return true;
+      }
+
+      function applyResistance(targetDir, intensity) {
+        const current = lbt.position.clone();
+        const delta = current.subtract(prevPos);
+        const dir = delta.length() > 0.0001 ? delta.normalize() : BABYLON.Vector3.Zero();
+        const dot = BABYLON.Vector3.Dot(dir, targetDir);
+        if (dot < CONFIG.maxOffAxisDot) {
+          metrics.inc("wrongDirectionCount", 0);
+          const corrected = prevPos.add(delta.scale(CONFIG.resistanceFactor * intensity));
+          lbt.position = BABYLON.Vector3.Lerp(current, corrected, 0.65);
+        }
+      }
+
+      function evaluateRisk(point) {
+        let level = "safe";
+        let nearest = Infinity;
+        for (const zone of riskZones) {
+          const d = BABYLON.Vector3.Distance(point, zone.center);
+          nearest = Math.min(nearest, d);
+          if (d <= zone.danger) return { level: "danger", nearest: d, zoneId: zone.id };
+          if (d <= zone.warning) level = "warning";
+        }
+        return { level, nearest, zoneId: null };
+      }
+
+      function maybeAskDangerNudge() {
+        const now = performance.now();
+        lastDangerEvents = lastDangerEvents.filter((t) => now - t <= CONFIG.dangerNudgeWindowMs);
+        if (lastDangerEvents.length >= CONFIG.dangerNudgeCountThreshold && !dialog.isOpen()) {
+          dialog.show("danger-zone-repeat");
+          metrics.inc("nudgeDialogCount", 0);
+          metrics.logEvent(steps.get(), "reflection-open", { reason: "danger-repeat" });
+          lastDangerEvents = [];
+        }
+      }
+
+      scene.onPointerObservable.add((pointerInfo) => {
+        switch (pointerInfo.type) {
+          case BABYLON.PointerEventTypes.POINTERDOWN: {
+            const pickInfo = pointerInfo.pickInfo;
+            if (!pickInfo.hit || !pickInfo.pickedMesh || !draggableMeshes.has(pickInfo.pickedMesh)) return;
+
+            pointerDownAt = performance.now();
+            pointerDownXY = { x: scene.pointerX, y: scene.pointerY };
+            const point = pickDragPoint();
+            if (!point) return;
+
+            dragging = true;
+            camera.detachControl(canvas);
+            dragOffset = lbt.position.subtract(point);
+            metrics.logEvent(steps.get(), "pointer-down-lbt");
+            break;
+          }
+          case BABYLON.PointerEventTypes.POINTERMOVE: {
+            if (!dragging) return;
+            const point = pickDragPoint();
+            if (!point) return;
+            lbt.position = point.add(dragOffset);
+            break;
+          }
+          case BABYLON.PointerEventTypes.POINTERUP: {
+            const pressMs = performance.now() - pointerDownAt;
+            const movePx = Math.hypot(scene.pointerX - pointerDownXY.x, scene.pointerY - pointerDownXY.y);
+
+            if (pressMs < CONFIG.minDragMs && movePx < CONFIG.dragThresholdPx) {
+              metrics.inc("accidentClickCount", 0);
+              metrics.logEvent(steps.get(), "accident-click", { pressMs, movePx });
+              setAwareness("คลิกสั้นเกินไป ระบบไม่นับเป็นการลาก", "warn");
+            } else {
+              metrics.logEvent(steps.get(), "intentional-drag", { pressMs, movePx });
+            }
+
+            if (dragging) {
+              dragging = false;
+              camera.attachControl(canvas, true);
+            }
+            break;
+          }
+          default:
+            break;
+        }
+      });
+
+      function runStepLogic() {
+        const current = steps.get();
+        const hookPos = getHookPos();
+
+        if (current === Step.Positioning) {
+          const inArea = BABYLON.Vector3.Distance(hookPos, positioningArea.position) < 0.86;
+          lbt.position.y = 1.15;
+          if (inArea) {
+            snapHookTo(positioningArea.position, CONFIG.snapRadius + 0.42);
+            if (!dwellStartMs) dwellStartMs = performance.now();
+            const dwell = performance.now() - dwellStartMs;
+            setStatus("Positioning - วาง LBT ในโซนเริ่มต้นให้นิ่ง");
+            setAwareness("เข้าโซนถูกต้องแล้ว รักษาความนิ่ง", "good");
+            setBar(ui.stability, dwell / CONFIG.positioningDwellMs);
+            if (dwell >= CONFIG.positioningDwellMs) {
+              steps.advanceIf(Step.Positioning);
+              dwellStartMs = null;
+              setStatus("ผ่าน Positioning -> ไป Attaching");
+              setAwareness("เกี่ยว anchor ฝั่งตรงข้ามทิศดึง", "info");
+              metrics.logEvent(Step.Positioning, "step-pass");
+            }
+          } else {
+            dwellStartMs = null;
+            setBar(ui.stability, 0);
+          }
+        }
+
+        if (current === Step.Attaching) {
+          const near = BABYLON.Vector3.Distance(hookPos, attachmentHook.position);
+          if (near < 1.0) {
+            setAwareness("ใกล้ anchor แล้ว ปล่อยให้ snap และนิ่ง", "warn");
+          }
+
+          const snapped = snapHookTo(attachmentHook.position, CONFIG.snapRadius);
+          if (snapped && !dragging) {
+            attached = true;
+            if (!dwellStartMs) dwellStartMs = performance.now();
+            const dwell = performance.now() - dwellStartMs;
+            setStatus("Attaching - รักษา lock ให้เสถียร");
+            setBar(ui.stability, dwell / CONFIG.attachDwellMs);
+            if (dwell >= CONFIG.attachDwellMs) {
+              steps.advanceIf(Step.Attaching);
+              dwellStartMs = null;
+              setStatus("ผ่าน Attaching -> ไป Hooking");
+              setAwareness("เข้า pull-ring และห้ามดึงก่อน lock", "info");
+              metrics.logEvent(Step.Attaching, "step-pass");
+            }
+          } else {
+            dwellStartMs = null;
+            setBar(ui.stability, 0);
+          }
+        }
+
+        if (current === Step.Hooking) {
+          const ringDist = BABYLON.Vector3.Distance(hookPos, pullRing.position);
+
+          if (ringDist < 1.0) {
+            setStatus("Hooking - จัดแนว hook เข้าห่วง");
+            ringMat.emissiveColor = new BABYLON.Color3(0.2, 0.18, 0.02);
+          } else {
+            ringMat.emissiveColor = new BABYLON.Color3(0.15, 0.09, 0.01);
+          }
+
+          if (!attached) {
+            steps.addError();
+            setAwareness("ยังไม่ผ่าน Attaching", "danger");
+          }
+
+          const snapped = snapHookTo(pullRing.position, CONFIG.snapRadius);
+          if (snapped) {
+            applyResistance(pullDirection, 0.9);
+            if (!dragging) {
+              if (!dwellStartMs) dwellStartMs = performance.now();
+              const dwell = performance.now() - dwellStartMs;
+              setBar(ui.stability, dwell / CONFIG.hookDwellMs);
+              if (dwell >= CONFIG.hookDwellMs) {
+                hooked = true;
+                steps.advanceIf(Step.Hooking);
+                dwellStartMs = null;
+                setStatus("ผ่าน Hooking -> ไป Pulling");
+                setAwareness("ดึงครั้งเดียว สม่ำเสมอ ตรงแนว", "info");
+                metrics.logEvent(Step.Hooking, "step-pass");
+              }
+            }
+          } else {
+            dwellStartMs = null;
+            setBar(ui.stability, 0);
+          }
+        }
+
+        if (current === Step.Pulling) {
+          if (!hooked) {
+            steps.addError();
+            setAwareness("ดึงก่อน hook สำเร็จไม่ได้", "danger");
+            const b = audio.beep();
+            if (b) metrics.inc("beepCount", 0);
+            if (!dialog.isOpen()) {
+              dialog.show("pull-before-hook");
+              metrics.inc("nudgeDialogCount", 0);
+            }
+            return;
+          }
+
+          applyResistance(pullDirection, 1);
+
+          const nowSpeed = lbt.position.subtract(prevPos).length() / Math.max(0.001, (performance.now() - prevSampleAt) / 1000);
+          const smoothness = Math.max(0, Math.min(1, 1 - Math.abs(nowSpeed - 1.5) / 2.2));
+          setBar(ui.pull, smoothness);
+
+          if (nowSpeed > CONFIG.pullRedSpeedMin) {
+            if (!pullRedSinceMs) pullRedSinceMs = performance.now();
+            if (performance.now() - pullRedSinceMs > CONFIG.pullRedSpeedDurationMs) {
+              setAwareness("ความเร็วอยู่ในโซนแดงต่อเนื่อง", "danger");
+              if (!dialog.isOpen()) {
+                dialog.show("pull-speed-red");
+                metrics.inc("nudgeDialogCount", 0);
+                metrics.logEvent(Step.Pulling, "reflection-open", { reason: "pull-speed-red" });
+              }
+            }
+          } else {
+            pullRedSinceMs = null;
+          }
+
+          const hookNow = getHookPos();
+          if (!pullStarted) {
+            pullStarted = true;
+            pullStartPos = hookNow.clone();
+          }
+
+          const pulledDistance = BABYLON.Vector3.Distance(hookNow, pullStartPos);
+
+          if (nowSpeed < CONFIG.pullStopSpeedThreshold && pulledDistance > 0.6 && dragging) {
+            metrics.inc("stopMidwayCount", 0);
+            const sparked = audio.spark();
+            if (sparked) metrics.inc("beepCount", 0);
+            setAwareness("หยุดกลางคัน เสี่ยง arc/spark", "danger");
+            if (!dialog.isOpen()) {
+              dialog.show("stop-midway");
+              metrics.inc("nudgeDialogCount", 0);
+              metrics.logEvent(Step.Pulling, "reflection-open", { reason: "stop-midway" });
+            }
+          }
+
+          if (pulledDistance >= CONFIG.pullTargetDistance && smoothness > 0.45) {
+            steps.advanceIf(Step.Pulling);
+            pullStarted = false;
+            pullStartPos = null;
+            setStatus("ผ่าน Pulling -> ไป Detaching");
+            setAwareness("ทำ 5.1 บิดก่อน แล้ว 5.2 ยกออกฝั่งปลอดภัย", "info");
+            metrics.logEvent(Step.Pulling, "step-pass", { pulledDistance });
+          }
+        }
+
+        if (current === Step.Detaching) {
+          const hookNow = getHookPos();
+          const toExit = safeExit.position.subtract(hookNow).normalize();
+
+          const sideMotion = Math.abs(lbt.position.z - prevPos.z);
+          if (!detachingTwisted) {
+            twistAccum += sideMotion;
+            setStatus("Detaching 5.1 - บิดแกนให้หลุดจากแหวน");
+            setAwareness("ทำการบิดซ้าย-ขวาก่อนยกออก", "warn");
+            if (twistAccum >= 0.5) {
+              detachingTwisted = true;
+              setStatus("Detaching 5.1 สำเร็จ -> 5.2 ยกออกฝั่งปลอดภัย");
+              setAwareness("ยกออกไปทาง safe exit", "info");
+            }
+          } else {
+            applyResistance(toExit, 0.75);
+            const d = BABYLON.Vector3.Distance(hookNow, safeExit.position);
+            if (d < 0.82) {
+              steps.advanceIf(Step.Detaching);
+              setStatus("เสร็จสิ้นการฝึก (Completed)");
+              setAwareness("ทำตามลำดับครบและสามารถ export ข้อมูลได้", "good");
+              setBar(ui.stability, 1);
+              setBar(ui.pull, 1);
+              metrics.logEvent(Step.Detaching, "step-pass");
+            }
+          }
+        }
+      }
+
+      scene.onBeforeRenderObservable.add(() => {
+        const dtMs = performance.now() - prevSampleAt;
+        if (dtMs > 16) {
+          const current = steps.get();
+          const currentPos = lbt.position.clone();
+          const delta = currentPos.subtract(prevPos);
+          const speed = delta.length() / (dtMs / 1000);
+          const direction = delta.length() > 0.00001 ? delta.normalize() : BABYLON.Vector3.Zero();
+          metrics.sample(current, currentPos, speed, direction);
+          prevPos = currentPos;
+          prevSampleAt = performance.now();
+        }
+
+        const risk = evaluateRisk(getHookPos());
+        if (risk.level === "warning") {
+          steps.addWarning();
+          steps.addRisk("warning", 16);
+          metrics.inc("yellowWarningsCount", 16);
+          flashWarning();
+          setAwareness("เข้า Warning zone ให้ปรับตำแหน่ง", "warn");
+        } else if (risk.level === "danger") {
+          steps.addError();
+          steps.addRisk("danger", 16);
+          metrics.inc("redDangerCount", 16);
+          showDangerVignette();
+          setStatus("เข้าเขตอันตราย");
+          setAwareness("ถอยออกจากเขตแดงก่อนดำเนินการ", "danger");
+
+          const b = audio.beep();
+          if (b) metrics.inc("beepCount", 0);
+
+          if (!dangerSinceMs) {
+            dangerSinceMs = performance.now();
+            lastDangerEvents.push(dangerSinceMs);
+            maybeAskDangerNudge();
+          }
+          if (performance.now() - dangerSinceMs > CONFIG.timeInRedNudgeMs && !dialog.isOpen()) {
+            dialog.show("danger-zone-repeat");
+            metrics.inc("nudgeDialogCount", 0);
+          }
+        } else {
+          clearVignette();
+          dangerSinceMs = null;
+        }
+
+        runStepLogic();
+      });
+
+      ui.exportBtn.onclick = () => {
+        const json = metrics.export(steps.snapshot());
+        const blob = new Blob([JSON.stringify(json, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "lbt-session-" + Date.now() + ".json";
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+
+      ui.resetBtn.onclick = () => {
+        location.reload();
+      };
+
+      loadModel("high_voltage_pole.glb", new BABYLON.TransformNode("poleRoot", scene), {
+        fitAxis: "y",
+        targetSize: 9,
+        onLoaded(modelRoot) {
+          modelRoot.position = new BABYLON.Vector3(0, 0, 0);
+          poleFallback.setEnabled(false);
+          crossArmFallback.setEnabled(false);
+          setStatus("โหลดโมเดลเสาไฟแรงสูงแล้ว");
+        }
+      }).catch(() => {
+        setAwareness("โหลด high_voltage_pole.glb ไม่สำเร็จ ใช้เสาจำลองแทน", "warn");
+      });
+
+      loadModel("lbt.glb", lbt, {
+        fitAxis: "max",
+        targetSize: 5.1,
+        onLoaded(modelRoot) {
+          for (const mesh of modelRoot.getChildMeshes()) {
+            mesh.isPickable = true;
+            draggableMeshes.add(mesh);
+          }
+          lbtHandleFallback.setEnabled(false);
+          lbtHookFallback.setEnabled(false);
+          lbtEndFallback.setEnabled(false);
+          setHookLocatorFromModel(modelRoot);
+          setStatus("โหลดโมเดล LBT แล้ว");
+        }
+      }).catch(() => {
+        setAwareness("โหลด lbt.glb ไม่สำเร็จ ใช้ LBT จำลองแทน", "warn");
+      });
+
+      setStatus("เริ่มขั้น Positioning");
+      setAwareness("เคลื่อน LBT ไปพื้นที่เริ่มต้น", "info");
+
+      return scene;
+    }
+
+    const scene = startApp();
+    engine.runRenderLoop(() => scene.render());
+    window.addEventListener("resize", () => engine.resize());
+  </script>
+</body>
+</html>

@@ -1,127 +1,13 @@
-const TILE_SIZE_PX = 8;
-const DEFAULT_SIZE = 128;
+import { GameRules } from "./player-state.js";
 
 let hourAccumulator = 0;
 
-    const GameState = {
-      map: {
-        size: DEFAULT_SIZE,
-        tileSizeM: 2,
-        height: new Int8Array(DEFAULT_SIZE * DEFAULT_SIZE),
-        resources: new Int16Array(DEFAULT_SIZE * DEFAULT_SIZE),
-        resourcesQty: new Int16Array(DEFAULT_SIZE * DEFAULT_SIZE),
-        roads: new Uint8Array(DEFAULT_SIZE * DEFAULT_SIZE),
-        units: new Int16Array(DEFAULT_SIZE * DEFAULT_SIZE),
-        buildings: new Int16Array(DEFAULT_SIZE * DEFAULT_SIZE)
-      },
-      defs: {
-        terrainLevels: [],
-        resources: [],
-        units: [],
-        buildings: []
-      },
-      runtime: {
-        population: 0,
-        populationCap: 0,
-        available: 0,
-        steps: 0,
-        hour: 0,
-        day: 1,
-        week: 1,
-        happiness: 50,
-        happy: true,
-        cityCenterIndex: -1,
-        unlockedBuildings: new Set(),
-        unitEntities: [],
-        buildingSites: [],
-        buildingAnchors: new Int32Array(DEFAULT_SIZE * DEFAULT_SIZE),
-        hutResidents: {},
-        hutGrowth: {},
-        lumberWorkers: {},
-        hunterWorkers: {},
-        workplaceFood: {},
-        hunterFoodStock: {},
-        resourceClaims: {},
-        walkable: new Uint8Array(DEFAULT_SIZE * DEFAULT_SIZE),
-        lastWorkMealKey: "",
-        system: {
-          paused: false,
-          speed: 1,
-          resourceFade: 0.75,
-          buildMode: "none"
-        },
-        resources: {
-          wood: 0,
-          food: 0
-        }
-      }
-    };
-
-    const GameRules = {
-      // Runtime balance/config is loaded from rules.json by player-system.js.
-      // Values here are internal fallbacks only.
-      build: {
-        startingBuildings: ["tent"],
-        prerequisites: { hut: ["tent"], lumberyard: ["tent"], hunter: ["tent"], storage: ["tent"] },
-        startingPopulation: 3,
-        startingResources: { wood: 20, food: 0 },
-        buildCosts: {
-          hut: { wood: 10, workers: 1 },
-          lumberyard: { wood: 8, workers: 1 },
-          hunter: { wood: 10, workers: 1 },
-          storage: { wood: 12, workers: 1 }
-        }
-      },
-      population: {
-        hutCapacity: 2,
-        hutGrowthWeeks: 1,
-        foodPerPersonPerDay: 3,
-        freeWorkerFoodGatherPerDay: 4,
-        starvationWeeksToDie: 4
-      },
-      happiness: {
-        threshold: 50,
-        gainWhenFed: 12,
-        lossWhenStarving: 24
-      },
-      economy: {
-        lumberyardSteps: 4,
-        lumberyardYield: 1,
-        lumberyardWorkers: 1,
-        workplaceMealsPerWorkerPerDay: 3,
-        hunterWorkers: 1,
-        hunterFoodPerHunt: 1,
-        hunterFoodPerDay: 12,
-        hunterHaulPerTrip: 10,
-        hunterHutFoodCap: 20,
-        hunterStockBufferDays: 2
-      },
-      time: {
-        hoursPerDay: 24,
-        daysPerWeek: 7,
-        hourTickSeconds: 0.35
-      },
-      storage: {
-        tentFoodCap: 20,
-        tentWoodCap: 20,
-        storageFoodBonus: 50,
-        storageWoodBonus: 50
-      },
-      movement: {
-        villagerWalkMetersPerHour: 72,
-        villagerWanderMetersPerHour: 48,
-        lumberjackWalkMetersPerHour: 64
-      }
-    };
-
     const Systems = {
       tick(state, dt) {
-        Systems.resourceDecay(state, dt);
-        Systems.updateWalkableLayer(state);
-        Systems.advanceTime(state, dt);
-        assignBuildersToSites(state);
-        assignHaulWorkers(state);
-        Systems.unitForage(state, dt);
+        FRAME_SYSTEM_PIPELINE.forEach((systemFn) => systemFn(state, dt));
+      },
+      runSimulationSubstep(state, dt) {
+        SUBSTEP_SYSTEM_PIPELINE.forEach((systemFn) => systemFn(state, dt));
       },
       updateWalkableLayer(state) {
         const size = state.map.size;
@@ -154,35 +40,45 @@ let hourAccumulator = 0;
       },
       advanceTime(state, dt) {
         const hourTick = Math.max(0.05, Number(GameRules.time.hourTickSeconds) || 0.35);
+        const minutesPerSubstep = Math.max(1, Math.min(60, Number(GameRules.time.minutesPerSubstep) || 10));
+        const substepsPerHour = Math.max(1, Math.round(60 / minutesPerSubstep));
+        const substepTick = hourTick / substepsPerHour;
         const hoursPerDay = Math.max(1, Number(GameRules.time.hoursPerDay) || 24);
         const daysPerWeek = Math.max(1, Number(GameRules.time.daysPerWeek) || 7);
         hourAccumulator += dt;
-        while (hourAccumulator >= hourTick) {
-          hourAccumulator -= hourTick;
-          state.runtime.hour += 1;
-          if (state.runtime.hour >= hoursPerDay) {
-            state.runtime.hour = 0;
-            state.runtime.day += 1;
-            state.runtime.steps += 1;
-            if (state.runtime.day > daysPerWeek) {
-              state.runtime.day = 1;
-              state.runtime.week += 1;
+        while (hourAccumulator >= substepTick) {
+          hourAccumulator -= substepTick;
+          Systems.runSimulationSubstep(state, substepTick);
+          state.runtime.substep = (Number(state.runtime.substep) || 0) + 1;
+          if (state.runtime.substep >= substepsPerHour) {
+            state.runtime.substep = 0;
+            state.runtime.hour += 1;
+            processHourlyFood(state);
+            if (state.runtime.hour >= hoursPerDay) {
+              state.runtime.hour = 0;
+              state.runtime.day += 1;
+              state.runtime.steps += 1;
+              if (state.runtime.day > daysPerWeek) {
+                state.runtime.day = 1;
+                state.runtime.week += 1;
+              }
+              Systems.settlementStep(state);
             }
-            Systems.settlementStep(state);
+            processWorkplaceMealWindow(state);
           }
-          processWorkplaceMealWindow(state);
         }
       },
       settlementStep(state) {
+        SETTLEMENT_SYSTEM_PIPELINE.forEach((systemFn) => systemFn(state));
+      },
+      hydrateFromLoadedState(state) {
+        Systems.updateWalkableLayer(state);
         assignHomelessToHuts(state);
         assignLumberWorkers(state);
         assignHunterWorkers(state);
         syncWorkplaceFoodState(state);
-        resetDailyTripBudget(state);
-        processHunterProduction(state);
-        processDailyFood(state);
-        processWeeklyPopulationGrowth(state);
-        clampResourceStock(state);
+        pruneResourceClaims(state);
+        syncUnitsFromEntities(state);
       },
       unitForage(state, dt) {
         const size = state.map.size;
@@ -196,7 +92,9 @@ let hourAccumulator = 0;
         const villagerWalkSpeed = tilesPerSecondFromMetersPerHour(state, GameRules.movement.villagerWalkMetersPerHour);
         const villagerWanderSpeed = tilesPerSecondFromMetersPerHour(state, GameRules.movement.villagerWanderMetersPerHour);
         const lumberjackWalkSpeed = tilesPerSecondFromMetersPerHour(state, GameRules.movement.lumberjackWalkMetersPerHour);
+        const allowPersonalForage = !hasPendingCityJobs(state);
         pruneResourceClaims(state);
+        pruneDepotQueues(state);
         const claims = state.runtime.resourceClaims || {};
         const isClaimedByOther = (index, unitId) => {
           if (!Number.isFinite(index) || index < 0) return false;
@@ -341,10 +239,13 @@ let hourAccumulator = 0;
             if (entity.targetIndex >= 0) {
               const tx = (entity.targetIndex % size) + 0.5;
               const ty = Math.floor(entity.targetIndex / size) + 0.5;
+              const beforeDist = distance(entity.x, entity.y, tx, ty);
               const dist = PathfindingSystem.moveEntityTowards(state, entity, tx, ty, lumberjackWalkSpeed, dt);
               if (dist <= 1.1) {
                 entity.task = "harvest_wood";
-                entity.gatherTimer = (entity.gatherTimer || 0) + dt;
+                const toReach = Math.max(0, (beforeDist - 1.1) / Math.max(0.0001, lumberjackWalkSpeed));
+                const gatherDt = beforeDist <= 1.1 ? dt : Math.max(0, dt - toReach);
+                entity.gatherTimer = (entity.gatherTimer || 0) + gatherDt;
                 if (entity.gatherTimer >= 1.2) {
                   entity.gatherTimer = 0;
                   qty[entity.targetIndex] = Math.max(0, qty[entity.targetIndex] - 1);
@@ -430,10 +331,13 @@ let hourAccumulator = 0;
               const tx = (entity.targetIndex % size) + 0.5;
               const ty = Math.floor(entity.targetIndex / size) + 0.5;
               entity.task = "seek_game";
+              const beforeDist = distance(entity.x, entity.y, tx, ty);
               const dist = PathfindingSystem.moveEntityTowards(state, entity, tx, ty, villagerWalkSpeed, dt);
               if (dist <= 1.1) {
                 entity.task = "hunt";
-                entity.gatherTimer = (entity.gatherTimer || 0) + dt;
+                const toReach = Math.max(0, (beforeDist - 1.1) / Math.max(0.0001, villagerWalkSpeed));
+                const gatherDt = beforeDist <= 1.1 ? dt : Math.max(0, dt - toReach);
+                entity.gatherTimer = (entity.gatherTimer || 0) + gatherDt;
                 if (entity.gatherTimer >= 1.2) {
                   entity.gatherTimer = 0;
                   qty[entity.targetIndex] = Math.max(0, qty[entity.targetIndex] - 1);
@@ -576,33 +480,14 @@ let hourAccumulator = 0;
             }
           }
 
-          if ((entity.carryFood || 0) <= 0 && (!Number.isFinite(entity.workFoodTarget) || entity.workFoodTarget < 0)) {
-            const hunterSource = findNearestHunterFoodSource(state, entity.x, entity.y);
-            if (hunterSource >= 0) {
-              releaseResourceClaim(state, entity);
-              entity.targetIndex = -1;
-              const hx = (hunterSource % size) + 0.5;
-              const hy = Math.floor(hunterSource / size) + 0.5;
-              entity.task = "pickup_hunter_food";
-              const remain = PathfindingSystem.moveEntityTowards(state, entity, hx, hy, villagerWalkSpeed, dt);
-              if (remain <= 0.6) {
-                const haulCap = Math.max(1, Number(GameRules.economy.hunterHaulPerTrip) || 12);
-                const foodSpace = Math.max(0, getResourceCap(state, "food") - (state.runtime.resources.food || 0));
-                const maxTake = Math.max(0, Math.min(haulCap, foodSpace));
-                const got = withdrawHunterFood(state, hunterSource, maxTake);
-                if (got > 0) {
-                  entity.carryFood = got;
-                  entity.task = "return_food";
-                  entity.targetIndex = -1;
-                } else {
-                  entity.task = "idle";
-                }
-              }
-              return;
-            }
-          }
+          // Hunter pickup is assignment-driven (haulRole === "hunter_haul") to avoid crowding.
 
-          if ((entity.carryFood || 0) > 0) {
+          const gatheredToday = Number(entity.dailyFoodGathered) || 0;
+          const gatherCap = Math.max(0, Number(GameRules.population.freeWorkerFoodGatherPerDay) || 4);
+          const canHuntToday = gatheredToday < gatherCap;
+          const carryCap = Math.max(1, Number(GameRules.population.freeWorkerFoodCarryCap) || 6);
+
+          if ((entity.carryFood || 0) > 0 && ((entity.carryFood || 0) >= carryCap || !canHuntToday || !allowPersonalForage)) {
             releaseResourceClaim(state, entity);
             entity.task = "return_food";
             entity.targetIndex = -1;
@@ -636,15 +521,35 @@ let hourAccumulator = 0;
               entity.depotIndex = getNearestDepotAnchor(state, entity.x, entity.y);
             }
             if (entity.depotIndex >= 0) {
-              const depotX = (entity.depotIndex % size) + 0.5;
-              const depotY = Math.floor(entity.depotIndex / size) + 0.5;
+              const depotAnchor = entity.depotIndex;
+              const depotX = (depotAnchor % size) + 0.5;
+              const depotY = Math.floor(depotAnchor / size) + 0.5;
+              const distToDepot = distance(entity.x, entity.y, depotX, depotY);
+              if (distToDepot <= 2.2 || getDepotQueuePosition(state, depotAnchor, entity.id) >= 0) {
+                enqueueDepotQueue(state, depotAnchor, entity.id);
+              }
+              const queuePos = getDepotQueuePosition(state, depotAnchor, entity.id);
+              if (queuePos > 0) {
+                entity.task = "queue_depot";
+                const slot = (queuePos - 1) % 8;
+                const ring = Math.floor((queuePos - 1) / 8);
+                const angle = (Math.PI * 2 * slot) / 8;
+                const radius = 1.0 + ring * 0.6;
+                const waitX = Math.max(0.5, Math.min(size - 0.5, depotX + Math.cos(angle) * radius));
+                const waitY = Math.max(0.5, Math.min(size - 0.5, depotY + Math.sin(angle) * radius));
+                PathfindingSystem.moveEntityTowards(state, entity, waitX, waitY, villagerWalkSpeed, dt);
+                return;
+              }
+              entity.task = "return_food";
               const remain = PathfindingSystem.moveEntityTowards(state, entity, depotX, depotY, villagerWalkSpeed, dt);
               if (remain <= 0.5) {
                 depositResource(state, "food", entity.carryFood);
                 entity.carryFood = 0;
+                leaveDepotQueue(state, depotAnchor, entity.id);
                 entity.task = "idle";
               }
             } else if (centerIndex >= 0) {
+              leaveDepotQueue(state, entity.depotIndex, entity.id);
               const remain = PathfindingSystem.moveEntityTowards(state, entity, centerX, centerY, villagerWalkSpeed, dt);
               if (remain <= 0.5) {
                 depositResource(state, "food", entity.carryFood);
@@ -652,15 +557,30 @@ let hourAccumulator = 0;
                 entity.task = "idle";
               }
             } else {
+              leaveDepotQueue(state, entity.depotIndex, entity.id);
               entity.task = "idle";
             }
             return;
           }
 
-          const gatheredToday = Number(entity.dailyFoodGathered) || 0;
-          const gatherCap = Math.max(0, Number(GameRules.population.freeWorkerFoodGatherPerDay) || 4);
-          const canHuntToday = gatheredToday < gatherCap;
           const needsTarget = !isTargetValid(entity, entity.targetIndex);
+          if (!allowPersonalForage) {
+            releaseResourceClaim(state, entity);
+            entity.targetIndex = -1;
+            entity.gatherTimer = 0;
+            entity.task = "idle";
+            const depot = getNearestDepotAnchor(state, entity.x, entity.y);
+            if (depot >= 0) {
+              const dx = (depot % size) + 0.5;
+              const dy = Math.floor(depot / size) + 0.5;
+              const remain = PathfindingSystem.moveEntityTowards(state, entity, dx, dy, villagerWalkSpeed, dt);
+              if (remain <= 1.2) {
+                entity.wanderTarget = null;
+                entity.wanderTime = 0;
+              }
+            }
+            return;
+          }
           if (needsTarget) {
             releaseResourceClaim(state, entity);
             entity.tripCost = 0;
@@ -684,13 +604,20 @@ let hourAccumulator = 0;
             entity.arrived = false;
           }
 
+          if ((entity.carryFood || 0) > 0 && entity.targetIndex < 0) {
+            entity.task = "return_food";
+          }
+
           if (entity.targetIndex >= 0) {
             const tx = (entity.targetIndex % size) + 0.5;
             const ty = Math.floor(entity.targetIndex / size) + 0.5;
+            const beforeDist = distance(entity.x, entity.y, tx, ty);
             const dist = PathfindingSystem.moveEntityTowards(state, entity, tx, ty, villagerWalkSpeed, dt);
             if (dist <= 1.1) {
               entity.task = "harvest_food";
-              entity.gatherTimer += dt;
+              const toReach = Math.max(0, (beforeDist - 1.1) / Math.max(0.0001, villagerWalkSpeed));
+              const gatherDt = beforeDist <= 1.1 ? dt : Math.max(0, dt - toReach);
+              entity.gatherTimer += gatherDt;
               if (entity.gatherTimer >= 1.1) {
                 entity.gatherTimer = 0;
                 qty[entity.targetIndex] = Math.max(0, qty[entity.targetIndex] - 1);
@@ -702,7 +629,7 @@ let hourAccumulator = 0;
                 }
                 releaseResourceClaim(state, entity);
                 entity.targetIndex = -1;
-                entity.task = "return_food";
+                entity.task = ((entity.carryFood || 0) >= carryCap || !canHuntToday || !allowPersonalForage) ? "return_food" : "seek_food";
               }
             } else {
               entity.task = "seek_food";
@@ -722,6 +649,32 @@ let hourAccumulator = 0;
         syncUnitsFromEntities(state);
       }
     };
+
+    // System pipelines define authoritative mutation order for the in-memory model.
+    const FRAME_SYSTEM_PIPELINE = [
+      (state, dt) => Systems.resourceDecay(state, dt),
+      (state) => Systems.updateWalkableLayer(state),
+      (state, dt) => Systems.advanceTime(state, dt)
+    ];
+
+    const SUBSTEP_SYSTEM_PIPELINE = [
+      (state) => assignLumberWorkers(state),
+      (state) => assignHunterWorkers(state),
+      (state) => assignBuildersToSites(state),
+      (state) => assignHaulWorkers(state),
+      (state, dt) => Systems.unitForage(state, dt)
+    ];
+
+    const SETTLEMENT_SYSTEM_PIPELINE = [
+      (state) => assignHomelessToHuts(state),
+      (state) => assignLumberWorkers(state),
+      (state) => assignHunterWorkers(state),
+      (state) => syncWorkplaceFoodState(state),
+      (state) => resetDailyTripBudget(state),
+      (state) => processHunterProduction(state),
+      (state) => processWeeklyPopulationGrowth(state),
+      (state) => clampResourceStock(state)
+    ];
 
     const DEFAULT_UNITS = [
       { id: "none", name_th: "None", color: "#1c1f1d" },
@@ -776,6 +729,8 @@ let hourAccumulator = 0;
         dailyTripPointsUsed: 0,
         dailyFoodGathered: 0,
         starvationDays: 0,
+        starvationHours: 0,
+        foodDebt: 0,
         tripCost: 0,
         siteId: null,
         carryType: null,
@@ -968,6 +923,30 @@ let hourAccumulator = 0;
       return null;
     };
 
+    const advanceEntityAlongPath = (state, entity, speed, dt) => {
+      if (!Array.isArray(entity.pathNodes) || entity.pathNodes.length === 0) return;
+      const size = state.map.size;
+      let stepBudget = Math.max(0, speed * dt);
+      while (stepBudget > 0 && entity.pathCursor < entity.pathNodes.length) {
+        const nextCell = entity.pathNodes[entity.pathCursor];
+        const nextX = (nextCell % size) + 0.5;
+        const nextY = Math.floor(nextCell / size) + 0.5;
+        const dist = distance(entity.x, entity.y, nextX, nextY);
+        if (dist <= 0.0001) {
+          entity.pathCursor += 1;
+          continue;
+        }
+        const step = Math.min(dist, stepBudget);
+        entity.x += ((nextX - entity.x) / dist) * step;
+        entity.y += ((nextY - entity.y) / dist) * step;
+        stepBudget -= step;
+        if (dist - step <= 0.0001) entity.pathCursor += 1;
+      }
+      if (entity.pathCursor >= entity.pathNodes.length) {
+        PathfindingSystem.clearPath(entity);
+      }
+    };
+
     const moveEntityTowards = (state, entity, tx, ty, speed, dt) => {
       const size = state.map.size;
       const start = toCellIndex(size, entity.x, entity.y);
@@ -994,27 +973,9 @@ let hourAccumulator = 0;
         }
       }
 
-      if (!Array.isArray(entity.pathNodes) || entity.pathNodes.length === 0) {
-        if (isWalkableCell(state, goal)) moveTowards(entity, goalX, goalY, speed, dt);
-        return distance(entity.x, entity.y, goalX, goalY);
-      }
+      if (!Array.isArray(entity.pathNodes) || entity.pathNodes.length === 0) return distance(entity.x, entity.y, goalX, goalY);
 
-      let nextCell = entity.pathNodes[Math.max(0, entity.pathCursor)];
-      let nextX = (nextCell % size) + 0.5;
-      let nextY = Math.floor(nextCell / size) + 0.5;
-      let remain = moveTowards(entity, nextX, nextY, speed, dt);
-      if (remain <= 0.05) {
-        entity.pathCursor += 1;
-        if (entity.pathCursor >= entity.pathNodes.length) {
-          PathfindingSystem.clearPath(entity);
-          moveTowards(entity, goalX, goalY, speed, dt);
-        } else {
-          nextCell = entity.pathNodes[entity.pathCursor];
-          nextX = (nextCell % size) + 0.5;
-          nextY = Math.floor(nextCell / size) + 0.5;
-          moveTowards(entity, nextX, nextY, speed, dt);
-        }
-      }
+      advanceEntityAlongPath(state, entity, speed, dt);
       return distance(entity.x, entity.y, goalX, goalY);
     };
 
@@ -1232,6 +1193,59 @@ let hourAccumulator = 0;
       return best;
     };
 
+    const ensureDepotQueues = (state) => {
+      if (!state.runtime.depotQueues || typeof state.runtime.depotQueues !== "object") {
+        state.runtime.depotQueues = {};
+      }
+      return state.runtime.depotQueues;
+    };
+
+    const enqueueDepotQueue = (state, anchor, unitId) => {
+      if (!Number.isFinite(anchor) || anchor < 0 || !unitId) return;
+      const queues = ensureDepotQueues(state);
+      const key = String(anchor);
+      if (!Array.isArray(queues[key])) queues[key] = [];
+      if (!queues[key].includes(unitId)) queues[key].push(unitId);
+    };
+
+    const leaveDepotQueue = (state, anchor, unitId) => {
+      if (!Number.isFinite(anchor) || anchor < 0 || !unitId) return;
+      const queues = ensureDepotQueues(state);
+      const key = String(anchor);
+      if (!Array.isArray(queues[key])) return;
+      queues[key] = queues[key].filter((id) => id !== unitId);
+      if (queues[key].length <= 0) delete queues[key];
+    };
+
+    const getDepotQueuePosition = (state, anchor, unitId) => {
+      if (!Number.isFinite(anchor) || anchor < 0 || !unitId) return -1;
+      const queues = ensureDepotQueues(state);
+      const key = String(anchor);
+      if (!Array.isArray(queues[key])) return -1;
+      return queues[key].indexOf(unitId);
+    };
+
+    const pruneDepotQueues = (state) => {
+      const queues = ensureDepotQueues(state);
+      const validDepots = new Set(getDepotAnchors(state).map((a) => String(a)));
+      const unitsById = new Map((state.runtime.unitEntities || []).map((u) => [u.id, u]));
+      const queueTasks = new Set(["return_food", "queue_depot"]);
+      Object.entries(queues).forEach(([anchorKey, ids]) => {
+        if (!validDepots.has(anchorKey)) {
+          delete queues[anchorKey];
+          return;
+        }
+        const filtered = (Array.isArray(ids) ? ids : []).filter((id) => {
+          const unit = unitsById.get(id);
+          if (!unit) return false;
+          return queueTasks.has(String(unit.task || ""));
+        });
+        if (filtered.length > 0) queues[anchorKey] = filtered;
+        else delete queues[anchorKey];
+      });
+      state.runtime.depotQueues = queues;
+    };
+
     const findNearestHunterFoodSource = (state, x, y) => {
       const stock = state.runtime.hunterFoodStock || {};
       let best = -1;
@@ -1443,31 +1457,70 @@ let hourAccumulator = 0;
       syncUnitsFromEntities(state);
     };
 
-    const processDailyFood = (state) => {
+    const processHourlyFood = (state) => {
       const foodPerPerson = Math.max(0, Number(GameRules.population.foodPerPersonPerDay) || 3);
+      const hoursPerDay = Math.max(1, Number(GameRules.time.hoursPerDay) || 24);
       const happyThreshold = Math.max(0, Number(GameRules.happiness.threshold) || 50);
       const gainWhenFed = Math.max(0, Number(GameRules.happiness.gainWhenFed) || 12);
       const lossWhenStarving = Math.max(0, Number(GameRules.happiness.lossWhenStarving) || 24);
-      const available = state.runtime.resources.food || 0;
       const units = state.runtime.unitEntities;
       const hunterIds = new Set();
       Object.values(state.runtime.hunterWorkers || {}).forEach((ids) => {
         (Array.isArray(ids) ? ids : []).forEach((id) => hunterIds.add(id));
       });
       const nonHunterUnits = units.filter((entity) => !hunterIds.has(entity.id));
-      const required = nonHunterUnits.length * foodPerPerson;
-      const fedCount = Math.min(nonHunterUnits.length, Math.floor(available / Math.max(1, foodPerPerson)));
-      const consumed = fedCount * foodPerPerson;
-      state.runtime.resources.food = Math.max(0, available - consumed);
+      const demandPerHour = foodPerPerson / hoursPerDay;
+      const mealsPerDay = Math.max(1, foodPerPerson);
+      const starvationHoursPerMealMiss = hoursPerDay / mealsPerDay;
+      const totalHoursToDie = Math.max(1, Math.floor(
+        (Number(GameRules.population.starvationWeeksToDie) || 4)
+        * (Number(GameRules.time.daysPerWeek) || 7)
+        * hoursPerDay
+      ));
 
-      const starvationDaysToDie = Math.max(1, Math.floor((Number(GameRules.population.starvationWeeksToDie) || 4) * (Number(GameRules.time.daysPerWeek) || 7)));
+      nonHunterUnits.forEach((entity) => {
+        entity.foodDebt = Math.max(0, Number(entity.foodDebt) || 0) + demandPerHour;
+        entity.starvationHours = Math.max(0, Number(entity.starvationHours) || 0);
+      });
+
+      let totalDueMeals = 0;
+      nonHunterUnits.forEach((entity) => {
+        totalDueMeals += Math.floor((Number(entity.foodDebt) || 0) + 1e-9);
+      });
+
+      const daysPerWeek = Math.max(1, Number(GameRules.time.daysPerWeek) || 7);
+      const absoluteHour = (
+        ((Math.max(1, state.runtime.week) - 1) * daysPerWeek + (Math.max(1, state.runtime.day) - 1)) * hoursPerDay
+      ) + Math.max(0, state.runtime.hour);
+      const startOffset = nonHunterUnits.length > 0 ? (absoluteHour % nonHunterUnits.length) : 0;
+
+      let missedMeals = 0;
+      let available = Math.max(0, Number(state.runtime.resources.food) || 0);
       for (let i = 0; i < nonHunterUnits.length; i += 1) {
-        const entity = nonHunterUnits[i];
-        if (i < fedCount) entity.starvationDays = 0;
-        else entity.starvationDays = (Number(entity.starvationDays) || 0) + 1;
+        const entity = nonHunterUnits[(i + startOffset) % nonHunterUnits.length];
+        let dueMeals = Math.floor((Number(entity.foodDebt) || 0) + 1e-9);
+        while (dueMeals > 0) {
+          entity.foodDebt = Math.max(0, (Number(entity.foodDebt) || 0) - 1);
+          if (available >= 1) {
+            available -= 1;
+            entity.starvationHours = 0;
+            entity.starvationDays = 0;
+          } else {
+            missedMeals += 1;
+            entity.starvationHours = (Number(entity.starvationHours) || 0) + starvationHoursPerMealMiss;
+            entity.starvationDays = Math.floor((Number(entity.starvationHours) || 0) / hoursPerDay);
+          }
+          dueMeals -= 1;
+        }
       }
+      state.runtime.resources.food = available;
+
       units.forEach((entity) => {
-        if (hunterIds.has(entity.id)) entity.starvationDays = 0;
+        if (hunterIds.has(entity.id)) {
+          entity.starvationDays = 0;
+          entity.starvationHours = 0;
+          entity.foodDebt = 0;
+        }
       });
 
       const hunterIdSet = new Set((state.runtime.unitEntities || []).map((entity) => entity.id));
@@ -1479,17 +1532,18 @@ let hourAccumulator = 0;
       });
 
       for (let i = units.length - 1; i >= 0; i -= 1) {
-        if ((Number(units[i].starvationDays) || 0) >= starvationDaysToDie) units.splice(i, 1);
+        if ((Number(units[i].starvationHours) || 0) >= totalHoursToDie) units.splice(i, 1);
       }
 
-      if (consumed >= required) {
-        state.runtime.happiness = Math.min(100, (state.runtime.happiness || 0) + gainWhenFed);
+      if (totalDueMeals <= 0 || missedMeals <= 0) {
+        state.runtime.happiness = Math.min(100, (state.runtime.happiness || 0) + (gainWhenFed / hoursPerDay));
         state.runtime.happy = (state.runtime.happiness || 0) >= happyThreshold;
         syncUnitsFromEntities(state);
         return;
       }
 
-      state.runtime.happiness = Math.max(0, (state.runtime.happiness || 0) - lossWhenStarving);
+      const shortageRatio = Math.max(0, Math.min(1, missedMeals / Math.max(1, totalDueMeals)));
+      state.runtime.happiness = Math.max(0, (state.runtime.happiness || 0) - ((lossWhenStarving / hoursPerDay) * shortageRatio));
       state.runtime.happy = (state.runtime.happiness || 0) >= happyThreshold;
       syncUnitsFromEntities(state);
     };
@@ -1521,8 +1575,10 @@ let hourAccumulator = 0;
       });
 
       state.runtime.unitEntities.forEach((entity) => {
-        entity.job = "idle";
-        entity.workIndex = -1;
+        if (entity.job === "lumberjack" || entity.job === "hunter") {
+          entity.job = "idle";
+          entity.workIndex = -1;
+        }
       });
 
       const assignedIds = new Set();
@@ -1762,15 +1818,56 @@ let hourAccumulator = 0;
       return -1;
     };
 
+    const hasPendingCityJobs = (state) => {
+      const entities = state.runtime.unitEntities || [];
+      const liveIds = new Set(entities.map((e) => e.id));
+
+      // Any incomplete building site means city work is still pending.
+      if ((state.runtime.buildingSites || []).some((site) => !site.active)) return true;
+
+      const requiredLumber = getBuildingAnchorsById(state, "lumberyard").length
+        * Math.max(1, Number(GameRules.economy.lumberyardWorkers) || 1);
+      const assignedLumber = Object.values(state.runtime.lumberWorkers || {}).reduce((sum, ids) => {
+        if (!Array.isArray(ids)) return sum;
+        return sum + ids.filter((id) => liveIds.has(id)).length;
+      }, 0);
+      if (assignedLumber < requiredLumber) return true;
+
+      const requiredHunter = getBuildingAnchorsById(state, "hunter").length
+        * Math.max(1, Number(GameRules.economy.hunterWorkers) || 1);
+      const assignedHunter = Object.values(state.runtime.hunterWorkers || {}).reduce((sum, ids) => {
+        if (!Array.isArray(ids)) return sum;
+        return sum + ids.filter((id) => liveIds.has(id)).length;
+      }, 0);
+      if (assignedHunter < requiredHunter) return true;
+
+      const hasDepot = getDepotAnchors(state).length > 0;
+      const cityFood = Math.max(0, Number(state.runtime.resources.food) || 0);
+      if (hasDepot && cityFood > 0) {
+        syncWorkplaceFoodState(state);
+        const needWorkFood = Object.values(state.runtime.workplaceFood || {}).some((site) => {
+          const workers = Math.max(0, Number(site?.workers) || 0);
+          const cap = Math.max(0, Number(site?.cap) || 0);
+          const stock = Math.max(0, Number(site?.stock) || 0);
+          return workers > 0 && stock < cap;
+        });
+        if (needWorkFood) return true;
+      }
+
+      const foodSpace = Math.max(0, getResourceCap(state, "food") - cityFood);
+      if (hasDepot && foodSpace > 0) {
+        const hasHunterStock = Object.values(state.runtime.hunterFoodStock || {}).some((amount) => (Number(amount) || 0) > 0);
+        if (hasHunterStock) return true;
+      }
+
+      return false;
+    };
+
 const resetHourAccumulator = () => {
   hourAccumulator = 0;
 };
 
 export {
-  TILE_SIZE_PX,
-  DEFAULT_SIZE,
-  GameState,
-  GameRules,
   Systems,
   DEFAULT_UNITS,
   DEFAULT_BUILDINGS,

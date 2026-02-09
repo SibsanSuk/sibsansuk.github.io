@@ -2,7 +2,9 @@ import {
   TILE_SIZE_PX,
   DEFAULT_SIZE,
   GameState,
-  GameRules,
+  GameRules
+} from "./player-state.js";
+import {
   Systems,
   DEFAULT_UNITS,
   DEFAULT_BUILDINGS,
@@ -17,7 +19,7 @@ import {
   assignHunterWorkers,
   syncWorkplaceFoodState,
   resetHourAccumulator
-} from "./player-model.js";
+} from "./player-systems.js";
 import { createGameView } from "./player-view.js";
 
 const canvas = document.getElementById("gameCanvas");
@@ -42,6 +44,7 @@ const resourceInfo = document.getElementById("resourceInfo");
 const qtyInfo = document.getElementById("qtyInfo");
 const popInfo = document.getElementById("popInfo");
 const stepInfo = document.getElementById("stepInfo");
+const toggleSimButton = document.getElementById("toggleSim");
 
 const RESOURCE_SPRITES = window.SPRITES?.RESOURCE_SPRITES || {};
 const BUILDING_SPRITES = window.SPRITES?.BUILDING_SPRITES || {};
@@ -55,7 +58,22 @@ SystemState.buildMode = "none";
 const gameView = createGameView({
   canvas,
   tileSizePx: TILE_SIZE_PX,
-  getResourceFade: () => SystemState.resourceFade
+  getResourceFade: () => SystemState.resourceFade,
+  ui: {
+    woodHud,
+    foodHud,
+    happyHud,
+    popHud,
+    freeHud,
+    hutHud,
+    lumberHud,
+    tileInfo,
+    resourceInfo,
+    qtyInfo,
+    popInfo,
+    stepInfo,
+    toggleSimButton
+  }
 });
 
     const recomputePopulation = (state) => {
@@ -306,6 +324,7 @@ const gameView = createGameView({
       GameState.runtime.available = Number(runtimeData.available) || 0;
       GameState.runtime.steps = Number(runtimeData.steps) || 0;
       GameState.runtime.hour = Number.isFinite(runtimeData.hour) ? runtimeData.hour : 0;
+      GameState.runtime.substep = Number.isFinite(runtimeData.substep) ? runtimeData.substep : 0;
       GameState.runtime.day = Number.isFinite(runtimeData.day) ? runtimeData.day : 1;
       GameState.runtime.week = Number.isFinite(runtimeData.week) ? runtimeData.week : 1;
       GameState.runtime.happiness = Number.isFinite(runtimeData.happiness) ? runtimeData.happiness : 50;
@@ -321,7 +340,7 @@ const gameView = createGameView({
       speedValue.textContent = `${Number(SystemState.speed).toFixed(1)}x`;
       resourceFadeInput.value = String(SystemState.resourceFade);
       resourceFadeValue.textContent = Number(SystemState.resourceFade).toFixed(2);
-      document.getElementById("toggleSim").textContent = SystemState.paused ? "Play" : "Pause";
+      gameView.setPauseLabel(SystemState.paused);
       GameState.runtime.unitEntities = [];
       GameState.runtime.buildingSites = [];
       GameState.runtime.hutResidents = {};
@@ -340,6 +359,7 @@ const gameView = createGameView({
       GameState.runtime.hunterFoodStock = runtimeData.hunterFoodStock && typeof runtimeData.hunterFoodStock === "object"
         ? { ...runtimeData.hunterFoodStock }
         : {};
+      GameState.runtime.depotQueues = {};
       GameState.runtime.lastWorkMealKey = typeof runtimeData.lastWorkMealKey === "string" ? runtimeData.lastWorkMealKey : "";
       resetHourAccumulator();
       GameState.runtime.buildingAnchors = new Int32Array(size * size);
@@ -369,6 +389,8 @@ const gameView = createGameView({
               dailyTripPointsUsed: 0,
               dailyFoodGathered: 0,
               starvationDays: 0,
+              starvationHours: 0,
+              foodDebt: 0,
               tripCost: 0,
               siteId: null,
               carryType: null,
@@ -393,12 +415,7 @@ const gameView = createGameView({
         }
       }
       rebuildBuildingAnchorsFromMap(GameState);
-      Systems.updateWalkableLayer(GameState);
-      assignHomelessToHuts(GameState);
-      assignLumberWorkers(GameState);
-      assignHunterWorkers(GameState);
-      syncWorkplaceFoodState(GameState);
-      syncUnitsFromEntities(GameState);
+      Systems.hydrateFromLoadedState(GameState);
       recomputePopulation(GameState);
       refreshBuildOptions();
       updateHud();
@@ -413,13 +430,15 @@ const gameView = createGameView({
     const updateHud = () => {
       const woodCap = getResourceCap(GameState, "wood");
       const foodCap = getResourceCap(GameState, "food");
-      woodHud.textContent = `${GameState.runtime.resources.wood || 0}/${woodCap}`;
-      foodHud.textContent = `${GameState.runtime.resources.food || 0}/${foodCap}`;
-      happyHud.textContent = `${Math.round(GameState.runtime.happiness || 0)}${GameState.runtime.happy ? "" : "!"}`;
-      popHud.textContent = `${GameState.runtime.population}/${GameState.runtime.populationCap}`;
-      freeHud.textContent = String(GameState.runtime.available || 0);
-      hutHud.textContent = String(countBuildingsById(GameState, "hut"));
-      lumberHud.textContent = String(countBuildingsById(GameState, "lumberyard"));
+      gameView.updateHud({
+        wood: `${GameState.runtime.resources.wood || 0}/${woodCap}`,
+        food: `${GameState.runtime.resources.food || 0}/${foodCap}`,
+        happy: `${Math.round(GameState.runtime.happiness || 0)}${GameState.runtime.happy ? "" : "!"}`,
+        pop: `${GameState.runtime.population}/${GameState.runtime.populationCap}`,
+        free: String(GameState.runtime.available || 0),
+        hut: String(countBuildingsById(GameState, "hut")),
+        lumber: String(countBuildingsById(GameState, "lumberyard"))
+      });
       updateBuildButtonsState();
     };
 
@@ -461,8 +480,12 @@ const gameView = createGameView({
     GameRootSystem.add({
       id: "hud-system",
       update: () => {
-        popInfo.textContent = `${GameState.runtime.population}/${GameState.runtime.populationCap}`;
-        stepInfo.textContent = `W${GameState.runtime.week} D${GameState.runtime.day} H${String(GameState.runtime.hour).padStart(2, "0")}`;
+        const minutesPerSubstep = Math.max(1, Math.min(60, Number(GameRules.time.minutesPerSubstep) || 10));
+        const minute = ((Number(GameState.runtime.substep) || 0) * minutesPerSubstep) % 60;
+        gameView.updateStatus({
+          pop: `${GameState.runtime.population}/${GameState.runtime.populationCap}`,
+          step: `W${GameState.runtime.week} D${GameState.runtime.day} H${String(GameState.runtime.hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`
+        });
         updateHud();
       }
     });
@@ -489,15 +512,20 @@ const gameView = createGameView({
       const y = Math.floor((event.clientY - rect.top) * scaleY / TILE_SIZE_PX);
       if (x < 0 || y < 0 || x >= GameState.map.size || y >= GameState.map.size) return;
       const idx = y * GameState.map.size + x;
-      tileInfo.textContent = `${x},${y}`;
       const resIndex = GameState.map.resources[idx];
       if (resIndex > 0) {
         const def = GameState.defs.resources[resIndex - 1];
-        resourceInfo.textContent = def ? def.name_th || def.name_en : "?";
-        qtyInfo.textContent = GameState.map.resourcesQty[idx] || 0;
+        gameView.updateTileInfo({
+          position: `${x},${y}`,
+          resource: def ? def.name_th || def.name_en : "?",
+          qty: GameState.map.resourcesQty[idx] || 0
+        });
       } else {
-      resourceInfo.textContent = "-";
-      qtyInfo.textContent = "-";
+      gameView.updateTileInfo({
+        position: `${x},${y}`,
+        resource: "-",
+        qty: "-"
+      });
     }
     });
 
@@ -526,6 +554,7 @@ const gameView = createGameView({
         available: GameState.runtime.available,
         cityCenterIndex: GameState.runtime.cityCenterIndex,
         hour: GameState.runtime.hour,
+        substep: GameState.runtime.substep,
         day: GameState.runtime.day,
         week: GameState.runtime.week,
         happiness: GameState.runtime.happiness,
@@ -586,9 +615,9 @@ const gameView = createGameView({
       reader.readAsText(file);
     });
 
-    document.getElementById("toggleSim").addEventListener("click", (event) => {
+    toggleSimButton.addEventListener("click", () => {
       SystemState.paused = !SystemState.paused;
-      event.target.textContent = SystemState.paused ? "Play" : "Pause";
+      gameView.setPauseLabel(SystemState.paused);
     });
 
     document.getElementById("stepSim").addEventListener("click", () => {
@@ -652,6 +681,7 @@ const gameView = createGameView({
       GameRules.population.hutGrowthWeeks = Number(populationRules.hut_growth_weeks) || GameRules.population.hutGrowthWeeks;
       GameRules.population.foodPerPersonPerDay = Number(populationRules.food_per_person_per_day) || GameRules.population.foodPerPersonPerDay;
       GameRules.population.freeWorkerFoodGatherPerDay = Number(unitRules.free_worker_food_gather_per_day || populationRules.free_worker_food_gather_per_day) || GameRules.population.freeWorkerFoodGatherPerDay;
+      GameRules.population.freeWorkerFoodCarryCap = Number(unitRules.free_worker_food_carry_cap || populationRules.free_worker_food_carry_cap) || GameRules.population.freeWorkerFoodCarryCap;
       GameRules.population.starvationWeeksToDie = Number(unitRules.starvation_weeks_to_die || populationRules.starvation_weeks_to_die) || GameRules.population.starvationWeeksToDie;
 
       GameRules.happiness.threshold = Number(happinessRules.threshold) || GameRules.happiness.threshold;
@@ -671,6 +701,7 @@ const gameView = createGameView({
 
       GameRules.time.hoursPerDay = Number(timeRules.hours_per_day) || GameRules.time.hoursPerDay;
       GameRules.time.daysPerWeek = Number(timeRules.days_per_week) || GameRules.time.daysPerWeek;
+      GameRules.time.minutesPerSubstep = Number(timeRules.minutes_per_substep) || GameRules.time.minutesPerSubstep;
       GameRules.time.hourTickSeconds = Number(timeRules.hour_tick_seconds) || GameRules.time.hourTickSeconds;
 
       GameRules.storage.tentFoodCap = Number(storageRules.tent_food_cap) || GameRules.storage.tentFoodCap;

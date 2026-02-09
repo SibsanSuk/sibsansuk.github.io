@@ -35,6 +35,7 @@
   "unit_rules": {
     "starting_population": 5,
     "free_worker_food_gather_per_day": 4,
+    "free_worker_food_carry_cap": 6,
     "starvation_weeks_to_die": 4,
     "movement": {
       "villager_walk_mph": 72,
@@ -66,6 +67,7 @@
   "time_rules": {
     "hours_per_day": 24,
     "days_per_week": 7,
+    "minutes_per_substep": 5,
     "hour_tick_seconds": 0.35
   },
   "storage_rules": {
