@@ -271,6 +271,40 @@
     .unit-details > summary{ list-style: none; }
     .unit-details > summary::-webkit-details-marker{ display: none; }
     .unit-details[open] .unit-caret{ transform: rotate(180deg); }
+    .course-tree-btn{
+      width: 100%;
+      text-align: left;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid transparent;
+      color: var(--ink);
+      transition: background .15s ease, border-color .15s ease;
+    }
+    .course-tree-btn:hover{ background: rgba(224,250,248,.65); }
+    .course-tree-btn.active{
+      background: var(--brand-100);
+      border-color: rgba(31,185,183,.35);
+    }
+    .course-tree .badge{
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 12px;
+      border: 1px solid rgba(0,0,0,.08);
+      background: rgba(79, 208, 200, .15);
+      color: #0b4f55;
+      white-space: nowrap;
+    }
+    .course-tree .badge.kind-chapter{ background: rgba(31,185,183,.16); }
+    .course-tree .badge.kind-sequential{ background: rgba(245,158,11,.16); color: #7c2d12; }
+    .course-tree .badge.kind-vertical{ background: rgba(79,140,255,.16); color: #1e3a8a; }
+    .course-tree .badge.kind-html{ background: rgba(24,184,121,.16); color: #065f46; }
+    .course-tree .badge.tool-ae{ background: rgba(245,158,11,.16); color: #7c2d12; }
+    .course-tree .badge.tool-bookroll{ background: rgba(79,140,255,.16); color: #1e3a8a; }
+    .course-tree .badge.tool-video{ background: rgba(197,156,255,.16); color: #3b0764; }
+    .course-tree .badge.tool-chatbot{ background: rgba(245,106,106,.16); color: #7f1d1d; }
+    .course-tree .badge.tool-sim{ background: rgba(31,185,183,.16); color: #0b4f55; }
+    .course-tree .badge.tool-iframe{ background: rgba(246,184,106,.18); color: #7c2d12; }
+    .course-tree .badge.tool-mixed{ background: rgba(148,163,184,.22); color: #334155; }
 
     @media (max-width: 1024px){
       body{
@@ -364,7 +398,7 @@
                       <div class="mt-3 h-2 bg-slate-200 rounded-full overflow-hidden">
                         <div class="h-full grad-success" id="speed-bar" style="width: 62%"></div>
                       </div>
-                      <div class="mt-2 text-xs text-slate-600">ความเร็วในการเรียนรู้ (mock)</div>
+                      <div class="mt-2 text-xs text-slate-600">ความเร็วในการเรียนรู้</div>
                     </div>
 
                     <div class="clay-soft p-4 cat-card cat-3">
@@ -376,7 +410,7 @@
                       <div class="mt-3 h-2 bg-slate-200 rounded-full overflow-hidden">
                         <div class="h-full grad-brand" id="performance-bar" style="width: 71%"></div>
                       </div>
-                      <div class="mt-2 text-xs text-slate-600">ผลสัมฤทธิ์รวม (mock)</div>
+                      <div class="mt-2 text-xs text-slate-600">ผลสัมฤทธิ์รวม</div>
                     </div>
                   </div>
 
@@ -492,6 +526,32 @@
                     </div>
                   </div>
 
+                  <div class="mt-5">
+                    <div class="clay-soft p-4 cat-card cat-5 course-tree">
+                      <div class="flex items-start justify-between gap-3">
+                        <div>
+                          <div class="font-bold">Course Structure (Deep)</div>
+                          <div class="mt-1 text-sm text-slate-600">แสดงโครงสร้างลึกแบบ course -> chapter -> sequential -> vertical -> component พร้อมดู JSON รายโหนด</div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <div class="text-xs text-slate-500 mono" id="course-deep-status">รอข้อมูล</div>
+                          <button id="course-deep-load" class="ghost px-3 py-1.5 text-xs text-slate-700">โหลดโครงสร้างลึก</button>
+                        </div>
+                      </div>
+                      <div class="mt-3 panel p-2">
+                        <input id="course-deep-search" class="w-full panel field px-3 py-2 text-sm outline-none" placeholder="ค้นหา title / id / kind..." disabled />
+                      </div>
+                      <div class="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
+                        <div id="course-deep-tree" class="panel p-2 grid gap-2 overflow-auto" style="max-height: 560px;">
+                          <div class="text-sm text-slate-600">กด "โหลดโครงสร้างลึก" เพื่อแสดงข้อมูล</div>
+                        </div>
+                        <div id="course-deep-inspector" class="panel p-4 overflow-auto" style="max-height: 560px;">
+                          <div class="text-sm text-slate-600">คลิกโหนดทางซ้ายเพื่อดูรายละเอียด</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <div class="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div class="clay-soft p-4 cat-card cat-5">
                       <div class="flex items-center justify-between gap-3">
@@ -546,7 +606,7 @@
                         </div>
                         <div class="mt-2 flex items-center justify-between">
                           <span>คอร์ส</span>
-                          <span id="course-id">VK Test (25-01-30)</span>
+                          <span id="course-id">-</span>
                         </div>
                       </div>
                       <div class="mt-3 panel p-4 text-sm text-slate-600">
@@ -581,8 +641,6 @@
 
   <script>
     const qs = new URLSearchParams(window.location.search);
-    // Default: use real APIs. Add `?mock=1` for CORS-free demos (loads `mock/*.json`).
-    const USE_MOCK_API = qs.get("mock") === "1";
     const SHOW_BOOKROLL = qs.get("bookroll") === "1";
     const OIDC = {
       authorizationEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/auth",
@@ -693,42 +751,10 @@
       return res.json();
     };
 
-    const mock = {
-      course: { title: "VK Test (25-01-30)", progress: 0.74, schedule: "เริ่ม 20 ม.ค. 2026 • ปิด 30 ม.ค. 2026" },
-      units: [
-        { id: "u1", name: "unit 1", items: [
-          { id: "p1", type: "quiz", name: "ข้อสอบก่อนเรียน", status: "done" },
-          { id: "q1", type: "quiz", name: "ข้อ 1", status: "doing" },
-          { id: "q2", type: "quiz", name: "ข้อ 2", status: "todo" }
-        ]},
-        { id: "u2", name: "unit 2", items: [
-          { id: "l1", type: "lesson", name: "บทเรียน 1", status: "todo" },
-          { id: "l2", type: "lesson", name: "บทเรียน 2", status: "todo" }
-        ]},
-        { id: "u3", name: "unit 3", items: [
-          { id: "e1", type: "exam", name: "แบบทดสอบปลายหน่วย", status: "locked" }
-        ]}
-      ],
-      student: { name: "student", id: "student", overall: 0.68, byUnit: [0.9, 0.55, 0.0] },
-      results: { speed: 0.62, performance: 0.71 }
-    };
-
-    const toPercent = (value) => Math.round(value * 100);
-
-    const statusCounts = mock.units
-      .flatMap((u) => u.items)
-      .reduce((acc, item) => {
-        acc[item.status] = (acc[item.status] || 0) + 1;
-        return acc;
-      }, { done: 0, doing: 0, todo: 0, locked: 0 });
-
     const params = new URLSearchParams(window.location.search);
+    const statusCounts = { done: 0, doing: 0, todo: 0, locked: 0 };
     let userId = params.get("userId");
     let courseId = params.get("courseid");
-    if (userId) {
-      mock.student.name = userId;
-      mock.student.id = userId;
-    }
     if (courseId) {
       const courseEl = document.getElementById("course-id");
       if (courseEl) courseEl.textContent = courseId;
@@ -758,13 +784,9 @@
       const headerCourseTitleEl = document.getElementById("header-course-title");
       if (headerCourseTitleEl) headerCourseTitleEl.textContent = decodeIfMojibake(window.courseDetailData?.courseTitle) || "-";
       const courseEl = document.getElementById("course-id");
-      if (courseEl) courseEl.textContent = courseId || "VK Test (25-01-30)";
-      if (userId) {
-        mock.student.name = userId;
-        mock.student.id = userId;
-      }
-      document.getElementById("student-name").textContent = mock.student.name;
-      document.getElementById("student-id").textContent = mock.student.id;
+      if (courseEl) courseEl.textContent = courseId || "-";
+      document.getElementById("student-name").textContent = userId || "-";
+      document.getElementById("student-id").textContent = userId || "-";
     };
 
     const loadBtn = document.getElementById("btn-load");
@@ -820,35 +842,6 @@
     const doneChapterAeUrl = (uid, cid) =>
       `https://ae-backend.learning.app.meca.in.th/analysis/donechapterview/${encodeURIComponent(uid)}/course/${encodeURIComponent(cid)}`;
 
-    const mockUrl = {
-      course: "mock/courseDetail.json",
-      bookrollMaxPage: "mock/bookrollMaxPage.json",
-      bookrollActivity: "mock/bookrollActivity.json",
-      chatbotSpeed: "mock/chatbotSpeed.json",
-      chatbotPerformance: "mock/chatbotPerformance.json",
-      doneChapter: "mock/doneChapterView.json",
-    };
-
-    const fetchMockJson = async (relPath) => {
-      const clean = String(relPath || "").replace(/^\/+/, "");
-      const candidates = [
-        clean,
-        "/" + clean,
-        "/VK/" + clean,
-      ];
-      let lastErr = null;
-      for (const u of candidates) {
-        try {
-          const res = await fetch(u);
-          if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-          return { data: await res.json(), url: u };
-        } catch (e) {
-          lastErr = e;
-        }
-      }
-      throw lastErr || new Error("mock fetch failed");
-    };
-
     const isLikelyCourseId = (cid) =>
       typeof cid === "string" && cid.includes("course-v1:");
 
@@ -894,6 +887,296 @@
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+
+    const courseDeepState = {
+      root: null,
+      flat: [],
+      selectedPath: null,
+      search: "",
+      verticalToolCache: new Map(),
+    };
+
+    const flattenCourseTree = (root) => {
+      const out = [];
+      const walk = (node, path, parentPath) => {
+        if (!node || typeof node !== "object" || Array.isArray(node)) return;
+        const kind = node.kind || (node.courseKey ? "course" : "node");
+        const title = decodeIfMojibake(node.courseTitle || node.title || node.fields?.title || "-");
+        const id = node.id || node.courseKey || "";
+        out.push({ node, path, parentPath, kind, title, id });
+        const kids = Array.isArray(node.children) ? node.children : [];
+        kids.forEach((c, i) => walk(c, `${path}.${i}`, path));
+      };
+      walk(root, "root", null);
+      return out;
+    };
+
+    const courseDeepBadgeHtml = (kind) => {
+      const k = String(kind || "node");
+      const cls =
+        k === "chapter" ? "badge kind-chapter" :
+        k === "sequential" ? "badge kind-sequential" :
+        k === "vertical" ? "badge kind-vertical" :
+        k === "html" ? "badge kind-html" :
+        "badge";
+      return `<span class="${cls}">${escapeHtml(k)}</span>`;
+    };
+
+    const courseDeepToolBadgeHtml = (path, node, kind) => {
+      if (kind !== "vertical") return "";
+      if (courseDeepState.verticalToolCache.has(path)) return courseDeepState.verticalToolCache.get(path);
+      const tool = inferVerticalTool(node);
+      if (!tool) return "";
+      const label = tool.sublabel ? `${tool.label}: ${tool.sublabel}` : tool.label;
+      const t = String(label).toLowerCase();
+      const cls =
+        t.includes("bookroll") ? "badge tool-bookroll" :
+        t.includes("video") ? "badge tool-video" :
+        t.includes("chatbot") ? "badge tool-chatbot" :
+        t.includes("simulator") ? "badge tool-sim" :
+        t.includes("iframe") ? "badge tool-iframe" :
+        t.includes("ae tool") ? "badge tool-ae" :
+        "badge tool-mixed";
+      const html = `<span class="${cls}">${escapeHtml(label)}</span>`;
+      courseDeepState.verticalToolCache.set(path, html);
+      return html;
+    };
+
+    const courseDeepMatchesSearch = (row, q) => {
+      if (!q) return true;
+      const s = q.toLowerCase();
+      return (
+        String(row?.title || "").toLowerCase().includes(s) ||
+        String(row?.id || "").toLowerCase().includes(s) ||
+        String(row?.kind || "").toLowerCase().includes(s)
+      );
+    };
+
+    const renderCourseDeepSubtree = (parentPath, parentNode, depth = 1) => {
+      const q = courseDeepState.search.trim();
+      const kids = Array.isArray(parentNode?.children) ? parentNode.children : [];
+      if (!kids.length) return "";
+
+      return kids.map((k, i) => {
+        const path = `${parentPath}.${i}`;
+        const row = courseDeepState.flat.find((r) => r.path === path);
+        const title = row?.title || pickTitle(k, "-");
+        const kind = row?.kind || k?.kind || "node";
+        const id = row?.id || k?.id || "";
+        const childKids = Array.isArray(k?.children) ? k.children : [];
+        const selfMatch = courseDeepMatchesSearch({ title, id, kind }, q);
+        const anyChild = !q ? true : courseDeepState.flat.some((r) => r.path.startsWith(path + ".") && courseDeepMatchesSearch(r, q));
+        if (q && !selfMatch && !anyChild) return "";
+
+        const active = courseDeepState.selectedPath === path ? "active" : "";
+        const pad = Math.min(depth * 10, 32);
+        if (!childKids.length) {
+          return `
+            <button class="course-tree-btn ${active}" style="padding-left:${12 + pad}px" data-course-path="${escapeHtml(path)}">
+              <div class="flex items-center justify-between gap-2">
+                <div class="truncate">${escapeHtml(title)}</div>
+                <div class="flex items-center gap-2">
+                  ${courseDeepBadgeHtml(kind)}
+                  ${courseDeepToolBadgeHtml(path, k, kind)}
+                </div>
+              </div>
+              ${id ? `<div class="mt-1 text-xs text-slate-500 mono break-all">${escapeHtml(id)}</div>` : ""}
+            </button>
+          `;
+        }
+
+        return `
+          <details class="panel p-2">
+            <summary>
+              <button class="course-tree-btn ${active}" style="padding-left:${12 + pad}px" data-course-path="${escapeHtml(path)}">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="font-semibold">${escapeHtml(title)}</div>
+                  <div class="flex items-center gap-2">
+                    ${courseDeepBadgeHtml(kind)}
+                    ${courseDeepToolBadgeHtml(path, k, kind)}
+                  </div>
+                </div>
+                ${id ? `<div class="mt-1 text-xs text-slate-500 mono break-all">${escapeHtml(id)}</div>` : ""}
+              </button>
+            </summary>
+            <div class="mt-2 grid gap-2">
+              ${renderCourseDeepSubtree(path, k, depth + 1)}
+            </div>
+          </details>
+        `;
+      }).filter(Boolean).join("");
+    };
+
+    const renderCourseDeepTree = () => {
+      const treeEl = document.getElementById("course-deep-tree");
+      const statusEl = document.getElementById("course-deep-status");
+      if (!treeEl) return;
+      if (!courseDeepState.root) {
+        treeEl.innerHTML = `<div class="text-sm text-slate-600">ยังไม่มีข้อมูล</div>`;
+        if (statusEl) statusEl.textContent = "รอข้อมูล";
+        return;
+      }
+
+      const q = courseDeepState.search.trim();
+      const chaptersRaw = Array.isArray(courseDeepState.root.children) ? courseDeepState.root.children : [];
+      const chapters = chaptersRaw
+        .map((ch, origIdx) => ({
+          ch,
+          origIdx,
+          title: pickTitle(ch, `บท ${origIdx + 1}`),
+          k: chapterSortKey(pickTitle(ch, `บท ${origIdx + 1}`)),
+        }))
+        .sort((a, b) => {
+          if (a.k.group !== b.k.group) return a.k.group - b.k.group;
+          if (a.k.num !== b.k.num) return a.k.num - b.k.num;
+          if (a.k.title < b.k.title) return -1;
+          if (a.k.title > b.k.title) return 1;
+          return a.origIdx - b.origIdx;
+        });
+
+      const filteredFlat = courseDeepState.flat.filter((r) => courseDeepMatchesSearch(r, q));
+      if (statusEl) statusEl.textContent = q ? `ผลค้นหา: ${filteredFlat.length}` : `nodes: ${courseDeepState.flat.length}`;
+
+      const chapterRows = chapters.map(({ ch, origIdx }) => {
+        const path = `root.${origIdx}`;
+        const row = courseDeepState.flat.find((r) => r.path === path);
+        const title = row?.title || pickTitle(ch, `บท ${origIdx + 1}`);
+        const id = row?.id || ch?.id || "";
+        if (q && !courseDeepMatchesSearch({ title, id, kind: "chapter" }, q)) {
+          const anyChild = filteredFlat.some((r) => r.path.startsWith(path + "."));
+          if (!anyChild) return "";
+        }
+        const active = courseDeepState.selectedPath === path ? "active" : "";
+        const kidCount = Array.isArray(ch?.children) ? ch.children.length : 0;
+        return `
+          <details class="panel p-2" open>
+            <summary>
+              <button class="course-tree-btn ${active}" data-course-path="${escapeHtml(path)}">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="font-semibold">${escapeHtml(title)}</div>
+                  ${courseDeepBadgeHtml("chapter")}
+                </div>
+                ${id ? `<div class="mt-1 text-xs text-slate-500 mono break-all">${escapeHtml(id)}</div>` : ""}
+              </button>
+            </summary>
+            <div class="mt-2 grid gap-2">
+              ${kidCount ? renderCourseDeepSubtree(path, ch, 1) : `<div class="text-sm text-slate-600">ไม่มีรายการย่อย</div>`}
+            </div>
+          </details>
+        `;
+      }).filter(Boolean).join("");
+
+      treeEl.innerHTML = chapterRows || `<div class="text-sm text-slate-600">ไม่พบผลลัพธ์</div>`;
+    };
+
+    const renderCourseDeepInspector = () => {
+      const inspectorEl = document.getElementById("course-deep-inspector");
+      if (!inspectorEl) return;
+      if (!courseDeepState.root || !courseDeepState.selectedPath) {
+        inspectorEl.innerHTML = `<div class="text-sm text-slate-600">คลิกโหนดทางซ้ายเพื่อดูรายละเอียด</div>`;
+        return;
+      }
+      const row = courseDeepState.flat.find((r) => r.path === courseDeepState.selectedPath);
+      if (!row) {
+        inspectorEl.innerHTML = `<div class="text-sm text-slate-600">ไม่พบโหนดที่เลือก</div>`;
+        return;
+      }
+
+      const node = row.node || {};
+      const kids = Array.isArray(node.children) ? node.children : [];
+      const tool = row.kind === "vertical" ? inferVerticalTool(node) : null;
+      const fieldsText = node.fields ? JSON.stringify(node.fields, null, 2) : "";
+      const rawText = JSON.stringify(node, null, 2);
+      const childButtons = kids.map((k, i) => {
+        const nextPath = `${row.path}.${i}`;
+        const title = pickTitle(k, `${k?.kind || "node"} ${i + 1}`);
+        const id = k?.id || "";
+        return `
+          <button class="course-tree-btn panel ${courseDeepState.selectedPath === nextPath ? "active" : ""}" data-course-path="${escapeHtml(nextPath)}">
+            <div class="flex items-center justify-between gap-2">
+              <div class="truncate">${escapeHtml(title)}</div>
+              ${courseDeepBadgeHtml(k?.kind || "node")}
+            </div>
+            ${id ? `<div class="mt-1 text-xs text-slate-500 mono break-all">${escapeHtml(id)}</div>` : ""}
+          </button>
+        `;
+      }).join("");
+
+      inspectorEl.innerHTML = `
+        <div class="grid gap-3">
+          <div>
+            <div class="text-xs text-slate-500">Path</div>
+            <div class="mono text-sm break-all">${escapeHtml(row.path)}</div>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500">Title</div>
+            <div class="font-semibold text-slate-800">${escapeHtml(row.title || "-")}</div>
+          </div>
+          <div class="flex items-center flex-wrap gap-2">
+            ${courseDeepBadgeHtml(row.kind)}
+            ${tool ? `<span class="badge tool-mixed">${escapeHtml(tool.sublabel ? `${tool.label}: ${tool.sublabel}` : tool.label)}</span>` : ""}
+          </div>
+          <div>
+            <div class="text-xs text-slate-500">ID</div>
+            <div class="mono text-xs break-all">${escapeHtml(row.id || "-")}</div>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500">Children</div>
+            <div class="text-sm">${kids.length}</div>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500">Fields</div>
+            <pre class="mt-1 panel p-3 text-xs whitespace-pre-wrap break-all">${escapeHtml(fieldsText || "ไม่มี fields")}</pre>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500">Raw JSON</div>
+            <pre class="mt-1 panel p-3 text-xs whitespace-pre-wrap break-all">${escapeHtml(rawText)}</pre>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500">Children List</div>
+            <div class="mt-2 grid gap-2">
+              ${childButtons || `<div class="text-sm text-slate-600">ไม่มีรายการย่อย</div>`}
+            </div>
+          </div>
+        </div>
+      `;
+    };
+
+    const setCourseDeepData = (root, renderNow = false) => {
+      const statusEl = document.getElementById("course-deep-status");
+      const treeEl = document.getElementById("course-deep-tree");
+      const inspectorEl = document.getElementById("course-deep-inspector");
+      const inputEl = document.getElementById("course-deep-search");
+      courseDeepState.root = root || null;
+      courseDeepState.search = "";
+      courseDeepState.verticalToolCache.clear();
+      if (inputEl) {
+        inputEl.value = "";
+        inputEl.disabled = !renderNow;
+      }
+      if (!root) {
+        courseDeepState.flat = [];
+        courseDeepState.selectedPath = null;
+        if (statusEl) statusEl.textContent = "รอข้อมูล";
+        if (treeEl) treeEl.innerHTML = `<div class="text-sm text-slate-600">ยังไม่มีข้อมูล</div>`;
+        if (inspectorEl) inspectorEl.innerHTML = `<div class="text-sm text-slate-600">คลิกโหนดทางซ้ายเพื่อดูรายละเอียด</div>`;
+        return;
+      }
+      if (!renderNow) {
+        courseDeepState.flat = [];
+        courseDeepState.selectedPath = null;
+        if (statusEl) statusEl.textContent = "พร้อมโหลด";
+        if (treeEl) treeEl.innerHTML = `<div class="text-sm text-slate-600">กด "โหลดโครงสร้างลึก" เพื่อแสดงข้อมูล</div>`;
+        if (inspectorEl) inspectorEl.innerHTML = `<div class="text-sm text-slate-600">ยังไม่ได้โหลดโครงสร้างลึก</div>`;
+        return;
+      }
+      courseDeepState.flat = flattenCourseTree(root);
+      const firstChapter = courseDeepState.flat.find((r) => r.path.startsWith("root.") && !r.path.includes(".", 5));
+      courseDeepState.selectedPath = firstChapter?.path || (courseDeepState.flat.length ? "root" : null);
+      if (inputEl) inputEl.disabled = false;
+      renderCourseDeepTree();
+      renderCourseDeepInspector();
+    };
 
     const renderCourseOutline = (data) => {
       const outlineEl = document.getElementById("course-outline");
@@ -1076,7 +1359,15 @@
       }
       if (typeof node !== "object") return;
       const tryPush = (v) => {
-        if (typeof v === "string" && v) out.text += "\n" + v;
+        if (typeof v === "string" && v) {
+          out.text += "\n" + v;
+          return;
+        }
+        if (v && typeof v === "object") {
+          try {
+            out.text += "\n" + JSON.stringify(v);
+          } catch {}
+        }
       };
       tryPush(node.kind);
       tryPush(node.id);
@@ -1086,21 +1377,97 @@
         ["display_name", "displayName", "title", "data", "url", "href", "src", "launch_url", "launchUrl"].forEach((k) => {
           tryPush(node.fields?.[k]);
         });
+        ["iframe_url", "iframeUrl", "iframe", "iframeURL", "aetool", "tool", "tool_type", "toolType"].forEach((k) => {
+          tryPush(node.fields?.[k]);
+        });
       }
       const kids = node.children || [];
       for (const k of kids) collectTextDeep(k, out, maxLen);
     };
 
-    const inferAeToolSubtype = (vertical) => {
+    const detectAeSubtypeFromText = (raw, kinds = new Set()) => {
+      const t = decodeIfMojibake(String(raw || "")).toLowerCase();
+      if (!t) return null;
+      if (t.includes("bookroll") || t.includes("br_") || t.includes("thaidlt.com")) return "BookRoll";
+      if (t.includes("chatbot") || t.includes("chat bot") || t.includes("แชตบอต") || t.includes("แชทบอท") || t.includes("/chat/")) return "Chatbot";
+      if (
+        kinds.has("video") ||
+        t.includes("video") ||
+        t.includes("youtube.com") ||
+        t.includes("youtu.be") ||
+        t.includes("vimeo.com") ||
+        t.includes("viola.thaidlt.com/player") ||
+        t.includes("mp4") ||
+        t.includes("m3u8")
+      ) return "Video";
+      if (t.includes("วิดีโอ") || t.includes("คลิป")) return "Video";
+      if (t.includes("ใบความรู้") || t.includes("book roll")) return "BookRoll";
+      if (
+        t.includes("kidbright simulator") ||
+        (t.includes("kidbright") && t.includes("simulator")) ||
+        t.includes("simulator")
+      ) return "KidBright Simulator";
+      if (t.includes("mqtt")) return "MQTT Tool";
+      if (t.includes("/question/")) return "Iframe";
+      return null;
+    };
+
+    const findAeToolMeta = (vertical) => {
+      const stack = Array.isArray(vertical?.children) ? vertical.children.slice() : [];
+      while (stack.length) {
+        const n = stack.shift();
+        if (!n || typeof n !== "object") continue;
+        const f = n.fields && typeof n.fields === "object" ? n.fields : {};
+        const data = f.data && typeof f.data === "object" ? f.data : {};
+        const id = typeof n.id === "string" ? n.id : "";
+        const aetool =
+          (typeof f.aetool === "string" ? f.aetool : "") ||
+          (typeof f.tool_type === "string" ? f.tool_type : "") ||
+          (typeof f.toolType === "string" ? f.toolType : "") ||
+          (typeof data.aetool === "string" ? data.aetool : "");
+        const iframeUrl =
+          (typeof f.iframe_url === "string" ? f.iframe_url : "") ||
+          (typeof f.iframeUrl === "string" ? f.iframeUrl : "") ||
+          (typeof f.launch_url === "string" ? f.launch_url : "") ||
+          (typeof f.launchUrl === "string" ? f.launchUrl : "") ||
+          (typeof f.url === "string" ? f.url : "") ||
+          (typeof f.href === "string" ? f.href : "") ||
+          (typeof f.src === "string" ? f.src : "") ||
+          (typeof data.iframe_url === "string" ? data.iframe_url : "");
+        const hint = detectAeSubtypeFromText(`${aetool}\n${iframeUrl}\n${JSON.stringify(data || {})}`);
+        if (n.kind === "aetool" || id.includes("type@aetool") || aetool || iframeUrl || hint) {
+          return { id, aetool, iframeUrl, hint };
+        }
+        const kids = n.children || [];
+        if (Array.isArray(kids)) stack.push(...kids);
+      }
+      return null;
+    };
+
+    const resolveLearningItemId = (vertical, tool) => {
+      const verticalId = String(vertical?.id || "");
+      const aeId = String(findAeToolMeta(vertical)?.id || "");
+      const label = String(tool?.label || "").toLowerCase();
+      const isAeTool = label.includes("ae tool") || label.includes("aetool");
+      if (isAeTool && aeId) return aeId;
+      return verticalId || aeId || "";
+    };
+
+    const inferAeToolSubtype = (vertical, kinds = new Set()) => {
       const bag = { text: "" };
+      collectTextDeep(vertical, bag);
       (vertical?.children || []).forEach((c) => collectTextDeep(c, bag));
       const t = decodeIfMojibake(bag.text).toLowerCase();
-      if (!t) return null;
+      const meta = findAeToolMeta(vertical);
+      const aet = (meta?.aetool || "").toLowerCase();
 
-      if (t.includes("bookroll") || t.includes("br_") || t.includes("thaidlt.com")) return "BookRoll";
-      if (t.includes("kidbright simulator") || (t.includes("kidbright") && t.includes("sim"))) return "KidBright Simulator";
-      if (t.includes("mqtt")) return "MQTT Tool";
-      return null;
+      if (aet === "bookroll") return "BookRoll";
+      if (aet === "video") return "Video";
+      if (aet === "chatbot") return "Chatbot";
+      if (aet === "simulator") return "KidBright Simulator";
+      if (aet === "iframe") return "Iframe";
+      if (meta?.hint) return meta.hint;
+      return detectAeSubtypeFromText(t, kinds);
     };
 
     const inferVerticalTool = (vertical) => {
@@ -1113,9 +1480,9 @@
 
       const title = pickTitle(vertical, "");
       const titleLc = title.toLowerCase();
-      const isAeTool = titleLc.includes("ae tool") || titleLc.includes("aetool") || titleLc.includes("ae-tool");
+      const isAeTool = kinds.has("aetool") || kinds.has("lti") || titleLc.includes("ae tool") || titleLc.includes("aetool") || titleLc.includes("ae-tool");
 
-      const subtype = inferAeToolSubtype(vertical);
+      const subtype = inferAeToolSubtype(vertical, kinds);
       if (isAeTool) return { label: "AE Tool", sublabel: subtype, tone: "badge kind-sequential" };
       if (kinds.has("lti")) return { label: "AE Tool (LTI)", sublabel: subtype, tone: "badge kind-sequential" };
       if (kinds.has("problem")) return { label: "แบบทดสอบ (problem)", tone: "badge kind-vertical" };
@@ -1219,7 +1586,8 @@
             });
             return {
               idx: vIdx,
-              id: v?.id || "",
+              id: resolveLearningItemId(v, tool),
+              node: v,
               title: pickTitle(v, `Vertical ${vIdx + 1}`),
               tool,
               pct
@@ -1289,13 +1657,17 @@
           verticals: sortByContentOrder(
             (seq?.children || []).filter((c) => c?.kind === "vertical"),
             (x) => pickTitle(x, "")
-          ).map((v, vIdx) => ({
-            idx: vIdx,
-            id: v?.id || "",
-            title: pickTitle(v, `Vertical ${vIdx + 1}`),
-            tool: inferVerticalTool(v),
-            pct: 0
-          }))
+          ).map((v, vIdx) => {
+            const tool = inferVerticalTool(v);
+            return {
+              idx: vIdx,
+              id: resolveLearningItemId(v, tool),
+              node: v,
+              title: pickTitle(v, `Vertical ${vIdx + 1}`),
+              tool,
+              pct: 0
+            };
+          })
         }));
       if (!sequentials.length) return `<div class="text-sm text-slate-600">บทนี้ไม่มีรายการย่อย</div>`;
 
@@ -1387,17 +1759,72 @@
           if (/แบบทดสอบ/i.test(label) || /problem/i.test(label)) return "QUIZ";
           if (/อ่านเนื้อหา/i.test(label) || /html/i.test(label)) return "HTML";
           if (/วิดีโอ/i.test(label) || /video/i.test(label)) return "VIDEO";
-          if (/ae tool/i.test(label) || /aetool/i.test(label)) return (sub || "AETOOL").toUpperCase();
+          if (/ae tool/i.test(label) || /aetool/i.test(label)) return sub ? `AETOOL (${sub.toLowerCase()})` : "AETOOL (unknown)";
           if (!label) return "UNKNOWN";
           return label.toUpperCase();
         };
 
-        const shortId = (id) => {
-          const s = String(id || "");
-          const m = s.match(/(?:block@)([^+]+)/);
-          if (m?.[1]) return m[1];
-          if (s.length <= 18) return s;
-          return s.slice(-18);
+        const collectNodeIdLines = (node, depth = 0, out = []) => {
+          if (!node || typeof node !== "object") return out;
+          const id = typeof node.id === "string" ? node.id : "";
+          const kind = String(node.kind || (depth === 0 ? "vertical" : "node"));
+          if (id) out.push({ depth, kind, id });
+          const kids = Array.isArray(node.children) ? node.children : [];
+          kids.forEach((k) => collectNodeIdLines(k, depth + 1, out));
+          return out;
+        };
+
+        const renderIdLines = (node, fallbackId) => {
+          const lines = collectNodeIdLines(node);
+          if (!lines.length && fallbackId) lines.push({ depth: 0, kind: "vertical", id: String(fallbackId) });
+          if (!lines.length) return `<div>VERTICAL • ID: -</div>`;
+          return lines.map((line) => {
+            const pad = Math.min(Number(line.depth || 0) * 14, 84);
+            const kind = String(line.kind || "node").toUpperCase();
+            return `<div style="padding-left:${pad}px">${escapeHtml(`${kind} • ID: ${line.id}`)}</div>`;
+          }).join("");
+        };
+
+        const pushParamLine = (out, depth, key, rawVal) => {
+          if (rawVal == null) return;
+          let val = "";
+          if (typeof rawVal === "string") val = rawVal;
+          else {
+            try { val = JSON.stringify(rawVal); } catch { val = String(rawVal); }
+          }
+          if (!val) return;
+          if (/^data:image\//i.test(val) && val.length > 80) val = `${val.slice(0, 80)}...[omitted]`;
+          if (val.length > 220) val = `${val.slice(0, 220)}...`;
+          out.push({ depth, key, val });
+        };
+
+        const collectAeToolParamLines = (node, depth = 0, out = []) => {
+          if (!node || typeof node !== "object") return out;
+          const kind = String(node.kind || "");
+          if (kind === "aetool") {
+            const fields = (node.fields && typeof node.fields === "object") ? node.fields : {};
+            Object.entries(fields).forEach(([k, v]) => {
+              if (k === "data" && v && typeof v === "object" && !Array.isArray(v)) {
+                Object.entries(v).forEach(([dk, dv]) => pushParamLine(out, depth + 1, `data.${dk}`, dv));
+              } else {
+                pushParamLine(out, depth + 1, k, v);
+              }
+            });
+          }
+          const kids = Array.isArray(node.children) ? node.children : [];
+          kids.forEach((k) => collectAeToolParamLines(k, depth + 1, out));
+          return out;
+        };
+
+        const renderAeToolParamLines = (node) => {
+          const lines = collectAeToolParamLines(node);
+          if (!lines.length) return "";
+          const header = `<div class="mt-1">AETOOL PARAMS</div>`;
+          const body = lines.map((line) => {
+            const pad = Math.min(Number(line.depth || 0) * 14, 98);
+            return `<div style="padding-left:${pad}px">${escapeHtml(`${line.key}: ${line.val}`)}</div>`;
+          }).join("");
+          return `${header}${body}`;
         };
 
         const statusFromPct = (pct) => {
@@ -1425,15 +1852,19 @@
           const itemsHtml = items.map((it) => {
             const st = statusFromPct(it.pct);
             const kind = displayKind(it.tool);
-            const sid = shortId(it.id);
-            const subtitle = `${kind} • ID: ${sid}`;
+            const idLinesHtml = renderIdLines(it.node, it.id);
+            const paramLinesHtml = renderAeToolParamLines(it.node);
             return `
               <div class="panel p-4 flex items-center justify-between gap-4">
                 <div class="flex items-start gap-4 min-w-0">
                   <div class="mt-2 w-4 h-4 rounded-full ${st.dot} shrink-0"></div>
                   <div class="min-w-0">
                     <div class="text-lg font-bold truncate" title="${escapeHtml(it.title || "")}">${escapeHtml(it.title || "-")}</div>
-                    <div class="mt-1 text-slate-500 font-semibold mono text-sm break-all" title="${escapeHtml(it.id || "")}">${escapeHtml(subtitle)}</div>
+                    <div class="mt-1 text-slate-500 font-semibold mono text-xs break-all">
+                      <div>${escapeHtml(kind)}</div>
+                      ${idLinesHtml}
+                      ${paramLinesHtml}
+                    </div>
                   </div>
                 </div>
                 <div class="shrink-0 flex items-center gap-3">
@@ -1541,28 +1972,20 @@
       const seqEl = document.getElementById("course-seq");
       const vertEl = document.getElementById("course-vert");
       const htmlEl = document.getElementById("course-html");
-      if (!USE_MOCK_API) {
-        if (!courseId) {
-          if (statusEl) statusEl.textContent = "ขาด courseid";
-          return;
-        }
-        if (!isLikelyCourseId(courseId)) {
-          if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
-          return;
-        }
+      if (!courseId) {
+        if (statusEl) statusEl.textContent = "ขาด courseid";
+        return;
+      }
+      if (!isLikelyCourseId(courseId)) {
+        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
+        return;
       }
       if (statusEl) statusEl.textContent = "กำลังโหลด...";
       try {
-        let data, srcUrl;
-        if (USE_MOCK_API) {
-          const out = await fetchMockJson(mockUrl.course);
-          data = out.data;
-          srcUrl = out.url;
-        } else {
-          const res = await fetch(courseUrl(courseId));
-          if (!res.ok) throw new Error(await res.text());
-          data = await res.json();
-        }
+        const srcUrl = courseUrl(courseId);
+        const res = await fetch(srcUrl);
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
         const title = decodeIfMojibake(data.courseTitle || data.title || "-");
         const key = data.courseKey || data.course_key || courseId;
         if (titleEl) titleEl.textContent = title;
@@ -1577,6 +2000,7 @@
         if (vertEl) vertEl.textContent = acc.vertical;
         if (htmlEl) htmlEl.textContent = acc.html;
         renderCourseOutline(data);
+        setCourseDeepData(data, false);
 
         // If the done-chapter chart already loaded, re-label it to match the course outline.
         if (window.doneChapterData) {
@@ -1606,7 +2030,7 @@
         }
         renderTopicTabsAndDetail();
 
-        if (statusEl) statusEl.textContent = USE_MOCK_API ? `ใช้ข้อมูลจำลอง (${srcUrl})` : "โหลดสำเร็จ";
+        if (statusEl) statusEl.textContent = `โหลดสำเร็จ (${srcUrl})`;
       } catch (err) {
         if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
         console.warn("Course API error:", err);
@@ -1765,28 +2189,20 @@
       const totalEl = document.getElementById("br-pages-total");
       const progressEl = document.getElementById("br-progress");
       const summaryEl = document.getElementById("bookroll-activity-summary");
-      if (!USE_MOCK_API) {
-        if (!userId || !courseId) {
-          if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
-          return;
-        }
-        if (!isLikelyCourseId(courseId)) {
-          if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
-          return;
-        }
+      if (!userId || !courseId) {
+        if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
+        return;
+      }
+      if (!isLikelyCourseId(courseId)) {
+        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
+        return;
       }
       if (statusEl) statusEl.textContent = "กำลังโหลด...";
       try {
-        let data, srcUrl;
-        if (USE_MOCK_API) {
-          const out = await fetchMockJson(mockUrl.bookrollActivity);
-          data = out.data;
-          srcUrl = out.url;
-        } else {
-          const res = await fetch(bookrollUrl(userId, courseId));
-          if (!res.ok) throw new Error(await res.text());
-          data = await res.json();
-        }
+        const srcUrl = bookrollUrl(userId, courseId);
+        const res = await fetch(srcUrl);
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
         window.bookrollData = data;
         renderBookrollChart(data);
         if (summaryEl) {
@@ -1808,7 +2224,7 @@
             progressEl.textContent = "-";
           }
         }
-        if (statusEl) statusEl.textContent = USE_MOCK_API ? `ใช้ข้อมูลจำลอง (${srcUrl})` : "โหลดสำเร็จ";
+        if (statusEl) statusEl.textContent = `โหลดสำเร็จ (${srcUrl})`;
         if (rawEl) rawEl.textContent = JSON.stringify(data, null, 2);
       } catch (err) {
         if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
@@ -1820,32 +2236,24 @@
     const fetchBookrollMaxPage = async () => {
       const statusEl = document.getElementById("bookroll-maxpage-status");
       const summaryEl = document.getElementById("bookroll-maxpage-summary");
-      if (!USE_MOCK_API) {
-        if (!userId || !courseId) {
-          if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
-          return;
-        }
-        if (!isLikelyCourseId(courseId)) {
-          if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
-          return;
-        }
+      if (!userId || !courseId) {
+        if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
+        return;
+      }
+      if (!isLikelyCourseId(courseId)) {
+        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
+        return;
       }
       if (statusEl) statusEl.textContent = "กำลังโหลด...";
       try {
-        let data, srcUrl;
-        if (USE_MOCK_API) {
-          const out = await fetchMockJson(mockUrl.bookrollMaxPage);
-          data = out.data;
-          srcUrl = out.url;
-        } else {
-          const res = await fetch(bookrollMaxPageUrl(courseId, userId));
-          if (!res.ok) throw new Error(await res.text());
-          data = await res.json();
-        }
+        const srcUrl = bookrollMaxPageUrl(courseId, userId);
+        const res = await fetch(srcUrl);
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
         window.bookrollMaxPageData = data;
         renderBookrollMaxPageChart(data);
         if (summaryEl) summaryEl.textContent = summarizeMaxPage(data);
-        if (statusEl) statusEl.textContent = USE_MOCK_API ? `ใช้ข้อมูลจำลอง (${srcUrl})` : "โหลดสำเร็จ";
+        if (statusEl) statusEl.textContent = `โหลดสำเร็จ (${srcUrl})`;
       } catch (err) {
         if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
         console.warn("Bookroll MaxPage API error:", err);
@@ -1856,28 +2264,20 @@
       const statusEl = document.getElementById("chatbot-speed-status");
       const rawEl = document.getElementById("chatbot-speed-raw");
       const summaryEl = document.getElementById("chatbot-speed-summary");
-      if (!USE_MOCK_API) {
-        if (!userId || !courseId) {
-          if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
-          return;
-        }
-        if (!isLikelyCourseId(courseId)) {
-          if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
-          return;
-        }
+      if (!userId || !courseId) {
+        if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
+        return;
+      }
+      if (!isLikelyCourseId(courseId)) {
+        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
+        return;
       }
       if (statusEl) statusEl.textContent = "กำลังโหลด...";
       try {
-        let data, srcUrl;
-        if (USE_MOCK_API) {
-          const out = await fetchMockJson(mockUrl.chatbotSpeed);
-          data = out.data;
-          srcUrl = out.url;
-        } else {
-          const res = await fetch(chatbotSpeedUrl(courseId, userId));
-          if (!res.ok) throw new Error(await res.text());
-          data = await res.json();
-        }
+        const srcUrl = chatbotSpeedUrl(courseId, userId);
+        const res = await fetch(srcUrl);
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
         window.chatbotSpeedData = data;
         const labels = getCourseChapterTitles(window.courseDetailData);
         const relabeled = labels.length ? applyCategoryLabels(data, labels) : data;
@@ -1890,7 +2290,7 @@
           summaryEl.textContent = nums.length ? `ค่าเฉลี่ยความเร็ว: ${avg}` : "ยังไม่มีข้อมูล";
         }
         if (rawEl) rawEl.textContent = JSON.stringify(relabeled, null, 2);
-        if (statusEl) statusEl.textContent = USE_MOCK_API ? `ใช้ข้อมูลจำลอง (${srcUrl})` : "โหลดสำเร็จ";
+        if (statusEl) statusEl.textContent = `โหลดสำเร็จ (${srcUrl})`;
         renderTopicTabsAndDetail();
       } catch (err) {
         if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
@@ -1903,28 +2303,20 @@
       const statusEl = document.getElementById("chatbot-perf-status");
       const rawEl = document.getElementById("chatbot-perf-raw");
       const summaryEl = document.getElementById("chatbot-perf-summary");
-      if (!USE_MOCK_API) {
-        if (!userId || !courseId) {
-          if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
-          return;
-        }
-        if (!isLikelyCourseId(courseId)) {
-          if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
-          return;
-        }
+      if (!userId || !courseId) {
+        if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
+        return;
+      }
+      if (!isLikelyCourseId(courseId)) {
+        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
+        return;
       }
       if (statusEl) statusEl.textContent = "กำลังโหลด...";
       try {
-        let data, srcUrl;
-        if (USE_MOCK_API) {
-          const out = await fetchMockJson(mockUrl.chatbotPerformance);
-          data = out.data;
-          srcUrl = out.url;
-        } else {
-          const res = await fetch(chatbotPerformanceUrl(courseId, userId));
-          if (!res.ok) throw new Error(await res.text());
-          data = await res.json();
-        }
+        const srcUrl = chatbotPerformanceUrl(courseId, userId);
+        const res = await fetch(srcUrl);
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
         window.chatbotPerfData = data;
         const labels = getCourseChapterTitles(window.courseDetailData);
         const relabeled = labels.length ? applyCategoryLabels(data, labels) : data;
@@ -1937,7 +2329,7 @@
           summaryEl.textContent = nums.length ? `ค่าเฉลี่ยผลการตอบ: ${avg}` : "ยังไม่มีข้อมูล";
         }
         if (rawEl) rawEl.textContent = JSON.stringify(relabeled, null, 2);
-        if (statusEl) statusEl.textContent = USE_MOCK_API ? `ใช้ข้อมูลจำลอง (${srcUrl})` : "โหลดสำเร็จ";
+        if (statusEl) statusEl.textContent = `โหลดสำเร็จ (${srcUrl})`;
         renderTopicTabsAndDetail();
       } catch (err) {
         if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
@@ -1949,28 +2341,20 @@
     const fetchDoneChapterView = async () => {
       const statusEl = document.getElementById("donechapter-status");
       const rawEl = document.getElementById("donechapter-raw");
-      if (!USE_MOCK_API) {
-        if (!userId || !courseId) {
-          if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
-          return;
-        }
-        if (!isLikelyCourseId(courseId)) {
-          if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
-          return;
-        }
+      if (!userId || !courseId) {
+        if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
+        return;
+      }
+      if (!isLikelyCourseId(courseId)) {
+        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
+        return;
       }
       if (statusEl) statusEl.textContent = "กำลังโหลด...";
       try {
-        let data, srcUrl;
-        if (USE_MOCK_API) {
-          const out = await fetchMockJson(mockUrl.doneChapter);
-          data = out.data;
-          srcUrl = out.url;
-        } else {
-          const res = await fetch(doneChapterVkUrl(userId, courseId));
-          if (!res.ok) throw new Error(await res.text());
-          data = await res.json();
-        }
+        const srcUrl = doneChapterVkUrl(userId, courseId);
+        const res = await fetch(srcUrl);
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
         window.doneChapterData = data;
         const labels = getCourseChapterTitles(window.courseDetailData);
         const relabeled = labels.length ? applyCategoryLabels(data, labels) : data;
@@ -1978,7 +2362,7 @@
         window.doneChapterRaw = relabeled;
         renderEchartToChart(relabeled, "doneChapterChart", "Done Chapter");
         if (rawEl) rawEl.textContent = JSON.stringify(relabeled, null, 2);
-        if (statusEl) statusEl.textContent = USE_MOCK_API ? `ใช้ข้อมูลจำลอง (${srcUrl})` : "โหลดสำเร็จ";
+        if (statusEl) statusEl.textContent = `โหลดสำเร็จ (${srcUrl})`;
         renderTopicTabsAndDetail();
       } catch (err) {
         if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
@@ -1987,21 +2371,59 @@
       }
     };
 
-    document.getElementById("student-name").textContent = mock.student.name;
-    document.getElementById("student-id").textContent = mock.student.id;
-    document.getElementById("overall-value").textContent = `${toPercent(mock.student.overall)}%`;
-    document.getElementById("overall-bar").style.width = `${toPercent(mock.student.overall)}%`;
-    document.getElementById("speed-value").textContent = `${toPercent(mock.results.speed)}%`;
-    document.getElementById("speed-bar").style.width = `${toPercent(mock.results.speed)}%`;
-    document.getElementById("performance-value").textContent = `${toPercent(mock.results.performance)}%`;
-    document.getElementById("performance-bar").style.width = `${toPercent(mock.results.performance)}%`;
+    document.getElementById("student-name").textContent = userId || "-";
+    document.getElementById("student-id").textContent = userId || "-";
+    document.getElementById("overall-value").textContent = "0%";
+    document.getElementById("overall-bar").style.width = "0%";
+    document.getElementById("speed-value").textContent = "0%";
+    document.getElementById("speed-bar").style.width = "0%";
+    document.getElementById("performance-value").textContent = "0%";
+    document.getElementById("performance-bar").style.width = "0%";
 
-    document.getElementById("done-count").textContent = statusCounts.done;
-    document.getElementById("doing-count").textContent = statusCounts.doing;
-    document.getElementById("todo-count").textContent = statusCounts.todo;
-    document.getElementById("locked-count").textContent = statusCounts.locked;
+    document.getElementById("done-count").textContent = "0";
+    document.getElementById("doing-count").textContent = "0";
+    document.getElementById("todo-count").textContent = "0";
+    document.getElementById("locked-count").textContent = "0";
     const loginBtn = document.getElementById("btn-login");
     const logoutBtn = document.getElementById("btn-logout");
+    const courseDeepTreeEl = document.getElementById("course-deep-tree");
+    if (courseDeepTreeEl) {
+      courseDeepTreeEl.addEventListener("click", (e) => {
+        const btn = e.target?.closest?.("[data-course-path]");
+        if (!btn) return;
+        courseDeepState.selectedPath = btn.getAttribute("data-course-path");
+        renderCourseDeepTree();
+        renderCourseDeepInspector();
+      });
+    }
+    const courseDeepInspectorEl = document.getElementById("course-deep-inspector");
+    if (courseDeepInspectorEl) {
+      courseDeepInspectorEl.addEventListener("click", (e) => {
+        const btn = e.target?.closest?.("[data-course-path]");
+        if (!btn) return;
+        courseDeepState.selectedPath = btn.getAttribute("data-course-path");
+        renderCourseDeepTree();
+        renderCourseDeepInspector();
+      });
+    }
+    const courseDeepSearchEl = document.getElementById("course-deep-search");
+    if (courseDeepSearchEl) {
+      courseDeepSearchEl.addEventListener("input", (e) => {
+        courseDeepState.search = e.target.value || "";
+        renderCourseDeepTree();
+      });
+    }
+    const courseDeepLoadEl = document.getElementById("course-deep-load");
+    if (courseDeepLoadEl) {
+      courseDeepLoadEl.addEventListener("click", () => {
+        if (!window.courseDetailData) {
+          const statusEl = document.getElementById("course-deep-status");
+          if (statusEl) statusEl.textContent = "ยังไม่มี course data";
+          return;
+        }
+        setCourseDeepData(window.courseDetailData, true);
+      });
+    }
     let auth = readAuth();
 
     const updateAuthUi = () => {
@@ -2077,10 +2499,10 @@
       new Chart(unitCtx, {
         type: "bar",
         data: {
-          labels: mock.units.map((u) => u.name),
+          labels: ["ยังไม่มีข้อมูล"],
           datasets: [{
             label: "คะแนนรวมต่อหน่วย",
-            data: mock.student.byUnit.map(toPercent),
+            data: [0],
             backgroundColor: ["#1fb9b7", "#4fd0c8", "#b7f1ec"],
             borderRadius: 12
           }]

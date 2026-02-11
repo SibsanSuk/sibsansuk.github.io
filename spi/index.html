@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SPI (EV/PV) Plot by Milestone + Auto UCL/LCL</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root { --b:#e5e7eb; --t:#111827; --m:#6b7280; }
+    body{ font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif; margin:20px; color:var(--t); }
+    h1{ font-size:18px; margin:0 0 10px; }
+    .wrap{ display:grid; grid-template-columns: 1fr; gap:14px; }
+    .panel{ border:1px solid var(--b); border-radius:12px; padding:14px; }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    button{
+      border:1px solid var(--b); background:#fff; padding:8px 10px; border-radius:10px;
+      cursor:pointer; font-weight:600;
+    }
+    button:hover{ background:#f9fafb; }
+    .hint{ color:var(--m); font-size:12px; line-height:1.4; }
+    table{ width:100%; border-collapse:separate; border-spacing:0; overflow:hidden; border:1px solid var(--b); border-radius:12px; }
+    thead th{
+      background:#f9fafb; text-align:left; font-size:12px; color:#374151;
+      padding:10px; border-bottom:1px solid var(--b);
+    }
+    tbody td{ padding:8px 10px; border-bottom:1px solid var(--b); vertical-align:middle; }
+    tbody tr:last-child td{ border-bottom:none; }
+    input{
+      width:100%; box-sizing:border-box; padding:8px 10px;
+      border:1px solid var(--b); border-radius:10px; outline:none;
+    }
+    input[readonly]{ background:#f9fafb; color:#374151; }
+    .num{ text-align:right; font-variant-numeric: tabular-nums; }
+    .actions{ display:flex; gap:8px; justify-content:flex-end; }
+    .badge{
+      display:inline-block; padding:2px 8px; border:1px solid var(--b);
+      border-radius:999px; font-size:12px; color:#374151; background:#fff;
+    }
+    canvas{ height:560px; max-height:70vh; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <h1>Schedule Performance Index (SPI) ต่อ Milestone</h1>
+      <div class="row">
+        <span class="badge">สูตร: SPI = EV / PV</span>
+        <span class="badge">CL/UCL/LCL คำนวณอัตโนมัติ</span>
+      </div>
+      <p class="hint">
+        ใส่ Milestone, EV, PV แล้วระบบจะคำนวณ SPI ให้อัตโนมัติ (EV/PV).
+        จากนั้นคำนวณ CL = ค่าเฉลี่ย SPI, UCL = CL + 3*sqrt(CL), LCL = max(0, CL - 3*sqrt(CL)).
+      </p>
+
+      <div class="row" style="justify-content:space-between">
+        <div class="row">
+          <button id="addRowBtn">+ เพิ่ม Milestone</button>
+          <button id="plotBtn">📈 Plot Graph</button>
+        </div>
+        <div class="row">
+          <button id="loadSampleBtn">ใส่ตัวอย่าง</button>
+          <button id="clearBtn">ล้างทั้งหมด</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:22%">Milestone</th>
+            <th style="width:14%">EV</th>
+            <th style="width:14%">PV</th>
+            <th style="width:14%">SPI (EV/PV)</th>
+            <th style="width:14%">UCL (Auto)</th>
+            <th style="width:14%">LCL (Auto)</th>
+            <th style="width:8%"></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <p class="hint" style="margin-top:10px">
+        ทิป: PV = 0 จะคำนวณ SPI ไม่ได้ (กันหารศูนย์) — จะปล่อยให้ว่างจนกว่าจะใส่ PV มากกว่า 0
+      </p>
+    </div>
+
+    <div class="panel">
+      <canvas id="spiChart"></canvas>
+    </div>
+  </div>
+
+  <script>
+    // ---------- Utilities ----------
+    const $ = (sel) => document.querySelector(sel);
+    const tbody = $("#tbody");
+
+    function toNum(v) {
+      const n = Number(String(v ?? "").replace(/,/g, "").trim());
+      return Number.isFinite(n) ? n : NaN;
+    }
+
+    function fmt(n, digits=3) {
+      if (!Number.isFinite(n)) return "";
+      return n.toFixed(digits);
+    }
+
+    function recalcRow(tr) {
+      const ev = toNum(tr.querySelector(".ev").value);
+      const pv = toNum(tr.querySelector(".pv").value);
+      const spiEl = tr.querySelector(".spi");
+
+      if (Number.isFinite(ev) && Number.isFinite(pv) && pv !== 0) {
+        spiEl.value = fmt(ev / pv, 3);
+      } else {
+        spiEl.value = "";
+      }
+    }
+
+    function getRowsData() {
+      const rows = [...tbody.querySelectorAll("tr")];
+      const data = rows.map(tr => {
+        const milestone = tr.querySelector(".ms").value.trim();
+        const ev = toNum(tr.querySelector(".ev").value);
+        const pv = toNum(tr.querySelector(".pv").value);
+        const spi = toNum(tr.querySelector(".spi").value);
+        return { milestone, ev, pv, spi };
+      });
+
+      // ใช้เฉพาะแถวที่มี milestone และมี SPI (คำนวณได้)
+      return data.filter(d => d.milestone && Number.isFinite(d.spi));
+    }
+
+    function addRow(prefill = {}) {
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td><input class="ms" placeholder="เช่น M1 / Jan / Sprint 1" value="${prefill.milestone ?? ""}"></td>
+        <td><input class="ev num" placeholder="EV" value="${prefill.ev ?? ""}"></td>
+        <td><input class="pv num" placeholder="PV" value="${prefill.pv ?? ""}"></td>
+        <td><input class="spi num" readonly placeholder="auto"></td>
+        <td><input class="ucl num" readonly placeholder="auto"></td>
+        <td><input class="lcl num" readonly placeholder="auto"></td>
+        <td class="actions"><button class="delBtn" title="ลบ">🗑️</button></td>
+      `;
+
+      // events
+      tr.querySelector(".ev").addEventListener("input", () => recalcRow(tr));
+      tr.querySelector(".pv").addEventListener("input", () => recalcRow(tr));
+      tr.querySelector(".delBtn").addEventListener("click", (e) => {
+        e.preventDefault();
+        tr.remove();
+        plot(); // update chart immediately
+      });
+
+      tbody.appendChild(tr);
+      recalcRow(tr);
+    }
+
+    // ---------- Chart ----------
+    let chart = null;
+    function calcControlLimits(values) {
+      if (!values.length) return { cl: NaN, ucl: NaN, lcl: NaN };
+      const cl = values.reduce((sum, v) => sum + v, 0) / values.length;
+      const sigma = Math.sqrt(Math.max(0, cl));
+      const ucl = cl + 3 * sigma;
+      const lcl = Math.max(0, cl - 3 * sigma);
+      return { cl, ucl, lcl };
+    }
+
+    function plot() {
+      const data = getRowsData();
+      const labels = data.map(d => d.milestone);
+
+      // SPI + auto CL/UCL/LCL
+      const spi = data.map(d => d.spi);
+      const limits = calcControlLimits(spi);
+      const clLine = spi.map(() => Number.isFinite(limits.cl) ? limits.cl : null);
+      const ucl = spi.map(() => Number.isFinite(limits.ucl) ? limits.ucl : null);
+      const lcl = spi.map(() => Number.isFinite(limits.lcl) ? limits.lcl : null);
+      const target = data.map(_ => 1.0);
+      const yValues = [...spi, ...clLine, ...ucl, ...lcl, ...target].filter(Number.isFinite);
+      const minY = yValues.length ? Math.max(0, Math.min(...yValues) - 0.1) : 0;
+      const maxY = yValues.length ? Math.max(...yValues) + 0.1 : 2;
+      [...tbody.querySelectorAll("tr")].forEach((tr) => {
+        tr.querySelector(".ucl").value = Number.isFinite(limits.ucl) ? fmt(limits.ucl, 3) : "";
+        tr.querySelector(".lcl").value = Number.isFinite(limits.lcl) ? fmt(limits.lcl, 3) : "";
+      });
+
+      const ctx = $("#spiChart");
+
+      const config = {
+        type: "line",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: "SPI (EV/PV)",
+              data: spi,
+              tension: 0.2,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              pointBackgroundColor: (ctx) => {
+                const i = ctx.dataIndex;
+                const d = data[i];
+                if (!d) return "#2563eb";
+                const overUcl = Number.isFinite(limits.ucl) && d.spi > limits.ucl;
+                const underLcl = Number.isFinite(limits.lcl) && d.spi < limits.lcl;
+                return (overUcl || underLcl) ? "#dc2626" : "#2563eb";
+              },
+              pointBorderColor: (ctx) => {
+                const i = ctx.dataIndex;
+                const d = data[i];
+                if (!d) return "#2563eb";
+                const overUcl = Number.isFinite(limits.ucl) && d.spi > limits.ucl;
+                const underLcl = Number.isFinite(limits.lcl) && d.spi < limits.lcl;
+                return (overUcl || underLcl) ? "#dc2626" : "#2563eb";
+              }
+            },
+            {
+              label: "CL",
+              data: clLine,
+              borderDash: [4, 4],
+              pointRadius: 0
+            },
+            {
+              label: "UCL",
+              data: ucl,
+              stepped: true,
+              borderDash: [6, 4],
+              pointRadius: 0
+            },
+            {
+              label: "LCL",
+              data: lcl,
+              stepped: true,
+              borderDash: [6, 4],
+              pointRadius: 0
+            },
+            {
+              label: "Target (1.0)",
+              data: target,
+              borderDash: [2, 6],
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: true,
+              text: "Schedule Performance Index (SPI) by Milestone"
+            },
+            tooltip: {
+              callbacks: {
+                afterBody: (items) => {
+                  const i = items?.[0]?.dataIndex ?? -1;
+                  if (i < 0) return "";
+                  const d = data[i];
+                  const lines = [];
+                  if (Number.isFinite(d.ev)) lines.push(`EV: ${d.ev}`);
+                  if (Number.isFinite(d.pv)) lines.push(`PV: ${d.pv}`);
+                  if (Number.isFinite(limits.cl)) lines.push(`CL: ${fmt(limits.cl, 3)}`);
+                  if (Number.isFinite(limits.ucl)) lines.push(`UCL: ${fmt(limits.ucl, 3)}`);
+                  if (Number.isFinite(limits.lcl)) lines.push(`LCL: ${fmt(limits.lcl, 3)}`);
+                  return lines.join("\n");
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              title: { display: true, text: "SPI" },
+              min: minY,
+              max: maxY
+            },
+            x: {
+              title: { display: true, text: "Milestone" }
+            }
+          }
+        }
+      };
+
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, config);
+    }
+
+    // ---------- Buttons ----------
+    $("#addRowBtn").addEventListener("click", () => addRow());
+    $("#plotBtn").addEventListener("click", plot);
+
+    $("#clearBtn").addEventListener("click", () => {
+      tbody.innerHTML = "";
+      addRow(); // start with one empty row
+      plot();
+    });
+
+    $("#loadSampleBtn").addEventListener("click", () => {
+      tbody.innerHTML = "";
+      // ตัวอย่าง: EV/PV ให้ได้ SPI ไล่ขึ้นแล้วลงนิดหน่อย (แก้ได้ตามจริง)
+      const sample = [
+        { milestone: "Jan", ev: 20, pv: 80 },
+        { milestone: "Feb", ev: 45, pv: 100 },
+        { milestone: "Mar", ev: 50, pv: 105 },
+        { milestone: "Apr", ev: 60, pv: 100 },
+        { milestone: "May", ev: 75, pv: 95 },
+        { milestone: "Jun", ev: 120, pv: 90 },
+        { milestone: "Jul", ev: 110, pv: 95 },
+        { milestone: "Aug", ev: 112, pv: 96 },
+        { milestone: "Sep", ev: 108, pv: 98 },
+        { milestone: "Oct", ev: 100, pv: 100 },
+        { milestone: "Nov", ev: 92,  pv: 102 },
+        { milestone: "Dec", ev: 95,  pv: 110 }
+      ];
+      sample.forEach(s => addRow(s));
+      plot();
+    });
+
+    // ---------- Init ----------
+    addRow();
+    plot();
+  </script>
+</body>
+</html>

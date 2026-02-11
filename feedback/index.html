@@ -87,6 +87,13 @@
       color: var(--accent);
     }
 
+    #cameraAngles {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #1e293b;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+
     .right-panel {
       position: fixed;
       right: 14px;
@@ -111,6 +118,57 @@
       font-size: 12px;
       margin-bottom: 4px;
       color: #334155;
+    }
+
+    .step-list {
+      margin-top: 6px;
+      display: grid;
+      gap: 5px;
+      list-style: none;
+      padding: 0;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #475569;
+      padding: 4px 6px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+    }
+
+    .step-item .mark {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 1px solid #94a3b8;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: #64748b;
+      background: #f8fafc;
+      flex: 0 0 16px;
+    }
+
+    .step-item.active {
+      border-color: #93c5fd;
+      background: #eff6ff;
+      color: #1e40af;
+    }
+
+    .step-item.done {
+      color: #166534;
+      border-color: #86efac;
+      background: #f0fdf4;
+    }
+
+    .step-item.done .mark {
+      border-color: #16a34a;
+      background: #16a34a;
+      color: #fff;
     }
 
     .bar-rail {
@@ -205,6 +263,54 @@
       font-weight: 600;
     }
 
+    .intro-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 23, 42, 0.55);
+      padding: 16px;
+    }
+
+    .intro-card {
+      width: min(680px, 100%);
+      border-radius: 16px;
+      border: 1px solid rgba(15, 23, 42, 0.2);
+      background: rgba(255, 255, 255, 0.98);
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.24);
+      padding: 18px;
+    }
+
+    .intro-card h2 {
+      font-size: 19px;
+      margin-bottom: 8px;
+      color: #0f172a;
+    }
+
+    .intro-card p {
+      margin-top: 7px;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #334155;
+    }
+
+    .intro-card .hint {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 10px;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      font-size: 13px;
+    }
+
+    #startTrainingBtn {
+      margin-top: 14px;
+      padding: 10px 14px;
+      font-size: 14px;
+    }
+
     @media (max-width: 900px) {
       .right-panel {
         top: auto;
@@ -220,6 +326,8 @@
     <span class="badge">Single-file: HTML + JavaScript only</span>
     <p id="statusText">สถานะ: เริ่มขั้น Positioning</p>
     <p id="awarenessText">Awareness: รักษาระยะปลอดภัยและเข้าเป้าทีละขั้น</p>
+    <p id="cameraAngles">Camera: alpha 0.0deg | beta 0.0deg | radius 0.00</p>
+    <p id="sessionTimer">Timer: 00:00.0 (ยังไม่เริ่ม)</p>
     <div class="controls">
       <button id="exportBtn" class="primary">Export JSON</button>
       <button id="resetBtn">Reset Session</button>
@@ -238,6 +346,13 @@
     <div class="bar-wrap">
       <div class="bar-label">Current Step</div>
       <div id="stepLabel" style="font-size:13px;font-weight:700;color:#0f172a">Positioning</div>
+      <ul class="step-list">
+        <li class="step-item" data-step-item data-step="Positioning"><span class="mark"> </span><span>1. Positioning</span></li>
+        <li class="step-item" data-step-item data-step="Attaching"><span class="mark"> </span><span>2. Attaching</span></li>
+        <li class="step-item" data-step-item data-step="Hooking"><span class="mark"> </span><span>3. Hooking</span></li>
+        <li class="step-item" data-step-item data-step="Pulling"><span class="mark"> </span><span>4. Pulling</span></li>
+        <li class="step-item" data-step-item data-step="Detaching"><span class="mark"> </span><span>5. Detaching</span></li>
+      </ul>
     </div>
   </aside>
 
@@ -251,15 +366,31 @@
     </div>
   </div>
 
+  <div id="introBackdrop" class="intro-backdrop">
+    <div class="intro-card">
+      <h2>Step 1: Positioning (Mockup)</h2>
+      <p>วัตถุประสงค์: นำ LBT เข้าไปวางที่จุด fuse บนเสาในแนวปฏิบัติงานที่ถูกต้อง</p>
+      <p>แนวที่ถูกต้อง: เข้าทางขวาของเสา</p>
+      <p>แนวที่ไม่ถูกต้อง: เข้าทางซ้ายของเสา และขึ้นสูงใกล้สายไฟด้านบน</p>
+      <div class="hint">ถ้าเริ่มเข้าทางผิด ระบบจะเกิด visual friction ทำให้ LBT เคลื่อนช้ากว่าเมาส์ (ไม่ 1:1)</div>
+      <button id="startTrainingBtn" class="primary">เริ่มฝึก Step 1</button>
+    </div>
+  </div>
+
   <canvas id="renderCanvas"></canvas>
 
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
   <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+  <script src="https://cdn.babylonjs.com/cannon.js"></script>
   <script>
     const CONFIG = {
       dragThresholdPx: 12,
       minDragMs: 120,
       snapRadius: 0.44,
+      positioningJointSnapDistance: 0.72,
+      positioningJointBreakDistance: 1.25,
+      positioningDistanceLagStart: 0.9,
+      positioningDistanceLagFull: 3.8,
       positioningDwellMs: 500,
       attachDwellMs: 700,
       hookDwellMs: 650,
@@ -280,41 +411,41 @@
     const QUESTIONS = [
       {
         id: "danger-zone-repeat",
-        question: "คุณเข้าเขตอันตรายซ้ำ อะไรคือการตอบสนองที่ปลอดภัยที่สุดตอนนี้?",
+        question: "เมื่อปลาย LBT เข้าใกล้ส่วนที่มีไฟฟ้าเกินระยะปลอดภัย ควรทำอย่างไรเป็นอันดับแรก?",
         options: [
-          "หยุดและถอย LBT ออกจากเขตแดงก่อน",
-          "รีบดึงต่อให้จบขั้นตอน",
-          "เปลี่ยนมุมกล้องแล้วดันเข้าไปใหม่"
+          "หยุดการทำงานและถอย LBT ออกจากเขตอันตรายก่อน",
+          "เร่งทำงานให้จบเพื่อให้พ้นจุดเสี่ยงเร็วขึ้น",
+          "คงตำแหน่งเดิมแล้วรอให้ประกายไฟหายเอง"
         ],
         correctOption: 0
       },
       {
         id: "pull-speed-red",
-        question: "ความเร็วอยู่ในโซนแดงต่อเนื่อง ควรทำอย่างไรเพื่อลดความเสี่ยง?",
+        question: "การดึง LBT ที่เร็วเกินไปต่อเนื่องเสี่ยงอะไร และควรแก้ด้วยวิธีใด?",
         options: [
-          "คุมแรงดึงให้สม่ำเสมอในโซนเขียว",
-          "เร่งให้สุดเพื่อลดเวลา",
-          "หยุดกลางทางแล้วค่อยลากต่อ"
+          "เสี่ยงควบคุมทิศทางผิดพลาด ควรคุมแรงดึงให้สม่ำเสมอ",
+          "ไม่เสี่ยงถ้าผู้ปฏิบัติมีประสบการณ์สูง",
+          "ยิ่งเร็วเท่าไรยิ่งปลอดภัยเพราะเวลาเสี่ยงสั้นลง"
         ],
         correctOption: 0
       },
       {
         id: "stop-midway",
-        question: "ถ้าหยุดกลางคันระหว่างดึง ต้องระวังผลกระทบใด?",
+        question: "หากหยุดแรงดึงกลางจังหวะระหว่างปฏิบัติการ สิ่งใดคือความเสี่ยงสำคัญ?",
         options: [
-          "เสี่ยงเกิด arc/spark จึงควรตั้งหลักใหม่",
-          "ไม่มีผล ดึงต่อได้ทันที",
-          "ระบบชดเชยความเสี่ยงให้อัตโนมัติ"
+          "เสี่ยงเกิด arc/spark และควรตั้งหลักก่อนเริ่มจังหวะใหม่",
+          "ไม่มีผลต่อความปลอดภัยเพราะ LBT เป็นฉนวน",
+          "แค่เปลี่ยนมือจับก็ลดความเสี่ยงได้ทั้งหมด"
         ],
         correctOption: 0
       },
       {
         id: "pull-before-hook",
-        question: "ถ้าพยายามดึงก่อน hook สำเร็จ ควรแก้อย่างไร?",
+        question: "ก่อนเริ่มดึง LBT ต้องตรวจเงื่อนไขใดให้ถูกต้องที่สุด?",
         options: [
-          "กลับไป hook ให้ lock และนิ่งก่อน",
-          "ดึงต่อเพื่อทดสอบแรง",
-          "ข้ามไป detaching"
+          "ตรวจให้ hook เข้าตำแหน่งและ lock มั่นคงก่อนดึง",
+          "เริ่มดึงเบาๆ ก่อน แล้วค่อยปรับตำแหน่งระหว่างดึง",
+          "ข้ามขั้นตอนล็อกเพื่อลดเวลาปฏิบัติงาน"
         ],
         correctOption: 0
       }
@@ -344,12 +475,17 @@
       stability: document.getElementById("stabilityFill"),
       pull: document.getElementById("pullFill"),
       step: document.getElementById("stepLabel"),
+      stepItems: Array.from(document.querySelectorAll("[data-step-item]")),
+      cameraAngles: document.getElementById("cameraAngles"),
+      sessionTimer: document.getElementById("sessionTimer"),
       vignette: document.getElementById("vignette"),
       exportBtn: document.getElementById("exportBtn"),
       resetBtn: document.getElementById("resetBtn"),
       dialogBackdrop: document.getElementById("dialogBackdrop"),
       dialogQuestion: document.getElementById("dialogQuestion"),
-      dialogOptions: document.getElementById("dialogOptions")
+      dialogOptions: document.getElementById("dialogOptions"),
+      introBackdrop: document.getElementById("introBackdrop"),
+      startTrainingBtn: document.getElementById("startTrainingBtn")
     };
 
     function toneColor(tone) {
@@ -372,6 +508,36 @@
       const v = Math.max(0, Math.min(1, value01));
       el.style.width = (v * 100) + "%";
       el.style.background = v > 0.8 ? "#16a34a" : v > 0.45 ? "#eab308" : "#ef4444";
+    }
+
+    function setCameraReadout(camera) {
+      const toDeg = BABYLON.Tools.ToDegrees;
+      let alphaDeg = toDeg(camera.alpha) % 360;
+      if (alphaDeg < 0) alphaDeg += 360;
+      const betaDeg = toDeg(camera.beta);
+      ui.cameraAngles.textContent = "Camera: alpha " + alphaDeg.toFixed(1) + "deg | beta " + betaDeg.toFixed(1) + "deg | radius " + camera.radius.toFixed(2);
+    }
+
+    function setTimerLabel(durationMs, started) {
+      const safeMs = Math.max(0, durationMs || 0);
+      const minutes = Math.floor(safeMs / 60000);
+      const seconds = Math.floor((safeMs % 60000) / 1000);
+      const tenths = Math.floor((safeMs % 1000) / 100);
+      const mm = String(minutes).padStart(2, "0");
+      const ss = String(seconds).padStart(2, "0");
+      ui.sessionTimer.textContent = started ? "Timer: " + mm + ":" + ss + "." + tenths : "Timer: 00:00.0 (ยังไม่เริ่ม)";
+    }
+
+    function setStepChecklist(stepStats, currentStep, positioningConnected) {
+      for (const item of ui.stepItems) {
+        const stepName = item.dataset.step;
+        const mark = item.querySelector(".mark");
+        const stat = stepStats[stepName];
+        const done = stepName === Step.Positioning ? (positioningConnected || (stat && stat.passed)) : Boolean(stat && stat.passed);
+        item.classList.toggle("done", done);
+        item.classList.toggle("active", currentStep === stepName && !done);
+        mark.textContent = done ? "✓" : "";
+      }
     }
 
     function flashWarning() {
@@ -424,7 +590,7 @@
     }
 
     function createMetrics() {
-      const startMs = performance.now();
+      let startMs = null;
       const events = [];
       const samples = [];
       const responses = [];
@@ -440,6 +606,9 @@
         stopMidwayCount: 0
       };
       return {
+        begin(startAtMs) {
+          startMs = typeof startAtMs === "number" ? startAtMs : performance.now();
+        },
         logEvent(step, type, data) {
           events.push({ t: performance.now(), step, type, data: data || null });
         },
@@ -473,7 +642,7 @@
         export(stepStats) {
           return {
             generatedAt: new Date().toISOString(),
-            sessionDurationMs: performance.now() - startMs,
+            sessionDurationMs: startMs === null ? 0 : performance.now() - startMs,
             counters,
             steps: stepStats,
             reflectionResponses: responses,
@@ -547,9 +716,12 @@
       });
 
       let current = Step.Positioning;
-      stats[current].enteredAtMs = performance.now();
 
       return {
+        begin(startAtMs) {
+          const t = typeof startAtMs === "number" ? startAtMs : performance.now();
+          stats[current].enteredAtMs = t;
+        },
         get: () => current,
         stat: () => stats,
         addWarning() {
@@ -583,9 +755,10 @@
           const copy = {};
           STEP_ORDER.forEach((step) => {
             const s = stats[step];
+            const durationMs = s.enteredAtMs > 0 ? Math.max(0, (s.finishedAtMs || now) - s.enteredAtMs) : 0;
             copy[step] = {
               ...s,
-              durationMs: Math.max(0, (s.finishedAtMs || now) - s.enteredAtMs)
+              durationMs
             };
           });
           return copy;
@@ -596,7 +769,7 @@
     const canvas = document.getElementById("renderCanvas");
     const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
 
-    function startApp() {
+    async function startApp() {
       const metrics = createMetrics();
       const audio = createAudioSystem();
       const steps = createStepManager();
@@ -608,11 +781,70 @@
       const scene = new BABYLON.Scene(engine);
       scene.clearColor = new BABYLON.Color4(0.86, 0.92, 0.97, 1);
 
-      const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2.2, Math.PI / 3.1, 16, new BABYLON.Vector3(0, 3.5, 0), scene);
+      const positioningCameraPreset = {
+        alphaDeg: 116.8,
+        betaDeg: 94.1,
+        radius: 9.67
+      };
+      const camera = new BABYLON.ArcRotateCamera(
+        "camera",
+        BABYLON.Tools.ToRadians(positioningCameraPreset.alphaDeg),
+        BABYLON.Tools.ToRadians(positioningCameraPreset.betaDeg),
+        positioningCameraPreset.radius,
+        new BABYLON.Vector3(0, 3.5, 0),
+        scene
+      );
       camera.attachControl(canvas, true);
       camera.lowerRadiusLimit = 7;
       camera.upperRadiusLimit = 26;
       camera.wheelDeltaPercentage = 0.01;
+      camera.panningSensibility = 0;
+
+      const cameraPointer = camera.inputs.attached.pointers;
+      const cameraFreeAngularSensibility = 1500;
+      const cameraLockedAngularSensibility = 1e9;
+      const cameraFreePanningSensibility = 140;
+      let shiftHeld = false;
+      let ctrlHeld = false;
+
+      function updateCameraControlMode() {
+        if (!cameraPointer) return;
+        const angularSensibility = shiftHeld ? cameraFreeAngularSensibility : cameraLockedAngularSensibility;
+        cameraPointer.angularSensibilityX = angularSensibility;
+        cameraPointer.angularSensibilityY = angularSensibility;
+        camera.panningSensibility = ctrlHeld ? cameraFreePanningSensibility : 0;
+      }
+
+      window.addEventListener("keydown", (event) => {
+        if (event.key === "Shift") {
+          shiftHeld = true;
+        } else if (event.key === "Control") {
+          ctrlHeld = true;
+        } else {
+          return;
+        }
+        updateCameraControlMode();
+      });
+
+      window.addEventListener("keyup", (event) => {
+        if (event.key === "Shift") {
+          shiftHeld = false;
+        } else if (event.key === "Control") {
+          ctrlHeld = false;
+        } else {
+          return;
+        }
+        updateCameraControlMode();
+      });
+
+      window.addEventListener("blur", () => {
+        shiftHeld = false;
+        ctrlHeld = false;
+        updateCameraControlMode();
+      });
+
+      updateCameraControlMode();
+      setCameraReadout(camera);
 
       new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0.2, 1, 0), scene).intensity = 0.82;
 
@@ -681,7 +913,9 @@
       lbtHookFallback.material = lbtMat;
       lbtEndFallback.material = lbtMat;
 
-      const helperPlane = BABYLON.Plane.FromPositionAndNormal(new BABYLON.Vector3(0, 1.15, 0), new BABYLON.Vector3(0, 1, 0));
+      const dragPlaneNormal = new BABYLON.Vector3(0, 0, 1);
+      let dragPlaneZ = lbt.position.z;
+      let helperPlane = BABYLON.Plane.FromPositionAndNormal(new BABYLON.Vector3(0, 0, dragPlaneZ), dragPlaneNormal);
       const pullDirection = pullRing.position.subtract(attachmentHook.position).normalize();
 
       const riskZones = [
@@ -696,6 +930,20 @@
       let pointerDownXY = { x: 0, y: 0 };
       let prevPos = lbt.position.clone();
       let prevSampleAt = performance.now();
+      let trainingStarted = false;
+      let trainingStartedAtMs = 0;
+      const topWirePoint = new BABYLON.Vector3(0, 8.2, 0);
+      let fusePositionTrigger = null;
+      let lbtPositionTrigger = null;
+      let positioningJointConnected = false;
+      let physicsReady = false;
+      let hingeJointActive = false;
+      let positioningHingeJoint = null;
+      let poleHingeAnchor = null;
+      let lbtHingeAnchor = null;
+      let lbtRigidBodyMesh = null;
+      let lbtRootOffsetFromBody = BABYLON.Vector3.Zero();
+      let lbtTriggerOffsetFromBody = BABYLON.Vector3.Zero();
 
       let dwellStartMs = null;
       let attached = false;
@@ -710,6 +958,197 @@
 
       function getHookPos() {
         return lbtHookLocator.getAbsolutePosition();
+      }
+
+      function getNodePosition(node, fallback) {
+        if (!node) return fallback.clone();
+        return node.getAbsolutePosition();
+      }
+
+      function getPositioningTargetPos() {
+        return getNodePosition(fusePositionTrigger, positioningArea.position);
+      }
+
+      function getPositioningLbtPos() {
+        return getNodePosition(lbtPositionTrigger, getHookPos());
+      }
+
+      function findNamedNodeUnderRoot(rootNode, targetName) {
+        if (!rootNode) return null;
+        if (rootNode.name === targetName) return rootNode;
+        const transformNodes = rootNode.getChildTransformNodes();
+        const meshes = rootNode.getChildMeshes();
+        for (const node of transformNodes) {
+          if (node.name === targetName) return node;
+        }
+        for (const mesh of meshes) {
+          if (mesh.name === targetName) return mesh;
+        }
+        return null;
+      }
+
+      function setupTriggerNodeVisual(node) {
+        if (!node) return;
+        if ("visibility" in node) {
+          node.visibility = 0.16;
+          node.isPickable = false;
+        }
+      }
+
+      async function setupPhysicsWorld() {
+        if (typeof CANNON === "undefined") {
+          setAwareness("ไม่พบ Cannon.js จึงใช้โหมดเชื่อมแบบไม่ใช้ physics", "warn");
+          return;
+        }
+        try {
+          scene.enablePhysics(new BABYLON.Vector3(0, -9.81, 0), new BABYLON.CannonJSPlugin());
+          physicsReady = true;
+        } catch (_error) {
+          physicsReady = false;
+          setAwareness("เริ่ม Cannon physics ไม่สำเร็จ สลับเป็นโหมดไม่ใช้ physics ชั่วคราว", "warn");
+        }
+      }
+
+      function getLbtBodyMesh() {
+        return lbtRigidBodyMesh || lbtHingeAnchor;
+      }
+
+      function getLbtBodyImpostor() {
+        const body = getLbtBodyMesh();
+        return body ? body.physicsImpostor : null;
+      }
+
+      function createLbtRigidBodyFromModel(modelRoot) {
+        if (!physicsReady || lbtRigidBodyMesh) return;
+        const meshes = modelRoot.getChildMeshes();
+        const bounds = collectBounds(meshes);
+        if (!bounds) return;
+        const size = bounds.size;
+        const safeSize = new BABYLON.Vector3(
+          Math.max(0.12, size.x * 0.85),
+          Math.max(0.12, size.y * 0.9),
+          Math.max(0.12, size.z * 0.85)
+        );
+        const center = bounds.min.add(bounds.max).scale(0.5);
+        const body = BABYLON.MeshBuilder.CreateBox(
+          "lbtRigidBodyMesh",
+          { width: safeSize.x, height: safeSize.y, depth: safeSize.z },
+          scene
+        );
+        body.position.copyFrom(center);
+        body.isVisible = false;
+        body.isPickable = false;
+        try {
+          body.physicsImpostor = new BABYLON.PhysicsImpostor(
+            body,
+            BABYLON.PhysicsImpostor.BoxImpostor,
+            { mass: 1.1, friction: 0.58, restitution: 0.02 },
+            scene
+          );
+          body.physicsImpostor.physicsBody.linearDamping = 0.28;
+          body.physicsImpostor.physicsBody.angularDamping = 0.35;
+          body.physicsImpostor.sleep();
+          lbtRigidBodyMesh = body;
+          lbtRootOffsetFromBody = lbt.position.subtract(body.position);
+          lbtTriggerOffsetFromBody = getPositioningLbtPos().subtract(body.position);
+        } catch (_error) {
+          body.dispose();
+          lbtRigidBodyMesh = null;
+          setAwareness("สร้าง rigid body ของ LBT ไม่สำเร็จ ใช้โหมด joint fallback", "warn");
+        }
+      }
+
+      function ensureHingeAnchors() {
+        if (!physicsReady) return;
+        if (!poleHingeAnchor) {
+          poleHingeAnchor = BABYLON.MeshBuilder.CreateSphere("poleHingeAnchor", { diameter: 0.06 }, scene);
+          poleHingeAnchor.isVisible = false;
+          poleHingeAnchor.isPickable = false;
+          poleHingeAnchor.physicsImpostor = new BABYLON.PhysicsImpostor(
+            poleHingeAnchor,
+            BABYLON.PhysicsImpostor.SphereImpostor,
+            { mass: 0, friction: 0.1, restitution: 0 },
+            scene
+          );
+        }
+        if (!lbtHingeAnchor && !lbtRigidBodyMesh) {
+          lbtHingeAnchor = BABYLON.MeshBuilder.CreateSphere("lbtHingeAnchor", { diameter: 0.06 }, scene);
+          lbtHingeAnchor.isVisible = false;
+          lbtHingeAnchor.isPickable = false;
+          lbtHingeAnchor.physicsImpostor = new BABYLON.PhysicsImpostor(
+            lbtHingeAnchor,
+            BABYLON.PhysicsImpostor.SphereImpostor,
+            { mass: 0.05, friction: 0.25, restitution: 0 },
+            scene
+          );
+          lbtHingeAnchor.physicsImpostor.sleep();
+        }
+      }
+
+      function activatePositioningHingeJoint() {
+        const lbtBodyMesh = getLbtBodyMesh();
+        const lbtBodyImpostor = getLbtBodyImpostor();
+        if (!physicsReady || hingeJointActive || !poleHingeAnchor || !lbtBodyMesh || !lbtBodyImpostor) return;
+        const fusePos = getPositioningTargetPos();
+        const lbtPos = getPositioningLbtPos();
+        poleHingeAnchor.position.copyFrom(fusePos);
+        lbtBodyMesh.position.copyFrom(lbtPos.subtract(lbtTriggerOffsetFromBody));
+        lbtBodyImpostor.wakeUp();
+
+        positioningHingeJoint = new BABYLON.HingeJoint({
+          mainPivot: BABYLON.Vector3.Zero(),
+          connectedPivot: lbtTriggerOffsetFromBody,
+          mainAxis: new BABYLON.Vector3(0, 0, 1),
+          connectedAxis: new BABYLON.Vector3(0, 0, 1)
+        });
+        poleHingeAnchor.physicsImpostor.addJoint(lbtBodyImpostor, positioningHingeJoint);
+        hingeJointActive = true;
+        metrics.logEvent(Step.Positioning, "hinge-joint-activated");
+      }
+
+      function releasePositioningHingeJoint() {
+        if (!physicsReady || !hingeJointActive || !positioningHingeJoint || !poleHingeAnchor) return;
+        try {
+          poleHingeAnchor.physicsImpostor.executeNativeFunction((world) => {
+            if (positioningHingeJoint.physicsJoint && world && typeof world.removeConstraint === "function") {
+              world.removeConstraint(positioningHingeJoint.physicsJoint);
+            }
+          });
+        } catch (_error) {
+          // Keep fallback behavior even if the plugin cannot remove the constraint.
+        }
+        positioningHingeJoint = null;
+        hingeJointActive = false;
+        const lbtBodyImpostor = getLbtBodyImpostor();
+        if (lbtBodyImpostor) {
+          lbtBodyImpostor.sleep();
+        }
+        metrics.logEvent(Step.Positioning, "hinge-joint-released");
+      }
+
+      function driveHingeAnchorToward(targetPos) {
+        const lbtBodyMesh = getLbtBodyMesh();
+        const lbtBodyImpostor = getLbtBodyImpostor();
+        if (!physicsReady || !hingeJointActive || !lbtBodyMesh || !lbtBodyImpostor) return;
+        const currentTrigger = lbtBodyMesh.position.add(lbtTriggerOffsetFromBody);
+        const toTarget = targetPos.subtract(currentTrigger);
+        const distance = toTarget.length();
+        if (distance < 0.0005) {
+          lbtBodyImpostor.setLinearVelocity(BABYLON.Vector3.Zero());
+          lbtBodyImpostor.setAngularVelocity(BABYLON.Vector3.Zero());
+          return;
+        }
+        const direction = toTarget.scale(1 / distance);
+        const desiredSpeed = Math.min(3.2, 1.4 + distance * 7.5);
+        lbtBodyImpostor.setLinearVelocity(direction.scale(desiredSpeed));
+      }
+
+      function syncLbtToHingeAnchor() {
+        if (!hingeJointActive) return;
+        const lbtBodyMesh = getLbtBodyMesh();
+        if (!lbtBodyMesh) return;
+        lbt.position = lbtBodyMesh.position.add(lbtRootOffsetFromBody);
+        lbt.position.z = dragPlaneZ;
       }
 
       function collectBounds(meshes) {
@@ -770,12 +1209,27 @@
         return ray.origin.add(ray.direction.scale(distance));
       }
 
+      function setDragPlaneZ(z) {
+        dragPlaneZ = z;
+        helperPlane = BABYLON.Plane.FromPositionAndNormal(new BABYLON.Vector3(0, 0, dragPlaneZ), dragPlaneNormal);
+      }
+
       function snapHookTo(target, radius) {
         const hookPos = getHookPos();
         const distance = BABYLON.Vector3.Distance(hookPos, target);
         if (distance > radius) return false;
         const offset = lbt.position.subtract(hookPos);
         lbt.position = target.add(offset);
+        return true;
+      }
+
+      function snapPositioningTriggerToTarget(target, radius) {
+        const lbtPos = getPositioningLbtPos();
+        const distance = BABYLON.Vector3.Distance(lbtPos, target);
+        if (distance > radius) return false;
+        const offset = lbt.position.subtract(lbtPos);
+        lbt.position = target.add(offset);
+        lbt.position.z = dragPlaneZ;
         return true;
       }
 
@@ -788,6 +1242,97 @@
           metrics.inc("wrongDirectionCount", 0);
           const corrected = prevPos.add(delta.scale(CONFIG.resistanceFactor * intensity));
           lbt.position = BABYLON.Vector3.Lerp(current, corrected, 0.65);
+        }
+      }
+
+      function getPositioningFrictionFactor(desiredPos) {
+        const delta = desiredPos.subtract(lbt.position);
+        const hookCurrent = getPositioningLbtPos();
+        const hookEstimate = hookCurrent.add(delta);
+        const targetPos = getPositioningTargetPos();
+        let followFactor = 1;
+
+        const triggerDistance = BABYLON.Vector3.Distance(hookEstimate, targetPos);
+        if (triggerDistance > CONFIG.positioningDistanceLagStart) {
+          const lag01 = Math.max(
+            0,
+            Math.min(
+              1,
+              (triggerDistance - CONFIG.positioningDistanceLagStart) /
+                Math.max(0.001, CONFIG.positioningDistanceLagFull - CONFIG.positioningDistanceLagStart)
+            )
+          );
+          const distanceFactor = 0.25 + (1 - lag01) * 0.55;
+          followFactor = Math.min(followFactor, distanceFactor);
+        }
+
+        if (hookEstimate.x < 0.1) {
+          followFactor = Math.min(followFactor, 0.3);
+        }
+
+        if (hookEstimate.y > 6.05) {
+          followFactor = Math.min(followFactor, 0.24);
+        }
+
+        const topDist = BABYLON.Vector3.Distance(hookEstimate, topWirePoint);
+        if (topDist < 2.5) {
+          const near01 = Math.max(0, Math.min(1, topDist / 2.5));
+          followFactor = Math.min(followFactor, 0.14 + near01 * 0.18);
+        }
+
+        if (delta.length() > 0.0001) {
+          const moveDir = delta.normalize();
+          const sideDangerPoint = new BABYLON.Vector3(-0.95, 5.3, hookCurrent.z);
+          const directionalHazards = [topWirePoint, sideDangerPoint];
+
+          for (const hazard of directionalHazards) {
+            const toHazardNow = hazard.subtract(hookCurrent);
+            const distNow = toHazardNow.length();
+            if (distNow < 0.001) continue;
+
+            const towardDanger = BABYLON.Vector3.Dot(moveDir, toHazardNow.normalize());
+            const distNext = BABYLON.Vector3.Distance(hookEstimate, hazard);
+            if (towardDanger <= 0.12 || distNext >= distNow) continue;
+
+            const proximity = Math.max(0, Math.min(1, (3.2 - distNext) / 3.2));
+            const dangerIntent = Math.max(0, Math.min(1, (towardDanger - 0.12) / 0.88));
+            const directionalFactor = Math.max(0.1, 1 - proximity * dangerIntent * 0.78);
+            followFactor = Math.min(followFactor, directionalFactor);
+          }
+        }
+
+        return followFactor;
+      }
+
+      function applyPositioningMockFriction(desiredPos) {
+        if (!trainingStarted || steps.get() !== Step.Positioning) {
+          lbt.position = desiredPos;
+          return;
+        }
+
+        const friction = getPositioningFrictionFactor(desiredPos);
+        const filteredPos = BABYLON.Vector3.Lerp(lbt.position, desiredPos, friction);
+        filteredPos.z = dragPlaneZ;
+        if (hingeJointActive && physicsReady) {
+          const lbtDelta = filteredPos.subtract(lbt.position);
+          const desiredTriggerPos = getPositioningLbtPos().add(lbtDelta);
+          driveHingeAnchorToward(desiredTriggerPos);
+        } else {
+          lbt.position = filteredPos;
+          lbt.position.z = dragPlaneZ;
+        }
+
+        if (friction < 0.2) {
+          setAwareness("เข้าใกล้สายไฟด้านบน อันตรายสูง ระบบต้านการเคลื่อนมาก", "danger");
+          return;
+        }
+        const distanceNow = BABYLON.Vector3.Distance(getPositioningLbtPos(), getPositioningTargetPos());
+        if (distanceNow > CONFIG.positioningDistanceLagStart + 0.35) {
+          setAwareness("TRG ยังห่างกันมาก ระบบหน่วง LBT ให้ตามเมาส์ช้าลง", "warn");
+          return;
+        }
+        if (friction < 0.45) {
+          setAwareness("กำลังลากเข้าทิศทางเสี่ยง ระบบทำให้ LBT ฝืนและหน่วงระยะ ให้ปรับแนวใหม่", "warn");
         }
       }
 
@@ -817,11 +1362,13 @@
       scene.onPointerObservable.add((pointerInfo) => {
         switch (pointerInfo.type) {
           case BABYLON.PointerEventTypes.POINTERDOWN: {
+            if (!trainingStarted) return;
             const pickInfo = pointerInfo.pickInfo;
             if (!pickInfo.hit || !pickInfo.pickedMesh || !draggableMeshes.has(pickInfo.pickedMesh)) return;
 
             pointerDownAt = performance.now();
             pointerDownXY = { x: scene.pointerX, y: scene.pointerY };
+            setDragPlaneZ(lbt.position.z);
             const point = pickDragPoint();
             if (!point) return;
 
@@ -833,9 +1380,12 @@
           }
           case BABYLON.PointerEventTypes.POINTERMOVE: {
             if (!dragging) return;
+
             const point = pickDragPoint();
             if (!point) return;
-            lbt.position = point.add(dragOffset);
+            const desiredPos = point.add(dragOffset);
+            desiredPos.z = dragPlaneZ;
+            applyPositioningMockFriction(desiredPos);
             break;
           }
           case BABYLON.PointerEventTypes.POINTERUP: {
@@ -853,6 +1403,7 @@
             if (dragging) {
               dragging = false;
               camera.attachControl(canvas, true);
+              updateCameraControlMode();
             }
             break;
           }
@@ -866,10 +1417,31 @@
         const hookPos = getHookPos();
 
         if (current === Step.Positioning) {
-          const inArea = BABYLON.Vector3.Distance(hookPos, positioningArea.position) < 0.86;
-          lbt.position.y = 1.15;
-          if (inArea) {
-            snapHookTo(positioningArea.position, CONFIG.snapRadius + 0.42);
+          const positioningTarget = getPositioningTargetPos();
+          const positioningLbt = getPositioningLbtPos();
+          const distanceToTarget = BABYLON.Vector3.Distance(positioningLbt, positioningTarget);
+          const hasTriggerPair = Boolean(fusePositionTrigger && lbtPositionTrigger);
+
+          if (hasTriggerPair) {
+            if (!positioningJointConnected && distanceToTarget <= CONFIG.positioningJointSnapDistance) {
+              positioningJointConnected = true;
+              activatePositioningHingeJoint();
+              metrics.logEvent(Step.Positioning, "positioning-joint-connected", { distanceToTarget });
+              setStatus("Positioning - TRG_lbt_position เชื่อม TRG_fuse_position แล้ว");
+              setAwareness("เชื่อมต่อ hinge สำหรับ Step 1 แล้ว รักษาความนิ่งให้ครบเวลา", "good");
+            } else if (positioningJointConnected && distanceToTarget > CONFIG.positioningJointBreakDistance) {
+              positioningJointConnected = false;
+              releasePositioningHingeJoint();
+              metrics.logEvent(Step.Positioning, "positioning-joint-broken", { distanceToTarget });
+              setAwareness("หลุดจาก trigger positioning แล้ว ให้ลากกลับเข้าจุด fuse อีกครั้ง", "warn");
+            }
+          }
+
+          const snapped = hasTriggerPair
+            ? positioningJointConnected
+            : snapHookTo(positioningArea.position, CONFIG.snapRadius + 0.42);
+
+          if (snapped) {
             if (!dwellStartMs) dwellStartMs = performance.now();
             const dwell = performance.now() - dwellStartMs;
             setStatus("Positioning - วาง LBT ในโซนเริ่มต้นให้นิ่ง");
@@ -1018,7 +1590,7 @@
           const hookNow = getHookPos();
           const toExit = safeExit.position.subtract(hookNow).normalize();
 
-          const sideMotion = Math.abs(lbt.position.z - prevPos.z);
+          const sideMotion = Math.abs(lbt.position.x - prevPos.x);
           if (!detachingTwisted) {
             twistAccum += sideMotion;
             setStatus("Detaching 5.1 - บิดแกนให้หลุดจากแหวน");
@@ -1044,6 +1616,11 @@
       }
 
       scene.onBeforeRenderObservable.add(() => {
+        setCameraReadout(camera);
+        setTimerLabel(trainingStarted ? performance.now() - trainingStartedAtMs : 0, trainingStarted);
+        setStepChecklist(steps.stat(), steps.get(), positioningJointConnected);
+        if (!trainingStarted) return;
+        syncLbtToHingeAnchor();
         const dtMs = performance.now() - prevSampleAt;
         if (dtMs > 16) {
           const current = steps.get();
@@ -1106,6 +1683,23 @@
         location.reload();
       };
 
+      ui.startTrainingBtn.onclick = () => {
+        if (trainingStarted) return;
+        trainingStarted = true;
+        trainingStartedAtMs = performance.now();
+        prevPos = lbt.position.clone();
+        prevSampleAt = trainingStartedAtMs;
+        metrics.begin(trainingStartedAtMs);
+        steps.begin(trainingStartedAtMs);
+        ui.introBackdrop.style.display = "none";
+        setStatus("Positioning - เริ่มจับเวลาและเริ่มฝึก");
+        setAwareness("ลาก LBT เข้าจุด fuse ทางขวาของเสา หลีกเลี่ยงซ้ายและด้านบน", "info");
+        metrics.logEvent(Step.Positioning, "training-start");
+      };
+
+      await setupPhysicsWorld();
+      ensureHingeAnchors();
+
       loadModel("high_voltage_pole.glb", new BABYLON.TransformNode("poleRoot", scene), {
         fitAxis: "y",
         targetSize: 9,
@@ -1113,7 +1707,19 @@
           modelRoot.position = new BABYLON.Vector3(0, 0, 0);
           poleFallback.setEnabled(false);
           crossArmFallback.setEnabled(false);
-          setStatus("โหลดโมเดลเสาไฟแรงสูงแล้ว");
+          const foundFuseTrigger = findNamedNodeUnderRoot(modelRoot, "TRG_fuse_position");
+          if (foundFuseTrigger) {
+            fusePositionTrigger = foundFuseTrigger;
+            setupTriggerNodeVisual(fusePositionTrigger);
+            positioningArea.position = getNodePosition(fusePositionTrigger, positioningArea.position);
+            if (poleHingeAnchor) {
+              poleHingeAnchor.position.copyFrom(getNodePosition(fusePositionTrigger, positioningArea.position));
+            }
+            setStatus("โหลดโมเดลเสาไฟแรงสูงแล้ว พร้อม TRG_fuse_position");
+          } else {
+            setStatus("โหลดโมเดลเสาไฟแรงสูงแล้ว");
+            setAwareness("ไม่พบ TRG_fuse_position ใช้โซน positioning เดิม", "warn");
+          }
         }
       }).catch(() => {
         setAwareness("โหลด high_voltage_pole.glb ไม่สำเร็จ ใช้เสาจำลองแทน", "warn");
@@ -1131,21 +1737,71 @@
           lbtHookFallback.setEnabled(false);
           lbtEndFallback.setEnabled(false);
           setHookLocatorFromModel(modelRoot);
-          setStatus("โหลดโมเดล LBT แล้ว");
+          const foundLbtTrigger = findNamedNodeUnderRoot(modelRoot, "TRG_lbt_position");
+          if (foundLbtTrigger) {
+            lbtPositionTrigger = foundLbtTrigger;
+            setupTriggerNodeVisual(lbtPositionTrigger);
+            createLbtRigidBodyFromModel(modelRoot);
+            if (lbtRigidBodyMesh) {
+              lbtRootOffsetFromBody = lbt.position.subtract(lbtRigidBodyMesh.position);
+              lbtTriggerOffsetFromBody = getPositioningLbtPos().subtract(lbtRigidBodyMesh.position);
+            } else if (lbtHingeAnchor) {
+              lbtHingeAnchor.position.copyFrom(getNodePosition(lbtPositionTrigger, getHookPos()));
+            }
+            setStatus("โหลดโมเดล LBT แล้ว พร้อม TRG_lbt_position");
+          } else {
+            setStatus("โหลดโมเดล LBT แล้ว");
+            setAwareness("ไม่พบ TRG_lbt_position ใช้จุด hook เดิมสำหรับ positioning", "warn");
+          }
         }
       }).catch(() => {
         setAwareness("โหลด lbt.glb ไม่สำเร็จ ใช้ LBT จำลองแทน", "warn");
       });
 
-      setStatus("เริ่มขั้น Positioning");
-      setAwareness("เคลื่อน LBT ไปพื้นที่เริ่มต้น", "info");
+      const mockRightGuide = BABYLON.MeshBuilder.CreateBox("mockRightGuide", { width: 1.15, height: 3.2, depth: 0.5 }, scene);
+      mockRightGuide.position = new BABYLON.Vector3(0.95, 5.3, 0.22);
+      mockRightGuide.visibility = 0.25;
+      const rightGuideMat = new BABYLON.StandardMaterial("rightGuideMat", scene);
+      rightGuideMat.diffuseColor = new BABYLON.Color3(0.1, 0.62, 0.38);
+      mockRightGuide.material = rightGuideMat;
+
+      const mockLeftWrong = BABYLON.MeshBuilder.CreateBox("mockLeftWrong", { width: 1.2, height: 3.2, depth: 0.5 }, scene);
+      mockLeftWrong.position = new BABYLON.Vector3(-0.95, 5.3, 0.22);
+      mockLeftWrong.visibility = 0.2;
+      const leftWrongMat = new BABYLON.StandardMaterial("leftWrongMat", scene);
+      leftWrongMat.diffuseColor = new BABYLON.Color3(0.85, 0.2, 0.2);
+      mockLeftWrong.material = leftWrongMat;
+
+      const mockTopDanger = BABYLON.MeshBuilder.CreateBox("mockTopDanger", { width: 3.4, height: 0.2, depth: 0.35 }, scene);
+      mockTopDanger.position = new BABYLON.Vector3(0, 8.2, 0.2);
+      mockTopDanger.visibility = 0.24;
+      const topDangerMat = new BABYLON.StandardMaterial("topDangerMat", scene);
+      topDangerMat.diffuseColor = new BABYLON.Color3(0.9, 0.1, 0.1);
+      mockTopDanger.material = topDangerMat;
+
+      setStatus("รอเริ่มฝึก Step 1");
+      setAwareness("อ่านคำอธิบายแล้วกดปุ่มเริ่มฝึก", "info");
+      setTimerLabel(0, false);
 
       return scene;
     }
 
-    const scene = startApp();
-    engine.runRenderLoop(() => scene.render());
-    window.addEventListener("resize", () => engine.resize());
+    startApp()
+      .then((scene) => {
+        engine.runRenderLoop(() => scene.render());
+        window.addEventListener("resize", () => engine.resize());
+      })
+      .catch((error) => {
+        const scene = new BABYLON.Scene(engine);
+        scene.clearColor = new BABYLON.Color4(0.86, 0.92, 0.97, 1);
+        const fallbackCamera = new BABYLON.FreeCamera("fallbackCamera", new BABYLON.Vector3(0, 3, -10), scene);
+        fallbackCamera.setTarget(BABYLON.Vector3.Zero());
+        setStatus("เกิดข้อผิดพลาดระหว่างเริ่มระบบ");
+        setAwareness("ระบบ fallback ทำงานแล้ว ตรวจ console เพื่อดูรายละเอียด", "danger");
+        console.error("startApp failed:", error);
+        engine.runRenderLoop(() => scene.render());
+        window.addEventListener("resize", () => engine.resize());
+      });
   </script>
 </body>
 </html>
