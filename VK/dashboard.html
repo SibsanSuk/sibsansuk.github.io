@@ -376,6 +376,23 @@
                     </div>
                   </div>
 
+                  <div class="mt-4">
+                    <details class="panel p-4 text-xs text-slate-600" id="login-debug-panel">
+                      <summary class="cursor-pointer select-none text-xs text-slate-500 font-semibold">
+                        ข้อมูลจากการ Login (ซ่อน/แสดง)
+                      </summary>
+                      <div class="mt-3 flex flex-wrap items-center gap-2">
+                        <button class="ghost px-3 py-1.5 text-xs text-slate-700" data-login-tab="summary">Summary</button>
+                        <button class="ghost px-3 py-1.5 text-xs text-slate-700" data-login-tab="derived">Derived Params</button>
+                        <button class="ghost px-3 py-1.5 text-xs text-slate-700" data-login-tab="raw">Raw Login JSON</button>
+                        <div class="text-xs text-slate-500 mono" id="login-debug-status">รอข้อมูล</div>
+                      </div>
+                      <div id="login-debug-tab-summary" class="mt-3 panel p-3"></div>
+                      <div id="login-debug-tab-derived" class="mt-3 panel p-3 hidden"></div>
+                      <pre id="login-debug-tab-raw" class="mt-3 panel p-3 whitespace-pre-wrap break-all hidden">ยังไม่มีข้อมูล</pre>
+                    </details>
+                  </div>
+
                   <div class="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
                     <div class="clay-soft p-4 cat-card cat-1">
                       <div class="text-sm text-slate-500">Overall Progress</div>
@@ -766,6 +783,10 @@
 
     const inputUserEl = document.getElementById("input-userid");
     const inputCourseEl = document.getElementById("input-courseid");
+    const loginDebugStatusEl = document.getElementById("login-debug-status");
+    const loginDebugTabSummaryEl = document.getElementById("login-debug-tab-summary");
+    const loginDebugTabDerivedEl = document.getElementById("login-debug-tab-derived");
+    const loginDebugTabRawEl = document.getElementById("login-debug-tab-raw");
     if (inputUserEl) inputUserEl.value = userId || "";
     if (inputCourseEl) inputCourseEl.value = courseId || "";
 
@@ -787,6 +808,7 @@
       if (courseEl) courseEl.textContent = courseId || "-";
       document.getElementById("student-name").textContent = userId || "-";
       document.getElementById("student-id").textContent = userId || "-";
+      updateLoginDebugPanel();
     };
 
     const loadBtn = document.getElementById("btn-load");
@@ -798,6 +820,8 @@
         courseId = nextCourseId || null;
         applyParams(userId, courseId);
         syncHeader();
+        fetchBookrollReadingData();
+        fetchVideoLearningProgress();
         fetchCourseDetail();
         if (SHOW_BOOKROLL) {
           fetchBookrollMaxPage();
@@ -821,8 +845,20 @@
       });
     }
 
+    document.querySelectorAll("[data-login-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        setLoginDebugTab(btn.getAttribute("data-login-tab"));
+      });
+    });
+
     const bookrollUrl = (uid, cid) =>
       `https://bookroll.thaidlt.com/meca/student/BR_activity?userID=${encodeURIComponent(uid)}&usageId=${encodeURIComponent(cid)}`;
+
+    const bookrollReadingDataUrl = (uid, cid) =>
+      `https://bookroll.thaidlt.com/meca/student/readingData?userID=${encodeURIComponent(uid)}&usageId=${encodeURIComponent(cid)}&view=student&ts=${Date.now()}`;
+
+    const videoBarUrl = (userName, cid) =>
+      `https://viola.thaidlt.com/meca/chart/bar/?userName=${encodeURIComponent(userName)}&usageId=${encodeURIComponent(cid)}`;
 
     const courseUrl = (cid) =>
       `https://sbs-backend.mooc.meca.in.th/lms/${encodeURIComponent(cid)}`;
@@ -863,6 +899,125 @@
       return { read, total, progress };
     };
 
+    const normalizeTopicKey = (s) =>
+      decodeIfMojibake(String(s || ""))
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
+
+    const parseReadTotal = (v) => {
+      if (typeof v === "string") {
+        const m = v.trim().match(/^(\d+)\s*:\s*(\d+)$/);
+        if (m) {
+          const read = Number(m[1]);
+          const total = Number(m[2]);
+          const progress = total > 0 ? clamp(Math.round((read / total) * 100), 0, 100) : 0;
+          return { read, total, progress };
+        }
+      }
+      if (v && typeof v === "object") {
+        const read = pickNumber(v, ["read", "readPage", "read_page", "current", "done"]);
+        const total = pickNumber(v, ["total", "totalPage", "total_page", "max", "all"]);
+        if (read != null && total != null) {
+          const progress = total > 0 ? clamp(Math.round((read / total) * 100), 0, 100) : 0;
+          return { read, total, progress };
+        }
+      }
+      return null;
+    };
+
+    const buildReadingProgressMap = (payload) => {
+      const root = payload?.results && typeof payload.results === "object" ? payload.results : payload;
+      if (!root || typeof root !== "object") return [];
+      return Object.entries(root).map(([title, raw]) => {
+        const parsed = parseReadTotal(raw);
+        if (!parsed) return null;
+        return {
+          title: decodeIfMojibake(title),
+          key: normalizeTopicKey(title),
+          read: parsed.read,
+          total: parsed.total,
+          progress: parsed.progress
+        };
+      }).filter(Boolean);
+    };
+
+    const getReadingProgressForTitle = (title) => {
+      const entries = Array.isArray(window.bookrollReadingProgress) ? window.bookrollReadingProgress : [];
+      if (!entries.length) return null;
+      const key = normalizeTopicKey(title);
+      if (!key) return null;
+      const exact = entries.find((x) => x.key === key);
+      if (exact) return exact;
+      const loose = entries
+        .filter((x) => x.key.includes(key) || key.includes(x.key))
+        .sort((a, b) => b.key.length - a.key.length)[0];
+      return loose || null;
+    };
+
+    const getChartCategoryAxis = (axis) => {
+      if (Array.isArray(axis)) return axis.find((a) => a?.type === "category") || axis[0];
+      return axis;
+    };
+
+    const parseChartValue = (v) => {
+      if (Number.isFinite(v)) return Number(v);
+      if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) return Number(v);
+      if (v && typeof v === "object") {
+        const n = pickNumber(v, ["value", "y", "x", "percent", "percentage"]);
+        if (n != null) return n;
+      }
+      return null;
+    };
+
+    const buildVideoProgressMap = (payload) => {
+      const option = payload?.Option || payload?.option || payload || {};
+      const yAxis = getChartCategoryAxis(option?.yAxis);
+      const labels = Array.isArray(yAxis?.data) ? yAxis.data : [];
+      const series = Array.isArray(option?.series) ? option.series : [];
+      const seriesData = Array.isArray(series[0]?.data) ? series[0].data : [];
+      const out = [];
+      for (let i = 0; i < Math.max(labels.length, seriesData.length); i += 1) {
+        const title = decodeIfMojibake(String(labels[i] ?? ""));
+        if (!title) continue;
+        const progress = parseChartValue(seriesData[i]);
+        if (progress == null) continue;
+        out.push({
+          title,
+          key: normalizeTopicKey(title),
+          progress: clamp(Math.round(progress), 0, 100)
+        });
+      }
+      return out;
+    };
+
+    const getVideoProgressForTitle = (title) => {
+      const entries = Array.isArray(window.videoProgressData) ? window.videoProgressData : [];
+      if (!entries.length) return null;
+      const key = normalizeTopicKey(title);
+      if (!key) return null;
+      const exact = entries.find((x) => x.key === key);
+      if (exact) return exact;
+      const loose = entries
+        .filter((x) => x.key.includes(key) || key.includes(x.key))
+        .sort((a, b) => b.key.length - a.key.length)[0];
+      return loose || null;
+    };
+
+    const resolveVideoUserNameInfo = () => {
+      const qsUserName = (params.get("userName") || params.get("username") || params.get("email") || "").trim();
+      if (qsUserName) return { value: qsUserName, source: "querystring" };
+      const profile = auth?.profile && typeof auth.profile === "object" ? auth.profile : {};
+      const profileEmail = typeof profile.email === "string" ? profile.email.trim() : "";
+      if (profileEmail) return { value: profileEmail, source: "auth.profile.email" };
+      const preferred = typeof profile.preferred_username === "string" ? profile.preferred_username.trim() : "";
+      if (preferred) return { value: preferred, source: "auth.profile.preferred_username" };
+      const fallback = String(userId || "").trim();
+      return { value: fallback, source: fallback ? "userId" : "-" };
+    };
+
+    const resolveVideoUserName = () => resolveVideoUserNameInfo().value;
+
     const countKinds = (node, acc) => {
       if (!node) return;
       const kind = node.kind;
@@ -887,6 +1042,82 @@
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+
+    const setLoginDebugTab = (tab) => {
+      const next = tab === "derived" || tab === "raw" ? tab : "summary";
+      const tabs = document.querySelectorAll("[data-login-tab]");
+      tabs.forEach((btn) => {
+        const active = btn.getAttribute("data-login-tab") === next;
+        btn.className = active
+          ? "pill px-3 py-1.5 text-xs font-semibold tracking-wide text-white grad-brand"
+          : "ghost px-3 py-1.5 text-xs text-slate-700";
+      });
+      if (loginDebugTabSummaryEl) loginDebugTabSummaryEl.classList.toggle("hidden", next !== "summary");
+      if (loginDebugTabDerivedEl) loginDebugTabDerivedEl.classList.toggle("hidden", next !== "derived");
+      if (loginDebugTabRawEl) loginDebugTabRawEl.classList.toggle("hidden", next !== "raw");
+      window.loginDebugTab = next;
+    };
+
+    const updateLoginDebugPanel = () => {
+      const profile = auth?.profile && typeof auth.profile === "object" ? auth.profile : {};
+      const token = auth?.token && typeof auth.token === "object" ? auth.token : {};
+      const videoUser = resolveVideoUserNameInfo();
+      const loggedIn = !!auth?.userId;
+      const sessionUser = auth?.userId || "-";
+      const profileEmail = typeof profile.email === "string" ? profile.email : "-";
+      const profilePreferred = typeof profile.preferred_username === "string" ? profile.preferred_username : "-";
+      const expiresIn = Number.isFinite(Number(token.expires_in)) ? `${Number(token.expires_in)}s` : "-";
+
+      if (loginDebugStatusEl) {
+        loginDebugStatusEl.textContent = loggedIn ? "ล็อกอินแล้ว" : "ยังไม่ล็อกอิน";
+      }
+
+      if (loginDebugTabSummaryEl) {
+        loginDebugTabSummaryEl.innerHTML = `
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+            <div>session userId: <span class="mono">${escapeHtml(sessionUser)}</span></div>
+            <div>query userId: <span class="mono">${escapeHtml(userId || "-")}</span></div>
+            <div>profile email: <span class="mono">${escapeHtml(profileEmail)}</span></div>
+            <div>preferred_username: <span class="mono">${escapeHtml(profilePreferred)}</span></div>
+            <div>query courseId: <span class="mono break-all">${escapeHtml(courseId || "-")}</span></div>
+            <div>video userName: <span class="mono">${escapeHtml(videoUser.value || "-")}</span> <span class="text-slate-400">(${escapeHtml(videoUser.source)})</span></div>
+            <div>token expires_in: <span class="mono">${escapeHtml(expiresIn)}</span></div>
+            <div>token access_token: <span class="mono">${token.access_token ? "present" : "-"}</span></div>
+          </div>
+        `;
+      }
+
+      if (loginDebugTabDerivedEl) {
+        const rows = [
+          { name: "BookRoll", param: `userID=${userId || "-"}&usageId=${courseId || "-"}` },
+          { name: "DoneChapter", param: `/analysis/donechapterview/${userId || "-"}/course/${courseId || "-"}` },
+          { name: "Video Bar", param: `userName=${videoUser.value || "-"}&usageId=${courseId || "-"}` },
+          { name: "Chatbot Speed", param: `/stats/echart/chatbotSpeed/${courseId || "-"}/${userId || "-"}` },
+          { name: "Chatbot Performance", param: `/stats/stats/echart/chatbotPerformance/${courseId || "-"}/${userId || "-"}` }
+        ];
+        loginDebugTabDerivedEl.innerHTML = rows.map((r) => `
+          <div class="mb-2 last:mb-0">
+            <div class="font-semibold">${escapeHtml(r.name)}</div>
+            <div class="mono break-all text-[11px] text-slate-500">${escapeHtml(r.param)}</div>
+          </div>
+        `).join("");
+      }
+
+      if (loginDebugTabRawEl) {
+        const raw = {
+          auth: auth || null,
+          derived: {
+            userId: userId || null,
+            courseId: courseId || null,
+            videoUserName: videoUser.value || null,
+            videoUserNameSource: videoUser.source
+          }
+        };
+        loginDebugTabRawEl.textContent = JSON.stringify(raw, null, 2);
+      }
+    };
+
+    setLoginDebugTab(window.loginDebugTab || "summary");
 
     const courseDeepState = {
       root: null,
@@ -1534,9 +1765,20 @@
       const subtype = tool?.sublabel || "";
       const isBookroll = subtype.toLowerCase().includes("bookroll") || (tool?.label || "").toLowerCase().includes("bookroll");
       if (isBookroll) {
+        const reading = getReadingProgressForTitle(vTitle);
+        if (reading?.progress != null) return reading.progress;
         const maxPage = getBookrollMaxPageValue(vTitle);
         if (maxPage != null) return clamp(Math.round(maxPage * 20), 0, 100);
         return pctFromSeed(seed, 10, 95);
+      }
+
+      const isAeVideo =
+        (tool?.label || "").toLowerCase().includes("ae tool") &&
+        subtype.toLowerCase().includes("video");
+      if (isAeVideo) {
+        const video = getVideoProgressForTitle(vTitle);
+        if (video?.progress != null) return video.progress;
+        return pctFromSeed(seed, 10, 90);
       }
 
       const base =
@@ -1852,8 +2094,16 @@
           const itemsHtml = items.map((it) => {
             const st = statusFromPct(it.pct);
             const kind = displayKind(it.tool);
+            const reading = getReadingProgressForTitle(it.title);
+            const video = getVideoProgressForTitle(it.title);
             const idLinesHtml = renderIdLines(it.node, it.id);
             const paramLinesHtml = renderAeToolParamLines(it.node);
+            const readingHtml = reading
+              ? `<div class="mt-1">BOOKROLL • อ่าน ${reading.read}/${reading.total} หน้า (${reading.progress}%)</div>`
+              : "";
+            const videoHtml = (kind === "AETOOL (video)" && video)
+              ? `<div class="mt-1">VIDEO • รับชม ${video.progress}%</div>`
+              : "";
             return `
               <div class="panel p-4 flex items-center justify-between gap-4">
                 <div class="flex items-start gap-4 min-w-0">
@@ -1862,12 +2112,15 @@
                     <div class="text-lg font-bold truncate" title="${escapeHtml(it.title || "")}">${escapeHtml(it.title || "-")}</div>
                     <div class="mt-1 text-slate-500 font-semibold mono text-xs break-all">
                       <div>${escapeHtml(kind)}</div>
+                      ${readingHtml}
+                      ${videoHtml}
                       ${idLinesHtml}
                       ${paramLinesHtml}
                     </div>
                   </div>
                 </div>
                 <div class="shrink-0 flex items-center gap-3">
+                  <div class="info-pill px-3 py-2 text-sm font-bold bg-slate-100 text-slate-700 border border-slate-200">${escapeHtml(`${clamp(Number(it.pct) || 0, 0, 100)}%`)}</div>
                   <div class="info-pill px-4 py-2 text-sm font-semibold tracking-wide ${st.badge}">${escapeHtml(st.text)}</div>
                 </div>
               </div>
@@ -2233,6 +2486,59 @@
       }
     };
 
+    const fetchBookrollReadingData = async () => {
+      if (!userId || !courseId || !isLikelyCourseId(courseId)) {
+        window.bookrollReadingData = null;
+        window.bookrollReadingProgress = [];
+        renderTopicTabsAndDetail();
+        return;
+      }
+      try {
+        const srcUrl = bookrollReadingDataUrl(userId, courseId);
+        const res = await fetch(srcUrl);
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        window.bookrollReadingData = data;
+        window.bookrollReadingProgress = buildReadingProgressMap(data);
+      } catch (err) {
+        window.bookrollReadingData = null;
+        window.bookrollReadingProgress = [];
+        console.warn("Bookroll readingData API error:", err);
+      } finally {
+        renderTopicTabsAndDetail();
+      }
+    };
+
+    const fetchVideoLearningProgress = async () => {
+      if (!courseId || !isLikelyCourseId(courseId)) {
+        window.videoLearningRaw = null;
+        window.videoProgressData = [];
+        renderTopicTabsAndDetail();
+        return;
+      }
+      const userName = resolveVideoUserName();
+      if (!userName) {
+        window.videoLearningRaw = null;
+        window.videoProgressData = [];
+        renderTopicTabsAndDetail();
+        return;
+      }
+      try {
+        const srcUrl = videoBarUrl(userName, courseId);
+        const res = await fetch(srcUrl);
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        window.videoLearningRaw = data;
+        window.videoProgressData = buildVideoProgressMap(data);
+      } catch (err) {
+        window.videoLearningRaw = null;
+        window.videoProgressData = [];
+        console.warn("Video learning API error:", err);
+      } finally {
+        renderTopicTabsAndDetail();
+      }
+    };
+
     const fetchBookrollMaxPage = async () => {
       const statusEl = document.getElementById("bookroll-maxpage-status");
       const summaryEl = document.getElementById("bookroll-maxpage-summary");
@@ -2441,6 +2747,8 @@
         applyParams(userId, courseId);
         syncHeader();
       }
+      updateLoginDebugPanel();
+      fetchVideoLearningProgress();
     };
 
     if (loginBtn) loginBtn.addEventListener("click", startLogin);
@@ -2485,6 +2793,8 @@
       setAuthState(auth);
     }
 
+    fetchBookrollReadingData();
+    fetchVideoLearningProgress();
     fetchCourseDetail();
     if (SHOW_BOOKROLL) {
       fetchBookrollMaxPage();
