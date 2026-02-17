@@ -1004,19 +1004,31 @@
       return loose || null;
     };
 
-    const resolveVideoUserNameInfo = () => {
-      const qsUserName = (params.get("userName") || params.get("username") || params.get("email") || "").trim();
-      if (qsUserName) return { value: qsUserName, source: "querystring" };
+    const resolveVideoUserNameCandidates = () => {
       const profile = auth?.profile && typeof auth.profile === "object" ? auth.profile : {};
-      const profileEmail = typeof profile.email === "string" ? profile.email.trim() : "";
-      if (profileEmail) return { value: profileEmail, source: "auth.profile.email" };
-      const preferred = typeof profile.preferred_username === "string" ? profile.preferred_username.trim() : "";
-      if (preferred) return { value: preferred, source: "auth.profile.preferred_username" };
-      const fallback = String(userId || "").trim();
-      return { value: fallback, source: fallback ? "userId" : "-" };
+      const raw = [
+        { value: (params.get("userName") || params.get("username") || params.get("email") || "").trim(), source: "querystring" },
+        { value: (typeof profile.email === "string" ? profile.email : "").trim(), source: "auth.profile.email" },
+        { value: (typeof profile.preferred_username === "string" ? profile.preferred_username : "").trim(), source: "auth.profile.preferred_username" },
+        { value: String(userId || "").trim(), source: "userId" }
+      ];
+      const out = [];
+      const seen = new Set();
+      raw.forEach((x) => {
+        if (!x.value) return;
+        const key = x.value.toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        out.push(x);
+      });
+      return out;
     };
 
-    const resolveVideoUserName = () => resolveVideoUserNameInfo().value;
+    const resolveVideoUserNameInfo = () => {
+      if (window.videoUserNameResolved?.value) return window.videoUserNameResolved;
+      const first = resolveVideoUserNameCandidates()[0];
+      return first || { value: "", source: "-" };
+    };
 
     const countKinds = (node, acc) => {
       if (!node) return;
@@ -2516,28 +2528,44 @@
       if (!courseId || !isLikelyCourseId(courseId)) {
         window.videoLearningRaw = null;
         window.videoProgressData = [];
+        window.videoUserNameResolved = null;
         renderTopicTabsAndDetail();
+        updateLoginDebugPanel();
         return;
       }
-      const userName = resolveVideoUserName();
-      if (!userName) {
+      const candidates = resolveVideoUserNameCandidates();
+      if (!candidates.length) {
         window.videoLearningRaw = null;
         window.videoProgressData = [];
+        window.videoUserNameResolved = null;
         renderTopicTabsAndDetail();
+        updateLoginDebugPanel();
         return;
       }
       try {
-        const srcUrl = videoBarUrl(userName, courseId);
-        const res = await fetch(srcUrl);
-        if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
-        window.videoLearningRaw = data;
-        window.videoProgressData = buildVideoProgressMap(data);
+        let best = { entries: [], data: null, info: null };
+        for (const info of candidates) {
+          const srcUrl = videoBarUrl(info.value, courseId);
+          const res = await fetch(srcUrl);
+          if (!res.ok) continue;
+          const data = await res.json();
+          const entries = buildVideoProgressMap(data);
+          if (entries.length) {
+            best = { entries, data, info };
+            break;
+          }
+          if (!best.data) best = { entries, data, info };
+        }
+        window.videoLearningRaw = best.data;
+        window.videoProgressData = best.entries;
+        window.videoUserNameResolved = best.info || candidates[0] || null;
       } catch (err) {
         window.videoLearningRaw = null;
         window.videoProgressData = [];
+        window.videoUserNameResolved = null;
         console.warn("Video learning API error:", err);
       } finally {
+        updateLoginDebugPanel();
         renderTopicTabsAndDetail();
       }
     };
