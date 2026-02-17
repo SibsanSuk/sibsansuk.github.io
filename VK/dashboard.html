@@ -1004,6 +1004,65 @@
       return loose || null;
     };
 
+    const isAeVideoTool = (tool) => {
+      const label = String(tool?.label || "").toLowerCase();
+      const sub = String(tool?.sublabel || "").toLowerCase();
+      return label.includes("ae tool") && sub.includes("video");
+    };
+
+    const collectCourseVideoVerticals = (course) => {
+      const out = [];
+      const chapters = getSortedChapters(course);
+      chapters.forEach((ch) => {
+        const sequentials = sortByContentOrder(
+          (ch?.children || []).filter((c) => c?.kind === "sequential"),
+          (x) => pickTitle(x, "")
+        );
+        sequentials.forEach((seq) => {
+          const verticals = sortByContentOrder(
+            (seq?.children || []).filter((c) => c?.kind === "vertical"),
+            (x) => pickTitle(x, "")
+          );
+          verticals.forEach((v) => {
+            const tool = inferVerticalTool(v);
+            if (!isAeVideoTool(tool)) return;
+            out.push({
+              id: String(v?.id || ""),
+              title: pickTitle(v, "")
+            });
+          });
+        });
+      });
+      return out;
+    };
+
+    const getVideoProgressForVertical = (vertical, tool) => {
+      if (!isAeVideoTool(tool)) return null;
+      const title = pickTitle(vertical, "");
+      const byTitle = getVideoProgressForTitle(title);
+      if (byTitle) return byTitle;
+
+      const entries = Array.isArray(window.videoProgressData) ? window.videoProgressData : [];
+      if (!entries.length) return null;
+      const course = window.courseDetailData;
+      if (!course) return null;
+
+      const cacheKey = String(course?.id || course?.courseKey || "course");
+      if (!window.videoVerticalOrderCache || window.videoVerticalOrderCache.key !== cacheKey) {
+        window.videoVerticalOrderCache = {
+          key: cacheKey,
+          list: collectCourseVideoVerticals(course)
+        };
+      }
+      const ordered = window.videoVerticalOrderCache.list || [];
+      if (!ordered.length) return null;
+
+      const vId = String(vertical?.id || "");
+      const idx = ordered.findIndex((x) => (vId && x.id === vId) || normalizeTopicKey(x.title) === normalizeTopicKey(title));
+      if (idx < 0 || idx >= entries.length) return null;
+      return entries[idx];
+    };
+
     const resolveVideoUserNameCandidates = () => {
       const profile = auth?.profile && typeof auth.profile === "object" ? auth.profile : {};
       const raw = [
@@ -1784,10 +1843,9 @@
       }
 
       const isAeVideo =
-        (tool?.label || "").toLowerCase().includes("ae tool") &&
-        subtype.toLowerCase().includes("video");
+        isAeVideoTool(tool);
       if (isAeVideo) {
-        const video = getVideoProgressForTitle(vTitle);
+        const video = getVideoProgressForVertical(vertical, tool);
         if (video?.progress != null) return video.progress;
         return null;
       }
@@ -2110,7 +2168,7 @@
             const st = statusFromPct(it.pct);
             const kind = displayKind(it.tool);
             const reading = getReadingProgressForTitle(it.title);
-            const video = getVideoProgressForTitle(it.title);
+            const video = getVideoProgressForVertical(it.node, it.tool);
             const idLinesHtml = renderIdLines(it.node, it.id);
             const paramLinesHtml = renderAeToolParamLines(it.node);
             const readingHtml = reading
