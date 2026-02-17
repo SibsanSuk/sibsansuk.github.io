@@ -1757,7 +1757,6 @@
     };
 
     const computeVerticalProgress = ({ chapterIdx, vertical, tool, userId, courseId, speedYou, perfYou, chapterDone }) => {
-      if (chapterDone) return 100;
       const vTitle = pickTitle(vertical, "");
       const seed = `${userId || "-"}|${courseId || "-"}|c${chapterIdx}|${vertical?.id || vTitle}`;
 
@@ -1769,7 +1768,7 @@
         if (reading?.progress != null) return reading.progress;
         const maxPage = getBookrollMaxPageValue(vTitle);
         if (maxPage != null) return clamp(Math.round(maxPage * 20), 0, 100);
-        return pctFromSeed(seed, 10, 95);
+        return null;
       }
 
       const isAeVideo =
@@ -1778,17 +1777,9 @@
       if (isAeVideo) {
         const video = getVideoProgressForTitle(vTitle);
         if (video?.progress != null) return video.progress;
-        return pctFromSeed(seed, 10, 90);
+        return null;
       }
-
-      const base =
-        (Number.isFinite(speedYou) && Number.isFinite(perfYou))
-          ? clamp(Math.round((Number(speedYou) + Number(perfYou)) / 2), 0, 100)
-          : pctFromSeed(seed, 15, 85);
-
-      if ((tool?.label || "").includes("HTML")) return clamp(Math.round(base * 0.85), 0, 100);
-      if ((tool?.label || "").includes("AE Tool")) return clamp(Math.round(base * 1.05), 0, 100);
-      return base;
+      return null;
     };
 
     const buildProgressModel = () => {
@@ -1843,8 +1834,10 @@
           };
         });
 
-        const allPcts = seqItems.flatMap((s) => s.verticals.map((v) => v.pct));
-        const chapterPct = allPcts.length ? Math.round(allPcts.reduce((a, b) => a + b, 0) / allPcts.length) : (chapterDone ? 100 : 0);
+        const allPcts = seqItems
+          .flatMap((s) => s.verticals.map((v) => v.pct))
+          .filter((v) => Number.isFinite(v));
+        const chapterPct = allPcts.length ? Math.round(allPcts.reduce((a, b) => a + b, 0) / allPcts.length) : null;
         return {
           idx: chapterIdx,
           id: chapterNode?.id || "",
@@ -1855,18 +1848,21 @@
         };
       });
 
-      const all = out.flatMap((c) => c.sequentials.flatMap((s) => s.verticals.map((v) => v.pct)));
-      const overallPct = all.length ? Math.round(all.reduce((a, b) => a + b, 0) / all.length) : 0;
+      const all = out
+        .flatMap((c) => c.sequentials.flatMap((s) => s.verticals.map((v) => v.pct)))
+        .filter((v) => Number.isFinite(v));
+      const overallPct = all.length ? Math.round(all.reduce((a, b) => a + b, 0) / all.length) : null;
       return { chapters: out, overallPct };
     };
 
     const updateOverviewFromModel = (model) => {
       if (!model) return;
-      const overall = clamp(model.overallPct ?? 0, 0, 100);
+      const hasOverall = Number.isFinite(model.overallPct);
+      const overall = hasOverall ? clamp(model.overallPct, 0, 100) : null;
       const overallValueEl = document.getElementById("overall-value");
       const overallBarEl = document.getElementById("overall-bar");
-      if (overallValueEl) overallValueEl.textContent = `${overall}%`;
-      if (overallBarEl) overallBarEl.style.width = `${overall}%`;
+      if (overallValueEl) overallValueEl.textContent = hasOverall ? `${overall}%` : "-";
+      if (overallBarEl) overallBarEl.style.width = hasOverall ? `${overall}%` : "0%";
 
       // Also update the top chart to be per-chapter percentage (instead of done/not-done).
       const labels = model.chapters.map((c) => c.title);
@@ -1875,7 +1871,7 @@
         tooltip: { trigger: "axis" },
         xAxis: { type: "category", data: labels },
         yAxis: { type: "value" },
-        series: [{ name: "ความคืบหน้า", type: "bar", data: model.chapters.map((c) => c.chapterPct) }]
+        series: [{ name: "ความคืบหน้า", type: "bar", data: model.chapters.map((c) => Number.isFinite(c.chapterPct) ? c.chapterPct : null) }]
       };
       window.doneChapterProgressData = cfg;
       renderEchartToChart(cfg, "doneChapterChart", "Done Chapter");
@@ -1907,7 +1903,7 @@
               node: v,
               title: pickTitle(v, `Vertical ${vIdx + 1}`),
               tool,
-              pct: 0
+              pct: null
             };
           })
         }));
@@ -1917,12 +1913,18 @@
         const vHtml = (seq.verticals || []).map((v) => {
           const tool = v.tool || inferVerticalTool(v);
           const sub = tool.sublabel ? `<span class="badge ml-2">${escapeHtml(tool.sublabel)}</span>` : "";
-          const pct = clamp(Number(v.pct) || 0, 0, 100);
-          const badge =
-            pct >= 100 ? `<span class="badge badge-done">ผ่านแล้ว</span>` :
-            pct >= 50 ? `<span class="badge badge-doing">กำลังทำ</span>` :
-            pct > 0 ? `<span class="badge badge-todo">เริ่มแล้ว</span>` :
-            `<span class="badge badge-locked">ยังไม่เริ่ม</span>`;
+          const hasPct = Number.isFinite(v.pct);
+          const pct = hasPct ? clamp(Number(v.pct), 0, 100) : null;
+          const badge = !hasPct
+            ? `<span class="badge badge-locked">ไม่มีข้อมูล API</span>`
+            : pct >= 100 ? `<span class="badge badge-done">ผ่านแล้ว</span>` :
+              pct >= 50 ? `<span class="badge badge-doing">กำลังทำ</span>` :
+              pct > 0 ? `<span class="badge badge-todo">เริ่มแล้ว</span>` :
+              `<span class="badge badge-locked">ยังไม่เริ่ม</span>`;
+          const progressBarHtml = hasPct
+            ? `<div class="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden"><div class="h-full grad-brand" style="width:${pct}%"></div></div>`
+            : "";
+          const progressTextHtml = hasPct ? `${pct}%` : "-";
           return `
             <div class="panel p-3">
               <div class="flex items-start justify-between gap-2">
@@ -1932,12 +1934,10 @@
                   <span class="${tool.tone}">${escapeHtml(tool.label)}</span>${sub}
                 </div>
               </div>
-              <div class="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden">
-                <div class="h-full grad-brand" style="width:${pct}%"></div>
-              </div>
+              ${progressBarHtml}
               <div class="mt-1 flex items-center justify-between text-xs text-slate-500">
                 <span class="mono break-all">${escapeHtml(v.id || "")}</span>
-                <span class="mono font-bold">${pct}%</span>
+                <span class="mono font-bold">${progressTextHtml}</span>
               </div>
             </div>
           `;
@@ -2070,7 +2070,8 @@
         };
 
         const statusFromPct = (pct) => {
-          const n = clamp(Number(pct) || 0, 0, 100);
+          if (!Number.isFinite(pct)) return { dot: "bg-slate-300", badge: "bg-slate-100 text-slate-500 border border-slate-200", text: "ไม่มีข้อมูล API" };
+          const n = clamp(Number(pct), 0, 100);
           if (n >= 100) return { dot: "bg-emerald-500", badge: "grad-success text-white", text: "ผ่านแล้ว" };
           if (n > 0) return { dot: "bg-blue-500", badge: "bg-blue-100 text-blue-700 border border-blue-200", text: "กำลังทำ" };
           return { dot: "bg-slate-400", badge: "bg-slate-100 text-slate-500 border border-slate-200", text: "ยังไม่เริ่ม" };
@@ -2084,12 +2085,14 @@
           })));
           const openAttr = i === 0 ? " open" : "";
           const countText = `(${items.length} รายการ)`;
-          const pct = clamp(Number(ch.chapterPct) || 0, 0, 100);
-          const pctBadge =
-            pct >= 100 ? "grad-success text-white" :
-            pct >= 50 ? "bg-amber-100 text-amber-800 border border-amber-200" :
-            pct > 0 ? "bg-sky-100 text-sky-800 border border-sky-200" :
-            "bg-slate-100 text-slate-500 border border-slate-200";
+          const hasChapterPct = Number.isFinite(ch.chapterPct);
+          const pct = hasChapterPct ? clamp(Number(ch.chapterPct), 0, 100) : null;
+          const pctBadge = !hasChapterPct
+            ? "bg-slate-100 text-slate-500 border border-slate-200"
+            : pct >= 100 ? "grad-success text-white" :
+              pct >= 50 ? "bg-amber-100 text-amber-800 border border-amber-200" :
+              pct > 0 ? "bg-sky-100 text-sky-800 border border-sky-200" :
+              "bg-slate-100 text-slate-500 border border-slate-200";
 
           const itemsHtml = items.map((it) => {
             const st = statusFromPct(it.pct);
@@ -2120,7 +2123,7 @@
                   </div>
                 </div>
                 <div class="shrink-0 flex items-center gap-3">
-                  <div class="info-pill px-3 py-2 text-sm font-bold bg-slate-100 text-slate-700 border border-slate-200">${escapeHtml(`${clamp(Number(it.pct) || 0, 0, 100)}%`)}</div>
+                  ${Number.isFinite(it.pct) ? `<div class="info-pill px-3 py-2 text-sm font-bold bg-slate-100 text-slate-700 border border-slate-200">${escapeHtml(`${clamp(Number(it.pct), 0, 100)}%`)}</div>` : ""}
                   <div class="info-pill px-4 py-2 text-sm font-semibold tracking-wide ${st.badge}">${escapeHtml(st.text)}</div>
                 </div>
               </div>
@@ -2136,7 +2139,7 @@
                     <div class="flex items-center gap-4 flex-wrap">
                       <div class="text-lg font-extrabold text-slate-800">${escapeHtml(ch.title || `บทที่ ${i + 1}`)}</div>
                       <div class="text-slate-500 font-semibold text-lg">${escapeHtml(countText)}</div>
-                      <div class="info-pill px-3 py-2 text-sm font-bold ${pctBadge}">${escapeHtml(`${pct}%`)}</div>
+                      <div class="info-pill px-3 py-2 text-sm font-bold ${pctBadge}">${escapeHtml(hasChapterPct ? `${pct}%` : "-")}</div>
                     </div>
                     <div class="unit-caret text-slate-400 transition-transform">▼</div>
                   </summary>
