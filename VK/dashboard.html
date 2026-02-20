@@ -472,19 +472,6 @@
                   </div>
 
                   <div class="mt-5 hidden">
-                    <div class="clay-soft p-4 cat-card cat-1">
-                      <div class="flex items-center justify-between gap-3">
-                        <div class="font-bold">BookRoll อ่านถึงหน้า</div>
-                        <div class="text-xs text-slate-500 mono" id="bookroll-maxpage-status">รอข้อมูล</div>
-                      </div>
-                      <div class="mt-2 text-sm text-slate-600" id="bookroll-maxpage-summary">ยังไม่มีสรุป</div>
-                      <div class="mt-3 h-[320px]">
-                        <canvas class="chart-canvas" id="bookrollMaxPageChart"></canvas>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="mt-5 hidden">
                     <div class="clay-soft p-4 cat-card cat-4">
                       <div class="flex items-center justify-between gap-3">
                         <div class="font-bold">BookRoll Activity</div>
@@ -567,6 +554,35 @@
                         </div>
                       </div>
                     </div>
+                  </div>
+
+                  <div class="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <details class="clay-soft p-4 cat-card cat-5">
+                      <summary class="cursor-pointer select-none flex items-center justify-between gap-3">
+                        <div class="font-bold">BookRoll API Debug</div>
+                        <div class="text-xs text-slate-500 mono" id="bookroll-json-status">รอข้อมูล</div>
+                      </summary>
+                      <div class="mt-3 grid gap-3">
+                        <div class="panel p-4 text-xs text-slate-600">
+                          <div class="font-semibold text-slate-700">readingData</div>
+                          <pre id="bookroll-reading-raw" class="mt-2 whitespace-pre-wrap break-all">ยังไม่มีข้อมูล</pre>
+                        </div>
+                        <div class="panel p-4 text-xs text-slate-600">
+                          <div class="font-semibold text-slate-700">BR_activity</div>
+                          <pre id="bookroll-activity-raw-debug" class="mt-2 whitespace-pre-wrap break-all">ยังไม่มีข้อมูล</pre>
+                        </div>
+                      </div>
+                    </details>
+                    <details class="clay-soft p-4 cat-card cat-5">
+                      <summary class="cursor-pointer select-none flex items-center justify-between gap-3">
+                        <div class="font-bold">Video API Debug</div>
+                        <div class="text-xs text-slate-500 mono" id="video-json-status">รอข้อมูล</div>
+                      </summary>
+                      <div class="mt-3 panel p-4 text-xs text-slate-600">
+                        <div class="font-semibold text-slate-700">viola/chart/bar</div>
+                        <pre id="video-raw-debug" class="mt-2 whitespace-pre-wrap break-all">ยังไม่มีข้อมูล</pre>
+                      </div>
+                    </details>
                   </div>
 
                   <div class="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -824,7 +840,6 @@
         fetchVideoLearningProgress();
         fetchCourseDetail();
         if (SHOW_BOOKROLL) {
-          fetchBookrollMaxPage();
           fetchBookroll();
         }
         fetchDoneChapterView();
@@ -863,9 +878,6 @@
     const courseUrl = (cid) =>
       `https://sbs-backend.mooc.meca.in.th/lms/${encodeURIComponent(cid)}`;
 
-    const bookrollMaxPageUrl = (cid, uid) =>
-      `https://sbs-backend.mooc.meca.in.th/stats/echart/bookrollMaxPage/${encodeURIComponent(cid)}/${encodeURIComponent(uid)}`;
-
     const chatbotSpeedUrl = (cid, uid) =>
       `https://sbs-backend.mooc.meca.in.th/stats/echart/chatbotSpeed/${encodeURIComponent(cid)}/${encodeURIComponent(uid)}`;
 
@@ -899,11 +911,52 @@
       return { read, total, progress };
     };
 
+    const updateBookrollJsonDrawer = () => {
+      const statusEl = document.getElementById("bookroll-json-status");
+      const readingRawEl = document.getElementById("bookroll-reading-raw");
+      const activityRawEl = document.getElementById("bookroll-activity-raw-debug");
+      const reading = window.bookrollReadingData ?? null;
+      const activity = window.bookrollData ?? null;
+      if (readingRawEl) {
+        readingRawEl.textContent = reading ? JSON.stringify(reading, null, 2) : "ยังไม่มีข้อมูล";
+      }
+      if (activityRawEl) {
+        activityRawEl.textContent = activity
+          ? JSON.stringify(activity, null, 2)
+          : (SHOW_BOOKROLL ? "ยังไม่มีข้อมูล" : "ไม่ได้โหลด (เปิดด้วย ?bookroll=1)");
+      }
+      if (statusEl) {
+        const readingCount = Number(Array.isArray(window.bookrollReadingProgress) ? window.bookrollReadingProgress.length : 0);
+        const activityLoaded = !!activity;
+        statusEl.textContent = `reading: ${readingCount} รายการ • activity: ${activityLoaded ? "โหลดแล้ว" : "ยังไม่โหลด"}`;
+      }
+    };
+
+    const updateVideoJsonDrawer = () => {
+      const statusEl = document.getElementById("video-json-status");
+      const rawEl = document.getElementById("video-raw-debug");
+      const raw = window.videoLearningRaw ?? null;
+      const user = resolveVideoUserNameInfo();
+      if (rawEl) {
+        rawEl.textContent = raw ? JSON.stringify(raw, null, 2) : "ยังไม่มีข้อมูล";
+      }
+      if (statusEl) {
+        const count = Number(Array.isArray(window.videoProgressData) ? window.videoProgressData.length : 0);
+        const apiStatus = String(window.videoApiStatus || "idle");
+        statusEl.textContent = `entries: ${count} • api: ${apiStatus} • userName: ${user?.value || "-"}`;
+      }
+    };
+
     const normalizeTopicKey = (s) =>
       decodeIfMojibake(String(s || ""))
         .replace(/\s+/g, " ")
         .trim()
         .toLowerCase();
+
+    const normalizeUsageId = (s) => {
+      const v = decodeIfMojibake(String(s || "")).trim();
+      return v ? v.toLowerCase() : "";
+    };
 
     const parseReadTotal = (v) => {
       if (typeof v === "string") {
@@ -922,24 +975,76 @@
           const progress = total > 0 ? clamp(Math.round((read / total) * 100), 0, 100) : 0;
           return { read, total, progress };
         }
+        const progress = pickNumber(v, ["progress", "progressRate", "rate", "percent", "percentage"]);
+        if (progress != null) {
+          return { read: null, total: null, progress: clamp(Math.round(progress), 0, 100) };
+        }
       }
       return null;
     };
 
-    const buildReadingProgressMap = (payload) => {
-      const root = payload?.results && typeof payload.results === "object" ? payload.results : payload;
-      if (!root || typeof root !== "object") return [];
-      return Object.entries(root).map(([title, raw]) => {
-        const parsed = parseReadTotal(raw);
-        if (!parsed) return null;
-        return {
-          title: decodeIfMojibake(title),
-          key: normalizeTopicKey(title),
+    const buildReadingProgressMap = (payload, opts = {}) => {
+      const usageHint = normalizeUsageId(opts?.usageId || opts?.usageID || "");
+      const titleHint = decodeIfMojibake(String(opts?.titleHint || "")).trim();
+      const out = [];
+      const seen = new Set();
+      const pushEntry = (titleRaw, parsed, usageIdRaw) => {
+        if (!parsed) return;
+        const title = decodeIfMojibake(String(titleRaw || titleHint || "")).trim();
+        const key = normalizeTopicKey(title);
+        const usageId = normalizeUsageId(usageIdRaw || usageHint || "");
+        const dedupeKey = `${usageId}|${key}|${parsed.progress ?? "-"}`;
+        if (seen.has(dedupeKey)) return;
+        seen.add(dedupeKey);
+        out.push({
+          title: title || (usageId ? `usageId:${usageId}` : "-"),
+          key,
+          usageId,
           read: parsed.read,
           total: parsed.total,
           progress: parsed.progress
-        };
-      }).filter(Boolean);
+        });
+      };
+      const tryArrayRows = (rows) => {
+        if (!Array.isArray(rows)) return;
+        rows.forEach((row) => {
+          if (!row || typeof row !== "object") return;
+          const parsed = parseReadTotal(row) || parseReadTotal(row.value) || parseReadTotal(row.stats) || parseReadTotal(row.data);
+          const title =
+            row.title ||
+            row.topic ||
+            row.label ||
+            row.name ||
+            row.display_name ||
+            row.displayName ||
+            row.book_title ||
+            row.bookTitle;
+          const usageId = row.usageId || row.usage_id || row.courseId || row.course_id || row.id;
+          pushEntry(title, parsed, usageId);
+        });
+      };
+      const tryObjectMap = (obj) => {
+        if (!obj || typeof obj !== "object" || Array.isArray(obj)) return;
+        Object.entries(obj).forEach(([k, raw]) => {
+          const parsed = parseReadTotal(raw);
+          if (parsed) pushEntry(k, parsed, null);
+        });
+      };
+
+      if (Array.isArray(payload)) {
+        tryArrayRows(payload);
+      } else if (payload && typeof payload === "object") {
+        tryArrayRows(payload.results);
+        tryArrayRows(payload.result);
+        tryArrayRows(payload.data);
+        tryObjectMap(payload.results);
+        tryObjectMap(payload.result);
+        tryObjectMap(payload.data);
+        tryObjectMap(payload);
+        const parsedRoot = parseReadTotal(payload);
+        if (parsedRoot) pushEntry(payload.title || payload.name || null, parsedRoot, payload.usageId || payload.usage_id || payload.id || null);
+      }
+      return out.filter((x) => Number.isFinite(x.progress));
     };
 
     const getReadingProgressForTitle = (title) => {
@@ -953,6 +1058,56 @@
         .filter((x) => x.key.includes(key) || key.includes(x.key))
         .sort((a, b) => b.key.length - a.key.length)[0];
       return loose || null;
+    };
+
+    const getBookrollUsageIdsFromVertical = (vertical) => {
+      const out = [];
+      const seen = new Set();
+      const pushUsageId = (id) => {
+        const key = normalizeUsageId(id);
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        out.push(key);
+      };
+      const stack = [vertical];
+      while (stack.length) {
+        const n = stack.shift();
+        if (!n || typeof n !== "object") continue;
+        const id = String(n.id || "");
+        const isAeNode = n.kind === "aetool" || id.includes("type@aetool");
+        if (isAeNode && id.includes("block-v1:")) pushUsageId(id);
+        const f = n.fields && typeof n.fields === "object" ? n.fields : {};
+        const data = f.data && typeof f.data === "object" ? f.data : {};
+        [
+          f.usageId, f.usage_id, f.courseid, f.courseId, f.block_id, f.blockId, f.id,
+          data.usageId, data.usage_id, data.courseid, data.courseId, data.block_id, data.blockId, data.id
+        ].forEach((v) => pushUsageId(v));
+        const kids = Array.isArray(n.children) ? n.children : [];
+        if (kids.length) stack.push(...kids);
+      }
+      return out;
+    };
+
+    const getReadingProgressForVertical = (vertical, title) => {
+      const byTitle = getReadingProgressForTitle(title);
+      if (byTitle?.progress != null) return byTitle;
+      const usageIds = getBookrollUsageIdsFromVertical(vertical);
+      if (!usageIds.length) return null;
+      const entries = Array.isArray(window.bookrollReadingProgress) ? window.bookrollReadingProgress : [];
+      if (!entries.length) return null;
+      const byUsage = entries.find((x) => x?.usageId && usageIds.includes(normalizeUsageId(x.usageId)));
+      return byUsage || null;
+    };
+
+    const getReadingProgressForUsageId = (usageId, titleHint = "") => {
+      const entries = Array.isArray(window.bookrollReadingProgress) ? window.bookrollReadingProgress : [];
+      if (!entries.length) return null;
+      const key = normalizeUsageId(usageId);
+      if (key) {
+        const exact = entries.find((x) => normalizeUsageId(x?.usageId || "") === key);
+        if (exact?.progress != null) return exact;
+      }
+      return getReadingProgressForTitle(titleHint);
     };
 
     const getChartCategoryAxis = (axis) => {
@@ -1010,19 +1165,22 @@
       return label.includes("ae tool") && sub.includes("video");
     };
 
+    const isBookrollOrVideoTool = (tool) => {
+      const label = String(tool?.label || "").toLowerCase();
+      const sub = String(tool?.sublabel || "").toLowerCase();
+      if (sub.includes("bookroll") || sub.includes("video")) return true;
+      if (label.includes("bookroll")) return true;
+      if (label === "วิดีโอ" || label.includes("video")) return true;
+      return false;
+    };
+
     const collectCourseVideoVerticals = (course) => {
       const out = [];
       const chapters = getSortedChapters(course);
       chapters.forEach((ch) => {
-        const sequentials = sortByContentOrder(
-          (ch?.children || []).filter((c) => c?.kind === "sequential"),
-          (x) => pickTitle(x, "")
-        );
+        const sequentials = (ch?.children || []).filter((c) => c?.kind === "sequential");
         sequentials.forEach((seq) => {
-          const verticals = sortByContentOrder(
-            (seq?.children || []).filter((c) => c?.kind === "vertical"),
-            (x) => pickTitle(x, "")
-          );
+          const verticals = (seq?.children || []).filter((c) => c?.kind === "vertical");
           verticals.forEach((v) => {
             const tool = inferVerticalTool(v);
             if (!isAeVideoTool(tool)) return;
@@ -1814,31 +1972,15 @@
       return Math.round(lo + v * (hi - lo));
     };
 
-    const getBookrollMaxPageValue = (verticalTitle) => {
-      // cfg from /stats/echart/bookrollMaxPage: yAxis.data = titles, series[0].data = numbers
-      const cfg = window.bookrollMaxPageData;
-      if (!cfg) return null;
-      const labels = cfg?.yAxis?.data || [];
-      const data = cfg?.series?.[0]?.data || [];
-      if (!Array.isArray(labels) || !Array.isArray(data)) return null;
-      const idx = labels.findIndex((x) => decodeIfMojibake(String(x)) === decodeIfMojibake(String(verticalTitle)));
-      if (idx < 0) return null;
-      const n = Number(data[idx]);
-      return Number.isFinite(n) ? n : null;
-    };
-
     const computeVerticalProgress = ({ chapterIdx, vertical, tool, userId, courseId, speedYou, perfYou, chapterDone }) => {
       const vTitle = pickTitle(vertical, "");
       const seed = `${userId || "-"}|${courseId || "-"}|c${chapterIdx}|${vertical?.id || vTitle}`;
 
-      // Try to use BookRoll max-page if present and matches this vertical title.
       const subtype = tool?.sublabel || "";
       const isBookroll = subtype.toLowerCase().includes("bookroll") || (tool?.label || "").toLowerCase().includes("bookroll");
       if (isBookroll) {
-        const reading = getReadingProgressForTitle(vTitle);
+        const reading = getReadingProgressForVertical(vertical, vTitle);
         if (reading?.progress != null) return reading.progress;
-        const maxPage = getBookrollMaxPageValue(vTitle);
-        if (maxPage != null) return clamp(Math.round(maxPage * 20), 0, 100);
         return null;
       }
 
@@ -1850,6 +1992,50 @@
         return null;
       }
       return null;
+    };
+
+    const inferAeSubtypeFromNode = (node) => {
+      const f = node?.fields && typeof node.fields === "object" ? node.fields : {};
+      const data = f.data && typeof f.data === "object" ? f.data : {};
+      const aet = String(
+        f.aetool || f.tool_type || f.toolType || data.aetool || ""
+      ).toLowerCase();
+      if (aet === "bookroll") return "BookRoll";
+      if (aet === "video") return "Video";
+      const raw = [
+        f.iframe_url, f.iframeUrl, f.launch_url, f.launchUrl, f.url, f.href, f.src,
+        data.iframe_url, data.iframeUrl, JSON.stringify(data || {})
+      ].filter(Boolean).join("\n");
+      return detectAeSubtypeFromText(raw);
+    };
+
+    const collectVerticalAeSubtools = (vertical) => {
+      const out = [];
+      const seen = new Set();
+      const stack = [vertical];
+      while (stack.length) {
+        const n = stack.shift();
+        if (!n || typeof n !== "object") continue;
+        const id = String(n.id || "");
+        const isAe = n.kind === "aetool" || id.includes("type@aetool");
+        if (isAe) {
+          const subtype = inferAeSubtypeFromNode(n);
+          if (subtype === "BookRoll" || subtype === "Video") {
+            const key = `${subtype}|${id || "-"}`;
+            if (!seen.has(key)) {
+              seen.add(key);
+              out.push({
+                id: id || "",
+                subtype,
+                title: decodeIfMojibake(String(n?.title || n?.fields?.display_name || ""))
+              });
+            }
+          }
+        }
+        const kids = Array.isArray(n.children) ? n.children : [];
+        if (kids.length) stack.push(...kids);
+      }
+      return out;
     };
 
     const buildProgressModel = () => {
@@ -1866,34 +2052,58 @@
         const speedYou = getSeriesAt(window.chatbotSpeedData, chapterIdx, "your");
         const perfYou = getSeriesAt(window.chatbotPerfData, chapterIdx, "your");
 
-        const sequentials = sortByContentOrder(
-          (chapterNode?.children || []).filter((c) => c?.kind === "sequential"),
-          (x) => pickTitle(x, "")
-        );
+        const sequentials = (chapterNode?.children || []).filter((c) => c?.kind === "sequential");
         const seqItems = sequentials.map((seq, sIdx) => {
-          const verticals = sortByContentOrder(
-            (seq?.children || []).filter((c) => c?.kind === "vertical"),
-            (x) => pickTitle(x, "")
-          );
+          const verticals = (seq?.children || []).filter((c) => c?.kind === "vertical");
           const verts = verticals.map((v, vIdx) => {
-            const tool = inferVerticalTool(v);
-            const pct = computeVerticalProgress({
-              chapterIdx,
-              vertical: v,
-              tool,
-              userId: user,
-              courseId: courseKey,
-              speedYou,
-              perfYou,
-              chapterDone
-            });
+            const baseTool = inferVerticalTool(v);
+            const subtools = collectVerticalAeSubtools(v)
+              .map((entry) => {
+                const tool = { label: "AE Tool", sublabel: entry.subtype, tone: "badge kind-sequential" };
+                const entryTitle = entry.title || pickTitle(v, `Vertical ${vIdx + 1}`);
+                const reading = entry.subtype === "BookRoll"
+                  ? getReadingProgressForUsageId(entry.id, entryTitle)
+                  : null;
+                const video = entry.subtype === "Video"
+                  ? (getVideoProgressForTitle(entryTitle) || getVideoProgressForVertical(v, tool))
+                  : null;
+                const pct = reading?.progress ?? video?.progress ?? null;
+                return {
+                  id: entry.id || resolveLearningItemId(v, tool),
+                  title: entryTitle,
+                  tool,
+                  pct,
+                  reading,
+                  video
+                };
+              });
+            const effectiveSubtools = subtools.length
+              ? subtools
+              : [{
+                id: resolveLearningItemId(v, baseTool),
+                title: pickTitle(v, `Vertical ${vIdx + 1}`),
+                tool: baseTool,
+                pct: computeVerticalProgress({
+                  chapterIdx,
+                  vertical: v,
+                  tool: baseTool,
+                  userId: user,
+                  courseId: courseKey,
+                  speedYou,
+                  perfYou,
+                  chapterDone
+                })
+              }];
+            const subPcts = effectiveSubtools.map((x) => x.pct).filter((x) => Number.isFinite(x));
+            const pct = subPcts.length ? Math.round(subPcts.reduce((a, b) => a + b, 0) / subPcts.length) : null;
             return {
               idx: vIdx,
-              id: resolveLearningItemId(v, tool),
+              id: resolveLearningItemId(v, baseTool),
               node: v,
               title: pickTitle(v, `Vertical ${vIdx + 1}`),
-              tool,
-              pct
+              tool: effectiveSubtools[0]?.tool || baseTool,
+              pct,
+              subtools: effectiveSubtools
             };
           });
           return {
@@ -1955,17 +2165,11 @@
       const chapter = (Number.isFinite(chapterIdx) ? model?.chapters?.[chapterIdx] : null) || null;
       const sequentials = chapter
         ? chapter.sequentials
-        : sortByContentOrder(
-          (chapterNode.children || []).filter((c) => c?.kind === "sequential"),
-          (x) => pickTitle(x, "")
-        ).map((seq, sIdx) => ({
+        : ((chapterNode.children || []).filter((c) => c?.kind === "sequential")).map((seq, sIdx) => ({
           idx: sIdx,
           id: seq?.id || "",
           title: pickTitle(seq, `Sequential ${sIdx + 1}`),
-          verticals: sortByContentOrder(
-            (seq?.children || []).filter((c) => c?.kind === "vertical"),
-            (x) => pickTitle(x, "")
-          ).map((v, vIdx) => {
+          verticals: ((seq?.children || []).filter((c) => c?.kind === "vertical")).map((v, vIdx) => {
             const tool = inferVerticalTool(v);
             return {
               idx: vIdx,
@@ -2149,12 +2353,24 @@
 
         const unitHtml = model.chapters.map((ch, i) => {
           const accent = palette[i % palette.length];
-          const items = (ch.sequentials || []).flatMap((s) => (s.verticals || []).map((v) => ({
-            ...v,
-            seqTitle: s.title || ""
-          })));
+          const items = (ch.sequentials || []).flatMap((s) =>
+            (s.verticals || [])
+              .filter((v) => isBookrollOrVideoTool(v.tool))
+              .map((v) => ({
+                ...v,
+                seqTitle: s.title || ""
+              }))
+          );
+          const toolBlocks = items.flatMap((it) => {
+            const subs = Array.isArray(it.subtools) && it.subtools.length ? it.subtools : [it];
+            return subs.map((sub, idx) => ({
+              vertical: it,
+              sub,
+              idx
+            }));
+          });
           const openAttr = i === 0 ? " open" : "";
-          const countText = `(${items.length} รายการ)`;
+          const countText = `(${toolBlocks.length} blocks)`;
           const hasChapterPct = Number.isFinite(ch.chapterPct);
           const pct = hasChapterPct ? clamp(Number(ch.chapterPct), 0, 100) : null;
           const pctBadge = !hasChapterPct
@@ -2164,36 +2380,42 @@
               pct > 0 ? "bg-sky-100 text-sky-800 border border-sky-200" :
               "bg-slate-100 text-slate-500 border border-slate-200";
 
-          const itemsHtml = items.map((it) => {
-            const st = statusFromPct(it.pct);
-            const kind = displayKind(it.tool);
-            const reading = getReadingProgressForTitle(it.title);
-            const video = getVideoProgressForVertical(it.node, it.tool);
-            const idLinesHtml = renderIdLines(it.node, it.id);
-            const paramLinesHtml = renderAeToolParamLines(it.node);
-            const readingHtml = reading
-              ? `<div class="mt-1">BOOKROLL • อ่าน ${reading.read}/${reading.total} หน้า (${reading.progress}%)</div>`
-              : "";
-            const videoHtml = (kind === "AETOOL (video)" && video)
-              ? `<div class="mt-1">VIDEO • รับชม ${video.progress}%</div>`
-              : "";
+          const itemsHtml = toolBlocks.map((row) => {
+            const it = row.vertical;
+            const sub = row.sub;
+            const baseStatus = statusFromPct(sub.pct);
+            const kind = displayKind(sub.tool);
+            const pctText = Number.isFinite(sub.pct) ? `${clamp(Number(sub.pct), 0, 100)}%` : "-";
+            const reading = sub.reading || null;
+            const video = sub.video || null;
+            const isVideo = /video/i.test(String(sub.tool?.sublabel || ""));
+            const isBook = /bookroll/i.test(String(sub.tool?.sublabel || ""));
+            const kindPrefix = isVideo ? "[video] " : (isBook ? "[book] " : "");
+            const headingPrefix = kindPrefix;
+            const videoApiFailed = isVideo && String(window.videoApiStatus || "") === "error";
+            const st = videoApiFailed
+              ? { ...baseStatus, text: "ไม่สามารถดึง API ได้" }
+              : baseStatus;
+            const progressDetail = reading
+              ? `อ่าน ${reading.read ?? "-"} / ${reading.total ?? "-"} หน้า`
+              : (video ? `รับชม ${video.progress}%` : (videoApiFailed ? "ไม่สามารถดึง API ได้" : "ไม่มีข้อมูล API"));
+            const subId = sub.id || "-";
+            const seqTitle = it.seqTitle ? `<div class="text-[11px] text-slate-400">SEQ: ${escapeHtml(it.seqTitle)}</div>` : "";
             return `
               <div class="panel p-4 flex items-center justify-between gap-4">
                 <div class="flex items-start gap-4 min-w-0">
                   <div class="mt-2 w-4 h-4 rounded-full ${st.dot} shrink-0"></div>
                   <div class="min-w-0">
-                    <div class="text-lg font-bold truncate" title="${escapeHtml(it.title || "")}">${escapeHtml(it.title || "-")}</div>
+                    <div class="text-lg font-bold truncate" title="${escapeHtml(`${headingPrefix}${it.title || ""}`)}">${escapeHtml(`${headingPrefix}${it.title || "-"}`)}</div>
+                    ${seqTitle}
                     <div class="mt-1 text-slate-500 font-semibold mono text-xs break-all">
-                      <div>${escapeHtml(kind)}</div>
-                      ${readingHtml}
-                      ${videoHtml}
-                      ${idLinesHtml}
-                      ${paramLinesHtml}
+                      <div>${escapeHtml(kind)} • ${escapeHtml(pctText)} • ${escapeHtml(progressDetail)}</div>
+                      <div>BLOCK • ID: ${escapeHtml(subId)}</div>
                     </div>
                   </div>
                 </div>
                 <div class="shrink-0 flex items-center gap-3">
-                  ${Number.isFinite(it.pct) ? `<div class="info-pill px-3 py-2 text-sm font-bold bg-slate-100 text-slate-700 border border-slate-200">${escapeHtml(`${clamp(Number(it.pct), 0, 100)}%`)}</div>` : ""}
+                  ${Number.isFinite(sub.pct) ? `<div class="info-pill px-3 py-2 text-sm font-bold bg-slate-100 text-slate-700 border border-slate-200">${escapeHtml(pctText)}</div>` : ""}
                   <div class="info-pill px-4 py-2 text-sm font-semibold tracking-wide ${st.badge}">${escapeHtml(st.text)}</div>
                 </div>
               </div>
@@ -2355,6 +2577,9 @@
           if (rawEl) rawEl.textContent = JSON.stringify(window.chatbotPerfData, null, 2);
         }
         renderTopicTabsAndDetail();
+        if (!window.bookrollReadingProgress?.length && userId && courseId) {
+          fetchBookrollReadingData();
+        }
 
         if (statusEl) statusEl.textContent = `โหลดสำเร็จ (${srcUrl})`;
       } catch (err) {
@@ -2411,58 +2636,6 @@
       });
     };
 
-    const renderBookrollMaxPageChart = (cfg) => {
-      const labels = (cfg?.yAxis?.data || []).map(decodeIfMojibake);
-      const series = Array.isArray(cfg?.series) ? cfg.series : [];
-      const data = series[0]?.data || [];
-      const ctx = document.getElementById("bookrollMaxPageChart");
-      if (!ctx) return;
-      if (window.bookrollMaxPageChart) window.bookrollMaxPageChart.destroy();
-      if (!labels.length) {
-        window.bookrollMaxPageChart = new Chart(ctx, {
-          type: "bar",
-          data: { labels: ["ไม่มีข้อมูล"], datasets: [{ label: "อ่านถึงหน้า", data: [0], backgroundColor: "#b7f1ec" }] },
-          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-        });
-        return;
-      }
-      window.bookrollMaxPageChart = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels,
-          datasets: [{
-            label: decodeIfMojibake(cfg?.title?.text) || "อ่านถึงหน้า",
-            data,
-            backgroundColor: "#1fb9b7",
-            borderRadius: 8
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          indexAxis: "y",
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { beginAtZero: true },
-            y: { ticks: { autoSkip: false } }
-          }
-        }
-      });
-    };
-
-    const summarizeMaxPage = (cfg) => {
-      const labels = (cfg?.yAxis?.data || []).map(decodeIfMojibake);
-      const data = (cfg?.series?.[0]?.data || []).map((v) => Number(v) || 0);
-      if (!labels.length || !data.length) return "ยังไม่มีข้อมูลการอ่าน";
-      let max = -1;
-      let idx = -1;
-      data.forEach((v, i) => {
-        if (v > max) { max = v; idx = i; }
-      });
-      if (max <= 0 || idx < 0) return "ยังไม่พบการอ่านในบทเรียน";
-      return `อ่านถึงหน้า ${max} ใน "${labels[idx]}"`;
-    };
-
     const renderEchartToChart = (cfg, canvasId, fallbackLabel) => {
       const ctx = document.getElementById(canvasId);
       if (!ctx) return;
@@ -2517,10 +2690,12 @@
       const summaryEl = document.getElementById("bookroll-activity-summary");
       if (!userId || !courseId) {
         if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
+        updateBookrollJsonDrawer();
         return;
       }
       if (!isLikelyCourseId(courseId)) {
         if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
+        updateBookrollJsonDrawer();
         return;
       }
       if (statusEl) statusEl.textContent = "กำลังโหลด...";
@@ -2552,10 +2727,12 @@
         }
         if (statusEl) statusEl.textContent = `โหลดสำเร็จ (${srcUrl})`;
         if (rawEl) rawEl.textContent = JSON.stringify(data, null, 2);
+        updateBookrollJsonDrawer();
       } catch (err) {
         if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
         if (rawEl) rawEl.textContent = err?.message || "เกิดข้อผิดพลาด";
         console.warn("Bookroll API error:", err);
+        updateBookrollJsonDrawer();
       }
     };
 
@@ -2563,21 +2740,106 @@
       if (!userId || !courseId || !isLikelyCourseId(courseId)) {
         window.bookrollReadingData = null;
         window.bookrollReadingProgress = [];
+        updateBookrollJsonDrawer();
         renderTopicTabsAndDetail();
         return;
       }
-      try {
-        const srcUrl = bookrollReadingDataUrl(userId, courseId);
+      const mergeReadingEntries = (list) => {
+        const map = new Map();
+        (Array.isArray(list) ? list : []).forEach((item) => {
+          if (!item || !Number.isFinite(item.progress)) return;
+          const usageId = normalizeUsageId(item.usageId || "");
+          const key = normalizeTopicKey(item.key || item.title || "");
+          const dedupeKey = `${usageId}|${key || "-"}`;
+          const prev = map.get(dedupeKey);
+          if (!prev || Number(item.progress) > Number(prev.progress)) {
+            map.set(dedupeKey, {
+              ...item,
+              usageId
+            });
+          }
+        });
+        return Array.from(map.values());
+      };
+      const fetchReadingEntriesByUsageId = async (usageId, titleHint = "") => {
+        const srcUrl = bookrollReadingDataUrl(userId, usageId);
         const res = await fetch(srcUrl);
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
-        window.bookrollReadingData = data;
-        window.bookrollReadingProgress = buildReadingProgressMap(data);
+        return {
+          sourceUrl: srcUrl,
+          data,
+          entries: buildReadingProgressMap(data, { usageId, titleHint })
+        };
+      };
+      const collectBookrollUsageTargets = () => {
+        const course = window.courseDetailData;
+        if (!course) return [];
+        const out = [];
+        const seen = new Set();
+        const chapters = getSortedChapters(course);
+        chapters.forEach((ch) => {
+          const sequentials = (ch?.children || []).filter((c) => c?.kind === "sequential");
+          sequentials.forEach((seq) => {
+            const verticals = (seq?.children || []).filter((c) => c?.kind === "vertical");
+            verticals.forEach((v) => {
+              const tool = inferVerticalTool(v);
+              const subtype = String(tool?.sublabel || "").toLowerCase();
+              const isBookroll = subtype.includes("bookroll") || String(tool?.label || "").toLowerCase().includes("bookroll");
+              if (!isBookroll) return;
+              const title = pickTitle(v, "");
+              getBookrollUsageIdsFromVertical(v).forEach((usageId) => {
+                const key = normalizeUsageId(usageId);
+                if (!key || seen.has(key)) return;
+                seen.add(key);
+                out.push({ usageId, title });
+              });
+            });
+          });
+        });
+        return out;
+      };
+      try {
+        const aggregate = [];
+        const debugSources = [];
+
+        try {
+          const srcUrl = bookrollReadingDataUrl(userId, courseId);
+          const res = await fetch(srcUrl);
+          if (res.ok) {
+            const data = await res.json();
+            debugSources.push({ url: srcUrl, data });
+            aggregate.push(...buildReadingProgressMap(data, { usageId: courseId }));
+          }
+        } catch (err) {
+          console.warn("Bookroll readingData API error:", err);
+        }
+
+        const targets = collectBookrollUsageTargets();
+        if (targets.length) {
+          const responses = await Promise.all(
+            targets.map(async (target) => {
+              try {
+                return await fetchReadingEntriesByUsageId(target.usageId, target.title);
+              } catch {
+                return null;
+              }
+            })
+          );
+          responses.filter(Boolean).forEach((hit) => {
+            debugSources.push({ url: hit.sourceUrl, data: hit.data });
+            aggregate.push(...hit.entries);
+          });
+        }
+
+        window.bookrollReadingData = debugSources.length ? debugSources[0].data : null;
+        window.bookrollReadingProgress = mergeReadingEntries(aggregate);
       } catch (err) {
         window.bookrollReadingData = null;
         window.bookrollReadingProgress = [];
-        console.warn("Bookroll readingData API error:", err);
+        console.warn("Bookroll reading progress error:", err);
       } finally {
+        updateBookrollJsonDrawer();
         renderTopicTabsAndDetail();
       }
     };
@@ -2587,6 +2849,7 @@
         window.videoLearningRaw = null;
         window.videoProgressData = [];
         window.videoUserNameResolved = null;
+        window.videoApiStatus = "invalid-course";
         renderTopicTabsAndDetail();
         updateLoginDebugPanel();
         return;
@@ -2596,16 +2859,19 @@
         window.videoLearningRaw = null;
         window.videoProgressData = [];
         window.videoUserNameResolved = null;
+        window.videoApiStatus = "missing-username";
         renderTopicTabsAndDetail();
         updateLoginDebugPanel();
         return;
       }
       try {
         let best = { entries: [], data: null, info: null };
+        let okResponseCount = 0;
         for (const info of candidates) {
           const srcUrl = videoBarUrl(info.value, courseId);
           const res = await fetch(srcUrl);
           if (!res.ok) continue;
+          okResponseCount += 1;
           const data = await res.json();
           const entries = buildVideoProgressMap(data);
           if (entries.length) {
@@ -2617,41 +2883,17 @@
         window.videoLearningRaw = best.data;
         window.videoProgressData = best.entries;
         window.videoUserNameResolved = best.info || candidates[0] || null;
+        window.videoApiStatus = okResponseCount > 0 ? "ok" : "error";
       } catch (err) {
         window.videoLearningRaw = null;
         window.videoProgressData = [];
         window.videoUserNameResolved = null;
+        window.videoApiStatus = "error";
         console.warn("Video learning API error:", err);
       } finally {
         updateLoginDebugPanel();
+        updateVideoJsonDrawer();
         renderTopicTabsAndDetail();
-      }
-    };
-
-    const fetchBookrollMaxPage = async () => {
-      const statusEl = document.getElementById("bookroll-maxpage-status");
-      const summaryEl = document.getElementById("bookroll-maxpage-summary");
-      if (!userId || !courseId) {
-        if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
-        return;
-      }
-      if (!isLikelyCourseId(courseId)) {
-        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
-        return;
-      }
-      if (statusEl) statusEl.textContent = "กำลังโหลด...";
-      try {
-        const srcUrl = bookrollMaxPageUrl(courseId, userId);
-        const res = await fetch(srcUrl);
-        if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
-        window.bookrollMaxPageData = data;
-        renderBookrollMaxPageChart(data);
-        if (summaryEl) summaryEl.textContent = summarizeMaxPage(data);
-        if (statusEl) statusEl.textContent = `โหลดสำเร็จ (${srcUrl})`;
-      } catch (err) {
-        if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
-        console.warn("Bookroll MaxPage API error:", err);
       }
     };
 
@@ -2882,11 +3124,12 @@
       setAuthState(auth);
     }
 
+    updateBookrollJsonDrawer();
+    updateVideoJsonDrawer();
     fetchBookrollReadingData();
     fetchVideoLearningProgress();
     fetchCourseDetail();
     if (SHOW_BOOKROLL) {
-      fetchBookrollMaxPage();
       fetchBookroll();
     }
     fetchDoneChapterView();
