@@ -546,10 +546,21 @@
     };
 
     const params = new URLSearchParams(window.location.search);
+    const getQueryParamPreservePlus = (name) => {
+      const pattern = new RegExp(`[?&]${name}=([^&]*)`);
+      const match = window.location.search.match(pattern);
+      if (!match) return null;
+      try {
+        // Keep '+' as literal plus (not space) for ids like course-v1:ORG+COURSE+RUN
+        return decodeURIComponent(match[1].replace(/\+/g, "%2B"));
+      } catch {
+        return match[1].replace(/\+/g, "+");
+      }
+    };
     let bookrollOverallChartInstance = null;
     let videoOverallChartInstance = null;
     let userId = null;
-    let courseId = params.get("courseid");
+    let courseId = getQueryParamPreservePlus("courseid") || params.get("courseid");
     if (courseId) {
       const courseEl = document.getElementById("course-id");
       if (courseEl) courseEl.textContent = courseId;
