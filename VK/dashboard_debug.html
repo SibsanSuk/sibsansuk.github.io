@@ -345,11 +345,52 @@
                   <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                     <div>
                       <div class="text-2xl font-extrabold">Dashboard สรุปผลการเรียน</div>
+                      <div class="mt-2"><span class="cat-pill cat-5">Student Analytics</span></div>
+                      <div class="text-sm text-slate-500">
+                        อัปเดตล่าสุด: 3 ก.พ. 2026 • หลักสูตร <span id="header-course-title">-</span>
+                      </div>
+                      <div class="mt-2 text-xs text-slate-500 mono">
+                        userId: <span id="current-userid">-</span> • courseId: <span id="current-courseid">-</span>
+                      </div>
+                      <div class="mt-3 grid grid-cols-1 lg:grid-cols-[1fr_1fr_auto] gap-2">
+                        <input
+                          id="input-userid"
+                          class="panel field px-3 py-2 text-sm outline-none"
+                          placeholder="กรอก userId"
+                        />
+                        <input
+                          id="input-courseid"
+                          class="panel field px-3 py-2 text-sm outline-none"
+                          placeholder="กรอก courseId"
+                        />
+                        <button
+                          id="btn-load"
+                          class="pill text-sm px-4 py-2 font-semibold tracking-wide text-white grad-brand"
+                        ><span>ดึงข้อมูล</span></button>
+                      </div>
                     </div>
                     <div class="flex items-center gap-2">
                       <button id="btn-login" class="pill text-sm px-4 py-3 font-semibold tracking-wide text-white grad-brand"><span>Login</span></button>
                       <button id="btn-logout" class="pill text-sm px-4 py-3 font-semibold tracking-wide text-white grad-danger"><span>Logout</span></button>
+                      <button class="pill text-sm px-4 py-3 font-semibold tracking-wide text-white grad-brand"><span>Export</span></button>
                     </div>
+                  </div>
+
+                  <div class="mt-4">
+                    <details class="panel p-4 text-xs text-slate-600" id="login-debug-panel">
+                      <summary class="cursor-pointer select-none text-xs text-slate-500 font-semibold">
+                        ข้อมูลจากการ Login (ซ่อน/แสดง)
+                      </summary>
+                      <div class="mt-3 flex flex-wrap items-center gap-2">
+                        <button class="ghost px-3 py-1.5 text-xs text-slate-700" data-login-tab="summary">Summary</button>
+                        <button class="ghost px-3 py-1.5 text-xs text-slate-700" data-login-tab="derived">Derived Params</button>
+                        <button class="ghost px-3 py-1.5 text-xs text-slate-700" data-login-tab="raw">Raw Login JSON</button>
+                        <div class="text-xs text-slate-500 mono" id="login-debug-status">รอข้อมูล</div>
+                      </div>
+                      <div id="login-debug-tab-summary" class="mt-3 panel p-3"></div>
+                      <div id="login-debug-tab-derived" class="mt-3 panel p-3 hidden"></div>
+                      <pre id="login-debug-tab-raw" class="mt-3 panel p-3 whitespace-pre-wrap break-all hidden">ยังไม่มีข้อมูล</pre>
+                    </details>
                   </div>
 
                   <div class="mt-5">
@@ -391,6 +432,39 @@
                     </div>
                   </div>
 
+                  <div class="mt-5 hidden">
+                    <div class="clay-soft p-4 cat-card cat-4">
+                      <div class="flex items-center justify-between gap-3">
+                        <div class="font-bold">BookRoll Activity</div>
+                        <div class="text-xs text-slate-500 mono" id="bookroll-status">รอข้อมูล</div>
+                      </div>
+                      <div class="mt-2 text-sm text-slate-600" id="bookroll-activity-summary">ยังไม่มีสรุป</div>
+                      <div class="mt-3 h-[260px]">
+                        <canvas class="chart-canvas" id="bookrollChart"></canvas>
+                      </div>
+                      <div class="mt-3 grid grid-cols-1 lg:grid-cols-3 gap-3 text-sm">
+                        <div class="panel p-3">
+                          <div class="text-xs text-slate-500">หน้าที่อ่าน</div>
+                          <div class="mt-1 text-2xl font-black mono text-brand-soft" id="br-pages-read">-</div>
+                        </div>
+                        <div class="panel p-3">
+                          <div class="text-xs text-slate-500">จำนวนหน้า</div>
+                          <div class="mt-1 text-2xl font-black mono text-brand-soft" id="br-pages-total">-</div>
+                        </div>
+                        <div class="panel p-3">
+                          <div class="text-xs text-slate-500">ความคืบหน้า</div>
+                          <div class="mt-1 text-2xl font-black mono text-brand-soft" id="br-progress">-</div>
+                        </div>
+                      </div>
+                      <details class="mt-3 panel p-4 text-xs text-slate-600">
+                        <summary class="cursor-pointer select-none text-xs text-slate-500 font-semibold">
+                          ดูข้อมูลดิบ (JSON)
+                        </summary>
+                        <pre id="bookroll-raw" class="mt-2 whitespace-pre-wrap break-all">ยังไม่มีข้อมูล</pre>
+                      </details>
+                    </div>
+                  </div>
+
                   <div class="mt-5">
                     <div class="clay-soft p-4 cat-card cat-4">
                       <div class="flex items-start justify-between gap-3">
@@ -417,10 +491,142 @@
                     </div>
                   </div>
 
+                  <div class="mt-5">
+                    <div class="clay-soft p-4 cat-card cat-5 course-tree">
+                      <div class="flex items-start justify-between gap-3">
+                        <div>
+                          <div class="font-bold">Course Structure (Deep)</div>
+                          <div class="mt-1 text-sm text-slate-600">แสดงโครงสร้างลึกแบบ course -> chapter -> sequential -> vertical -> component พร้อมดู JSON รายโหนด</div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <div class="text-xs text-slate-500 mono" id="course-deep-status">รอข้อมูล</div>
+                          <button id="course-deep-load" class="ghost px-3 py-1.5 text-xs text-slate-700">โหลดโครงสร้างลึก</button>
+                        </div>
+                      </div>
+                      <div class="mt-3 panel p-2">
+                        <input id="course-deep-search" class="w-full panel field px-3 py-2 text-sm outline-none" placeholder="ค้นหา title / id / kind..." disabled />
+                      </div>
+                      <div class="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
+                        <div id="course-deep-tree" class="panel p-2 grid gap-2 overflow-auto" style="max-height: 560px;">
+                          <div class="text-sm text-slate-600">กด "โหลดโครงสร้างลึก" เพื่อแสดงข้อมูล</div>
+                        </div>
+                        <div id="course-deep-inspector" class="panel p-4 overflow-auto" style="max-height: 560px;">
+                          <div class="text-sm text-slate-600">คลิกโหนดทางซ้ายเพื่อดูรายละเอียด</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <details class="clay-soft p-4 cat-card cat-5">
+                      <summary class="cursor-pointer select-none flex items-center justify-between gap-3">
+                        <div class="font-bold">BookRoll API Debug</div>
+                        <div class="text-xs text-slate-500 mono" id="bookroll-json-status">รอข้อมูล</div>
+                      </summary>
+                      <div class="mt-3 grid gap-3">
+                        <div class="panel p-4 text-xs text-slate-600">
+                          <div class="font-semibold text-slate-700">readingData</div>
+                          <pre id="bookroll-reading-raw" class="mt-2 whitespace-pre-wrap break-all">ยังไม่มีข้อมูล</pre>
+                        </div>
+                        <div class="panel p-4 text-xs text-slate-600">
+                          <div class="font-semibold text-slate-700">BR_activity</div>
+                          <pre id="bookroll-activity-raw-debug" class="mt-2 whitespace-pre-wrap break-all">ยังไม่มีข้อมูล</pre>
+                        </div>
+                      </div>
+                    </details>
+                    <details class="clay-soft p-4 cat-card cat-5">
+                      <summary class="cursor-pointer select-none flex items-center justify-between gap-3">
+                        <div class="font-bold">Video API Debug</div>
+                        <div class="text-xs text-slate-500 mono" id="video-json-status">รอข้อมูล</div>
+                      </summary>
+                      <div class="mt-3 panel p-4 text-xs text-slate-600">
+                        <div class="font-semibold text-slate-700">viola/chart/bar</div>
+                        <pre id="video-raw-debug" class="mt-2 whitespace-pre-wrap break-all">ยังไม่มีข้อมูล</pre>
+                      </div>
+                    </details>
+                  </div>
+
+                  <div class="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="clay-soft p-4 cat-card cat-5">
+                      <div class="flex items-center justify-between gap-3">
+                        <div class="font-bold">Chatbot Speed</div>
+                        <div class="text-xs text-slate-500 mono" id="chatbot-speed-status">รอข้อมูล</div>
+                      </div>
+                      <div class="mt-2 text-sm text-slate-600" id="chatbot-speed-summary">ยังไม่มีสรุป</div>
+                      <div class="mt-3 h-[260px]">
+                        <canvas class="chart-canvas" id="chatbotSpeedChart"></canvas>
+                      </div>
+                      <details class="mt-3 panel p-4 text-xs text-slate-600">
+                        <summary class="cursor-pointer select-none text-xs text-slate-500 font-semibold">
+                          ดูข้อมูลดิบ (JSON)
+                        </summary>
+                        <pre id="chatbot-speed-raw" class="mt-2 whitespace-pre-wrap break-all">ยังไม่มีข้อมูล</pre>
+                      </details>
+                    </div>
+
+                    <div class="clay-soft p-4 cat-card cat-3">
+                      <div class="flex items-center justify-between gap-3">
+                        <div class="font-bold">Chatbot Performance</div>
+                        <div class="text-xs text-slate-500 mono" id="chatbot-perf-status">รอข้อมูล</div>
+                      </div>
+                      <div class="mt-2 text-sm text-slate-600" id="chatbot-perf-summary">ยังไม่มีสรุป</div>
+                      <div class="mt-3 h-[260px]">
+                        <canvas class="chart-canvas" id="chatbotPerfChart"></canvas>
+                      </div>
+                      <details class="mt-3 panel p-4 text-xs text-slate-600">
+                        <summary class="cursor-pointer select-none text-xs text-slate-500 font-semibold">
+                          ดูข้อมูลดิบ (JSON)
+                        </summary>
+                        <pre id="chatbot-perf-raw" class="mt-2 whitespace-pre-wrap break-all">ยังไม่มีข้อมูล</pre>
+                      </details>
+                    </div>
+                  </div>
+
+                  <div class="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="clay-soft p-4 cat-card cat-2">
+                      <div class="font-bold">สรุปผลรายคน</div>
+                      <div class="mt-3 panel p-4 text-sm text-slate-600">
+                        <div class="flex items-center justify-between">
+                          <span>ชื่อผู้เรียน</span>
+                          <span class="font-semibold" id="student-name">student</span>
+                        </div>
+                        <div class="mt-2 flex items-center justify-between">
+                          <span>ID</span>
+                          <span class="mono" id="student-id">student</span>
+                        </div>
+                        <div class="mt-2 flex items-center justify-between">
+                          <span>ช่วงเวลาเรียน</span>
+                          <span>20 ม.ค. 2026 - 30 ม.ค. 2026</span>
+                        </div>
+                        <div class="mt-2 flex items-center justify-between">
+                          <span>คอร์ส</span>
+                          <span id="course-id">-</span>
+                        </div>
+                      </div>
+                      <div class="mt-3 panel p-4 text-sm text-slate-600">
+                        <div class="font-semibold">ข้อเสนอแนะ</div>
+                        <p class="mt-2">แนะนำให้ทบทวน unit 2 เพิ่มเติม และเริ่ม unit 3 เพื่อปิดช่องว่างการเรียนรู้</p>
+                      </div>
+                    </div>
+
+                    <div class="clay-soft p-4 cat-card cat-4">
+                      <div class="font-bold">บันทึกการวิเคราะห์</div>
+                      <textarea
+                        class="mt-3 w-full panel field p-4 outline-none text-sm"
+                        rows="6"
+                        placeholder="จดบันทึกการวิเคราะห์ (demo)"></textarea>
+                      <div class="mt-3 flex justify-end">
+                        <button class="pill text-sm px-4 py-3 font-semibold tracking-wide text-white grad-success"><span>บันทึก</span></button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
+            <div class="text-center text-xs text-slate-500 py-4">
+              Prototype UI • Dashboard Summary • Chart.js + Tailwind CDN
+            </div>
           </main>
         </div>
       </div>
@@ -578,6 +784,8 @@
       if (headerCourseTitleEl) headerCourseTitleEl.textContent = decodeIfMojibake(window.courseDetailData?.courseTitle) || "-";
       const courseEl = document.getElementById("course-id");
       if (courseEl) courseEl.textContent = courseId || "-";
+      document.getElementById("student-name").textContent = userId || "-";
+      document.getElementById("student-id").textContent = userId || "-";
       updateLoginDebugPanel();
     };
 
@@ -596,6 +804,8 @@
         if (SHOW_BOOKROLL) {
           fetchBookroll();
         }
+        fetchChatbotSpeed();
+        fetchChatbotPerformance();
       });
     }
 
@@ -628,6 +838,12 @@
 
     const courseUrl = (cid) =>
       `https://sbs-backend.mooc.meca.in.th/lms/${encodeURIComponent(cid)}`;
+
+    const chatbotSpeedUrl = (cid, uid) =>
+      `https://sbs-backend.mooc.meca.in.th/stats/echart/chatbotSpeed/${encodeURIComponent(cid)}/${encodeURIComponent(uid)}`;
+
+    const chatbotPerformanceUrl = (cid, uid) =>
+      `https://sbs-backend.mooc.meca.in.th/stats/stats/echart/chatbotPerformance/${encodeURIComponent(cid)}/${encodeURIComponent(uid)}`;
 
     const isLikelyCourseId = (cid) =>
       typeof cid === "string" && cid.includes("course-v1:");
@@ -1058,7 +1274,9 @@
       if (loginDebugTabDerivedEl) {
         const rows = [
           { name: "BookRoll", param: `userID=${userId || "-"}&usageId=${courseId || "-"}` },
-          { name: "Video Bar", param: `userName=${videoUser.value || "-"}&usageId=${courseId || "-"}` }
+          { name: "Video Bar", param: `userName=${videoUser.value || "-"}&usageId=${courseId || "-"}` },
+          { name: "Chatbot Speed", param: `/stats/echart/chatbotSpeed/${courseId || "-"}/${userId || "-"}` },
+          { name: "Chatbot Performance", param: `/stats/stats/echart/chatbotPerformance/${courseId || "-"}/${userId || "-"}` }
         ];
         loginDebugTabDerivedEl.innerHTML = rows.map((r) => `
           <div class="mb-2 last:mb-0">
@@ -2286,6 +2504,17 @@
       const progressText = Number.isFinite(chapterPct) ? `ความคืบหน้า ${chapterPct}%` : "ความคืบหน้า -";
       const progressTone = Number.isFinite(chapterPct) && chapterPct >= 100 ? "grad-success text-white" : "btn-soft";
 
+      const speedAvg = getSeriesAt(window.chatbotSpeedData, idx, "average");
+      const speedYou = getSeriesAt(window.chatbotSpeedData, idx, "your");
+      const perfAvg = getSeriesAt(window.chatbotPerfData, idx, "average");
+      const perfYou = getSeriesAt(window.chatbotPerfData, idx, "your");
+
+      const pct = (v) => (v == null || Number.isNaN(v)) ? "-" : `${Math.round(v)}%`;
+      const bar = (v) => {
+        const n = v == null || Number.isNaN(v) ? 0 : Math.max(0, Math.min(100, Number(v)));
+        return `<div class="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden"><div class="h-full grad-brand" style="width:${n}%"></div></div>`;
+      };
+
       if (!detailEl) return;
       detailEl.innerHTML = `
         <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-3">
@@ -2296,7 +2525,20 @@
           <div class="info-pill px-4 py-2 text-sm font-semibold tracking-wide ${progressTone}">${escapeHtml(progressText)}</div>
         </div>
 
-        <div class="mt-4 panel p-4">
+        <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <div class="panel p-4">
+            <div class="text-sm font-bold">Learning Speed</div>
+            <div class="mt-2 text-sm text-slate-600">Your: <span class="mono font-bold">${escapeHtml(pct(speedYou))}</span> • Avg: <span class="mono">${escapeHtml(pct(speedAvg))}</span></div>
+            ${bar(speedYou)}
+          </div>
+          <div class="panel p-4">
+            <div class="text-sm font-bold">Learning Performance</div>
+            <div class="mt-2 text-sm text-slate-600">Your: <span class="mono font-bold">${escapeHtml(pct(perfYou))}</span> • Avg: <span class="mono">${escapeHtml(pct(perfAvg))}</span></div>
+            ${bar(perfYou)}
+          </div>
+        </div>
+
+        <div class="mt-3 panel p-4">
           <div class="text-sm font-bold">รายการย่อยในบทนี้ (Sequential / Vertical)</div>
           <div class="mt-2 text-sm text-slate-600">ดูประเภทเครื่องมือจาก component ที่อยู่ในแต่ละ vertical</div>
           <div class="mt-3">
@@ -2344,6 +2586,20 @@
         renderCourseOutline(data);
         setCourseDeepData(data, false);
 
+        // Re-label speed/perf charts (if loaded) to match the course outline, then refresh tabs.
+        const chapterLabels = getCourseChapterTitles(data);
+        if (window.chatbotSpeedData && chapterLabels.length) {
+          window.chatbotSpeedData = applyCategoryLabels(window.chatbotSpeedData, chapterLabels);
+          renderEchartToChart(window.chatbotSpeedData, "chatbotSpeedChart", "Chatbot Speed");
+          const rawEl = document.getElementById("chatbot-speed-raw");
+          if (rawEl) rawEl.textContent = JSON.stringify(window.chatbotSpeedData, null, 2);
+        }
+        if (window.chatbotPerfData && chapterLabels.length) {
+          window.chatbotPerfData = applyCategoryLabels(window.chatbotPerfData, chapterLabels);
+          renderEchartToChart(window.chatbotPerfData, "chatbotPerfChart", "Chatbot Performance");
+          const rawEl = document.getElementById("chatbot-perf-raw");
+          if (rawEl) rawEl.textContent = JSON.stringify(window.chatbotPerfData, null, 2);
+        }
         renderTopicTabsAndDetail();
         if (!window.bookrollReadingProgress?.length && userId && courseId) {
           fetchBookrollReadingData();
@@ -2665,6 +2921,86 @@
       }
     };
 
+    const fetchChatbotSpeed = async () => {
+      const statusEl = document.getElementById("chatbot-speed-status");
+      const rawEl = document.getElementById("chatbot-speed-raw");
+      const summaryEl = document.getElementById("chatbot-speed-summary");
+      if (!userId || !courseId) {
+        if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
+        return;
+      }
+      if (!isLikelyCourseId(courseId)) {
+        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
+        return;
+      }
+      if (statusEl) statusEl.textContent = "กำลังโหลด...";
+      try {
+        const srcUrl = chatbotSpeedUrl(courseId, userId);
+        const res = await fetch(srcUrl);
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        window.chatbotSpeedData = data;
+        const labels = getCourseChapterTitles(window.courseDetailData);
+        const relabeled = labels.length ? applyCategoryLabels(data, labels) : data;
+        window.chatbotSpeedData = relabeled;
+        renderEchartToChart(relabeled, "chatbotSpeedChart", "Chatbot Speed");
+        if (summaryEl) {
+          const series = relabeled?.series?.[0]?.data || [];
+          const nums = series.map((v) => Number(v) || 0);
+          const avg = nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : 0;
+          summaryEl.textContent = nums.length ? `ค่าเฉลี่ยความเร็ว: ${avg}` : "ยังไม่มีข้อมูล";
+        }
+        if (rawEl) rawEl.textContent = JSON.stringify(relabeled, null, 2);
+        if (statusEl) statusEl.textContent = `โหลดสำเร็จ (${srcUrl})`;
+        renderTopicTabsAndDetail();
+      } catch (err) {
+        if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
+        if (rawEl) rawEl.textContent = err?.message || "เกิดข้อผิดพลาด";
+        console.warn("Chatbot Speed API error:", err);
+      }
+    };
+
+    const fetchChatbotPerformance = async () => {
+      const statusEl = document.getElementById("chatbot-perf-status");
+      const rawEl = document.getElementById("chatbot-perf-raw");
+      const summaryEl = document.getElementById("chatbot-perf-summary");
+      if (!userId || !courseId) {
+        if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
+        return;
+      }
+      if (!isLikelyCourseId(courseId)) {
+        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
+        return;
+      }
+      if (statusEl) statusEl.textContent = "กำลังโหลด...";
+      try {
+        const srcUrl = chatbotPerformanceUrl(courseId, userId);
+        const res = await fetch(srcUrl);
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        window.chatbotPerfData = data;
+        const labels = getCourseChapterTitles(window.courseDetailData);
+        const relabeled = labels.length ? applyCategoryLabels(data, labels) : data;
+        window.chatbotPerfData = relabeled;
+        renderEchartToChart(relabeled, "chatbotPerfChart", "Chatbot Performance");
+        if (summaryEl) {
+          const series = relabeled?.series?.[0]?.data || [];
+          const nums = series.map((v) => Number(v) || 0);
+          const avg = nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : 0;
+          summaryEl.textContent = nums.length ? `ค่าเฉลี่ยผลการตอบ: ${avg}` : "ยังไม่มีข้อมูล";
+        }
+        if (rawEl) rawEl.textContent = JSON.stringify(relabeled, null, 2);
+        if (statusEl) statusEl.textContent = `โหลดสำเร็จ (${srcUrl})`;
+        renderTopicTabsAndDetail();
+      } catch (err) {
+        if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
+        if (rawEl) rawEl.textContent = err?.message || "เกิดข้อผิดพลาด";
+        console.warn("Chatbot Performance API error:", err);
+      }
+    };
+
+    document.getElementById("student-name").textContent = userId || "-";
+    document.getElementById("student-id").textContent = userId || "-";
     document.getElementById("overall-value-wide").textContent = "0%";
     document.getElementById("overall-bar-wide").style.width = "0%";
     document.getElementById("bookroll-donut-done").textContent = "0";
@@ -2739,60 +3075,53 @@
 
     const code = params.get("code");
     const error = params.get("error");
-    const hasActiveSession = !!(auth?.token?.access_token || auth?.userId);
-    const shouldAutoLogin = !hasActiveSession && !code && !error;
-
-    if (shouldAutoLogin) {
-      startLogin().catch((e) => {
-        console.warn("Auto login failed:", e);
-      });
+    if (error) {
+      console.warn("Login error:", error);
+    } else if (code) {
+      (async () => {
+        try {
+          const token = await exchangeCodeForToken(code);
+          const claims = token.id_token ? decodeJwt(token.id_token) : null;
+          const userinfo = token.access_token ? await fetchUserInfo(token.access_token) : null;
+          const resolvedUserId =
+            (userinfo && (userinfo.sub || userinfo.preferred_username || userinfo.email)) ||
+            (claims && (claims.sub || claims.preferred_username || claims.email)) ||
+            "-";
+          const authPayload = {
+            userId: resolvedUserId,
+            profile: userinfo || claims || {},
+            token: {
+              access_token: token.access_token,
+              id_token: token.id_token,
+              expires_in: token.expires_in,
+            },
+          };
+          storeAuth(authPayload);
+          setAuthState(authPayload);
+        } catch (e) {
+          console.warn("Login failed:", e);
+        } finally {
+          sessionStorage.removeItem("pkce_verifier");
+          const url = new URL(window.location.href);
+          url.searchParams.delete("code");
+          url.searchParams.delete("error");
+          window.history.replaceState({}, document.title, url.toString());
+        }
+      })();
     } else {
-      if (error) {
-        console.warn("Login error:", error);
-      } else if (code) {
-        (async () => {
-          try {
-            const token = await exchangeCodeForToken(code);
-            const claims = token.id_token ? decodeJwt(token.id_token) : null;
-            const userinfo = token.access_token ? await fetchUserInfo(token.access_token) : null;
-            const resolvedUserId =
-              (userinfo && (userinfo.sub || userinfo.preferred_username || userinfo.email)) ||
-              (claims && (claims.sub || claims.preferred_username || claims.email)) ||
-              "-";
-            const authPayload = {
-              userId: resolvedUserId,
-              profile: userinfo || claims || {},
-              token: {
-                access_token: token.access_token,
-                id_token: token.id_token,
-                expires_in: token.expires_in,
-              },
-            };
-            storeAuth(authPayload);
-            setAuthState(authPayload);
-          } catch (e) {
-            console.warn("Login failed:", e);
-          } finally {
-            sessionStorage.removeItem("pkce_verifier");
-            const url = new URL(window.location.href);
-            url.searchParams.delete("code");
-            url.searchParams.delete("error");
-            window.history.replaceState({}, document.title, url.toString());
-          }
-        })();
-      } else {
-        setAuthState(auth);
-      }
-
-      updateBookrollJsonDrawer();
-      updateVideoJsonDrawer();
-      fetchBookrollReadingData();
-      fetchVideoLearningProgress();
-      fetchCourseDetail();
-      if (SHOW_BOOKROLL) {
-        fetchBookroll();
-      }
+      setAuthState(auth);
     }
+
+    updateBookrollJsonDrawer();
+    updateVideoJsonDrawer();
+    fetchBookrollReadingData();
+    fetchVideoLearningProgress();
+    fetchCourseDetail();
+    if (SHOW_BOOKROLL) {
+      fetchBookroll();
+    }
+        fetchChatbotSpeed();
+        fetchChatbotPerformance();
 
     const unitCtx = document.getElementById("unitChart");
     if (unitCtx) {
