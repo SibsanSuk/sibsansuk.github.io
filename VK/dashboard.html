@@ -2232,7 +2232,6 @@
             const progressDetail = reading
               ? `อ่าน ${reading.read ?? "-"} / ${reading.total ?? "-"} หน้า`
               : (video ? `รับชม ${video.progress}%` : (videoApiFailed ? "ไม่สามารถดึง API ได้" : "ไม่มีข้อมูล API"));
-            const subId = sub.id || "-";
             const seqTitle = it.seqTitle ? `<div class="text-[11px] text-slate-400">SEQ: ${escapeHtml(it.seqTitle)}</div>` : "";
             return `
               <div class="panel p-4 flex items-center justify-between gap-4">
@@ -2242,8 +2241,7 @@
                     <div class="text-lg font-bold truncate" title="${escapeHtml(`${headingPrefix}${it.title || ""}`)}">${escapeHtml(`${headingPrefix}${it.title || "-"}`)}</div>
                     ${seqTitle}
                     <div class="mt-1 text-slate-500 font-semibold mono text-xs break-all">
-                      <div>${escapeHtml(kind)} • ${escapeHtml(pctText)} • ${escapeHtml(progressDetail)}</div>
-                      <div>BLOCK • ID: ${escapeHtml(subId)}</div>
+                      <div>${escapeHtml(progressDetail)}</div>
                     </div>
                   </div>
                 </div>
