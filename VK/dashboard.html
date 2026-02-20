@@ -481,6 +481,9 @@
         alert("กรุณาใส่ client_id ก่อนใช้งานปุ่ม Login");
         return;
       }
+      if (courseId) {
+        sessionStorage.setItem("post_login_courseid", courseId);
+      }
       const url = await buildAuthUrl();
       window.location.href = url;
     };
@@ -584,6 +587,16 @@
       if (nextCourseId) url.searchParams.set("courseid", nextCourseId);
       else url.searchParams.delete("courseid");
       window.history.replaceState({}, document.title, url.toString());
+    };
+
+    const restoreCourseIdAfterLogin = () => {
+      if (courseId) return;
+      const savedCourseId = sessionStorage.getItem("post_login_courseid");
+      if (!savedCourseId) return;
+      courseId = savedCourseId;
+      sessionStorage.removeItem("post_login_courseid");
+      applyParams(courseId);
+      syncHeader();
     };
 
     const syncHeader = () => {
@@ -2756,15 +2769,9 @@
 
     const code = params.get("code");
     const error = params.get("error");
-    const hasOidcTransientParams =
-      params.has("code") ||
-      params.has("error") ||
-      params.has("state") ||
-      params.has("session_state") ||
-      params.has("iss") ||
-      params.has("stateid");
     if (error) {
       console.warn("Login error:", error);
+      restoreCourseIdAfterLogin();
       setAuthState(auth);
       loadDashboardData();
     } else if (code) {
@@ -2787,6 +2794,7 @@
             },
           };
           storeAuth(authPayload);
+          restoreCourseIdAfterLogin();
           setAuthState(authPayload);
           loadDashboardData();
         } catch (e) {
