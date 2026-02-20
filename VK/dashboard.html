@@ -345,6 +345,12 @@
                   <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                     <div>
                       <div class="text-2xl font-extrabold">Dashboard สรุปผลการเรียน</div>
+                      <div class="mt-2 text-sm text-slate-600">
+                        ชื่อวิชา: <span id="header-course-name" class="font-semibold">-</span>
+                      </div>
+                      <div class="mt-1 text-sm text-slate-600">
+                        email ผู้เรียน: <span id="header-learner-email" class="font-semibold">-</span>
+                      </div>
                     </div>
                     <div class="flex items-center gap-2">
                       <button id="btn-login" class="pill text-sm px-4 py-3 font-semibold tracking-wide text-white grad-brand"><span>Login</span></button>
@@ -542,7 +548,7 @@
     const params = new URLSearchParams(window.location.search);
     let bookrollOverallChartInstance = null;
     let videoOverallChartInstance = null;
-    let userId = params.get("userId");
+    let userId = null;
     let courseId = params.get("courseid");
     if (courseId) {
       const courseEl = document.getElementById("course-id");
@@ -562,10 +568,8 @@
     if (inputUserEl) inputUserEl.value = userId || "";
     if (inputCourseEl) inputCourseEl.value = courseId || "";
 
-    const applyParams = (nextUserId, nextCourseId) => {
+    const applyParams = (nextCourseId) => {
       const url = new URL(window.location.href);
-      if (nextUserId) url.searchParams.set("userId", nextUserId);
-      else url.searchParams.delete("userId");
       if (nextCourseId) url.searchParams.set("courseid", nextCourseId);
       else url.searchParams.delete("courseid");
       window.history.replaceState({}, document.title, url.toString());
@@ -574,30 +578,24 @@
     const syncHeader = () => {
       if (currentUserEl) currentUserEl.textContent = userId || "-";
       if (currentCourseEl) currentCourseEl.textContent = courseId || "-";
-      const headerCourseTitleEl = document.getElementById("header-course-title");
-      if (headerCourseTitleEl) headerCourseTitleEl.textContent = decodeIfMojibake(window.courseDetailData?.courseTitle) || "-";
+      const headerCourseNameEl = document.getElementById("header-course-name");
+      if (headerCourseNameEl) {
+        headerCourseNameEl.textContent = decodeIfMojibake(window.courseDetailData?.courseTitle || window.courseDetailData?.title) || "-";
+      }
+      const headerLearnerEmailEl = document.getElementById("header-learner-email");
+      if (headerLearnerEmailEl) {
+        const profile = auth?.profile && typeof auth.profile === "object" ? auth.profile : {};
+        const email = typeof profile.email === "string" && profile.email.trim()
+          ? profile.email.trim()
+          : (typeof profile.preferred_username === "string" && profile.preferred_username.trim()
+            ? profile.preferred_username.trim()
+            : "-");
+        headerLearnerEmailEl.textContent = email;
+      }
       const courseEl = document.getElementById("course-id");
       if (courseEl) courseEl.textContent = courseId || "-";
       updateLoginDebugPanel();
     };
-
-    const loadBtn = document.getElementById("btn-load");
-    if (loadBtn) {
-      loadBtn.addEventListener("click", () => {
-        const nextUserId = inputUserEl ? inputUserEl.value.trim() : "";
-        const nextCourseId = inputCourseEl ? inputCourseEl.value.trim() : "";
-        userId = nextUserId || null;
-        courseId = nextCourseId || null;
-        applyParams(userId, courseId);
-        syncHeader();
-        fetchBookrollReadingData();
-        fetchVideoLearningProgress();
-        fetchCourseDetail();
-        if (SHOW_BOOKROLL) {
-          fetchBookroll();
-        }
-      });
-    }
 
     const topicTabsEl = document.getElementById("topic-tabs");
     if (topicTabsEl) {
@@ -2332,8 +2330,8 @@
         const key = data.courseKey || data.course_key || courseId;
         if (titleEl) titleEl.textContent = title;
         if (keyEl) keyEl.textContent = key;
-        const headerCourseTitleEl = document.getElementById("header-course-title");
-        if (headerCourseTitleEl) headerCourseTitleEl.textContent = title;
+        const headerCourseNameEl = document.getElementById("header-course-name");
+        if (headerCourseNameEl) headerCourseNameEl.textContent = title;
         window.courseDetailData = data;
         const acc = { chapter: 0, sequential: 0, vertical: 0, html: 0 };
         countKinds(data, acc);
@@ -2724,66 +2722,14 @@
     const setAuthState = (nextAuth) => {
       auth = nextAuth;
       updateAuthUi();
-      if (auth?.userId && !userId) {
-        userId = auth.userId;
-        if (inputUserEl) inputUserEl.value = userId;
-        applyParams(userId, courseId);
-        syncHeader();
-      }
+      userId = auth?.userId || null;
+      if (inputUserEl) inputUserEl.value = userId || "";
+      applyParams(courseId);
+      syncHeader();
       updateLoginDebugPanel();
-      fetchVideoLearningProgress();
     };
 
-    if (loginBtn) loginBtn.addEventListener("click", startLogin);
-    if (logoutBtn) logoutBtn.addEventListener("click", () => logout(auth));
-
-    const code = params.get("code");
-    const error = params.get("error");
-    const hasActiveSession = !!(auth?.token?.access_token || auth?.userId);
-    const shouldAutoLogin = !hasActiveSession && !code && !error;
-
-    if (shouldAutoLogin) {
-      startLogin().catch((e) => {
-        console.warn("Auto login failed:", e);
-      });
-    } else {
-      if (error) {
-        console.warn("Login error:", error);
-      } else if (code) {
-        (async () => {
-          try {
-            const token = await exchangeCodeForToken(code);
-            const claims = token.id_token ? decodeJwt(token.id_token) : null;
-            const userinfo = token.access_token ? await fetchUserInfo(token.access_token) : null;
-            const resolvedUserId =
-              (userinfo && (userinfo.sub || userinfo.preferred_username || userinfo.email)) ||
-              (claims && (claims.sub || claims.preferred_username || claims.email)) ||
-              "-";
-            const authPayload = {
-              userId: resolvedUserId,
-              profile: userinfo || claims || {},
-              token: {
-                access_token: token.access_token,
-                id_token: token.id_token,
-                expires_in: token.expires_in,
-              },
-            };
-            storeAuth(authPayload);
-            setAuthState(authPayload);
-          } catch (e) {
-            console.warn("Login failed:", e);
-          } finally {
-            sessionStorage.removeItem("pkce_verifier");
-            const url = new URL(window.location.href);
-            url.searchParams.delete("code");
-            url.searchParams.delete("error");
-            window.history.replaceState({}, document.title, url.toString());
-          }
-        })();
-      } else {
-        setAuthState(auth);
-      }
-
+    const loadDashboardData = () => {
       updateBookrollJsonDrawer();
       updateVideoJsonDrawer();
       fetchBookrollReadingData();
@@ -2792,6 +2738,63 @@
       if (SHOW_BOOKROLL) {
         fetchBookroll();
       }
+    };
+
+    if (loginBtn) loginBtn.addEventListener("click", startLogin);
+    if (logoutBtn) logoutBtn.addEventListener("click", () => logout(auth));
+
+    const code = params.get("code");
+    const error = params.get("error");
+    const hasOidcTransientParams =
+      params.has("code") ||
+      params.has("error") ||
+      params.has("state") ||
+      params.has("session_state") ||
+      params.has("iss") ||
+      params.has("stateid");
+    if (error) {
+      console.warn("Login error:", error);
+      setAuthState(auth);
+      loadDashboardData();
+    } else if (code) {
+      (async () => {
+        try {
+          const token = await exchangeCodeForToken(code);
+          const claims = token.id_token ? decodeJwt(token.id_token) : null;
+          const userinfo = token.access_token ? await fetchUserInfo(token.access_token) : null;
+          const resolvedUserId =
+            (userinfo && (userinfo.sub || userinfo.preferred_username || userinfo.email)) ||
+            (claims && (claims.sub || claims.preferred_username || claims.email)) ||
+            "-";
+          const authPayload = {
+            userId: resolvedUserId,
+            profile: userinfo || claims || {},
+            token: {
+              access_token: token.access_token,
+              id_token: token.id_token,
+              expires_in: token.expires_in,
+            },
+          };
+          storeAuth(authPayload);
+          setAuthState(authPayload);
+          loadDashboardData();
+        } catch (e) {
+          console.warn("Login failed:", e);
+        } finally {
+          sessionStorage.removeItem("pkce_verifier");
+          const url = new URL(window.location.href);
+          url.searchParams.delete("code");
+          url.searchParams.delete("error");
+          url.searchParams.delete("state");
+          url.searchParams.delete("session_state");
+          url.searchParams.delete("iss");
+          url.searchParams.delete("stateid");
+          window.history.replaceState({}, document.title, url.toString());
+        }
+      })();
+    } else {
+      setAuthState(auth);
+      loadDashboardData();
     }
 
     const unitCtx = document.getElementById("unitChart");
