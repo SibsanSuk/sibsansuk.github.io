@@ -249,6 +249,30 @@
     .mono{ font-feature-settings: "tnum" 1, "ss01" 1; }
     .text-brand-soft{ color: var(--brand-600); }
     .grad-brand{ background: linear-gradient(90deg, var(--brand-700), var(--brand-500)); }
+    #overall-bar-wide{
+      position: relative;
+      overflow: hidden;
+      animation: overallGlow 2.2s ease-in-out infinite;
+    }
+    #overall-bar-wide::after{
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -35%;
+      width: 35%;
+      height: 100%;
+      background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.6), rgba(255,255,255,0));
+      animation: overallShine 2.6s linear infinite;
+      pointer-events: none;
+    }
+    @keyframes overallShine{
+      from { left: -35%; }
+      to { left: 120%; }
+    }
+    @keyframes overallGlow{
+      0%, 100% { box-shadow: 0 0 0 rgba(31,185,183,0), 0 0 0 rgba(31,185,183,0); }
+      50% { box-shadow: 0 0 8px rgba(31,185,183,.5), 0 0 18px rgba(31,185,183,.3); }
+    }
     .grad-success{ background: linear-gradient(90deg, #18b879, #2fd19a); }
     .grad-danger{ background: linear-gradient(90deg, #f97316, #fb923c); }
     .btn-soft{
