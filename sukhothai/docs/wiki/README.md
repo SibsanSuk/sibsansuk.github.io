@@ -5,6 +5,7 @@
 ## Website Entry
 
 - เปิดเว็บ wiki: `docs/wiki/index.html`
+- เปิดเอกสาร `.md` แบบอ่านง่าย: `docs/wiki/view.html?doc=../mvp/content-registry-mvp.md`
 
 ## Quick Start
 

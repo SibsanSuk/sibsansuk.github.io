@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wiki Document Viewer</title>
+  <link rel="stylesheet" href="./viewer.css" />
+</head>
+<body>
+  <div class="bg-orb orb-a"></div>
+  <div class="bg-orb orb-b"></div>
+
+  <main class="viewer-shell">
+    <header class="viewer-header">
+      <a class="back-link" href="./index.html">กลับหน้า Wiki Portal</a>
+      <h1 id="doc-title">กำลังโหลดเอกสาร...</h1>
+      <p id="doc-path" class="doc-path"></p>
+      <div class="header-actions">
+        <a id="open-raw" class="btn secondary" href="#">เปิดไฟล์ต้นฉบับ</a>
+      </div>
+      <p id="doc-error" class="error" hidden></p>
+    </header>
+
+    <section class="layout">
+      <aside class="toc-wrap">
+        <h2>สารบัญ</h2>
+        <nav id="toc"></nav>
+      </aside>
+
+      <article id="content" class="content markdown-body"></article>
+    </section>
+  </main>
+
+  <script src="./md-viewer.js"></script>
+</body>
+</html>
+
