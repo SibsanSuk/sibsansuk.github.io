@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sukhothai - Content Registry (MVP)</title>
+  <style>
+    :root {
+      --bg: #f3efe6;
+      --ink: #2b241c;
+      --muted: #6b6156;
+      --panel: #fffdf8;
+      --line: #ded4c3;
+      --accent: #a0462c;
+      --accent-2: #1f6b5a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Noto Sans Thai", "Sarabun", system-ui, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(900px 420px at 0% -10%, #f7e8cc, transparent),
+        radial-gradient(1000px 480px at 100% 0%, #efe3cf, transparent),
+        var(--bg);
+      line-height: 1.5;
+    }
+
+    .wrap {
+      width: min(1200px, 94vw);
+      margin: 24px auto 48px;
+      display: grid;
+      gap: 16px;
+    }
+
+    header {
+      background: linear-gradient(140deg, #fff7e8, #fffdf8);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px 20px;
+      box-shadow: 0 10px 24px rgba(45, 31, 17, 0.08);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(24px, 2.8vw, 34px);
+      color: var(--accent);
+      letter-spacing: .2px;
+    }
+
+    .subtitle {
+      margin: 8px 0 0;
+      color: var(--muted);
+    }
+
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 10px 24px rgba(45, 31, 17, 0.05);
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 20px;
+      color: var(--accent-2);
+    }
+
+    ul { margin: 8px 0 0 20px; padding: 0; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    thead th {
+      text-align: left;
+      padding: 10px;
+      background: #f6efe2;
+      border-bottom: 1px solid var(--line);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    tbody td {
+      padding: 9px 10px;
+      border-top: 1px solid #eee5d7;
+      vertical-align: top;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border-radius: 10px;
+    }
+
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid #d9c9af;
+      background: #fff6ea;
+      font-size: 12px;
+    }
+
+    footer {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 720px) {
+      .wrap { width: min(1200px, 96vw); }
+      section { padding: 12px; }
+      table { font-size: 13px; }
+      thead th, tbody td { padding: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <h1>Sukhothai - Content Registry (MVP)</h1>
+      <p class="subtitle">แสดงผลจากเอกสาร <span class="mono">content-registry-mvp.md</span> สำหรับใช้ติดตามงานทีม</p>
+    </header>
+
+    <section>
+      <h2>1) Usage Rules</h2>
+      <ul>
+        <li>ห้ามเพิ่มรายการใหม่โดยไม่ระบุ owner + estimate + acceptance</li>
+        <li><span class="pill">priority</span>: P0 (must ship), P1 (important), P2 (optional for MVP)</li>
+        <li><span class="pill">estimate</span>: S (&lt;= 1 วัน), M (2-4 วัน), L (5-10 วัน)</li>
+        <li><span class="pill">status</span>: todo | doing | blocked | done</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>2) Resource Registry (MVP)</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>id</th><th>display_name_th</th><th>category</th><th>priority</th><th>owner</th><th>estimate</th><th>status</th><th>acceptance_criteria</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">rice</td><td>ข้าว</td><td>food</td><td>P0</td><td>design</td><td>S</td><td>todo</td><td>ใช้เป็นอาหารหลักและแสดงใน HUD ได้</td></tr>
+          <tr><td class="mono">fish</td><td>ปลา</td><td>food</td><td>P0</td><td>design</td><td>S</td><td>todo</td><td>ผลิตจากอาคารประมงและเข้า stock ได้</td></tr>
+          <tr><td class="mono">wood</td><td>ไม้</td><td>material</td><td>P0</td><td>design</td><td>S</td><td>todo</td><td>ใช้ก่อสร้างอาคารหลักได้</td></tr>
+          <tr><td class="mono">pottery</td><td>เครื่องปั้น</td><td>goods</td><td>P1</td><td>design</td><td>S</td><td>todo</td><td>จบ chain แล้วได้ output เข้าคลัง</td></tr>
+          <tr><td class="mono">labor</td><td>แรงงาน</td><td>population</td><td>P0</td><td>code</td><td>M</td><td>todo</td><td>ระบบจองแรงงานต่ออาคารทำงานถูกต้อง</td></tr>
+          <tr><td class="mono">faith</td><td>ศรัทธา</td><td>service</td><td>P1</td><td>code</td><td>M</td><td>todo</td><td>ค่า faith เพิ่มจากอาคารศาสนาและถูกอ่านโดย objective</td></tr>
+          <tr><td class="mono">gold</td><td>เงิน</td><td>economy</td><td>P1</td><td>code</td><td>M</td><td>todo</td><td>รายรับ/รายจ่ายพื้นฐานแสดงใน UI</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section>
+      <h2>3) Building Registry (MVP)</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>id</th><th>display_name_th</th><th>category</th><th>chain/service</th><th>priority</th><th>owner</th><th>estimate</th><th>status</th><th>acceptance_criteria</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">road</td><td>ถนน</td><td>infrastructure</td><td>connectivity</td><td>P0</td><td>code</td><td>M</td><td>todo</td><td>อาคารเชื่อมต่อถนนแล้วเดินทางได้</td></tr>
+          <tr><td class="mono">house_t1</td><td>บ้านชาวบ้าน</td><td>housing</td><td>population</td><td>P0</td><td>code</td><td>M</td><td>todo</td><td>รับผู้อยู่อาศัยและผูก need checks</td></tr>
+          <tr><td class="mono">house_t2</td><td>บ้านยกระดับ</td><td>housing</td><td>population</td><td>P1</td><td>code</td><td>M</td><td>todo</td><td>อัปเกรดจาก T1 เมื่อเงื่อนไขครบ</td></tr>
+          <tr><td class="mono">canal_segment</td><td>คลองส่งน้ำ</td><td>infrastructure</td><td>water_network</td><td>P0</td><td>code</td><td>M</td><td>todo</td><td>ขุดและเชื่อมเครือข่ายคลองได้ต่อเนื่อง</td></tr>
+          <tr><td class="mono">water_collect_point</td><td>จุดตักน้ำ</td><td>service</td><td>water_access</td><td>P0</td><td>code</td><td>M</td><td>todo</td><td>บ้านใกล้จุดตักน้ำ/คลองได้สถานะน้ำ</td></tr>
+          <tr><td class="mono">rice_farm</td><td>นาข้าว</td><td>production</td><td>rice_chain</td><td>P0</td><td>code</td><td>M</td><td>todo</td><td>สร้างงานผลิตข้าวตามรอบเวลา</td></tr>
+          <tr><td class="mono">fisher_hut</td><td>กระท่อมประมง</td><td>production</td><td>fish_chain</td><td>P0</td><td>code</td><td>M</td><td>todo</td><td>ผลิตปลาเมื่อเข้าถึงจุดน้ำได้</td></tr>
+          <tr><td class="mono">lumber_camp</td><td>กระท่อมตัดไม้</td><td>production</td><td>wood_chain</td><td>P0</td><td>code</td><td>M</td><td>todo</td><td>ผลิตไม้และส่งเข้า stockpile ได้</td></tr>
+          <tr><td class="mono">pottery_kiln</td><td>เตาเครื่องปั้น</td><td>production</td><td>pottery_chain</td><td>P1</td><td>code</td><td>L</td><td>todo</td><td>ใช้วัตถุดิบครบก่อนผลิต output</td></tr>
+          <tr><td class="mono">granary</td><td>ยุ้งฉาง</td><td>storage</td><td>food_storage</td><td>P0</td><td>code</td><td>M</td><td>todo</td><td>เพิ่มความจุอาหารและอ่านค่าได้ถูกต้อง</td></tr>
+          <tr><td class="mono">stockpile</td><td>โกดัง</td><td>storage</td><td>goods_storage</td><td>P0</td><td>code</td><td>M</td><td>todo</td><td>เก็บไม้/เครื่องปั้นและรองรับ distribution</td></tr>
+          <tr><td class="mono">market</td><td>ตลาด</td><td>service</td><td>distribution</td><td>P0</td><td>code</td><td>L</td><td>todo</td><td>กระจายสินค้าให้บ้านในรัศมี</td></tr>
+          <tr><td class="mono">shrine</td><td>ศาสนสถานเล็ก</td><td>service</td><td>faith</td><td>P1</td><td>code</td><td>M</td><td>todo</td><td>เพิ่ม faith/ความสุขในพื้นที่บริการ</td></tr>
+          <tr><td class="mono">watch_post</td><td>จุดลาดตระเวน</td><td>safety</td><td>stability</td><td>P2</td><td>code</td><td>M</td><td>todo</td><td>ลดความเสี่ยงความไม่สงบพื้นฐาน</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section>
+      <h2>4) Character/Agent Registry (MVP)</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>id</th><th>role</th><th>priority</th><th>owner</th><th>estimate</th><th>status</th><th>acceptance_criteria</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">laborer</td><td>คนงานทั่วไป</td><td>P0</td><td>code</td><td>L</td><td>todo</td><td>รับ task และเดินเส้นทางได้</td></tr>
+          <tr><td class="mono">carrier</td><td>คนขนส่ง</td><td>P0</td><td>code</td><td>L</td><td>todo</td><td>รับ-ส่งสินค้าระหว่างอาคารได้</td></tr>
+          <tr><td class="mono">service_walker</td><td>ผู้ให้บริการ</td><td>P1</td><td>code</td><td>M</td><td>todo</td><td>กระจาย service token ให้บ้านตามรัศมีถนน</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section>
+      <h2>5) Systems Registry (MVP)</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>id</th><th>system</th><th>priority</th><th>owner</th><th>estimate</th><th>status</th><th>acceptance_criteria</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">sim_tick</td><td>fixed tick simulation</td><td>P0</td><td>code</td><td>L</td><td>todo</td><td>simulation รันคงที่ที่ tick rate ที่กำหนด</td></tr>
+          <tr><td class="mono">command_bus</td><td>player command pipeline</td><td>P0</td><td>code</td><td>L</td><td>todo</td><td>command valid/invalid ถูกจัดการครบ</td></tr>
+          <tr><td class="mono">placement_rules</td><td>placement validation</td><td>P0</td><td>code</td><td>M</td><td>todo</td><td>วางอาคารผิดเงื่อนไขแล้ว reject ได้</td></tr>
+          <tr><td class="mono">economy_runtime</td><td>production + consumption</td><td>P0</td><td>code</td><td>L</td><td>todo</td><td>resource delta ถูกต้องตาม chain</td></tr>
+          <tr><td class="mono">housing_needs</td><td>need evaluation + upgrade</td><td>P0</td><td>code</td><td>L</td><td>todo</td><td>T1-&gt;T2 ทำงานตามเงื่อนไข</td></tr>
+          <tr><td class="mono">service_coverage</td><td>water/market/faith coverage</td><td>P0</td><td>code</td><td>L</td><td>todo</td><td>coverage cache อัปเดตและอ่านใช้ได้</td></tr>
+          <tr><td class="mono">crisis_event</td><td>flood_or_drought</td><td>P0</td><td>code</td><td>M</td><td>todo</td><td>วิกฤตเริ่ม-จบและส่งผลต่อเศรษฐกิจ</td></tr>
+          <tr><td class="mono">win_lose_eval</td><td>objective evaluator</td><td>P0</td><td>code</td><td>M</td><td>todo</td><td>ตัดสินแพ้ชนะได้ถูกต้องตามเกณฑ์</td></tr>
+          <tr><td class="mono">save_load</td><td>persistence</td><td>P1</td><td>code</td><td>M</td><td>todo</td><td>save/load กลับมาเล่นต่อได้</td></tr>
+          <tr><td class="mono">hud_core</td><td>resource + objective HUD</td><td>P0</td><td>ui</td><td>M</td><td>todo</td><td>ผู้เล่นอ่านทรัพยากร/เป้าหมายได้ชัด</td></tr>
+          <tr><td class="mono">alerts_panel</td><td>alert &amp; warning UI</td><td>P1</td><td>ui</td><td>M</td><td>todo</td><td>แจ้งปัญหาหลักแบบ actionable</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section>
+      <h2>6) Map/Scenario Registry (MVP)</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>id</th><th>item</th><th>priority</th><th>owner</th><th>estimate</th><th>status</th><th>acceptance_criteria</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">map_river_01</td><td>แผนที่ริมน้ำหลัก</td><td>P0</td><td>design</td><td>M</td><td>todo</td><td>เล่นครบ journey 0-15 นาทีได้</td></tr>
+          <tr><td class="mono">fish_spots</td><td>จุดปลาในแม่น้ำ</td><td>P0</td><td>design</td><td>S</td><td>todo</td><td>ระบบประมงหา resource ได้</td></tr>
+          <tr><td class="mono">fertile_zones</td><td>พื้นที่นาปลูกได้</td><td>P0</td><td>design</td><td>S</td><td>todo</td><td>อาคารนาให้ผลผลิตตามเงื่อนไข</td></tr>
+          <tr><td class="mono">crisis_trigger_01</td><td>trigger วิกฤต</td><td>P0</td><td>design</td><td>S</td><td>todo</td><td>วิกฤตเกิดตาม timeline เดโม</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section>
+      <h2>7) UI/Tutorial Registry (MVP)</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>id</th><th>item</th><th>priority</th><th>owner</th><th>estimate</th><th>status</th><th>acceptance_criteria</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">tutorial_step_01</td><td>เริ่มด่าน + objective แรก</td><td>P0</td><td>ui</td><td>S</td><td>todo</td><td>ผู้เล่นเข้าใจเป้าหมายใน 10 วินาที</td></tr>
+          <tr><td class="mono">tutorial_step_02</td><td>วางถนน/บ้าน/คลอง/จุดตักน้ำ</td><td>P0</td><td>ui</td><td>S</td><td>todo</td><td>ผู้เล่นผ่านช่วงที่ 1 ได้โดยไม่ติด</td></tr>
+          <tr><td class="mono">tutorial_step_03</td><td>เปิด chain เศรษฐกิจ</td><td>P0</td><td>ui</td><td>S</td><td>todo</td><td>ผู้เล่นเริ่มผลิตข้าว/ไม้ได้</td></tr>
+          <tr><td class="mono">end_of_run_summary</td><td>หน้าสรุปจบด่าน</td><td>P1</td><td>ui</td><td>M</td><td>todo</td><td>แสดงผลแพ้/ชนะและ metric หลัก</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section>
+      <h2>8) Milestone Mapping</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>milestone</th><th>includes</th><th>target</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">M1 Foundation</td><td>sim_tick, command_bus, placement_rules, map_river_01</td><td>สัปดาห์ 1-2</td></tr>
+          <tr><td class="mono">M2 Core Economy</td><td>rice/fish/wood chains, housing_needs, granary/stockpile</td><td>สัปดาห์ 3-4</td></tr>
+          <tr><td class="mono">M3 Playable Loop</td><td>market, service_coverage, HUD/tutorial ช่วงต้น</td><td>สัปดาห์ 5-6</td></tr>
+          <tr><td class="mono">M4 Objective Layer</td><td>crisis_event, win_lose_eval, summary screen</td><td>สัปดาห์ 7-8</td></tr>
+          <tr><td class="mono">M5 Polish</td><td>alerts, balance pass, bugfix, playtest support</td><td>สัปดาห์ 9-10</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <footer>Change Log: 2026-02-20 - Initial MVP registry created.</footer>
+  </main>
+</body>
+</html>
