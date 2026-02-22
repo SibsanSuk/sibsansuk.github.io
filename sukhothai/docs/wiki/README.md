@@ -1,6 +1,6 @@
 # Sukhothai Wiki Hub
 
-ศูนย์กลางเอกสารสำหรับทีมงาน แยกตามผู้ใช้งานเพื่อเข้าถึงง่าย
+ศูนย์กลางเอกสารสำหรับ MVP เท่านั้น (ไม่แสดงบันทึกหลังบ้าน)
 
 ## Website Entry
 
@@ -9,8 +9,9 @@
 
 ## Quick Start
 
-- สายพัฒนา (Dev/Agent): `docs/wiki/developers/README.md`
-- ผู้เกี่ยวข้อง (PM/Design/Producer/Investor view): `docs/wiki/stakeholders/README.md`
+- สรุป MVP: `docs/wiki/view.html?doc=../mvp/mvp-summary.md`
+- ทะเบียนขอบเขต MVP: `docs/wiki/view.html?doc=../mvp/content-registry-mvp.md`
+- แผนการทำงาน MVP: `docs/wiki/view.html?doc=../mvp/phase-workflow.md`
 
 ## Source of Truth (MVP)
 
@@ -19,6 +20,4 @@
 3. `docs/mvp/mvp-summary.md`
 4. `docs/mvp/mvp-technical-design.md`
 
-## Wiki Structure
-
-ดูโครงสร้างเต็ม: `docs/wiki/STRUCTURE.md`
+หมายเหตุ: หน้าเว็บ wiki นี้จำกัดการแสดงผลเฉพาะเอกสารใน `docs/mvp/`

@@ -15,7 +15,7 @@
   }
 
   if (!isAllowedDocPath(docPath)) {
-    showError("เส้นทางไฟล์ไม่ถูกต้อง (อนุญาตเฉพาะ .md ใต้ docs/mvp, docs/shared, docs/vision, docs/wiki)");
+    showError("เส้นทางไฟล์ไม่ถูกต้อง (อนุญาตเฉพาะ .md ใต้ docs/mvp)");
     return;
   }
 
@@ -52,7 +52,7 @@
   }
 
   function isAllowedDocPath(path) {
-    return /^\.\.\/(mvp|shared|vision|wiki)\/[a-z0-9._/-]+\.md$/i.test(path);
+    return /^\.\.\/mvp\/[a-z0-9._/-]+\.md$/i.test(path);
   }
 
   function fileNameOf(path) {
@@ -258,7 +258,7 @@
     if (!/\.md($|#|\?)/i.test(href)) return href;
 
     const resolved = resolveRelativePath(docPath, href.split("#")[0].split("?")[0]);
-    if (!isAllowedDocPath(resolved)) return href;
+    if (!isAllowedDocPath(resolved)) return "#";
     return `./view.html?doc=${encodeURIComponent(resolved)}`;
   }
 
