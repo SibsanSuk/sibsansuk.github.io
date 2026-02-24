@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3:*)",
+      "Bash(gh api repos/terrastruct/d2/contents/d2js/js/examples/basic.html --jq '.content')",
+      "WebFetch(domain:www.jsdelivr.com)",
+      "WebFetch(domain:cdn.jsdelivr.net)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:esm.sh)",
+      "Bash(curl -s \"https://api.github.com/repos/terrastruct/d2-playground/contents/src/js/modules/layout.js\")"
+    ]
+  }
+}

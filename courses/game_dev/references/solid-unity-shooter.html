@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOLID Unity Top-down Shooter</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --S: #ff6b6b;
+    --O: #ffa94d;
+    --L: #69db7c;
+    --I: #4dabf7;
+    --D: #cc5de8;
+    --S-dim: rgba(255,107,107,0.1);
+    --O-dim: rgba(255,169,77,0.1);
+    --L-dim: rgba(105,219,124,0.1);
+    --I-dim: rgba(77,171,247,0.1);
+    --D-dim: rgba(204,93,232,0.1);
+    --comment: #5c6370;
+    --keyword: #c678dd;
+    --string: #98c379;
+    --number: #d19a66;
+    --type: #e5c07b;
+    --method: #61afef;
+    --var: #abb2bf;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      linear-gradient(rgba(77,171,247,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(77,171,247,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 60px;
+  }
+
+  .header .badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--I);
+    border: 1px solid var(--I);
+    padding: 4px 14px;
+    border-radius: 2px;
+    letter-spacing: 3px;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+  }
+
+  .header h1 {
+    font-size: clamp(36px, 6vw, 64px);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -2px;
+    margin-bottom: 12px;
+  }
+
+  .header h1 span { color: var(--I); }
+
+  .header p {
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 400;
+  }
+
+  /* SOLID Nav Pills */
+  .solid-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 48px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 20px;
+    border-radius: 3px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+
+  .pill.S { color: var(--S); border-color: var(--S); background: var(--S-dim); }
+  .pill.O { color: var(--O); border-color: var(--O); background: var(--O-dim); }
+  .pill.L { color: var(--L); border-color: var(--L); background: var(--L-dim); }
+  .pill.I { color: var(--I); border-color: var(--I); background: var(--I-dim); }
+  .pill.D { color: var(--D); border-color: var(--D); background: var(--D-dim); }
+  .pill:hover { filter: brightness(1.3); transform: translateY(-1px); }
+
+  /* File tree */
+  .filetree {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 48px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+  }
+
+  .filetree-title {
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .tree-line { line-height: 2; color: var(--muted); }
+  .tree-line .folder { color: var(--O); }
+  .tree-line .file { color: var(--text); }
+  .tree-line .tag { font-size: 10px; padding: 1px 6px; border-radius: 2px; margin-left: 8px; vertical-align: middle; }
+  .tag.S { color: var(--S); background: var(--S-dim); border: 1px solid var(--S); }
+  .tag.O { color: var(--O); background: var(--O-dim); border: 1px solid var(--O); }
+  .tag.L { color: var(--L); background: var(--L-dim); border: 1px solid var(--L); }
+  .tag.I { color: var(--I); background: var(--I-dim); border: 1px solid var(--I); }
+  .tag.D { color: var(--D); background: var(--D-dim); border: 1px solid var(--D); }
+
+  /* Code sections */
+  .section {
+    margin-bottom: 40px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .principle-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    width: 48px;
+    height: 48px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .badge-S { color: var(--S); background: var(--S-dim); border: 1px solid var(--S); }
+  .badge-O { color: var(--O); background: var(--O-dim); border: 1px solid var(--O); }
+  .badge-L { color: var(--L); background: var(--L-dim); border: 1px solid var(--L); }
+  .badge-I { color: var(--I); background: var(--I-dim); border: 1px solid var(--I); }
+  .badge-D { color: var(--D); background: var(--D-dim); border: 1px solid var(--D); }
+
+  .section-title h2 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .section-title p {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* Code block */
+  .code-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .code-filename {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .code-filename span {
+    color: var(--text);
+  }
+
+  .copy-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    background: none;
+    border: 1px solid var(--border);
+    padding: 3px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .copy-btn:hover { color: var(--text); border-color: var(--text); }
+  .copy-btn.copied { color: var(--L); border-color: var(--L); }
+
+  pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    padding: 20px;
+    overflow-x: auto;
+    tab-size: 4;
+  }
+
+  /* Syntax highlight */
+  .cm { color: var(--comment); font-style: italic; }
+  .kw { color: var(--keyword); }
+  .ty { color: var(--type); }
+  .me { color: var(--method); }
+  .st { color: var(--string); }
+  .nu { color: var(--number); }
+  .va { color: var(--var); }
+  .hl-S { background: rgba(255,107,107,0.06); display: block; margin: 0 -20px; padding: 0 20px; }
+  .hl-O { background: rgba(255,169,77,0.06); display: block; margin: 0 -20px; padding: 0 20px; }
+  .hl-L { background: rgba(105,219,124,0.06); display: block; margin: 0 -20px; padding: 0 20px; }
+  .hl-I { background: rgba(77,171,247,0.06); display: block; margin: 0 -20px; padding: 0 20px; }
+  .hl-D { background: rgba(204,93,232,0.06); display: block; margin: 0 -20px; padding: 0 20px; }
+
+  /* Callout */
+  .callout {
+    display: flex;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    line-height: 1.6;
+    border-left: 3px solid;
+  }
+  .callout .icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .callout.S { background: var(--S-dim); border-color: var(--S); color: #ffb3b3; }
+  .callout.O { background: var(--O-dim); border-color: var(--O); color: #ffd8a8; }
+  .callout.L { background: var(--L-dim); border-color: var(--L); color: #b2f2bb; }
+  .callout.I { background: var(--I-dim); border-color: var(--I); color: #a5d8ff; }
+  .callout.D { background: var(--D-dim); border-color: var(--D); color: #e599f7; }
+
+  /* Summary table */
+  .summary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 60px;
+  }
+
+  .summary-header {
+    padding: 20px 24px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: -0.3px;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    padding: 12px 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+    vertical-align: top;
+    line-height: 1.6;
+  }
+  tr:last-child td { border-bottom: none; }
+  .p-letter {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 16px;
+    width: 50px;
+  }
+  .p-S { color: var(--S); }
+  .p-O { color: var(--O); }
+  .p-L { color: var(--L); }
+  .p-I { color: var(--I); }
+  .p-D { color: var(--D); }
+
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 3px;
+    color: var(--type);
+  }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 48px 0;
+    position: relative;
+  }
+  .divider::after {
+    content: attr(data-label);
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--bg);
+    padding: 0 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="badge">Unity C# · SOLID Principles</div>
+    <h1>Top-down <span>Shooter</span></h1>
+    <p>ตัวอย่างโปรเจกต์ที่ใช้ SOLID ทุกข้อในเกมจริง · สำหรับผู้เรียนที่มีประสบการณ์แล้ว</p>
+  </div>
+
+  <!-- Nav Pills -->
+  <div class="solid-nav">
+    <div class="pill S">S — Single Responsibility</div>
+    <div class="pill O">O — Open/Closed</div>
+    <div class="pill L">L — Liskov Substitution</div>
+    <div class="pill I">I — Interface Segregation</div>
+    <div class="pill D">D — Dependency Inversion</div>
+  </div>
+
+  <!-- File Tree -->
+  <div class="filetree">
+    <div class="filetree-title">📁 Project Structure</div>
+    <div class="tree-line"><span class="folder">Assets/Scripts/</span></div>
+    <div class="tree-line">&nbsp;&nbsp;├── <span class="folder">Input/</span></div>
+    <div class="tree-line">&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── <span class="file">PlayerInputActions.inputactions</span><span class="tag O">O</span></div>
+    <div class="tree-line">&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── <span class="file">IInputHandler.cs</span><span class="tag I">I</span><span class="tag D">D</span></div>
+    <div class="tree-line">&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── <span class="file">PlayerInputHandler.cs</span><span class="tag D">D</span> <span style="color:var(--muted);font-size:11px;">← SendMessage</span></div>
+    <div class="tree-line">&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── <span class="file">PlayerInputHandlerEvents.cs</span><span class="tag D">D</span> <span style="color:var(--muted);font-size:11px;">← UnityEvents</span></div>
+    <div class="tree-line">&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└── <span class="file">AIInputHandler.cs</span><span class="tag O">O</span></div>
+    <div class="tree-line">&nbsp;&nbsp;├── <span class="folder">Player/</span></div>
+    <div class="tree-line">&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── <span class="file">PlayerController.cs</span><span class="tag S">S</span><span class="tag D">D</span></div>
+    <div class="tree-line">&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── <span class="file">PlayerMover.cs</span><span class="tag S">S</span></div>
+    <div class="tree-line">&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└── <span class="file">PlayerHealth.cs</span><span class="tag S">S</span></div>
+    <div class="tree-line">&nbsp;&nbsp;├── <span class="folder">Combat/</span></div>
+    <div class="tree-line">&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── <span class="file">IDamageable.cs</span><span class="tag I">I</span></div>
+    <div class="tree-line">&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── <span class="file">Weapon.cs</span><span class="tag O">O</span></div>
+    <div class="tree-line">&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── <span class="file">Pistol.cs</span><span class="tag O">O</span></div>
+    <div class="tree-line">&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── <span class="file">Shotgun.cs</span><span class="tag O">O</span></div>
+    <div class="tree-line">&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└── <span class="file">RocketLauncher.cs</span><span class="tag O">O</span></div>
+    <div class="tree-line">&nbsp;&nbsp;├── <span class="folder">Enemy/</span></div>
+    <div class="tree-line">&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── <span class="file">EnemyBase.cs</span><span class="tag L">L</span></div>
+    <div class="tree-line">&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── <span class="file">WalkEnemy.cs</span><span class="tag L">L</span></div>
+    <div class="tree-line">&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── <span class="file">FlyEnemy.cs</span><span class="tag L">L</span></div>
+    <div class="tree-line">&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── <span class="file">ShooterEnemy.cs</span><span class="tag L">L</span></div>
+    <div class="tree-line">&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└── <span class="file">EnemyFactory.cs</span><span class="tag O">O</span></div>
+    <div class="tree-line">&nbsp;&nbsp;├── <span class="folder">Score/</span></div>
+    <div class="tree-line">&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└── <span class="file">ScoreManager.cs</span><span class="tag S">S</span></div>
+    <div class="tree-line">&nbsp;&nbsp;└── <span class="folder">UI/</span></div>
+    <div class="tree-line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="file">UIManager.cs</span><span class="tag S">S</span></div>
+  </div>
+
+  <!-- ===== SECTION I ===== -->
+  <div class="section" id="sec-I">
+    <div class="section-header">
+      <div class="principle-badge badge-I">I</div>
+      <div class="section-title">
+        <h2>Interface Segregation — สร้าง Interface เล็กๆ ก่อน</h2>
+        <p>เริ่มจาก Interface เพราะทุกอย่างในระบบจะ depend กัน ต้องวางรากฐานให้ดีก่อน</p>
+      </div>
+    </div>
+
+    <div class="callout I">
+      <span class="icon">💡</span>
+      <span>แทนที่จะทำ Interface ใหญ่ตัวเดียว เราแยกเป็น Interface เล็กๆ ตามหน้าที่ — ทั้ง SendMessage handler, UnityEvents handler, หรือ AI Bot ล้วน implement <code>IInputHandler</code> เดียวกัน <code>PlayerController</code> จึงไม่รู้ว่า input มาจากไหน</span>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">Input / <span>IInputHandler.cs</span></span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="cm">// [I] Interface Segregation + [D] Dependency Inversion
+// Interface นี้ไม่สนใจว่า input มาจาก PlayerInput SendMessage,
+// UnityEvents, legacy Input หรือ AI
+// PlayerController รู้จักแค่ตัวนี้เท่านั้น</span>
+<span class="kw">public interface</span> <span class="ty">IInputHandler</span>
+{
+    <span class="cm">// ทิศทางเคลื่อนที่ (ค่า -1 ถึง 1 ทั้ง x และ y)</span>
+    <span class="ty">Vector2</span> <span class="me">GetMoveInput</span>();
+
+    <span class="cm">// true เฉพาะเฟรมที่กดปุ่มยิง</span>
+    <span class="kw">bool</span> <span class="me">GetFireInput</span>();
+}</pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">Combat / <span>IDamageable.cs</span></span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="cm">// [I] Interface Segregation
+// แยก "รับ damage" ออกเป็น Interface ของตัวเอง
+// Player, Enemy, หรือแม้แต่ Barrel ที่ระเบิดได้ ล้วน implement ได้
+// โดยไม่ต้องมี inheritance เดียวกัน</span>
+<span class="kw">public interface</span> <span class="ty">IDamageable</span>
+{
+    <span class="kw">void</span> <span class="me">TakeDamage</span>(<span class="kw">int</span> amount);
+}</pre>
+    </div>
+  </div>
+
+  <div class="divider" data-label="DEPENDENCY INVERSION + NEW INPUT SYSTEM"></div>
+
+  <!-- ===== SECTION D ===== -->
+  <div class="section" id="sec-D">
+    <div class="section-header">
+      <div class="principle-badge badge-D">D</div>
+      <div class="section-title">
+        <h2>Dependency Inversion — PlayerInput Component ผ่าน IInputHandler</h2>
+        <p>PlayerController ไม่รู้จัก PlayerInput โดยตรง — รู้จักแค่ IInputHandler</p>
+      </div>
+    </div>
+
+    <div class="callout D">
+      <span class="icon">🎮</span>
+      <span><strong>ทำไมต้อง wrap PlayerInput ด้วย Interface?</strong> — ถ้า PlayerController เรียก PlayerInput โดยตรง จะทดสอบไม่ได้ เพิ่ม AI bot ไม่ได้ และเปลี่ยน input method ต้องแก้โค้ด แต่ถ้า wrap ไว้ใน <code>IInputHandler</code> แค่สลับ component ใน Inspector ก็เปลี่ยนได้ทันที</span>
+    </div>
+
+    <!-- Setup box -->
+    <div class="callout I" style="margin-bottom:16px;">
+      <span class="icon">📋</span>
+      <div>
+        <strong>ตั้งค่า PlayerInput Component ใน Unity Editor</strong><br><br>
+        1. <strong>Package Manager</strong> → ค้นหา <code>Input System</code> → Install → Restart<br>
+        2. Project Settings → Player → Active Input Handling → <strong>Input System Package (New)</strong><br>
+        3. เลือก Player GameObject → <strong>Add Component → Player Input</strong><br>
+        4. คลิก <strong>Create Actions</strong> → บันทึกเป็น <code>PlayerInputActions</code><br>
+        5. ใน Actions Asset: Action Map <strong>"Player"</strong> มี Action <strong>Move</strong> (Vector2) และ <strong>Fire</strong> (Button)<br>
+        6. Behavior → เลือก <strong>"Send Messages"</strong> หรือ <strong>"Invoke Unity Events"</strong><br>
+        7. เพิ่ม Component <strong>PlayerInputHandler</strong> (script ด้านล่าง) บน GameObject เดียวกัน
+      </div>
+    </div>
+
+    <!-- แบบ SendMessage -->
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">Input / <span>PlayerInputHandler.cs</span> &nbsp;—&nbsp; Behavior: Send Messages</span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="kw">using</span> UnityEngine;
+<span class="kw">using</span> UnityEngine.InputSystem;
+
+<span class="cm">// [D] Concrete implementation ของ IInputHandler โดยใช้ PlayerInput + SendMessage
+// PlayerInput Component จะเรียก OnMove / OnFire ผ่าน SendMessage อัตโนมัติ
+// เมื่อผู้เล่นกด input ที่ตรงกับ Action ใน Action Asset
+//
+// ⚠️ SendMessage ทำงานได้เฉพาะเมื่อ script นี้อยู่บน GameObject
+//    เดียวกับ PlayerInput Component เท่านั้น
+//
+// [I] implement เฉพาะ method ที่ต้องการ ไม่มีอะไรเกิน
+// [O] ถ้าอยากรองรับ AI bot แค่สร้าง AIInputHandler ใหม่ class เดียว</span>
+<span class="kw">public class</span> <span class="ty">PlayerInputHandler</span> : <span class="ty">MonoBehaviour</span>, <span class="ty">IInputHandler</span>
+{
+    <span class="cm">// PlayerInput Component จะ inject ค่าเหล่านี้ผ่าน SendMessage callbacks
+    // script นี้ไม่ต้อง GetComponent หรือ reference PlayerInput เอง</span>
+    <span class="kw">private</span> <span class="ty">Vector2</span> moveInput;
+    <span class="kw">private bool</span> firePressedThisFrame;
+
+    <span class="cm">// ----- SendMessage Callbacks -----
+    // ชื่อ method ต้องตรงกับ "On" + ชื่อ Action ใน Action Asset เป๊ะ
+    // เช่น Action "Move" → OnMove, Action "Fire" → OnFire</span>
+
+    <span class="cm">// called ทุกครั้งที่ค่า Move เปลี่ยน (กด/ปล่อย WASD หรือขยับ Stick)</span>
+    <span class="kw">void</span> <span class="me">OnMove</span>(<span class="ty">InputValue</span> value)
+    {
+        moveInput = value.<span class="me">Get</span>&lt;<span class="ty">Vector2</span>&gt;();
+    }
+
+    <span class="cm">// called เมื่อกดปุ่ม Fire (started phase เท่านั้น ไม่ triggered ซ้ำตอนค้างกด)</span>
+    <span class="kw">void</span> <span class="me">OnFire</span>(<span class="ty">InputValue</span> value)
+    {
+        <span class="cm">// isPressed ตรวจว่ากดอยู่หรือเปล่า — set flag เพื่อให้ PlayerController อ่านได้</span>
+        <span class="kw">if</span> (value.<span class="me">isPressed</span>)
+            firePressedThisFrame = <span class="kw">true</span>;
+    }
+
+    <span class="cm">// ----- IInputHandler implementation -----</span>
+
+    <span class="kw">public</span> <span class="ty">Vector2</span> <span class="me">GetMoveInput</span>() => moveInput;
+
+    <span class="kw">public bool</span> <span class="me">GetFireInput</span>()
+    {
+        <span class="cm">// อ่านค่าแล้ว clear ทันที — ป้องกันยิงซ้ำถ้า Update() เร็วกว่า callback</span>
+        <span class="kw">if</span> (firePressedThisFrame)
+        {
+            firePressedThisFrame = <span class="kw">false</span>;
+            <span class="kw">return true</span>;
+        }
+        <span class="kw">return false</span>;
+    }
+}</pre>
+    </div>
+
+    <!-- แบบ UnityEvents -->
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">Input / <span>PlayerInputHandlerEvents.cs</span> &nbsp;—&nbsp; Behavior: Invoke Unity Events</span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="kw">using</span> UnityEngine;
+<span class="kw">using</span> UnityEngine.InputSystem;
+
+<span class="cm">// [D] แบบที่ 2: ใช้ Invoke Unity Events แทน SendMessage
+// ต่างกันที่: method signature ต้องรับ InputAction.CallbackContext
+// และต้อง wire ใน Inspector ของ PlayerInput Component เอง
+//
+// ข้อดีของ UnityEvents vs SendMessage:
+//   UnityEvents → เห็น connection ชัดใน Inspector, type-safe กว่า, debug ง่าย
+//   SendMessage → setup น้อยกว่า แต่ connection ซ่อนอยู่ใน code</span>
+<span class="kw">public class</span> <span class="ty">PlayerInputHandlerEvents</span> : <span class="ty">MonoBehaviour</span>, <span class="ty">IInputHandler</span>
+{
+    <span class="kw">private</span> <span class="ty">Vector2</span> moveInput;
+    <span class="kw">private bool</span> firePressedThisFrame;
+
+    <span class="cm">// ----- UnityEvent target methods -----
+    // ใน Inspector ของ PlayerInput Component:
+    //   Events → Player → Move → ลาก GameObject แล้วเลือก method นี้
+    //   Events → Player → Fire → ลาก GameObject แล้วเลือก method นี้
+    //
+    // Method signature ต้องเป็น (InputAction.CallbackContext) เสมอ</span>
+
+    <span class="cm">// wired ไปที่ Events → Player → Move (performed)</span>
+    <span class="kw">public void</span> <span class="me">OnMove</span>(<span class="ty">InputAction</span>.<span class="ty">CallbackContext</span> context)
+    {
+        <span class="cm">// performed = มีค่า, canceled = ปล่อยปุ่ม (ค่าเป็น zero)</span>
+        moveInput = context.<span class="me">ReadValue</span>&lt;<span class="ty">Vector2</span>&gt;();
+    }
+
+    <span class="cm">// wired ไปที่ Events → Player → Fire (started) — triggered ครั้งเดียวตอนกด</span>
+    <span class="kw">public void</span> <span class="me">OnFire</span>(<span class="ty">InputAction</span>.<span class="ty">CallbackContext</span> context)
+    {
+        <span class="cm">// started phase = กดครั้งแรก เหมาะสำหรับ "ยิง 1 นัดต่อการกด"</span>
+        <span class="kw">if</span> (context.phase == <span class="ty">InputActionPhase</span>.Started)
+            firePressedThisFrame = <span class="kw">true</span>;
+    }
+
+    <span class="cm">// ----- IInputHandler implementation -----</span>
+
+    <span class="kw">public</span> <span class="ty">Vector2</span> <span class="me">GetMoveInput</span>() => moveInput;
+
+    <span class="kw">public bool</span> <span class="me">GetFireInput</span>()
+    {
+        <span class="kw">if</span> (firePressedThisFrame)
+        {
+            firePressedThisFrame = <span class="kw">false</span>;
+            <span class="kw">return true</span>;
+        }
+        <span class="kw">return false</span>;
+    }
+}</pre>
+    </div>
+
+    <!-- เปรียบเทียบ SendMessage vs UnityEvents -->
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">⚖️ เปรียบเทียบ SendMessage vs Invoke Unity Events</span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="cm">// ============================================================
+//  Feature           | Send Messages       | Invoke Unity Events
+// ============================================================
+//  Setup             | เพิ่ม script อย่าง  | ต้อง wire ใน Inspector
+//                    | เดียว               | ทีละ Action ทีละ method
+// ------------------------------------------------------------
+//  Method signature  | OnMove(InputValue)  | OnMove(CallbackContext)
+// ------------------------------------------------------------
+//  Connection        | ซ่อนอยู่ใน naming  | เห็นใน Inspector ชัดเจน
+//  visibility        | convention          |
+// ------------------------------------------------------------
+//  Type safety       | ต่ำกว่า             | สูงกว่า
+// ------------------------------------------------------------
+//  Performance       | SendMessage ช้ากว่า | เร็วกว่า (direct invoke)
+//                    | (reflection)        |
+// ------------------------------------------------------------
+//  Multi-component   | broadcast ได้ทุก   | เลือก wire เฉพาะที่ต้องการ
+//                    | component บน GO    |
+// ------------------------------------------------------------
+//  ข้อสรุป           | เหมาะสำหรับ        | เหมาะสำหรับ production
+//                    | prototype เร็ว     | และ team ใหญ่
+// ============================================================
+//
+//  ทั้งสองแบบ implement IInputHandler เหมือนกัน
+//  → PlayerController ไม่รู้และไม่สนว่าใช้แบบไหน (D)</span></pre>
+    </div>
+
+    <div class="callout O" style="margin-top:8px;">
+      <span class="icon">✨</span>
+      <span><strong>SOLID ในทางปฏิบัติ:</strong> drag <code>PlayerInputHandler</code> หรือ <code>PlayerInputHandlerEvents</code> ใส่ Inspector ของ PlayerController ก็ใช้ได้ทั้งคู่ — หรือจะสร้าง <code>AIInputHandler</code> ใหม่ก็ไม่ต้องแก้ PlayerController แม้แต่บรรทัดเดียว นี่คือ D + I + O ทำงานร่วมกัน</span>
+    </div>
+  </div>
+
+  <div class="divider" data-label="SINGLE RESPONSIBILITY"></div>
+
+  <!-- ===== SECTION S ===== -->
+  <div class="section" id="sec-S">
+    <div class="section-header">
+      <div class="principle-badge badge-S">S</div>
+      <div class="section-title">
+        <h2>Single Responsibility — 1 Class = 1 หน้าที่</h2>
+        <p>แทนที่ Player class เดียวจะทำทุกอย่าง แยกออกเป็น Controller, Mover, Health</p>
+      </div>
+    </div>
+
+    <div class="callout S">
+      <span class="icon">✂️</span>
+      <span><code>PlayerController</code> รับ input แล้วสั่งการ &nbsp;|&nbsp; <code>PlayerMover</code> คำนวณ movement &nbsp;|&nbsp; <code>PlayerHealth</code> จัดการ HP — แก้ไข movement ไม่กระทบ HP logic และกลับกัน</span>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">Player / <span>PlayerController.cs</span></span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="kw">using</span> UnityEngine;
+
+<span class="cm">// [S] หน้าที่เดียว: รับ Input แล้วสั่งให้ component อื่นทำงาน
+// [D] พึ่ง IInputHandler Interface — ไม่รู้จัก NewInputHandler หรือ AIInputHandler โดยตรง
+// เปลี่ยน input source ทำได้ใน Inspector โดยไม่แก้โค้ดนี้เลย</span>
+<span class="kw">public class</span> <span class="ty">PlayerController</span> : <span class="ty">MonoBehaviour</span>
+{
+    <span class="cm">// drag NewInputHandler หรือ AIInputHandler ใส่ใน Inspector ก็ได้
+    // PlayerController ไม่สนว่าเป็น concrete class อะไร</span>
+    [<span class="ty">SerializeField</span>] <span class="kw">private</span> <span class="ty">MonoBehaviour</span> inputHandlerMono;
+    [<span class="ty">SerializeField</span>] <span class="kw">private</span> <span class="ty">PlayerMover</span> mover;
+    [<span class="ty">SerializeField</span>] <span class="kw">private</span> <span class="ty">Weapon</span> currentWeapon;
+
+    <span class="kw">private</span> <span class="ty">IInputHandler</span> input; <span class="cm">// เก็บเป็น Interface ไม่ใช่ concrete class</span>
+
+    <span class="kw">void</span> <span class="me">Start</span>()
+    {
+        <span class="cm">// Cast MonoBehaviour → Interface ตอน runtime</span>
+        input = inputHandlerMono <span class="kw">as</span> <span class="ty">IInputHandler</span>;
+
+        <span class="kw">if</span> (input == <span class="kw">null</span>)
+            <span class="ty">Debug</span>.<span class="me">LogError</span>(<span class="st">"inputHandlerMono ต้อง implement IInputHandler!"</span>);
+    }
+
+    <span class="kw">void</span> <span class="me">Update</span>()
+    {
+        <span class="cm">// สั่ง Mover ให้เคลื่อนที่ — ไม่คำนวณ movement เอง (S)
+        // GetMoveInput() อาจมาจาก WASD, Gamepad Stick, หรือ AI — ไม่สนใจ (D)</span>
+        mover.<span class="me">Move</span>(input.<span class="me">GetMoveInput</span>());
+
+        <span class="cm">// สั่ง Weapon ให้ยิง — ไม่รู้ว่า weapon ประเภทไหน (O)</span>
+        <span class="kw">if</span> (input.<span class="me">GetFireInput</span>())
+            currentWeapon.<span class="me">Fire</span>();
+    }
+}</pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">Player / <span>PlayerMover.cs</span></span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="kw">using</span> UnityEngine;
+
+<span class="cm">// [S] หน้าที่เดียว: คำนวณและ apply การเคลื่อนที่
+// ไม่รู้เรื่อง Input, HP, หรือ Score ทั้งสิ้น</span>
+<span class="kw">public class</span> <span class="ty">PlayerMover</span> : <span class="ty">MonoBehaviour</span>
+{
+    [<span class="ty">SerializeField</span>] <span class="kw">private float</span> speed = <span class="nu">5f</span>;
+
+    <span class="kw">public void</span> <span class="me">Move</span>(<span class="ty">Vector2</span> direction)
+    {
+        <span class="cm">// normalize เพื่อไม่ให้วิ่งเร็วขึ้นตอนกด diagonal</span>
+        <span class="ty">Vector2</span> normalized = direction.<span class="me">normalized</span>;
+        transform.<span class="me">Translate</span>(
+            <span class="kw">new</span> <span class="ty">Vector3</span>(normalized.x, normalized.y, <span class="nu">0</span>)
+            * speed * <span class="ty">Time</span>.deltaTime
+        );
+    }
+}</pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">Player / <span>PlayerHealth.cs</span></span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="kw">using</span> UnityEngine;
+
+<span class="cm">// [S] หน้าที่เดียว: จัดการ HP ของ Player
+// [I] implement IDamageable — ใครก็ยิงหา Player ได้โดยไม่รู้จัก class นี้
+// ใช้ Action event เพื่อแจ้ง UIManager โดยไม่ต้อง reference กันตรงๆ</span>
+<span class="kw">public class</span> <span class="ty">PlayerHealth</span> : <span class="ty">MonoBehaviour</span>, <span class="ty">IDamageable</span>
+{
+    [<span class="ty">SerializeField</span>] <span class="kw">private int</span> maxHP = <span class="nu">100</span>;
+    <span class="kw">private int</span> currentHP;
+
+    <span class="cm">// Events — UIManager subscribe ตรงนี้ PlayerHealth ไม่ต้องรู้จัก UI</span>
+    <span class="kw">public</span> System.<span class="ty">Action</span>&lt;<span class="kw">int</span>&gt; OnHealthChanged;
+    <span class="kw">public</span> System.<span class="ty">Action</span> OnPlayerDied;
+
+    <span class="kw">void</span> <span class="me">Start</span>() => currentHP = maxHP;
+
+    <span class="kw">public void</span> <span class="me">TakeDamage</span>(<span class="kw">int</span> amount)
+    {
+        currentHP = <span class="ty">Mathf</span>.<span class="me">Max</span>(<span class="nu">0</span>, currentHP - amount); <span class="cm">// clamp ไม่ให้ติดลบ</span>
+        OnHealthChanged?.<span class="me">Invoke</span>(currentHP);              <span class="cm">// แจ้ง UI</span>
+
+        <span class="kw">if</span> (currentHP &lt;= <span class="nu">0</span>)
+            OnPlayerDied?.<span class="me">Invoke</span>();
+    }
+
+    <span class="kw">public int</span> GetCurrentHP() => currentHP;
+    <span class="kw">public int</span> GetMaxHP() => maxHP;
+}</pre>
+    </div>
+  </div>
+
+  <div class="divider" data-label="OPEN / CLOSED"></div>
+
+  <!-- ===== SECTION O ===== -->
+  <div class="section" id="sec-O">
+    <div class="section-header">
+      <div class="principle-badge badge-O">O</div>
+      <div class="section-title">
+        <h2>Open/Closed — เพิ่ม Weapon ใหม่ โดยไม่แก้ของเดิม</h2>
+        <p>สร้าง abstract Weapon แล้วแต่ละ weapon เป็น subclass — เพิ่มได้เรื่อยๆ ไม่มีวันสิ้นสุด</p>
+      </div>
+    </div>
+
+    <div class="callout O">
+      <span class="icon">🔫</span>
+      <span>PlayerController เรียกแค่ <code>currentWeapon.Fire()</code> — ไม่รู้ว่าตอนนี้ถืออะไร จะเพิ่ม Sniper, Flamethrower, หรือ Laser Cannon ก็ไม่ต้องแก้ PlayerController แม้แต่บรรทัดเดียว</span>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">Combat / <span>Weapon.cs</span></span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="kw">using</span> UnityEngine;
+
+<span class="cm">// [O] Abstract base class — "เปิด" ให้ต่อขยาย แต่ "ปิด" ไม่ให้แก้ตรงนี้
+// PlayerController รู้จักแค่ class นี้ — ไม่รู้จัก Pistol, Shotgun โดยตรง</span>
+<span class="kw">public abstract class</span> <span class="ty">Weapon</span> : <span class="ty">MonoBehaviour</span>
+{
+    [<span class="ty">SerializeField</span>] <span class="kw">protected</span> <span class="ty">GameObject</span> bulletPrefab;
+    [<span class="ty">SerializeField</span>] <span class="kw">protected</span> <span class="ty">Transform</span> firePoint;   <span class="cm">// จุดที่กระสุนออก</span>
+    [<span class="ty">SerializeField</span>] <span class="kw">protected float</span> fireRate = <span class="nu">0.5f</span>;  <span class="cm">// ดีเลย์ระหว่างช็อต</span>
+
+    <span class="kw">protected float</span> nextFireTime;
+
+    <span class="cm">// subclass ต้อง override — นี่คือจุดที่ "ต่อขยาย" เกิดขึ้น</span>
+    <span class="kw">public abstract void</span> <span class="me">Fire</span>();
+
+    <span class="cm">// helper method ให้ subclass ใช้ตรวจสอบ cooldown</span>
+    <span class="kw">protected bool</span> <span class="me">CanFire</span>()
+    {
+        <span class="kw">return</span> <span class="ty">Time</span>.time >= nextFireTime;
+    }
+}</pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">Combat / <span>Pistol.cs</span></span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="kw">using</span> UnityEngine;
+
+<span class="cm">// [O] ต่อขยาย Weapon โดยไม่แก้ base class</span>
+<span class="kw">public class</span> <span class="ty">Pistol</span> : <span class="ty">Weapon</span>
+{
+    <span class="kw">public override void</span> <span class="me">Fire</span>()
+    {
+        <span class="kw">if</span> (!<span class="me">CanFire</span>()) <span class="kw">return</span>;
+
+        <span class="cm">// ยิงกระสุน 1 นัดตรงๆ</span>
+        <span class="ty">Instantiate</span>(bulletPrefab, firePoint.position, firePoint.rotation);
+        nextFireTime = <span class="ty">Time</span>.time + fireRate;
+    }
+}</pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">Combat / <span>Shotgun.cs</span></span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="kw">using</span> UnityEngine;
+
+<span class="cm">// [O] เพิ่ม Weapon ใหม่ — Pistol และ PlayerController ไม่ถูกแตะต้องเลย</span>
+<span class="kw">public class</span> <span class="ty">Shotgun</span> : <span class="ty">Weapon</span>
+{
+    [<span class="ty">SerializeField</span>] <span class="kw">private int</span> pelletCount = <span class="nu">5</span>;
+    [<span class="ty">SerializeField</span>] <span class="kw">private float</span> spreadAngle = <span class="nu">20f</span>;
+
+    <span class="kw">public override void</span> <span class="me">Fire</span>()
+    {
+        <span class="kw">if</span> (!<span class="me">CanFire</span>()) <span class="kw">return</span>;
+
+        <span class="cm">// ยิง pellet กระจาย spread angle</span>
+        <span class="kw">for</span> (<span class="kw">int</span> i = <span class="nu">0</span>; i &lt; pelletCount; i++)
+        {
+            <span class="kw">float</span> angle = <span class="ty">Random</span>.<span class="me">Range</span>(-spreadAngle / <span class="nu">2</span>, spreadAngle / <span class="nu">2</span>);
+            <span class="ty">Quaternion</span> rot = firePoint.rotation * <span class="ty">Quaternion</span>.<span class="me">Euler</span>(<span class="nu">0</span>, <span class="nu">0</span>, angle);
+            <span class="ty">Instantiate</span>(bulletPrefab, firePoint.position, rot);
+        }
+
+        nextFireTime = <span class="ty">Time</span>.time + fireRate;
+    }
+}</pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">Combat / <span>RocketLauncher.cs</span></span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="kw">using</span> UnityEngine;
+
+<span class="cm">// [O] เพิ่ม weapon ที่ 3 — ขยายระบบโดยสมบูรณ์ ไม่มีการแก้ไขใดๆ ก่อนหน้า</span>
+<span class="kw">public class</span> <span class="ty">RocketLauncher</span> : <span class="ty">Weapon</span>
+{
+    [<span class="ty">SerializeField</span>] <span class="kw">private float</span> explosionRadius = <span class="nu">3f</span>;
+
+    <span class="kw">public override void</span> <span class="me">Fire</span>()
+    {
+        <span class="kw">if</span> (!<span class="me">CanFire</span>()) <span class="kw">return</span>;
+
+        <span class="ty">GameObject</span> rocket = <span class="ty">Instantiate</span>(
+            bulletPrefab, firePoint.position, firePoint.rotation
+        );
+
+        <span class="cm">// ตั้ง explosion radius ให้ rocket component (ถ้ามี)</span>
+        <span class="ty">Rocket</span> rocketComp = rocket.<span class="me">GetComponent</span>&lt;<span class="ty">Rocket</span>&gt;();
+        <span class="kw">if</span> (rocketComp != <span class="kw">null</span>)
+            rocketComp.<span class="me">SetExplosionRadius</span>(explosionRadius);
+
+        nextFireTime = <span class="ty">Time</span>.time + fireRate;
+    }
+}</pre>
+    </div>
+  </div>
+
+  <div class="divider" data-label="LISKOV SUBSTITUTION"></div>
+
+  <!-- ===== SECTION L ===== -->
+  <div class="section" id="sec-L">
+    <div class="section-header">
+      <div class="principle-badge badge-L">L</div>
+      <div class="section-title">
+        <h2>Liskov Substitution — Enemy ทุกตัวใช้แทนกันได้</h2>
+        <p>ทุกที่ที่รับ EnemyBase สามารถรับ WalkEnemy, FlyEnemy, ShooterEnemy ได้โดยไม่พัง</p>
+      </div>
+    </div>
+
+    <div class="callout L">
+      <span class="icon">🔄</span>
+      <span>EnemyFactory คืน <code>EnemyBase</code> — ผู้เรียกไม่รู้และไม่จำเป็นต้องรู้ว่าได้ enemy ประเภทไหน พฤติกรรม <code>TakeDamage</code> และ <code>Die</code> ทำงานถูกต้องเหมือนกันในทุก subclass</span>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">Enemy / <span>EnemyBase.cs</span></span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="kw">using</span> UnityEngine;
+
+<span class="cm">// [L] Base class ที่ subclass ทุกตัวต้องใช้แทนได้อย่างถูกต้อง
+// [I] implement IDamageable — bullet ไม่ต้องรู้ว่าชน enemy ประเภทไหน</span>
+<span class="kw">public abstract class</span> <span class="ty">EnemyBase</span> : <span class="ty">MonoBehaviour</span>, <span class="ty">IDamageable</span>
+{
+    [<span class="ty">SerializeField</span>] <span class="kw">protected int</span> hp = <span class="nu">30</span>;
+    [<span class="ty">SerializeField</span>] <span class="kw">protected int</span> damage = <span class="nu">10</span>;
+    [<span class="ty">SerializeField</span>] <span class="kw">protected int</span> scoreValue = <span class="nu">100</span>;
+
+    <span class="kw">protected</span> <span class="ty">Transform</span> player;
+
+    <span class="kw">protected virtual void</span> <span class="me">Start</span>()
+    {
+        <span class="ty">GameObject</span> playerObj = <span class="ty">GameObject</span>.<span class="me">FindGameObjectWithTag</span>(<span class="st">"Player"</span>);
+        <span class="kw">if</span> (playerObj != <span class="kw">null</span>) player = playerObj.transform;
+    }
+
+    <span class="cm">// [L] TakeDamage ทำงานเหมือนกันทุก subclass — ไม่มีการ throw exception
+    // หรือทำพฤติกรรมที่ขัดแย้งกับ base class</span>
+    <span class="kw">public virtual void</span> <span class="me">TakeDamage</span>(<span class="kw">int</span> amount)
+    {
+        hp -= amount;
+        <span class="kw">if</span> (hp &lt;= <span class="nu">0</span>) <span class="me">Die</span>();
+    }
+
+    <span class="cm">// subclass override ได้ถ้าอยาก die effect พิเศษ</span>
+    <span class="kw">protected virtual void</span> <span class="me">Die</span>()
+    {
+        <span class="ty">ScoreManager</span>.Instance?.<span class="me">AddScore</span>(scoreValue);
+        <span class="ty">Destroy</span>(gameObject);
+    }
+}</pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">Enemy / <span>WalkEnemy.cs</span></span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="kw">using</span> UnityEngine;
+
+<span class="cm">// [L] ใช้แทน EnemyBase ได้ — TakeDamage ยัง work, Die ยัง work</span>
+<span class="kw">public class</span> <span class="ty">WalkEnemy</span> : <span class="ty">EnemyBase</span>
+{
+    [<span class="ty">SerializeField</span>] <span class="kw">private float</span> speed = <span class="nu">2f</span>;
+
+    <span class="kw">void</span> <span class="me">Update</span>()
+    {
+        <span class="kw">if</span> (player == <span class="kw">null</span>) <span class="kw">return</span>;
+
+        <span class="cm">// เดินตรงหาผู้เล่น</span>
+        transform.position = <span class="ty">Vector2</span>.<span class="me">MoveTowards</span>(
+            transform.position,
+            player.position,
+            speed * <span class="ty">Time</span>.deltaTime
+        );
+    }
+
+    <span class="cm">// ชนผู้เล่นแล้วทำ damage</span>
+    <span class="kw">void</span> <span class="me">OnTriggerEnter2D</span>(<span class="ty">Collider2D</span> col)
+    {
+        <span class="kw">if</span> (!col.<span class="me">CompareTag</span>(<span class="st">"Player"</span>)) <span class="kw">return</span>;
+
+        col.<span class="me">GetComponent</span>&lt;<span class="ty">IDamageable</span>&gt;()?.<span class="me">TakeDamage</span>(damage);
+    }
+}</pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">Enemy / <span>FlyEnemy.cs</span></span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="kw">using</span> UnityEngine;
+
+<span class="cm">// [L] FlyEnemy ใช้แทน EnemyBase ได้ — บินเร็วกว่าแต่พฤติกรรมหลักเหมือนกัน</span>
+<span class="kw">public class</span> <span class="ty">FlyEnemy</span> : <span class="ty">EnemyBase</span>
+{
+    [<span class="ty">SerializeField</span>] <span class="kw">private float</span> speed = <span class="nu">4f</span>;     <span class="cm">// เร็วกว่า WalkEnemy</span>
+    [<span class="ty">SerializeField</span>] <span class="kw">private float</span> zigzagAmount = <span class="nu">2f</span>; <span class="cm">// บินแบบ zigzag</span>
+
+    <span class="kw">void</span> <span class="me">Update</span>()
+    {
+        <span class="kw">if</span> (player == <span class="kw">null</span>) <span class="kw">return</span>;
+
+        <span class="ty">Vector2</span> dir = (player.position - transform.position).<span class="me">normalized</span>;
+
+        <span class="cm">// เพิ่ม zigzag movement ให้หลบกระสุนยากขึ้น</span>
+        <span class="ty">Vector2</span> zigzag = <span class="ty">Vector2</span>.Perpendicular(dir)
+            * <span class="ty">Mathf</span>.<span class="me">Sin</span>(<span class="ty">Time</span>.time * <span class="nu">3f</span>) * zigzagAmount;
+
+        transform.<span class="me">Translate</span>((dir + zigzag * <span class="nu">0.3f</span>) * speed * <span class="ty">Time</span>.deltaTime);
+    }
+
+    <span class="kw">void</span> <span class="me">OnTriggerEnter2D</span>(<span class="ty">Collider2D</span> col)
+    {
+        <span class="kw">if</span> (!col.<span class="me">CompareTag</span>(<span class="st">"Player"</span>)) <span class="kw">return</span>;
+        col.<span class="me">GetComponent</span>&lt;<span class="ty">IDamageable</span>&gt;()?.<span class="me">TakeDamage</span>(damage);
+    }
+}</pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">Enemy / <span>ShooterEnemy.cs</span></span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="kw">using</span> UnityEngine;
+
+<span class="cm">// [L] ShooterEnemy ยิงกระสุนแทนการพุ่งชน — แต่ยังใช้แทน EnemyBase ได้
+// TakeDamage และ Die ยังทำงานถูกต้องเหมือนเดิม (ไม่ throw exception)</span>
+<span class="kw">public class</span> <span class="ty">ShooterEnemy</span> : <span class="ty">EnemyBase</span>
+{
+    [<span class="ty">SerializeField</span>] <span class="kw">private</span> <span class="ty">GameObject</span> bulletPrefab;
+    [<span class="ty">SerializeField</span>] <span class="kw">private float</span> fireRate = <span class="nu">2f</span>;
+    [<span class="ty">SerializeField</span>] <span class="kw">private float</span> bulletSpeed = <span class="nu">5f</span>;
+    [<span class="ty">SerializeField</span>] <span class="kw">private float</span> attackRange = <span class="nu">8f</span>;
+
+    <span class="kw">private float</span> nextFireTime;
+
+    <span class="kw">void</span> <span class="me">Update</span>()
+    {
+        <span class="kw">if</span> (player == <span class="kw">null</span>) <span class="kw">return</span>;
+
+        <span class="kw">float</span> dist = <span class="ty">Vector2</span>.<span class="me">Distance</span>(transform.position, player.position);
+
+        <span class="cm">// ยิงเมื่ออยู่ในระยะและ cooldown หมดแล้ว</span>
+        <span class="kw">if</span> (dist &lt;= attackRange && <span class="ty">Time</span>.time >= nextFireTime)
+        {
+            <span class="me">Shoot</span>();
+            nextFireTime = <span class="ty">Time</span>.time + fireRate;
+        }
+    }
+
+    <span class="kw">private void</span> <span class="me">Shoot</span>()
+    {
+        <span class="kw">if</span> (bulletPrefab == <span class="kw">null</span>) <span class="kw">return</span>;
+
+        <span class="ty">Vector2</span> dir = (player.position - transform.position).<span class="me">normalized</span>;
+        <span class="ty">GameObject</span> bullet = <span class="ty">Instantiate</span>(bulletPrefab, transform.position, <span class="ty">Quaternion</span>.identity);
+
+        <span class="ty">Rigidbody2D</span> rb = bullet.<span class="me">GetComponent</span>&lt;<span class="ty">Rigidbody2D</span>&gt;();
+        <span class="kw">if</span> (rb != <span class="kw">null</span>)
+            rb.linearVelocity = dir * bulletSpeed;
+    }
+}</pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">Enemy / <span>EnemyFactory.cs</span></span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="kw">using</span> UnityEngine;
+
+<span class="cm">// [O] เพิ่ม EnemyType ใหม่ได้โดยเพิ่ม case ใน switch — Factory logic ไม่เปลี่ยน
+// [L] คืน EnemyBase — ผู้เรียกใช้ได้โดยไม่ต้องรู้ว่าเป็น subclass อะไร</span>
+<span class="kw">public enum</span> <span class="ty">EnemyType</span> { Walk, Fly, Shooter }
+
+<span class="kw">public class</span> <span class="ty">EnemyFactory</span> : <span class="ty">MonoBehaviour</span>
+{
+    [<span class="ty">SerializeField</span>] <span class="kw">private</span> <span class="ty">GameObject</span> walkEnemyPrefab;
+    [<span class="ty">SerializeField</span>] <span class="kw">private</span> <span class="ty">GameObject</span> flyEnemyPrefab;
+    [<span class="ty">SerializeField</span>] <span class="kw">private</span> <span class="ty">GameObject</span> shooterEnemyPrefab;
+
+    <span class="cm">// คืน EnemyBase — ผู้เรียกไม่ต้องรู้ type จริงๆ (L)</span>
+    <span class="kw">public</span> <span class="ty">EnemyBase</span> <span class="me">Spawn</span>(<span class="ty">EnemyType</span> type, <span class="ty">Vector3</span> position)
+    {
+        <span class="ty">GameObject</span> prefab = type <span class="kw">switch</span>
+        {
+            <span class="ty">EnemyType</span>.Walk    => walkEnemyPrefab,
+            <span class="ty">EnemyType</span>.Fly     => flyEnemyPrefab,
+            <span class="ty">EnemyType</span>.Shooter => shooterEnemyPrefab,
+            _ => <span class="kw">throw new</span> System.<span class="ty">ArgumentException</span>(<span class="st">$"Unknown EnemyType: {type}"</span>)
+        };
+
+        <span class="kw">return</span> <span class="ty">Instantiate</span>(prefab, position, <span class="ty">Quaternion</span>.identity)
+            .<span class="me">GetComponent</span>&lt;<span class="ty">EnemyBase</span>&gt;();
+    }
+}</pre>
+    </div>
+  </div>
+
+  <div class="divider" data-label="SCORE & UI"></div>
+
+  <!-- ===== Score + UI ===== -->
+  <div class="section">
+    <div class="section-header">
+      <div class="principle-badge badge-S">S</div>
+      <div class="section-title">
+        <h2>Score & UI — แต่ละ class มีหน้าที่ชัดเจน</h2>
+        <p>ScoreManager ไม่รู้จัก UI, UIManager ไม่ compute logic — ต่อกันผ่าน Events</p>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">Score / <span>ScoreManager.cs</span></span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="kw">using</span> UnityEngine;
+
+<span class="cm">// [S] หน้าที่เดียว: เก็บและเพิ่ม Score
+// ไม่รู้จัก UI เลย — แจ้งผ่าน event Action</span>
+<span class="kw">public class</span> <span class="ty">ScoreManager</span> : <span class="ty">MonoBehaviour</span>
+{
+    <span class="kw">public static</span> <span class="ty">ScoreManager</span> Instance; <span class="cm">// Singleton</span>
+    <span class="kw">public</span> System.<span class="ty">Action</span>&lt;<span class="kw">int</span>&gt; OnScoreChanged;
+
+    <span class="kw">private int</span> score = <span class="nu">0</span>;
+
+    <span class="kw">void</span> <span class="me">Awake</span>()
+    {
+        <span class="kw">if</span> (Instance == <span class="kw">null</span>) Instance = <span class="kw">this</span>;
+        <span class="kw">else</span> <span class="ty">Destroy</span>(gameObject);
+    }
+
+    <span class="kw">public void</span> <span class="me">AddScore</span>(<span class="kw">int</span> amount)
+    {
+        score += amount;
+        OnScoreChanged?.<span class="me">Invoke</span>(score); <span class="cm">// แจ้ง subscriber ทุกคน</span>
+    }
+
+    <span class="kw">public int</span> <span class="me">GetScore</span>() => score;
+}</pre>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-filename">UI / <span>UIManager.cs</span></span>
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      </div>
+      <pre><span class="kw">using</span> UnityEngine;
+<span class="kw">using</span> TMPro;
+
+<span class="cm">// [S] หน้าที่เดียว: แสดงผล UI
+// ไม่มี game logic ใดๆ — subscribe event แล้ว update text เท่านั้น</span>
+<span class="kw">public class</span> <span class="ty">UIManager</span> : <span class="ty">MonoBehaviour</span>
+{
+    [<span class="ty">SerializeField</span>] <span class="kw">private</span> <span class="ty">TextMeshProUGUI</span> hpText;
+    [<span class="ty">SerializeField</span>] <span class="kw">private</span> <span class="ty">TextMeshProUGUI</span> scoreText;
+    [<span class="ty">SerializeField</span>] <span class="kw">private</span> <span class="ty">GameObject</span> gameOverPanel;
+    [<span class="ty">SerializeField</span>] <span class="kw">private</span> <span class="ty">PlayerHealth</span> playerHealth;
+
+    <span class="kw">void</span> <span class="me">Start</span>()
+    {
+        <span class="cm">// Subscribe events — UIManager ไม่ต้องรู้ว่า HP คำนวณยังไง</span>
+        playerHealth.OnHealthChanged += hp => {
+            hpText.text = <span class="st">$"HP: {hp}"</span>;
+        };
+
+        playerHealth.OnPlayerDied += () => {
+            hpText.text = <span class="st">"HP: 0"</span>;
+            <span class="kw">if</span> (gameOverPanel != <span class="kw">null</span>)
+                gameOverPanel.<span class="me">SetActive</span>(<span class="kw">true</span>);
+        };
+
+        <span class="cm">// Subscribe score event — ไม่ต้องรู้จัก EnemyBase หรือ logic การให้คะแนน</span>
+        <span class="ty">ScoreManager</span>.Instance.OnScoreChanged += score => {
+            scoreText.text = <span class="st">$"Score: {score}"</span>;
+        };
+
+        <span class="cm">// initialize ค่าเริ่มต้น</span>
+        hpText.text = <span class="st">$"HP: {playerHealth.GetMaxHP()}"</span>;
+        scoreText.text = <span class="st">"Score: 0"</span>;
+    }
+}</pre>
+    </div>
+  </div>
+
+  <!-- Summary Table -->
+  <div class="summary">
+    <div class="summary-header">🗺️ สรุป — SOLID แต่ละข้ออยู่ที่ไหนในโปรเจกต์</div>
+    <table>
+      <tr>
+        <th>หลักการ</th>
+        <th>จำง่ายๆ</th>
+        <th>ปรากฏใน Class ไหน</th>
+      </tr>
+      <tr>
+        <td class="p-letter p-S">S</td>
+        <td>1 class = 1 หน้าที่</td>
+        <td><code>PlayerController</code>, <code>PlayerMover</code>, <code>PlayerHealth</code>, <code>ScoreManager</code>, <code>UIManager</code></td>
+      </tr>
+      <tr>
+        <td class="p-letter p-O">O</td>
+        <td>ต่อขยายได้ ไม่แก้ของเดิม</td>
+        <td><code>Weapon</code> → <code>Pistol</code>, <code>Shotgun</code>, <code>RocketLauncher</code> / <code>EnemyFactory</code> / <code>AIInputHandler</code> เพิ่มใหม่โดยไม่แก้อะไรเลย</td>
+      </tr>
+      <tr>
+        <td class="p-letter p-L">L</td>
+        <td>ลูกใช้แทนพ่อแม่ได้ ไม่พัง</td>
+        <td><code>EnemyBase</code> → <code>WalkEnemy</code>, <code>FlyEnemy</code>, <code>ShooterEnemy</code></td>
+      </tr>
+      <tr>
+        <td class="p-letter p-I">I</td>
+        <td>Interface เล็กๆ ตามหน้าที่</td>
+        <td><code>IInputHandler</code>, <code>IDamageable</code> — แยกจากกัน ไม่ยัด method ไม่เกี่ยว</td>
+      </tr>
+      <tr>
+        <td class="p-letter p-D">D</td>
+        <td>พึ่ง Interface ไม่ใช่ class จริง</td>
+        <td><code>PlayerController</code> พึ่ง <code>IInputHandler</code> — สลับ <code>PlayerInputHandler</code> (SendMessage) ↔ <code>PlayerInputHandlerEvents</code> (UnityEvents) ↔ <code>AIInputHandler</code> ได้ใน Inspector</td>
+      </tr>
+    </table>
+  </div>
+
+</div>
+
+<script>
+function copyCode(btn) {
+  const pre = btn.closest('.code-block').querySelector('pre');
+  const text = pre.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'copy';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+// Smooth scroll to section on pill click
+document.querySelectorAll('.pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    const letter = pill.classList[1];
+    const map = { S: 'sec-S', O: 'sec-O', L: 'sec-L', I: 'sec-I', D: 'sec-D' };
+    const el = document.getElementById(map[letter]);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+</script>
+</body>
+</html>

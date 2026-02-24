@@ -1,0 +1,1007 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GAME_DEV Slides</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/theme/white.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/plugin/highlight/monokai.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;500;600;700&display=swap">
+
+  <style>
+    @page {
+      size: A4 landscape;
+      margin: 1in;
+    }
+
+    :root {
+      --r-main-font: "Mitr", sans-serif;
+      --r-heading-font: "Mitr", sans-serif;
+      --ink: #161616;
+      --paper: #fffef7;
+      --accent: #ffd400;
+      --line: #1e1e1e;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Mitr", sans-serif;
+      background: #f1f1ec;
+    }
+
+    .reveal,
+    .reveal .slides,
+    .reveal h1,
+    .reveal h2,
+    .reveal h3,
+    .reveal p,
+    .reveal li {
+      font-family: "Mitr", sans-serif !important;
+    }
+
+    .topbar {
+      position: fixed;
+      top: 8px;
+      left: 8px;
+      right: 8px;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      border: 2px solid var(--line);
+      border-radius: 10px;
+      background: rgba(255, 254, 247, 0.98);
+      padding: 6px 8px;
+    }
+
+    .topbar label,
+    .topbar select,
+    .topbar a,
+    .topbar span {
+      font-size: 12px;
+      color: var(--ink);
+    }
+
+    .topbar select,
+    .topbar a {
+      border: 2px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 4px 8px;
+      text-decoration: none;
+    }
+
+    .reveal {
+      margin-top: 50px;
+      height: calc(100vh - 50px);
+    }
+
+    .reveal .slides {
+      text-align: left;
+    }
+
+    .reveal .slides section {
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      padding: 4px 4px;
+      color: var(--ink);
+      box-shadow: none;
+      width: 100% !important;
+      height: 100% !important;
+      max-width: none !important;
+      max-height: none !important;
+    }
+
+    /* Slide mode styles (set from markdown marker [mode:...]) */
+    .reveal .slides section.activity-mode {
+      background: #fffefb !important;
+      border: 2px solid #8e8e8e !important;
+      border-radius: 8px !important;
+      padding: 10px 12px !important;
+      box-shadow: none !important;
+    }
+
+    .reveal .slides section.activity-mode h1,
+    .reveal .slides section.activity-mode h2,
+    .reveal .slides section.activity-mode h3 {
+      background: #f3f3f3 !important;
+      border-color: #8e8e8e !important;
+      color: #2a2a2a !important;
+    }
+
+    .reveal .slides section.activity-mode::before {
+      content: "ACTIVITY";
+      display: inline-block;
+      font-size: 13px;
+      font-weight: 700;
+      color: #2a2a2a;
+      background: #eaeaea;
+      border: 1px solid #8e8e8e;
+      border-radius: 6px;
+      padding: 3px 9px;
+      margin-bottom: 6px;
+    }
+
+    .reveal h1,
+    .reveal h2,
+    .reveal h3 {
+      color: var(--ink);
+      margin-top: 0.1em;
+      margin-bottom: 0.22em;
+      line-height: 1.12;
+    }
+
+    .reveal h1,
+    .reveal h2 {
+      display: inline-block;
+      background: var(--accent);
+      border: 2px solid var(--line);
+      border-radius: 10px;
+      padding: 3px 9px;
+    }
+
+    .reveal h1 {
+      font-size: 1.22em;
+    }
+
+    .reveal h2 {
+      font-size: 0.98em;
+    }
+
+    .reveal h3 {
+      font-size: 0.84em;
+    }
+
+    .reveal p,
+    .reveal li {
+      color: #222;
+      line-height: 1.32;
+      font-size: 0.8em;
+    }
+
+    .reveal table {
+      width: 100%;
+      table-layout: fixed;
+      font-size: 0.68em;
+      line-height: 1.2;
+    }
+
+    .reveal th,
+    .reveal td {
+      padding: 0.22em 0.38em;
+      vertical-align: top;
+      word-break: break-word;
+    }
+
+    .reveal ul,
+    .reveal ol {
+      margin-top: 0.18em;
+      margin-bottom: 0.18em;
+      padding-left: 1.2em;
+    }
+
+    .reveal li {
+      margin-bottom: 0.12em;
+    }
+
+    .reveal blockquote {
+      border-left: 8px solid var(--accent);
+      background: #fffbe0;
+      padding: 10px 14px;
+      border-radius: 8px;
+      color: #252525;
+    }
+
+    .reveal pre {
+      border: 2px solid var(--line);
+      border-radius: 10px;
+      overflow: auto;
+      max-height: calc(100vh - 190px);
+    }
+
+    .reveal code {
+      border-radius: 5px;
+    }
+
+    .topbar button {
+      border: 2px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 4px 8px;
+      font: inherit;
+      font-size: 12px;
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+    .topbar button.active {
+      background: #fff4b8;
+    }
+
+    .topbar button.word-active {
+      background: #d9ecff;
+    }
+
+    /* Reading mode: textbook-like column */
+    body.reader-mode {
+      background: #ece9df;
+    }
+
+    body.reader-mode .reveal .slides {
+      text-align: left;
+    }
+
+    body.reader-mode .reveal .slides section {
+      max-width: 980px !important;
+      margin: 0 auto !important;
+      padding: 24px 28px !important;
+      background: #fffdf7 !important;
+      border: 1px solid #d8d2bf !important;
+      border-radius: 6px !important;
+      box-shadow: 0 8px 24px rgba(34, 30, 18, 0.08) !important;
+    }
+
+    body.reader-mode .reveal p,
+    body.reader-mode .reveal li {
+      font-size: 0.9em;
+      line-height: 1.5;
+    }
+
+    body.reader-mode .reveal h1,
+    body.reader-mode .reveal h2,
+    body.reader-mode .reveal h3 {
+      margin-bottom: 0.3em;
+    }
+
+    /* Word mode: render markdown as document pages, not slides */
+    #docView {
+      display: none;
+      padding: 64px 0 28px;
+    }
+
+    body.word-mode .reveal,
+    body.word-mode .footer-fixed {
+      display: none !important;
+    }
+
+    body.word-mode #docView {
+      display: block;
+    }
+
+    .doc-page {
+      width: min(8.27in, calc(100vw - 40px));
+      min-height: 11.69in;
+      margin: 0 auto 18px;
+      background: #fff;
+      border: 1px solid #ddd;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+      padding: 1in;
+      box-sizing: border-box;
+      color: #1c1c1c;
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    .doc-page h1,
+    .doc-page h2,
+    .doc-page h3 {
+      color: #111;
+      background: none;
+      border: 0;
+      border-radius: 0;
+      padding: 0;
+      margin: 0.7em 0 0.3em;
+      line-height: 1.3;
+      display: block;
+    }
+
+    .doc-page h1 { font-size: 30px; }
+    .doc-page h2 { font-size: 24px; }
+    .doc-page h3 { font-size: 20px; }
+
+    .doc-page p { margin: 0.38em 0; }
+
+    .doc-page ul,
+    .doc-page ol { margin: 0.3em 0 0.6em 1.2em; }
+
+    .doc-page li { margin-bottom: 0.2em; }
+
+    .doc-page img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 10px auto;
+    }
+
+    .doc-page pre {
+      white-space: pre-wrap;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 12px;
+      background: #f7f7f7;
+      overflow: auto;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .reveal .slides section img {
+      display: block;
+      margin: 0.5em auto;
+      max-width: 90%;
+      height: auto;
+    }
+
+    .reveal .slides section img.icon-inline {
+      display: inline-block;
+      margin: 0 4px;
+      max-width: none;
+      width: 28px;
+      height: 28px;
+      vertical-align: middle;
+    }
+
+    .reveal .slides .tips-box {
+      display: grid !important;
+      grid-template-columns: 40px minmax(0, 1fr);
+      align-items: start;
+      justify-items: start;
+      gap: 10px;
+      margin: 0.45em 0 0.6em;
+      padding: 8px 10px;
+      border: 1px solid #b8b8b8;
+      border-left: 5px solid #8f8f8f;
+      border-radius: 6px;
+      background: #f8f8f8;
+      color: #2a2a2a;
+      font-size: 0.74em !important;
+      line-height: 1.35 !important;
+      width: 100%;
+      box-sizing: border-box;
+      text-align: left !important;
+      list-style: none !important;
+      clear: both;
+      white-space: normal;
+    }
+
+    .reveal .slides .tips-box img.icon-inline[alt="Tips"] {
+      width: 40px;
+      height: 40px;
+      margin: 0;
+      flex: 0 0 40px;
+    }
+
+    .reveal .slides .tips-box strong {
+      display: block;
+      font-size: 0.98em;
+      letter-spacing: 0.01em;
+      margin-bottom: 2px;
+    }
+
+    .reveal .slides .tips-box .tips-content {
+      min-width: 0;
+      width: 100%;
+    }
+
+    .reveal .slides li.tips-box {
+      margin-left: 0 !important;
+      padding-left: 10px !important;
+    }
+
+    .reveal .slides ul:has(> li.tips-box),
+    .reveal .slides ol:has(> li.tips-box) {
+      padding-left: 0.2em;
+    }
+
+    .reveal .slides section figure {
+      margin: 0.6em auto;
+      text-align: center;
+    }
+
+    .reveal .slides .mermaid {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+      overflow: visible;
+      margin: 0.4em 0;
+    }
+
+    .reveal .slides .mermaid svg {
+      max-width: 100%;
+      height: auto;
+      overflow: visible;
+    }
+
+    .reveal .slides .d2-diagram {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      width: 100%;
+      max-height: calc(100vh - 180px);
+      overflow: auto;
+      margin: 0.4em 0;
+    }
+
+    .reveal .slides .d2-diagram svg {
+      /* Override D2's fixed pixel width/height so CSS can scale the SVG */
+      width: auto !important;
+      height: auto !important;
+      max-width: 100% !important;
+      max-height: calc(100vh - 180px) !important;
+      display: block;
+      font-family: "Mitr", sans-serif;
+    }
+
+    /* Reveal PDF export mode: keep one slide per page cleanly */
+    .print-pdf .topbar {
+      display: none !important;
+    }
+
+    .footer-fixed {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 10px;
+      z-index: 35;
+      font-size: 11px;
+      color: #6f7680;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      padding: 0;
+      line-height: 1.35;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .print-pdf .footer-fixed {
+      display: none !important;
+    }
+
+    .print-pdf .reveal {
+      margin-top: 0 !important;
+      height: auto !important;
+    }
+
+    .print-pdf .reveal .slides {
+      text-align: left;
+    }
+
+    .print-pdf .reveal .slides section {
+      width: 100% !important;
+      height: 100% !important;
+      min-height: 0 !important;
+      padding: 0 !important;
+      box-sizing: border-box;
+      border: 0 !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+
+    .print-pdf .reveal h1 {
+      font-size: 1.08em !important;
+    }
+
+    .print-pdf .reveal h2 {
+      font-size: 0.9em !important;
+    }
+
+    .print-pdf .reveal h3 {
+      font-size: 0.78em !important;
+    }
+
+    .print-pdf .reveal p,
+    .print-pdf .reveal li {
+      font-size: 0.72em !important;
+      line-height: 1.24 !important;
+    }
+
+    .print-pdf .reveal table {
+      font-size: 0.62em !important;
+      line-height: 1.16 !important;
+    }
+
+    .print-pdf .reveal ul,
+    .print-pdf .reveal ol {
+      margin-top: 0.12em !important;
+      margin-bottom: 0.12em !important;
+    }
+
+    .print-pdf .reveal li {
+      margin-bottom: 0.08em !important;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <span>GAME_DEV</span>
+    <label for="weekSelect">Chapter</label>
+    <select id="weekSelect"></select>
+    <a href="./index.html">Home</a>
+    <a href="./README.md">Open README</a>
+    <a id="exportPdfBtn" href="#" target="_blank" rel="noopener">Export PDF</a>
+    <button id="presentBtn" type="button">Present</button>
+    <button id="readerModeBtn" type="button">Reading Mode</button>
+    <button id="wordModeBtn" type="button">Word Mode</button>
+    <span id="topic"></span>
+  </div>
+
+  <div class="reveal">
+    <div class="slides" id="slidesRoot">
+      <section>
+        <h2>Loading...</h2>
+      </section>
+    </div>
+  </div>
+
+  <div id="docView"></div>
+
+  <div class="footer-fixed">
+    Game Design and Development : Sibsan Suksuchano
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5/plugin/markdown/markdown.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5/plugin/highlight/highlight.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <script>
+    const weeks = [
+      { id: '01', topic: 'Game Engine Fundamentals + Unity Basics' },
+      { id: '02', topic: 'Scene, Prefab, Transform System' },
+      { id: '03', topic: 'Input + Basic Gameplay Loop' },
+      { id: '04', topic: 'Physics-driven Gameplay' },
+      { id: '05', topic: 'UI, Feedback, and Game Feel' },
+      { id: '06', topic: 'Production Workflow + Build' },
+      { id: '07', topic: 'Final Playtest and Presentation' }
+    ];
+
+    function getWeekFromQuery() {
+      const value = new URLSearchParams(window.location.search).get('week') || '01';
+      return weeks.some((w) => w.id === value) ? value : '01';
+    }
+
+    function setQueryWeek(id) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('week', id);
+      localStorage.setItem('game_dev_last_week', id);
+      window.location.href = url.toString();
+    }
+
+    function setupWeekUI(current) {
+      const select = document.getElementById('weekSelect');
+      select.innerHTML = weeks
+        .map((w) => `<option value="${w.id}" ${w.id === current ? 'selected' : ''}>บทที่ ${w.id}</option>`)
+        .join('');
+      select.addEventListener('change', () => setQueryWeek(select.value));
+
+      const info = weeks.find((w) => w.id === current);
+      document.getElementById('topic').textContent = info ? `บทที่ ${info.id}: ${info.topic}` : '';
+      document.title = info ? `GAME_DEV - บทที่ ${info.id}` : 'GAME_DEV Slides';
+
+      const pdfUrl = new URL(window.location.href);
+      pdfUrl.searchParams.set('week', current);
+      pdfUrl.searchParams.set('print-pdf', '');
+      document.getElementById('exportPdfBtn').href = pdfUrl.toString();
+    }
+
+    function expandIconTags(markdown) {
+      const iconMap = {
+        Bell: 'https://www.svgrepo.com/show/513959/alt-bell.svg',
+        Camera: 'https://www.svgrepo.com/show/513964/alt-camera.svg',
+        Cog: 'https://www.svgrepo.com/show/513972/alt-cog.svg',
+        Tips: 'https://www.svgrepo.com/show/513962/alt-bulb.svg'
+      };
+
+      return markdown.replace(/\[([A-Za-z0-9_-]+)\]/g, (full, name) => {
+        const src = iconMap[name];
+        if (!src) return full;
+        return `<img class="icon-inline" src="${src}" alt="${name}" />`;
+      });
+    }
+
+    async function setupSlides(current) {
+      const root = document.getElementById('slidesRoot');
+      const mdPath = `slides/week${current}.md`;
+
+      if (window.location.protocol === 'file:') {
+        root.innerHTML = `
+          <section>
+            <h2>ต้องเปิดผ่าน local server</h2>
+            <pre><code>cd courses
+python3 -m http.server
+# open http://localhost:8000/game_dev/presentation.html?week=${current}</code></pre>
+          </section>
+        `;
+        return;
+      }
+
+      try {
+        const res = await fetch(mdPath, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`Cannot load ${mdPath} (${res.status})`);
+        const rawMd = await res.text();
+        window.__currentRawMarkdown = rawMd;
+        const expandedMd = expandIconTags(rawMd);
+
+        root.innerHTML = '';
+        const section = document.createElement('section');
+        section.setAttribute('data-markdown', '');
+        section.setAttribute('data-separator', '^---$');
+        section.setAttribute('data-separator-vertical', '^--$');
+        section.setAttribute('data-separator-notes', '^Note:');
+        section.setAttribute('data-charset', 'utf-8');
+
+        const tpl = document.createElement('script');
+        tpl.type = 'text/template';
+        tpl.textContent = expandedMd;
+
+        section.appendChild(tpl);
+        root.appendChild(section);
+      } catch (error) {
+        root.innerHTML = `
+          <section>
+            <h2>โหลดสไลด์ไม่สำเร็จ</h2>
+            <p>${String(error.message || error)}</p>
+          </section>
+        `;
+      }
+    }
+
+    function renderWordDocument(rawMd) {
+      const docView = document.getElementById('docView');
+      const expanded = expandIconTags(rawMd || '');
+      const blocks = expanded.split(/\n---\n/g).map((x) => x.trim()).filter(Boolean);
+      const pages = blocks.map((block) => {
+        const html = marked.parse(block, { gfm: true, breaks: true });
+        return `<article class="doc-page">${html}</article>`;
+      });
+      docView.innerHTML = pages.join('');
+    }
+
+    async function init() {
+      const currentWeek = getWeekFromQuery();
+      localStorage.setItem('game_dev_last_week', currentWeek);
+      setupWeekUI(currentWeek);
+      await setupSlides(currentWeek);
+
+      const deck = new Reveal({
+        hash: true,
+        controls: true,
+        progress: true,
+        slideNumber: 'c/t',
+        center: false,
+        width: 1280,
+        height: 720,
+        margin: 0.04,
+        pdfSeparateFragments: false,
+        transition: 'none',
+        backgroundTransition: 'none',
+        plugins: [RevealMarkdown, RevealHighlight]
+      });
+
+      await deck.initialize();
+
+      // Reading mode toggle (persisted)
+      const btn = document.getElementById('readerModeBtn');
+      const saved = localStorage.getItem('game_dev_reader_mode') === '1';
+      if (saved) {
+        document.body.classList.add('reader-mode');
+        btn.classList.add('active');
+      }
+
+      btn.addEventListener('click', () => {
+        const active = document.body.classList.toggle('reader-mode');
+        btn.classList.toggle('active', active);
+        localStorage.setItem('game_dev_reader_mode', active ? '1' : '0');
+        deck.layout();
+      });
+
+      // Word mode toggle (persisted): show markdown as document pages
+      const wordBtn = document.getElementById('wordModeBtn');
+      const wordSaved = localStorage.getItem('game_dev_word_mode') === '1';
+      if (wordSaved) {
+        document.body.classList.add('word-mode');
+        wordBtn.classList.add('word-active');
+        renderWordDocument(window.__currentRawMarkdown || '');
+      }
+
+      wordBtn.addEventListener('click', () => {
+        const active = document.body.classList.toggle('word-mode');
+        wordBtn.classList.toggle('word-active', active);
+        localStorage.setItem('game_dev_word_mode', active ? '1' : '0');
+        if (active) {
+          renderWordDocument(window.__currentRawMarkdown || '');
+        } else {
+          deck.layout();
+        }
+      });
+
+      // Fullscreen presentation toggle (Canva-like Present button)
+      const presentBtn = document.getElementById('presentBtn');
+      function updatePresentBtn() {
+        const isFs = !!document.fullscreenElement;
+        presentBtn.textContent = isFs ? 'Exit Fullscreen' : 'Present';
+        presentBtn.classList.toggle('active', isFs);
+      }
+
+      presentBtn.addEventListener('click', async () => {
+        try {
+          if (!document.fullscreenElement) {
+            await document.documentElement.requestFullscreen();
+          } else {
+            await document.exitFullscreen();
+          }
+        } catch (error) {
+          console.error('Fullscreen failed:', error);
+        } finally {
+          updatePresentBtn();
+          deck.layout();
+        }
+      });
+
+      document.addEventListener('fullscreenchange', () => {
+        updatePresentBtn();
+        deck.layout();
+      });
+      updatePresentBtn();
+
+      function applySlideModesFromMarkdown() {
+        const slides = [...document.querySelectorAll('.reveal .slides section')].filter(
+          (el) => !el.classList.contains('stack')
+        );
+
+        slides.forEach((slide) => {
+          const rawText = slide.textContent || '';
+          const m = rawText.match(/\[mode:(activity)\]/i);
+          if (!m) return;
+
+          const mode = m[1].toLowerCase();
+          slide.classList.add(`${mode}-mode`);
+
+          // Remove marker text from visible content wherever it appears.
+          const candidates = [...slide.querySelectorAll('p, li, h1, h2, h3, h4, h5')];
+          candidates.forEach((node) => {
+            if (node.textContent && /\[mode:(activity)\]/i.test(node.textContent)) {
+              // Remove only the marker token, keep existing inline HTML (e.g. Tips icon).
+              node.innerHTML = node.innerHTML.replace(/\[mode:(activity)\]/ig, '').trim();
+              const hasVisibleText = (node.textContent || '').trim().length > 0;
+              const hasMedia = node.querySelector('img, svg, video, audio, iframe');
+              if (!hasVisibleText && !hasMedia) node.remove();
+            }
+          });
+        });
+      }
+
+      function enhanceTipsBoxes() {
+        const candidates = [
+          ...document.querySelectorAll('.reveal .slides section p, .reveal .slides section li')
+        ];
+
+        candidates.forEach((node) => {
+          if (node.dataset.tipsEnhanced === '1') return;
+          const icon = node.querySelector('img.icon-inline[alt="Tips"]');
+          if (!icon) return;
+          node.dataset.tipsEnhanced = '1';
+          node.classList.add('tips-box');
+
+          const iconNode = icon.cloneNode(true);
+          icon.remove();
+
+          const content = document.createElement('div');
+          content.className = 'tips-content';
+
+          const title = document.createElement('strong');
+          title.textContent = 'Tips';
+          content.appendChild(title);
+
+          while (node.firstChild) {
+            content.appendChild(node.firstChild);
+          }
+
+          node.innerHTML = '';
+          node.appendChild(iconNode);
+          node.appendChild(content);
+        });
+      }
+
+      function initMermaidConfig() {
+        if (!window.mermaid) return;
+        mermaid.initialize({
+          startOnLoad: false,
+          securityLevel: 'loose',
+          theme: 'base',
+          flowchart: {
+            curve: 'basis',
+            htmlLabels: false,
+            useMaxWidth: true,
+            nodeSpacing: 55,
+            rankSpacing: 65,
+            padding: 20,
+            wrappingWidth: 220
+          },
+          themeVariables: {
+            fontFamily: 'Mitr, sans-serif',
+            fontSize: '16px',
+            primaryTextColor: '#142033',
+            lineColor: '#486a97',
+            clusterBkg: '#f6f9ff',
+            clusterBorder: '#8da9d3',
+            nodeBorder: '#355a8a',
+            mainBkg: '#ffffff'
+          }
+        });
+      }
+
+      function prepareMermaidBlocks() {
+        const mermaidBlocks = [
+          ...document.querySelectorAll(
+            'pre code.language-mermaid, pre code.mermaid, pre code[class*="language-mermaid"]'
+          )
+        ];
+
+        mermaidBlocks.forEach((code) => {
+          const pre = code.closest('pre');
+          if (!pre || pre.dataset.mermaidPrepared === '1') return;
+
+          const holder = document.createElement('div');
+          holder.className = 'mermaid-pending';
+          holder.dataset.mermaidSource = code.textContent || '';
+          pre.replaceWith(holder);
+        });
+      }
+
+      async function renderMermaidInSlide(slide) {
+        if (!window.mermaid || !slide) return;
+        const pending = [...slide.querySelectorAll('.mermaid-pending')];
+        if (!pending.length) return;
+
+        for (let i = 0; i < pending.length; i += 1) {
+          const holder = pending[i];
+          const source = holder.dataset.mermaidSource || '';
+          if (!source.trim()) continue;
+
+          const id = `mermaid-diagram-${Date.now()}-${i}`;
+          const result = await mermaid.render(id, source);
+          holder.innerHTML = result.svg;
+          holder.classList.remove('mermaid-pending');
+          holder.classList.add('mermaid');
+          if (typeof result.bindFunctions === 'function') {
+            result.bindFunctions(holder);
+          }
+        }
+      }
+
+      async function renderCurrentSlideMermaid() {
+        const current = deck.getCurrentSlide();
+        if (!current) return;
+        await renderMermaidInSlide(current);
+        deck.layout();
+      }
+
+      // ── D2 diagram support ──────────────────────────────────────────────
+      let _d2Instance = null;
+
+      async function loadD2() {
+        if (_d2Instance) return _d2Instance;
+        try {
+          const { D2 } = await import('https://esm.sh/@terrastruct/d2');
+          _d2Instance = new D2();
+          await _d2Instance.ready;
+          return _d2Instance;
+        } catch (err) {
+          console.error('D2 load failed:', err);
+          return null;
+        }
+      }
+
+      function prepareD2Blocks(scope = document) {
+        const blocks = [
+          ...scope.querySelectorAll(
+            'pre code.language-d2, pre code.d2, pre code[class*="language-d2"]'
+          )
+        ];
+        blocks.forEach((code) => {
+          const pre = code.closest('pre');
+          if (!pre || pre.dataset.d2Prepared === '1') return;
+          pre.dataset.d2Prepared = '1';
+          const holder = document.createElement('div');
+          holder.className = 'd2-pending';
+          holder.dataset.d2Source = code.textContent || '';
+          pre.replaceWith(holder);
+        });
+      }
+
+      async function renderD2InSlide(slide) {
+        if (!slide) return;
+        const pending = [...slide.querySelectorAll('.d2-pending')];
+        if (!pending.length) return;
+
+        const d2 = await loadD2();
+        if (!d2) return;
+
+        for (let i = 0; i < pending.length; i++) {
+          const holder = pending[i];
+          const source = holder.dataset.d2Source || '';
+          if (!source.trim()) continue;
+          try {
+            const result = await d2.compile(source);
+            const svg = await d2.render(result.diagram, {
+              ...result.renderOptions,
+              noXMLTag: true
+            });
+            holder.innerHTML = svg;
+
+            // Remove D2's fixed pixel dimensions so CSS max-width/max-height
+            // can scale the SVG correctly via the viewBox aspect ratio.
+            const svgEl = holder.querySelector('svg');
+            if (svgEl) {
+              const w = svgEl.getAttribute('width');
+              const h = svgEl.getAttribute('height');
+              if (w && h && !svgEl.getAttribute('viewBox')) {
+                svgEl.setAttribute('viewBox', `0 0 ${parseFloat(w)} ${parseFloat(h)}`);
+              }
+              svgEl.removeAttribute('width');
+              svgEl.removeAttribute('height');
+            }
+
+            holder.classList.remove('d2-pending');
+            holder.classList.add('d2-diagram');
+          } catch (err) {
+            console.error('D2 render failed:', err);
+            holder.innerHTML = `<pre style="color:red;font-size:0.7em">${err.message}</pre>`;
+            holder.classList.remove('d2-pending');
+          }
+        }
+      }
+
+      async function renderCurrentSlideD2() {
+        const current = deck.getCurrentSlide();
+        if (!current) return;
+        await renderD2InSlide(current);
+        deck.layout();
+      }
+
+      // Kick off D2 WASM load immediately so it's warm when slides need it.
+      loadD2().catch((error) => console.error('D2 preload failed:', error));
+
+      // Run after markdown plugin has finished injecting slide content.
+      setTimeout(() => {
+        applySlideModesFromMarkdown();
+        enhanceTipsBoxes();
+        initMermaidConfig();
+        prepareMermaidBlocks();
+        prepareD2Blocks();          // scan all slides in DOM
+        renderCurrentSlideMermaid().catch((error) => {
+          console.error('Mermaid render failed:', error);
+        });
+        renderCurrentSlideD2().catch((error) => {
+          console.error('D2 render failed:', error);
+        });
+      }, 0);
+
+      deck.on('slidechanged', ({ currentSlide }) => {
+        applySlideModesFromMarkdown();
+        enhanceTipsBoxes();
+        // prepare BEFORE render — handles lazy-loaded or not-yet-prepared slides
+        prepareD2Blocks(currentSlide);
+        renderCurrentSlideMermaid().catch((error) => {
+          console.error('Mermaid render on slide change failed:', error);
+        });
+        renderCurrentSlideD2().catch((error) => {
+          console.error('D2 render on slide change failed:', error);
+        });
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>

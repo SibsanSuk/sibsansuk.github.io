@@ -19,10 +19,239 @@
         หน้าเดียวสำหรับเข้าถึงเอกสาร MVP แบบอ่านง่าย แยกตามบทบาทการใช้งาน
       </p>
       <div class="hero-actions">
+        <a class="btn secondary" href="#phase-journey">Phase Journey</a>
         <a class="btn primary" href="#developers">สายนักพัฒนา</a>
         <a class="btn secondary" href="#stakeholders">ผู้เกี่ยวข้อง</a>
       </div>
     </header>
+
+    <section class="sync-hub">
+      <div class="section-head">
+        <h2>Team Sync</h2>
+        <p>อัปเดตสถานะร่วมทีมผ่านไฟล์กลางบน Google Drive (ไม่บันทึก local)</p>
+      </div>
+      <div class="sync-grid">
+        <label>
+          ชื่อผู้แก้ไข
+          <input id="editor-name" type="text" placeholder="เช่น Nook, Beam, Ton" />
+        </label>
+        <label>
+          Team Key
+          <input id="team-key" type="text" placeholder="เช่น sukhothai-mvp" />
+        </label>
+        <label>
+          Sync Endpoint URL
+          <input id="sync-endpoint" type="url" placeholder="https://script.google.com/macros/s/xxx/exec" />
+        </label>
+      </div>
+      <div class="sync-actions">
+        <button id="btn-load-team" class="sync-btn" type="button">Load Team</button>
+        <button id="btn-save-team" class="sync-btn primary" type="button">Save Team</button>
+        <button id="btn-export" class="sync-btn" type="button">Export JSON</button>
+        <button id="btn-import" class="sync-btn" type="button">Import JSON</button>
+        <input id="import-file" type="file" accept="application/json" hidden />
+      </div>
+      <p id="sync-status" class="sync-status">พร้อมใช้งาน • ข้อมูลจะตรงกันเมื่อ Save/Load Team</p>
+    </section>
+
+    <section id="phase-journey" class="quest-board">
+      <div class="section-head">
+        <h2>Phase Journey (Gamify)</h2>
+        <p>เลือก phase ปัจจุบัน แล้วทำตามลำดับเควสต์เพื่อเดินงาน MVP ให้ไม่หลุด scope</p>
+      </div>
+
+      <div class="phase-track" role="tablist" aria-label="MVP phases">
+        <button class="phase-btn is-active" data-phase="m1" aria-selected="true">
+          <span>M1 Data Foundation</span>
+          <small class="phase-state" data-phase-state="m1">todo</small>
+        </button>
+        <button class="phase-btn" data-phase="m2" aria-selected="false">
+          <span>M2 Command Contract</span>
+          <small class="phase-state" data-phase-state="m2">todo</small>
+        </button>
+        <button class="phase-btn" data-phase="m3" aria-selected="false">
+          <span>M3 Playable Loop</span>
+          <small class="phase-state" data-phase-state="m3">todo</small>
+        </button>
+        <button class="phase-btn" data-phase="m4" aria-selected="false">
+          <span>M4 Crisis + Win/Lose</span>
+          <small class="phase-state" data-phase-state="m4">todo</small>
+        </button>
+        <button class="phase-btn" data-phase="m5" aria-selected="false">
+          <span>M5 Polish + Playtest</span>
+          <small class="phase-state" data-phase-state="m5">todo</small>
+        </button>
+      </div>
+
+      <div class="phase-panels">
+        <article class="phase-panel is-active" data-phase-panel="m1">
+          <div class="phase-progress">
+            <label>
+              สถานะ
+              <select class="phase-status" data-phase-status="m1">
+                <option value="todo">todo - ยังไม่เริ่ม</option>
+                <option value="doing">doing - กำลังทำ</option>
+                <option value="done">done - เสร็จแล้ว</option>
+              </select>
+            </label>
+            <label>
+              โน้ตทีม
+              <input class="phase-note" data-phase-note="m1" type="text" placeholder="เช่น owner/ประเด็นติดขัด/next action" />
+            </label>
+          </div>
+          <p class="phase-goal">เป้าหมาย: ออกแบบ data model หลักของ MVP ให้ครบก่อนเริ่ม command layer</p>
+          <ol class="quest-steps">
+            <li>ออกแบบข้อมูลระบบแผนที่ (tile/zone/river/canal/walkability/placement constraints)</li>
+            <li>ออกแบบ data ของ building, resource, character/agent และความสัมพันธ์กัน</li>
+            <li>ล็อก schema/key naming ที่ใช้ร่วมกัน และอัปเดตรายการ P0 ที่เกี่ยวข้อง</li>
+          </ol>
+          <div class="quest-links">
+            <a href="./view.html?doc=../mvp/mvp-technical-design.md">Technical Design</a>
+            <a href="./view.html?doc=../mvp/content-registry-mvp.md">Content Registry</a>
+            <a href="./view.html?doc=../mvp/mvp-summary.md">MVP Summary</a>
+            <a href="./view.html?doc=../mvp/architecture-decisions.md">Architecture Decisions</a>
+          </div>
+          <ul class="exit-checks">
+            <li>map/building/resource/character data model ระบุชัดเจน</li>
+            <li>placement rules ขั้นต่ำและ coverage assumptions ล็อกแล้ว</li>
+            <li>รายการ P0 ฝั่ง data design ถูกอัปเดตสถานะใน registry</li>
+          </ul>
+        </article>
+
+        <article class="phase-panel" data-phase-panel="m2">
+          <div class="phase-progress">
+            <label>
+              สถานะ
+              <select class="phase-status" data-phase-status="m2">
+                <option value="todo">todo - ยังไม่เริ่ม</option>
+                <option value="doing">doing - กำลังทำ</option>
+                <option value="done">done - เสร็จแล้ว</option>
+              </select>
+            </label>
+            <label>
+              โน้ตทีม
+              <input class="phase-note" data-phase-note="m2" type="text" placeholder="เช่น owner/ประเด็นติดขัด/next action" />
+            </label>
+          </div>
+          <p class="phase-goal">เป้าหมาย: สร้าง command/event contract บน data model ที่ล็อกแล้ว</p>
+          <ol class="quest-steps">
+            <li>นิยาม command หลัก (place/remove/build/assign/speed/pause) พร้อม payload</li>
+            <li>กำหนด validation rules ให้สอดคล้องกับข้อจำกัดของ map/building/resources</li>
+            <li>กำหนด event ที่จำเป็นต่อ simulation/HUD และ sync กับเอกสารเทคนิค</li>
+          </ol>
+          <div class="quest-links">
+            <a href="./view.html?doc=../mvp/player-commands-examples.md">Player Commands</a>
+            <a href="./view.html?doc=../mvp/content-registry-mvp.md">Content Registry</a>
+            <a href="./view.html?doc=../mvp/mvp-technical-design.md">Technical Design</a>
+          </div>
+          <ul class="exit-checks">
+            <li>command หลักระบุ payload + validation ครบ</li>
+            <li>event contract ที่กระทบ HUD/gameplay ถูกกำหนดชัดเจน</li>
+            <li>เอกสาร command/technical design ไม่ขัดกัน</li>
+          </ul>
+        </article>
+
+        <article class="phase-panel" data-phase-panel="m3">
+          <div class="phase-progress">
+            <label>
+              สถานะ
+              <select class="phase-status" data-phase-status="m3">
+                <option value="todo">todo - ยังไม่เริ่ม</option>
+                <option value="doing">doing - กำลังทำ</option>
+                <option value="done">done - เสร็จแล้ว</option>
+              </select>
+            </label>
+            <label>
+              โน้ตทีม
+              <input class="phase-note" data-phase-note="m3" type="text" placeholder="เช่น owner/ประเด็นติดขัด/next action" />
+            </label>
+          </div>
+          <p class="phase-goal">เป้าหมาย: ทำช่วงเล่นนาที 0-6 ให้จบได้และวัดผลได้</p>
+          <ol class="quest-steps">
+            <li>กำหนด objective ช่วงต้นเกมให้ measurable ใน `MVP Summary`</li>
+            <li>ล็อก coverage model น้ำ/ตลาด/ศรัทธาใน `Content Registry`</li>
+            <li>ผูก command ที่ต้องใช้กับ tutorial flow ใน `Player Commands`</li>
+          </ol>
+          <div class="quest-links">
+            <a href="./view.html?doc=../mvp/mvp-summary.md">MVP Summary</a>
+            <a href="./view.html?doc=../mvp/content-registry-mvp.md">Content Registry</a>
+            <a href="./view.html?doc=../mvp/player-commands-examples.md">Player Commands</a>
+          </div>
+          <ul class="exit-checks">
+            <li>objective ทดสอบซ้ำได้ด้วยตัวเลข/เงื่อนไขชัดเจน</li>
+            <li>coverage model ล็อกและไม่มีจุดขัดแย้งเอกสาร</li>
+            <li>tutorial steps จำเป็นถูกระบุครบ</li>
+          </ul>
+        </article>
+
+        <article class="phase-panel" data-phase-panel="m4">
+          <div class="phase-progress">
+            <label>
+              สถานะ
+              <select class="phase-status" data-phase-status="m4">
+                <option value="todo">todo - ยังไม่เริ่ม</option>
+                <option value="doing">doing - กำลังทำ</option>
+                <option value="done">done - เสร็จแล้ว</option>
+              </select>
+            </label>
+            <label>
+              โน้ตทีม
+              <input class="phase-note" data-phase-note="m4" type="text" placeholder="เช่น owner/ประเด็นติดขัด/next action" />
+            </label>
+          </div>
+          <p class="phase-goal">เป้าหมาย: ล็อกวิกฤตหลัก 1 แบบ และ win/lose condition ที่เทสต์ได้จริง</p>
+          <ol class="quest-steps">
+            <li>ตัดสินใจวิกฤตหลัก (`flood` หรือ `drought`) ใน `Architecture Decisions`</li>
+            <li>ระบุ impact modifiers และ phase วิกฤตใน `Technical Design`</li>
+            <li>อัปเดตเงื่อนไขชนะ/แพ้ใน `MVP Summary` และ `Content Registry`</li>
+          </ol>
+          <div class="quest-links">
+            <a href="./view.html?doc=../mvp/architecture-decisions.md">Architecture Decisions</a>
+            <a href="./view.html?doc=../mvp/mvp-technical-design.md">Technical Design</a>
+            <a href="./view.html?doc=../mvp/mvp-summary.md">MVP Summary</a>
+            <a href="./view.html?doc=../mvp/content-registry-mvp.md">Content Registry</a>
+          </div>
+          <ul class="exit-checks">
+            <li>วิกฤตหลักถูกตัดสินใจชัดเจน 1 แบบ</li>
+            <li>impact modifiers ระบุชัดและ trace ได้</li>
+            <li>win/lose checks เป็นเกณฑ์ตัวเลขที่เทสต์ซ้ำได้</li>
+          </ul>
+        </article>
+
+        <article class="phase-panel" data-phase-panel="m5">
+          <div class="phase-progress">
+            <label>
+              สถานะ
+              <select class="phase-status" data-phase-status="m5">
+                <option value="todo">todo - ยังไม่เริ่ม</option>
+                <option value="doing">doing - กำลังทำ</option>
+                <option value="done">done - เสร็จแล้ว</option>
+              </select>
+            </label>
+            <label>
+              โน้ตทีม
+              <input class="phase-note" data-phase-note="m5" type="text" placeholder="เช่น owner/ประเด็นติดขัด/next action" />
+            </label>
+          </div>
+          <p class="phase-goal">เป้าหมาย: ปิดงานให้พร้อมเดโมและพร้อมรับ feedback จาก playtest</p>
+          <ol class="quest-steps">
+            <li>ล็อก status สุดท้ายของทุก P0/P1 ใน `Content Registry`</li>
+            <li>เช็กความพร้อมรอบส่งมอบด้วย `Execution Checklist`</li>
+            <li>จัดโน้ตส่งต่อรอบถัดไปใน `Handoff Guide`</li>
+          </ol>
+          <div class="quest-links">
+            <a href="./view.html?doc=../mvp/content-registry-mvp.md">Content Registry</a>
+            <a href="./view.html?doc=../mvp/mvp-execution-checklist.md">Execution Checklist</a>
+            <a href="./view.html?doc=../mvp/handoff-guide.md">Handoff Guide</a>
+          </div>
+          <ul class="exit-checks">
+            <li>playtest script พร้อมใช้งาน</li>
+            <li>KPI ที่ใช้ประเมินผลล็อกแล้ว</li>
+            <li>known issues ระบุความเสี่ยงและลำดับแก้ไข</li>
+          </ul>
+        </article>
+      </div>
+    </section>
 
     <section class="quick">
       <article class="quick-card">

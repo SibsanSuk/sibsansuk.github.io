@@ -1,0 +1,741 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Courses Console UI</title>
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Prompt:wght@400;500;700&display=swap");
+
+    :root {
+      --bg-0: #050b16;
+      --bg-1: #0c1b34;
+      --ink: #f4f8ff;
+      --muted: #b8c5df;
+      --line: rgba(255, 255, 255, 0.18);
+      --panel: rgba(7, 13, 23, 0.62);
+      --panel-strong: rgba(6, 11, 20, 0.82);
+      --accent: #6fd1ff;
+      --accent-2: #9c7eff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: linear-gradient(160deg, var(--bg-0), var(--bg-1));
+      color: var(--ink);
+      font-family: "Prompt", sans-serif;
+    }
+
+    .shell {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto auto;
+      gap: 12px;
+      padding: clamp(10px, 1.8vw, 24px);
+      background: radial-gradient(circle at 50% 120%, rgba(102, 194, 255, 0.1), transparent 45%);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tab {
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 4px 11px;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .tab.active {
+      color: #0f1b35;
+      background: linear-gradient(120deg, #8de2ff, #a09cff);
+      font-weight: 700;
+    }
+
+    .clock {
+      color: #dbe8ff;
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+
+    .hero {
+      position: relative;
+      border-radius: 24px;
+      border: 1px solid var(--line);
+      overflow: hidden;
+      background: #0a1427;
+      box-shadow: 0 16px 34px rgba(0, 0, 0, 0.35);
+      min-height: 320px;
+    }
+
+    #fx {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+      mix-blend-mode: screen;
+      opacity: 0.95;
+      filter: saturate(1.2) contrast(1.1);
+    }
+
+    .hero-bg,
+    .hero-bg-next {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background-position: center;
+      background-size: cover;
+      transform: scale(1.03);
+      transition: opacity 600ms ease;
+      filter: saturate(1.1) contrast(1.05);
+    }
+
+    .hero-bg-next {
+      opacity: 0;
+    }
+
+    .hero-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      background: linear-gradient(95deg, rgba(5, 9, 20, 0.7) 16%, rgba(6, 10, 20, 0.2) 55%, rgba(6, 10, 20, 0.72) 100%);
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 3;
+      height: 100%;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      padding: clamp(14px, 2vw, 22px);
+      align-items: end;
+    }
+
+    .hero-left {
+      display: grid;
+      gap: 8px;
+      align-content: end;
+      max-width: 760px;
+    }
+
+    .course-meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      justify-self: start;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      background: rgba(255, 255, 255, 0.07);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+
+    .icon-badge {
+      width: 22px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+      background: rgba(255, 255, 255, 0.16);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+    }
+
+    .hero-title {
+      font-family: "Sora", sans-serif;
+      font-weight: 800;
+      font-size: clamp(24px, 4.4vw, 58px);
+      letter-spacing: -0.02em;
+      line-height: 1.03;
+      text-shadow: 0 12px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .hero-concept {
+      color: #d2deff;
+      font-size: clamp(13px, 1.9vw, 18px);
+      max-width: 760px;
+    }
+
+    .hero-word {
+      color: rgba(255, 255, 255, 0.2);
+      font-family: "Sora", sans-serif;
+      font-weight: 800;
+      font-size: clamp(42px, 7vw, 120px);
+      line-height: 0.9;
+      letter-spacing: 0.03em;
+      align-self: center;
+      justify-self: end;
+      padding-right: clamp(4px, 1vw, 14px);
+      user-select: none;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .btn {
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 999px;
+      padding: 7px 14px;
+      background: rgba(6, 10, 20, 0.5);
+      color: var(--ink);
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255, 255, 255, 0.7);
+      background: rgba(90, 152, 255, 0.24);
+    }
+
+    .btn.primary {
+      background: linear-gradient(120deg, #67bcff, #9b86ff);
+      color: #051227;
+      border-color: transparent;
+    }
+
+    .track-wrap {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 10px;
+      background: var(--panel-strong);
+      backdrop-filter: blur(12px);
+      overflow: hidden;
+    }
+
+    .track {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: clamp(140px, 15vw, 190px);
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(150, 200, 255, 0.75) transparent;
+    }
+
+    .card {
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 14px;
+      overflow: hidden;
+      background: rgba(22, 33, 56, 0.82);
+      display: grid;
+      grid-template-rows: 86px auto;
+      cursor: pointer;
+      transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+      color: inherit;
+      text-align: left;
+      font: inherit;
+    }
+
+    .card:hover,
+    .card.active {
+      transform: translateY(-3px) scale(1.02);
+      border-color: rgba(255, 227, 112, 0.95);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.35), 0 0 20px rgba(116, 192, 255, 0.24);
+    }
+
+    .card-cover {
+      background-size: cover;
+      background-position: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .card-body {
+      padding: 7px 9px 9px;
+      display: grid;
+      gap: 2px;
+    }
+
+    .card-code {
+      font-family: "Sora", sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: #9fdfff;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .card-title {
+      font-size: 12px;
+      line-height: 1.25;
+      color: #edf3ff;
+      min-height: 30px;
+    }
+
+    .card-level {
+      font-size: 11px;
+      color: #bdcae6;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 4px 0;
+      color: #b9c8e8;
+      font-size: 12px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 860px) {
+      .hero-content {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-word {
+        justify-self: start;
+        padding-right: 0;
+      }
+
+      .track {
+        grid-auto-columns: 150px;
+      }
+
+      .topbar {
+        border-radius: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="tabs" id="tabs"></div>
+      <div class="clock" id="clock"></div>
+    </header>
+
+    <section class="hero">
+      <canvas id="fx" aria-hidden="true"></canvas>
+      <div id="heroBg" class="hero-bg"></div>
+      <div id="heroBgNext" class="hero-bg-next"></div>
+      <div class="hero-overlay"></div>
+
+      <div class="hero-content">
+        <div class="hero-left">
+          <div class="course-meta"><span id="heroIcon" class="icon-badge"></span><span id="heroLevel"></span></div>
+          <h1 id="heroTitle" class="hero-title"></h1>
+          <p id="heroConcept" class="hero-concept"></p>
+          <div class="hero-actions">
+            <button id="openBtn" class="btn primary" type="button">Open Course</button>
+            <button id="nextBtn" class="btn" type="button">Next Mission</button>
+          </div>
+        </div>
+
+        <div id="heroWord" class="hero-word"></div>
+      </div>
+    </section>
+
+    <section class="track-wrap">
+      <div id="track" class="track" role="listbox" aria-label="Course list"></div>
+    </section>
+
+    <footer class="footer">
+      <div class="controls">L/R: Change Course | Enter: Open | Mouse Wheel: Scroll</div>
+      <div>GPU Shader + Particle FX Active</div>
+    </footer>
+  </main>
+
+  <script type="module">
+    import * as THREE from "https://unpkg.com/three@0.161.0/build/three.module.js";
+
+    const courses = [
+      { code: "ICG", name: "Interactive Computer Graphics", level: "Bachelor", icon: "▣", word: "GRAPHICS", concept: "Realtime rendering, lighting, shading, and GPU pipelines for interactive worlds.", path: "./icg/", palette: ["#57d8ff", "#2c63ff", "#9b7bff"], category: "Rendering" },
+      { code: "PM", name: "Project Management and Digital Startup", level: "Bachelor", icon: "⌬", word: "STARTUP", concept: "Build product strategy, planning, agile execution, and digital venture validation.", path: "./pm/", palette: ["#ffe37f", "#ff8d61", "#ff6fb0"], category: "Business" },
+      { code: "3DMODEL", name: "3D Modeling and Animation", level: "Bachelor", icon: "◧", word: "ANIMATION", concept: "Modeling pipeline, topology, rigging, keyframe animation, and cinematic polish.", path: "./3dmodel/", palette: ["#8eff8c", "#2ccf93", "#35a9ff"], category: "Art" },
+      { code: "MASTER_ANIM", name: "3D Modeling and Animation for Games", level: "Master", icon: "✶", word: "MASTER", concept: "Advanced game-ready character and environment production with technical constraints.", path: "./master_anim/", palette: ["#ff7fce", "#a26dff", "#5dd0ff"], category: "Master" },
+      { code: "MASTER_MULTIPLAY", name: "Multiplayer Game Development", level: "Master", icon: "◎", word: "MULTIPLAYER", concept: "Authoritative networking, replication, latency handling, and scalable online systems.", path: "./master_multiplay/", palette: ["#b684ff", "#5f7cff", "#58dcff"], category: "Master" },
+      { code: "GAME_ENVI", name: "Virtual Environment for 3D Games", level: "Bachelor", icon: "◍", word: "WORLD", concept: "Terrain composition, level storytelling, optimization, and spatial immersion.", path: "./game_envi/", palette: ["#7fffc9", "#2ec89a", "#5cb1ff"], category: "Design" },
+      { code: "GAME_VFX", name: "Visual Effect for 3D Games", level: "Bachelor", icon: "✦", word: "VFX", concept: "Stylized and realistic VFX using particle systems, shader graphs, and post-processing.", path: "./game_vfx/", palette: ["#8de9ff", "#4f84ff", "#d76dff"], category: "Effects" },
+      { code: "GAME_VR", name: "Virtual Reality for 3D Games", level: "Bachelor", icon: "◉", word: "VR", concept: "Interaction design, locomotion comfort, and high-framerate immersive experiences.", path: "./game_vr/", palette: ["#6ed9ff", "#3f8dff", "#4cf5ff"], category: "XR" },
+      { code: "GAME_AR", name: "Augmented Reality for 3D Games", level: "Bachelor", icon: "◆", word: "AR", concept: "Spatial mapping, markerless tracking, and mixed reality game interactions.", path: "./game_ar/", palette: ["#8ef26f", "#4bc8a9", "#4b8bff"], category: "XR" },
+      { code: "GAME_DEV", name: "Game Design and Development", level: "Bachelor", icon: "⬢", word: "GAMEPLAY", concept: "Core loop design, balancing, prototyping, and full production iteration.", path: "./game_dev/", palette: ["#ffb86b", "#ff6b8f", "#7e7cff"], category: "Gameplay" }
+    ];
+
+    const tabs = document.getElementById("tabs");
+    const tabNames = ["All", "Rendering", "Art", "Gameplay", "XR", "Effects", "Business", "Master"];
+    tabs.innerHTML = tabNames.map((name, i) => `<span class="tab ${i === 0 ? "active" : ""}">${name}</span>`).join("");
+
+    function updateClock() {
+      const now = new Date();
+      document.getElementById("clock").textContent = now.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+    }
+    updateClock();
+    setInterval(updateClock, 30000);
+
+    function hexToRgb(hex) {
+      const clean = hex.replace("#", "");
+      const intVal = parseInt(clean, 16);
+      return {
+        r: ((intVal >> 16) & 255) / 255,
+        g: ((intVal >> 8) & 255) / 255,
+        b: (intVal & 255) / 255
+      };
+    }
+
+    function makeConceptTexture(course, w = 1600, h = 900) {
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+
+      const grad = ctx.createLinearGradient(0, 0, w, h);
+      grad.addColorStop(0, course.palette[0]);
+      grad.addColorStop(0.52, course.palette[1]);
+      grad.addColorStop(1, course.palette[2]);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.globalAlpha = 0.28;
+      for (let i = 0; i < 28; i += 1) {
+        ctx.fillStyle = i % 2 ? "#ffffff" : "#0b1428";
+        const x = Math.random() * w;
+        const y = Math.random() * h;
+        const r = 40 + Math.random() * 220;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.globalAlpha = 0.12;
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2;
+      for (let y = 0; y < h; y += 24) {
+        ctx.beginPath();
+        ctx.moveTo(0, y + Math.sin(y * 0.03) * 16);
+        ctx.bezierCurveTo(w * 0.35, y + 40, w * 0.65, y - 40, w, y + Math.cos(y * 0.02) * 20);
+        ctx.stroke();
+      }
+
+      ctx.globalAlpha = 0.22;
+      ctx.fillStyle = "#ffffff";
+      ctx.font = `800 ${Math.floor(w * 0.11)}px Sora`;
+      ctx.textAlign = "right";
+      ctx.fillText(course.word, w - 54, h - 84);
+
+      ctx.globalAlpha = 0.95;
+      ctx.fillStyle = "#f7fbff";
+      ctx.font = `700 ${Math.floor(w * 0.05)}px Prompt`;
+      ctx.textAlign = "left";
+      ctx.fillText(course.icon, 58, 96);
+      ctx.font = `700 ${Math.floor(w * 0.028)}px Prompt`;
+      ctx.fillText(course.code, 114, 98);
+
+      return canvas.toDataURL("image/jpeg", 0.88);
+    }
+
+    const enriched = courses.map((c) => ({ ...c, bg: makeConceptTexture(c), thumb: makeConceptTexture(c, 420, 260) }));
+
+    const track = document.getElementById("track");
+    const heroBg = document.getElementById("heroBg");
+    const heroBgNext = document.getElementById("heroBgNext");
+    const heroTitle = document.getElementById("heroTitle");
+    const heroConcept = document.getElementById("heroConcept");
+    const heroLevel = document.getElementById("heroLevel");
+    const heroWord = document.getElementById("heroWord");
+    const heroIcon = document.getElementById("heroIcon");
+    const openBtn = document.getElementById("openBtn");
+    const nextBtn = document.getElementById("nextBtn");
+
+    const cards = [];
+    enriched.forEach((course, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "card";
+      button.setAttribute("role", "option");
+      button.innerHTML = `
+        <div class="card-cover" style="background-image: linear-gradient(170deg, rgba(0,0,0,0.06), rgba(0,0,0,0.45)), url('${course.thumb}')"></div>
+        <div class="card-body">
+          <div class="card-code">${course.icon} ${course.code}</div>
+          <div class="card-title">${course.name}</div>
+          <div class="card-level">${course.level === "Master" ? "Master's Degree" : "Bachelor's Degree"}</div>
+        </div>
+      `;
+      button.addEventListener("click", () => selectCourse(index));
+      button.addEventListener("dblclick", () => window.location.href = course.path);
+      track.appendChild(button);
+      cards.push(button);
+    });
+
+    let activeIndex = 0;
+    let targetPalette = [hexToRgb(enriched[0].palette[0]), hexToRgb(enriched[0].palette[1]), hexToRgb(enriched[0].palette[2])];
+
+    function applyHero(course, animate = true) {
+      heroTitle.textContent = course.name;
+      heroConcept.textContent = course.concept;
+      heroLevel.textContent = `${course.level === "Master" ? "Master's" : "Bachelor's"} Degree`;
+      heroWord.textContent = course.word;
+      heroIcon.textContent = course.icon;
+      openBtn.onclick = () => { window.location.href = course.path; };
+
+      if (!animate) {
+        heroBg.style.backgroundImage = `url('${course.bg}')`;
+        heroBgNext.style.opacity = "0";
+      } else {
+        heroBgNext.style.backgroundImage = `url('${course.bg}')`;
+        heroBgNext.style.opacity = "1";
+        setTimeout(() => {
+          heroBg.style.backgroundImage = heroBgNext.style.backgroundImage;
+          heroBgNext.style.opacity = "0";
+        }, 420);
+      }
+    }
+
+    function selectCourse(index, scroll = true) {
+      activeIndex = (index + enriched.length) % enriched.length;
+      const course = enriched[activeIndex];
+      cards.forEach((card, i) => card.classList.toggle("active", i === activeIndex));
+      if (scroll) cards[activeIndex].scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      applyHero(course, true);
+      targetPalette = [hexToRgb(course.palette[0]), hexToRgb(course.palette[1]), hexToRgb(course.palette[2])];
+    }
+
+    nextBtn.addEventListener("click", () => selectCourse(activeIndex + 1));
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowRight") selectCourse(activeIndex + 1);
+      if (event.key === "ArrowLeft") selectCourse(activeIndex - 1);
+      if (event.key === "Enter") window.location.href = enriched[activeIndex].path;
+    });
+
+    applyHero(enriched[0], false);
+    cards[0].classList.add("active");
+
+    const canvas = document.getElementById("fx");
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.01, 10);
+    camera.position.z = 1;
+
+    const uniforms = {
+      uTime: { value: 0 },
+      uResolution: { value: new THREE.Vector2(1, 1) },
+      uColorA: { value: new THREE.Color().setRGB(targetPalette[0].r, targetPalette[0].g, targetPalette[0].b) },
+      uColorB: { value: new THREE.Color().setRGB(targetPalette[1].r, targetPalette[1].g, targetPalette[1].b) },
+      uColorC: { value: new THREE.Color().setRGB(targetPalette[2].r, targetPalette[2].g, targetPalette[2].b) },
+      uPulse: { value: 0 }
+    };
+
+    const bgMat = new THREE.ShaderMaterial({
+      uniforms,
+      transparent: true,
+      vertexShader: `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        precision highp float;
+        varying vec2 vUv;
+        uniform vec3 uColorA;
+        uniform vec3 uColorB;
+        uniform vec3 uColorC;
+        uniform vec2 uResolution;
+        uniform float uTime;
+        uniform float uPulse;
+
+        float hash(vec2 p) {
+          return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+        }
+
+        float noise(vec2 p) {
+          vec2 i = floor(p);
+          vec2 f = fract(p);
+          vec2 u = f * f * (3.0 - 2.0 * f);
+          return mix(
+            mix(hash(i + vec2(0.0, 0.0)), hash(i + vec2(1.0, 0.0)), u.x),
+            mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x),
+            u.y
+          );
+        }
+
+        float fbm(vec2 p) {
+          float v = 0.0;
+          float a = 0.5;
+          for (int i = 0; i < 5; i++) {
+            v += a * noise(p);
+            p *= 2.03;
+            a *= 0.5;
+          }
+          return v;
+        }
+
+        void main() {
+          vec2 uv = vUv;
+          vec2 p = (uv - 0.5) * vec2(uResolution.x / uResolution.y, 1.0) * 2.0;
+
+          float n1 = fbm(p * 1.4 + vec2(uTime * 0.08, -uTime * 0.04));
+          float n2 = fbm(p * 2.5 - vec2(uTime * 0.06, uTime * 0.08));
+          float wave = sin((p.x + n2 * 0.5) * 6.0 - uTime * 1.2) * 0.5 + 0.5;
+          float glow = smoothstep(0.2, 1.0, n1 + wave * 0.35 + uPulse * 0.15);
+
+          vec3 col = mix(uColorA, uColorB, n1);
+          col = mix(col, uColorC, smoothstep(0.3, 0.9, n2));
+          col += vec3(0.35, 0.45, 0.65) * pow(glow, 2.0) * 0.45;
+
+          float streak = smoothstep(0.02, 0.0, abs(fract((uv.y + n1 * 0.18 + uTime * 0.02) * 12.0) - 0.5));
+          col += vec3(0.12, 0.18, 0.26) * streak;
+
+          float vignette = smoothstep(1.1, 0.25, length(uv - 0.5));
+          col *= vignette;
+
+          gl_FragColor = vec4(col, 0.78);
+        }
+      `
+    });
+
+    const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), bgMat);
+    scene.add(quad);
+
+    const particleCount = 32000;
+    const particleGeo = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const seeds = new Float32Array(particleCount);
+    const sizes = new Float32Array(particleCount);
+
+    for (let i = 0; i < particleCount; i += 1) {
+      const i3 = i * 3;
+      positions[i3] = (Math.random() - 0.5) * 2.4;
+      positions[i3 + 1] = (Math.random() - 0.5) * 1.6;
+      positions[i3 + 2] = Math.random() * 1.0;
+      seeds[i] = Math.random() * 1000;
+      sizes[i] = 1.4 + Math.random() * 4.2;
+    }
+
+    particleGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    particleGeo.setAttribute("aSeed", new THREE.BufferAttribute(seeds, 1));
+    particleGeo.setAttribute("aSize", new THREE.BufferAttribute(sizes, 1));
+
+    const particleMat = new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      uniforms: {
+        uTime: { value: 0 },
+        uColorA: { value: new THREE.Color().setRGB(targetPalette[0].r, targetPalette[0].g, targetPalette[0].b) },
+        uColorB: { value: new THREE.Color().setRGB(targetPalette[2].r, targetPalette[2].g, targetPalette[2].b) },
+        uPulse: { value: 0 }
+      },
+      vertexShader: `
+        precision highp float;
+        attribute float aSeed;
+        attribute float aSize;
+        uniform float uTime;
+        varying float vMix;
+
+        void main() {
+          vec3 p = position;
+          float t = uTime * 0.38 + aSeed;
+          p.x += sin(t * 1.4 + p.y * 8.0) * 0.06;
+          p.y += cos(t * 1.1 + p.x * 7.0) * 0.05;
+          p.z += sin(t * 1.8) * 0.08;
+
+          vMix = fract(aSeed * 0.173 + uTime * 0.06);
+          gl_Position = vec4(p, 1.0);
+          gl_PointSize = aSize * (1.8 + sin(t * 3.0) * 0.6);
+        }
+      `,
+      fragmentShader: `
+        precision highp float;
+        uniform vec3 uColorA;
+        uniform vec3 uColorB;
+        uniform float uPulse;
+        varying float vMix;
+
+        void main() {
+          vec2 uv = gl_PointCoord - 0.5;
+          float d = length(uv);
+          float alpha = smoothstep(0.5, 0.04, d);
+          vec3 col = mix(uColorA, uColorB, vMix);
+          col += uPulse * 0.15;
+          gl_FragColor = vec4(col, alpha * 0.96);
+        }
+      `
+    });
+
+    const particles = new THREE.Points(particleGeo, particleMat);
+    scene.add(particles);
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      const width = Math.max(1, rect.width);
+      const height = Math.max(1, rect.height);
+      renderer.setSize(width, height, false);
+      uniforms.uResolution.value.set(width, height);
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    let time = 0;
+    function tick() {
+      requestAnimationFrame(tick);
+      time += 0.01;
+
+      uniforms.uTime.value = time;
+      uniforms.uPulse.value = Math.sin(time * 2.0) * 0.5 + 0.5;
+      particleMat.uniforms.uTime.value = time;
+      particleMat.uniforms.uPulse.value = uniforms.uPulse.value;
+
+      uniforms.uColorA.value.lerp(new THREE.Color().setRGB(targetPalette[0].r, targetPalette[0].g, targetPalette[0].b), 0.05);
+      uniforms.uColorB.value.lerp(new THREE.Color().setRGB(targetPalette[1].r, targetPalette[1].g, targetPalette[1].b), 0.05);
+      uniforms.uColorC.value.lerp(new THREE.Color().setRGB(targetPalette[2].r, targetPalette[2].g, targetPalette[2].b), 0.05);
+
+      particleMat.uniforms.uColorA.value.lerp(uniforms.uColorA.value, 0.08);
+      particleMat.uniforms.uColorB.value.lerp(uniforms.uColorC.value, 0.08);
+
+      renderer.render(scene, camera);
+    }
+    tick();
+  </script>
+</body>
+</html>
