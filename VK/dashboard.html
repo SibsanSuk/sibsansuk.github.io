@@ -354,6 +354,42 @@
     @media (orientation: portrait){
       .page-scroll{ padding-bottom: 12px; }
     }
+    .global-loading-overlay{
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      background: rgba(11, 79, 85, .32);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+    }
+    .global-loading-overlay.active{
+      display: flex;
+    }
+    .global-loading-card{
+      min-width: min(92vw, 360px);
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.45);
+      background: linear-gradient(180deg, #ffffff, #eaf7f7);
+      box-shadow: 0 20px 36px rgba(12,34,46,.25);
+      padding: 18px 20px;
+      text-align: center;
+    }
+    .global-loading-spinner{
+      width: 42px;
+      height: 42px;
+      border-radius: 999px;
+      border: 4px solid rgba(15,107,114,.18);
+      border-top-color: var(--brand-600);
+      margin: 0 auto 10px;
+      animation: globalSpin .8s linear infinite;
+    }
+    @keyframes globalSpin{
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 
@@ -453,6 +489,13 @@
           </main>
         </div>
       </div>
+    </div>
+  </div>
+  <div id="global-loading-overlay" class="global-loading-overlay" aria-live="polite" aria-busy="true">
+    <div class="global-loading-card">
+      <div class="global-loading-spinner" aria-hidden="true"></div>
+      <div class="font-bold text-slate-700">กำลังโหลดข้อมูลจาก API</div>
+      <div id="global-loading-text" class="mt-1 text-sm text-slate-500">โปรดรอสักครู่...</div>
     </div>
   </div>
 
@@ -2406,10 +2449,7 @@
         renderCourseOutline(data);
         setCourseDeepData(data, false);
 
-        renderTopicTabsAndDetail();
-        if (!window.bookrollReadingProgress?.length && userId && courseId) {
-          fetchBookrollReadingData();
-        }
+        requestDashboardRender();
 
         if (statusEl) statusEl.textContent = `โหลดสำเร็จ (${srcUrl})`;
       } catch (err) {
@@ -2571,7 +2611,7 @@
         window.bookrollReadingData = null;
         window.bookrollReadingProgress = [];
         updateBookrollJsonDrawer();
-        renderTopicTabsAndDetail();
+        requestDashboardRender();
         return;
       }
       const mergeReadingEntries = (list) => {
@@ -2670,7 +2710,7 @@
         console.warn("Bookroll reading progress error:", err);
       } finally {
         updateBookrollJsonDrawer();
-        renderTopicTabsAndDetail();
+        requestDashboardRender();
       }
     };
 
@@ -2680,7 +2720,7 @@
         window.videoProgressData = [];
         window.videoUserNameResolved = null;
         window.videoApiStatus = "invalid-course";
-        renderTopicTabsAndDetail();
+        requestDashboardRender();
         updateLoginDebugPanel();
         return;
       }
@@ -2690,7 +2730,7 @@
         window.videoProgressData = [];
         window.videoUserNameResolved = null;
         window.videoApiStatus = "missing-username";
-        renderTopicTabsAndDetail();
+        requestDashboardRender();
         updateLoginDebugPanel();
         return;
       }
@@ -2723,7 +2763,7 @@
       } finally {
         updateLoginDebugPanel();
         updateVideoJsonDrawer();
-        renderTopicTabsAndDetail();
+        requestDashboardRender();
       }
     };
 
@@ -2793,15 +2833,71 @@
       updateLoginDebugPanel();
     };
 
-    const loadDashboardData = () => {
+    const dashboardLoadState = {
+      cycle: 0,
+      deferRender: false,
+      pendingRender: false,
+      total: 0,
+      done: 0
+    };
+
+    const setGlobalLoadingOverlay = (visible, text = "") => {
+      const overlayEl = document.getElementById("global-loading-overlay");
+      const textEl = document.getElementById("global-loading-text");
+      if (overlayEl) overlayEl.classList.toggle("active", !!visible);
+      if (textEl) textEl.textContent = text || "โปรดรอสักครู่...";
+    };
+
+    const requestDashboardRender = () => {
+      if (dashboardLoadState.deferRender) {
+        dashboardLoadState.pendingRender = true;
+        return;
+      }
+      renderTopicTabsAndDetail();
+    };
+
+    const beginDashboardLoadCycle = (total) => {
+      dashboardLoadState.cycle += 1;
+      dashboardLoadState.deferRender = true;
+      dashboardLoadState.pendingRender = false;
+      dashboardLoadState.total = Math.max(0, Number(total) || 0);
+      dashboardLoadState.done = 0;
+      const cycleId = dashboardLoadState.cycle;
+      setGlobalLoadingOverlay(true, `กำลังโหลด 0/${dashboardLoadState.total} รายการ`);
+      return cycleId;
+    };
+
+    const markDashboardTaskDone = (cycleId) => {
+      if (cycleId !== dashboardLoadState.cycle) return;
+      dashboardLoadState.done = Math.min(dashboardLoadState.done + 1, dashboardLoadState.total);
+      setGlobalLoadingOverlay(true, `กำลังโหลด ${dashboardLoadState.done}/${dashboardLoadState.total} รายการ`);
+    };
+
+    const endDashboardLoadCycle = (cycleId) => {
+      if (cycleId !== dashboardLoadState.cycle) return;
+      dashboardLoadState.deferRender = false;
+      renderTopicTabsAndDetail();
+      dashboardLoadState.pendingRender = false;
+      setGlobalLoadingOverlay(false);
+    };
+
+    const loadDashboardData = async () => {
       updateBookrollJsonDrawer();
       updateVideoJsonDrawer();
-      fetchBookrollReadingData();
-      fetchVideoLearningProgress();
-      fetchCourseDetail();
-      if (SHOW_BOOKROLL) {
-        fetchBookroll();
-      }
+      const tasks = [
+        fetchBookrollReadingData,
+        fetchVideoLearningProgress,
+        fetchCourseDetail
+      ];
+      if (SHOW_BOOKROLL) tasks.push(fetchBookroll);
+      const cycleId = beginDashboardLoadCycle(tasks.length);
+      const wrapped = tasks.map((task) =>
+        Promise.resolve()
+          .then(() => task())
+          .finally(() => markDashboardTaskDone(cycleId))
+      );
+      await Promise.allSettled(wrapped);
+      endDashboardLoadCycle(cycleId);
     };
 
     if (loginBtn) loginBtn.addEventListener("click", startLogin);
