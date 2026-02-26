@@ -409,7 +409,7 @@
                         ชื่อวิชา: <span id="header-course-name" class="font-semibold">-</span>
                       </div>
                       <div class="mt-1 text-sm text-slate-600">
-                        email ผู้เรียน: <span id="header-learner-email" class="font-semibold">-</span>
+                        ชื่อผู้เรียน: <span id="header-learner-name" class="font-semibold">-</span>
                       </div>
                     </div>
                     <div class="flex items-center gap-2">
@@ -673,15 +673,19 @@
       if (headerCourseNameEl) {
         headerCourseNameEl.textContent = decodeIfMojibake(window.courseDetailData?.courseTitle || window.courseDetailData?.title) || "-";
       }
-      const headerLearnerEmailEl = document.getElementById("header-learner-email");
-      if (headerLearnerEmailEl) {
+      const headerLearnerNameEl = document.getElementById("header-learner-name");
+      if (headerLearnerNameEl) {
         const profile = auth?.profile && typeof auth.profile === "object" ? auth.profile : {};
-        const email = typeof profile.email === "string" && profile.email.trim()
-          ? profile.email.trim()
-          : (typeof profile.preferred_username === "string" && profile.preferred_username.trim()
-            ? profile.preferred_username.trim()
-            : "-");
-        headerLearnerEmailEl.textContent = email;
+        const name = typeof profile.name === "string" && profile.name.trim()
+          ? profile.name.trim()
+          : (typeof profile.given_name === "string" && profile.given_name.trim()
+            ? profile.given_name.trim()
+            : (typeof profile.preferred_username === "string" && profile.preferred_username.trim()
+              ? profile.preferred_username.trim()
+              : (typeof profile.email === "string" && profile.email.trim()
+                ? profile.email.trim()
+                : "-")));
+        headerLearnerNameEl.textContent = name;
       }
       const courseEl = document.getElementById("course-id");
       if (courseEl) courseEl.textContent = courseId || "-";
