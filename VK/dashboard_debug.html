@@ -1759,12 +1759,27 @@
       };
     };
 
+    const getChatbotTimeAt = (cfg, idx, preferNameIncludes) => {
+      const seconds = getSeriesAt(cfg, idx, preferNameIncludes);
+      return Number.isFinite(seconds) ? Math.max(0, Number(seconds)) : null;
+    };
+
     const formatChatbotScore = (info) => {
       if (!info || !Number.isFinite(info.score)) return "-";
       const scoreText = String(Math.round(Number(info.score)));
       if (!Number.isFinite(info.total) || info.total <= 0) return scoreText;
       const pctText = Number.isFinite(info.pct) ? ` (${info.pct}%)` : "";
       return `${scoreText}/${info.total}${pctText}`;
+    };
+
+    const formatDurationShort = (seconds) => {
+      const n = Number(seconds);
+      if (!Number.isFinite(n)) return "-";
+      const totalSec = Math.max(0, Math.round(n));
+      if (totalSec < 60) return `${totalSec} วินาที`;
+      const mins = Math.floor(totalSec / 60);
+      const secs = totalSec % 60;
+      return `${mins}:${String(secs).padStart(2, "0")} นาที`;
     };
 
     const sumChatbotScores = (items) => {
@@ -1857,6 +1872,49 @@
         return;
       }
       window.chatbotPerfOrderMap = buildChatbotPerformanceOrderMap(window.courseDetailData, window.chatbotPerfData);
+    };
+
+    const buildChatbotSpeedOrderMap = (course, cfg) => {
+      const chapters = getSortedChapters(course);
+      const series = Array.isArray(cfg?.series) ? cfg.series : [];
+      const categoryMeta = Array.isArray(cfg?.__categoryMeta) ? cfg.__categoryMeta : [];
+      const maxLen = Math.max(
+        categoryMeta.length,
+        ...series.map((s) => (Array.isArray(s?.data) ? s.data.length : 0))
+      );
+      let apiCursor = 0;
+      const chapterMaps = chapters.map((chapterNode, chapterIdx) => {
+        const slots = collectChapterChatbotSlots(chapterNode);
+        const items = slots.map((slot, slotIdx) => {
+          const apiIdx = apiCursor < maxLen ? apiCursor : null;
+          if (apiIdx != null) apiCursor += 1;
+          return {
+            chapterIdx,
+            slotIdx,
+            apiIdx,
+            id: slot.id,
+            title: slot.title,
+            seqTitle: slot.seqTitle,
+            meta: apiIdx != null ? getCategoryMetaAt(cfg, apiIdx) : null,
+            average: apiIdx != null ? getChatbotTimeAt(cfg, apiIdx, "average") : null,
+            your: apiIdx != null ? getChatbotTimeAt(cfg, apiIdx, "your") : null
+          };
+        });
+        return {
+          chapterIdx,
+          count: slots.length,
+          items
+        };
+      });
+      return { chapters: chapterMaps };
+    };
+
+    const rebuildChatbotSpeedOrderMap = () => {
+      if (!window.courseDetailData || !window.chatbotSpeedRawData) {
+        window.chatbotSpeedOrderMap = null;
+        return;
+      }
+      window.chatbotSpeedOrderMap = buildChatbotSpeedOrderMap(window.courseDetailData, window.chatbotSpeedRawData);
     };
 
     const pickTitle = (node, fallback) => decodeIfMojibake(node?.title || node?.fields?.title || fallback || "-");
@@ -2158,6 +2216,7 @@
 
       const out = chapters.map((chapterNode, chapterIdx) => {
         const chapterPerf = Array.isArray(perfOrderMap?.chapters) ? perfOrderMap.chapters[chapterIdx] : null;
+        const chapterSpeed = Array.isArray(window.chatbotSpeedOrderMap?.chapters) ? window.chatbotSpeedOrderMap.chapters[chapterIdx] : null;
         let chatbotSlotIdx = 0;
         const sequentials = (chapterNode?.children || []).filter((c) => c?.kind === "sequential");
         const seqItems = sequentials.map((seq, sIdx) => {
@@ -2177,6 +2236,9 @@
                 const chatbotSlot = entry.subtype === "Chatbot"
                   ? (Array.isArray(chapterPerf?.items) ? (chapterPerf.items[chatbotSlotIdx] || null) : null)
                   : null;
+                const chatbotSpeedSlot = entry.subtype === "Chatbot"
+                  ? (Array.isArray(chapterSpeed?.items) ? (chapterSpeed.items[chatbotSlotIdx] || null) : null)
+                  : null;
                 if (entry.subtype === "Chatbot") chatbotSlotIdx += 1;
                 const chatbot = chatbotSlot?.your || null;
                 const chatbotAverage = chatbotSlot?.average || null;
@@ -2190,6 +2252,8 @@
                   video,
                   chatbot,
                   chatbotAverage,
+                  chatbotTime: chatbotSpeedSlot?.your ?? null,
+                  chatbotTimeAverage: chatbotSpeedSlot?.average ?? null,
                   chatbotDone: Number.isFinite(chatbot?.score),
                   chatbotOrder: chatbotSlot?.slotIdx ?? null,
                   chatbotApiOrder: chatbotSlot?.apiIdx ?? null
@@ -2422,13 +2486,16 @@
             const chatbotText = toolInfo?.chatbot
               ? `คะแนน ${formatChatbotScore(toolInfo.chatbot)} • เฉลี่ย ${formatChatbotScore(toolInfo.chatbotAverage)}`
               : "";
+            const chatbotTimeText = isChatbot && (Number.isFinite(toolInfo?.chatbotTime) || Number.isFinite(toolInfo?.chatbotTimeAverage))
+              ? `ใช้เวลา ${formatDurationShort(toolInfo?.chatbotTime)} • เฉลี่ย ${formatDurationShort(toolInfo?.chatbotTimeAverage)}`
+              : "";
             const orderText = Number.isFinite(toolInfo?.chatbotOrder)
               ? `Quiz ลำดับที่ ${Number(toolInfo.chatbotOrder) + 1} ของบทนี้`
               : "";
             const apiText = chatbotText
               || (toolInfo?.reading ? `อ่าน ${toolInfo.reading.read ?? "-"} / ${toolInfo.reading.total ?? "-"} หน้า` : "")
               || (toolInfo?.video ? `รับชม ${toolInfo.video.progress}%` : "");
-            const metaLines = [orderText, apiText].filter(Boolean);
+            const metaLines = [orderText, apiText, chatbotTimeText].filter(Boolean);
             const metaHtml = metaLines.length
               ? `<div class="mt-1 text-xs text-slate-500">${metaLines.map((line) => `<div>${escapeHtml(line)}</div>`).join("")}</div>`
               : "";
@@ -2738,6 +2805,7 @@
         const chapterLabels = getCourseChapterTitles(data);
         if (window.chatbotSpeedData && chapterLabels.length) {
           window.chatbotSpeedData = applyCategoryLabels(window.chatbotSpeedData, chapterLabels);
+          rebuildChatbotSpeedOrderMap();
           renderEchartToChart(window.chatbotSpeedData, "chatbotSpeedChart", "Chatbot Speed");
           const rawEl = document.getElementById("chatbot-speed-raw");
           if (rawEl) rawEl.textContent = JSON.stringify(window.chatbotSpeedData, null, 2);
@@ -3088,7 +3156,11 @@
         const res = await fetch(srcUrl);
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
-        window.chatbotSpeedData = getChartConfig(data);
+        window.chatbotSpeedRawData = getChartConfig(data);
+        const rawCategories = getCategoryAxisData(window.chatbotSpeedRawData);
+        window.chatbotSpeedRawData.__categoryMeta = rawCategories.map((label) => parseChatbotCategoryMeta(label));
+        rebuildChatbotSpeedOrderMap();
+        window.chatbotSpeedData = window.chatbotSpeedRawData;
         const labels = getCourseChapterTitles(window.courseDetailData);
         const relabeled = labels.length ? applyCategoryLabels(window.chatbotSpeedData, labels) : window.chatbotSpeedData;
         window.chatbotSpeedData = relabeled;
