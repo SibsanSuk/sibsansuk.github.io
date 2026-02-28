@@ -722,6 +722,12 @@
     const courseUrl = (cid) =>
       `https://sbs-backend.mooc.meca.in.th/lms/${encodeURIComponent(cid)}`;
 
+    const chatbotSpeedUrl = (cid, uid) =>
+      `https://sbs-backend.mooc.meca.in.th/stats/echart/chatbotSpeed/${encodeURIComponent(cid)}/${encodeURIComponent(uid)}`;
+
+    const chatbotPerformanceUrl = (cid, uid) =>
+      `https://sbs-backend.mooc.meca.in.th/stats/echart/chatbotPerformance/${encodeURIComponent(cid)}/${encodeURIComponent(uid)}`;
+
     const isLikelyCourseId = (cid) =>
       typeof cid === "string" && cid.includes("course-v1:");
 
@@ -1535,17 +1541,48 @@
       return chapters.map((c, idx) => decodeIfMojibake(c.title || c.fields?.title || `บทที่ ${idx + 1}`));
     };
 
+    const getChartConfig = (cfg) => {
+      if (!cfg || typeof cfg !== "object") return cfg;
+      if (!cfg.chart || typeof cfg.chart !== "object") return cfg;
+      const chart = cfg.chart;
+      if (Array.isArray(cfg.__categoryMeta) && !Array.isArray(chart.__categoryMeta)) {
+        chart.__categoryMeta = cfg.__categoryMeta;
+      }
+      return chart;
+    };
+
+    const getCategoryAxisData = (cfg) => {
+      const chartCfg = getChartConfig(cfg);
+      const xAxis = Array.isArray(chartCfg?.xAxis) ? chartCfg.xAxis[0] : chartCfg?.xAxis;
+      const yAxis = Array.isArray(chartCfg?.yAxis) ? chartCfg.yAxis[0] : chartCfg?.yAxis;
+      if (xAxis?.type === "category" && Array.isArray(xAxis?.data)) return xAxis.data;
+      if (yAxis?.type === "category" && Array.isArray(yAxis?.data)) return yAxis.data;
+      return [];
+    };
+
+    const parseChatbotCategoryMeta = (rawLabel) => {
+      const raw = decodeIfMojibake(String(rawLabel || "")).trim();
+      if (!raw) return null;
+      const m = raw.match(/^(.*?)(?:,\s*(\d+))$/);
+      if (!m) return { raw, key: raw, total: null };
+      const key = String(m[1] || "").trim() || raw;
+      const total = Number(m[2]);
+      return { raw, key, total: Number.isFinite(total) ? total : null };
+    };
+
     const applyCategoryLabels = (cfg, labels) => {
       if (!cfg || !Array.isArray(labels) || labels.length === 0) return cfg;
-      const xAxis = Array.isArray(cfg.xAxis) ? cfg.xAxis[0] : cfg.xAxis;
-      const yAxis = Array.isArray(cfg.yAxis) ? cfg.yAxis[0] : cfg.yAxis;
+      const chartCfg = getChartConfig(cfg);
+      const xAxis = Array.isArray(chartCfg?.xAxis) ? chartCfg.xAxis[0] : chartCfg?.xAxis;
+      const yAxis = Array.isArray(chartCfg?.yAxis) ? chartCfg.yAxis[0] : chartCfg?.yAxis;
       const xIsCat = xAxis?.type === "category";
       const yIsCat = yAxis?.type === "category";
+      const rawCategories = getCategoryAxisData(cfg);
 
       const next =
         (typeof structuredClone === "function")
-          ? structuredClone(cfg)
-          : JSON.parse(JSON.stringify(cfg));
+          ? structuredClone(chartCfg)
+          : JSON.parse(JSON.stringify(chartCfg));
       if (xIsCat) {
         if (Array.isArray(next.xAxis)) next.xAxis[0] = { ...(next.xAxis[0] || {}), data: labels };
         else next.xAxis = { ...(next.xAxis || {}), data: labels };
@@ -1563,11 +1600,13 @@
           return { ...(s || {}), data: padded };
         });
       }
+      next.__categoryMeta = labels.map((_, idx) => parseChatbotCategoryMeta(rawCategories[idx]));
       return next;
     };
 
     const getSeriesAt = (cfg, idx, preferNameIncludes) => {
-      const series = Array.isArray(cfg?.series) ? cfg.series : [];
+      const chartCfg = getChartConfig(cfg);
+      const series = Array.isArray(chartCfg?.series) ? chartCfg.series : [];
       if (!series.length) return null;
       let s = series[0];
       if (preferNameIncludes) {
@@ -1577,6 +1616,107 @@
       const arr = Array.isArray(s?.data) ? s.data : [];
       const v = arr[idx];
       return Number.isFinite(v) ? v : (typeof v === "string" ? Number(v) : null);
+    };
+
+    const getCategoryMetaAt = (cfg, idx) => {
+      const chartCfg = getChartConfig(cfg);
+      const arr = Array.isArray(chartCfg?.__categoryMeta) ? chartCfg.__categoryMeta : [];
+      return arr[idx] || null;
+    };
+
+    const getChatbotScoreAt = (cfg, idx, preferNameIncludes) => {
+      const score = getSeriesAt(cfg, idx, preferNameIncludes);
+      const meta = getCategoryMetaAt(cfg, idx);
+      const total = Number(meta?.total);
+      const hasTotal = Number.isFinite(total) && total > 0;
+      return {
+        score: Number.isFinite(score) ? score : null,
+        total: hasTotal ? total : null
+      };
+    };
+
+    const getChatbotTimeAt = (cfg, idx, preferNameIncludes) => {
+      const seconds = getSeriesAt(cfg, idx, preferNameIncludes);
+      return Number.isFinite(seconds) ? Math.max(0, Number(seconds)) : null;
+    };
+
+    const formatChatbotScore = (info) => {
+      if (!info || !Number.isFinite(info.score)) return "-";
+      const scoreText = String(Math.round(Number(info.score)));
+      if (!Number.isFinite(info.total) || info.total <= 0) return scoreText;
+      return `${scoreText}/${info.total}`;
+    };
+
+    const formatDurationShort = (seconds) => {
+      const n = Number(seconds);
+      if (!Number.isFinite(n)) return "-";
+      const totalSec = Math.max(0, Math.round(n));
+      if (totalSec < 60) return `${totalSec} วินาที`;
+      const mins = Math.floor(totalSec / 60);
+      const secs = totalSec % 60;
+      return `${mins}:${String(secs).padStart(2, "0")} นาที`;
+    };
+
+    const collectChapterChatbotSlots = (chapterNode) => {
+      const out = [];
+      const sequentials = (chapterNode?.children || []).filter((c) => c?.kind === "sequential");
+      sequentials.forEach((seq) => {
+        const verticals = (seq?.children || []).filter((c) => c?.kind === "vertical");
+        verticals.forEach((v) => {
+          const entries = collectVerticalAeSubtools(v).filter((entry) => entry?.subtype === "Chatbot");
+          entries.forEach((entry, entryIdx) => {
+            out.push({
+              id: entry?.id || "",
+              title: entry?.title || decodeIfMojibake(String(v?.title || `Chatbot ${entryIdx + 1}`))
+            });
+          });
+        });
+      });
+      return out;
+    };
+
+    const buildChatbotOrderMap = (course, perfCfg, speedCfg) => {
+      const chapters = getSortedChapters(course);
+      const perfSeries = Array.isArray(getChartConfig(perfCfg)?.series) ? getChartConfig(perfCfg).series : [];
+      const speedSeries = Array.isArray(getChartConfig(speedCfg)?.series) ? getChartConfig(speedCfg).series : [];
+      const perfMeta = Array.isArray(getChartConfig(perfCfg)?.__categoryMeta) ? getChartConfig(perfCfg).__categoryMeta : [];
+      const speedMeta = Array.isArray(getChartConfig(speedCfg)?.__categoryMeta) ? getChartConfig(speedCfg).__categoryMeta : [];
+      const maxLen = Math.max(
+        perfMeta.length,
+        speedMeta.length,
+        ...perfSeries.map((s) => (Array.isArray(s?.data) ? s.data.length : 0)),
+        ...speedSeries.map((s) => (Array.isArray(s?.data) ? s.data.length : 0))
+      );
+      let apiCursor = 0;
+      return {
+        chapters: chapters.map((chapterNode, chapterIdx) => {
+          const slots = collectChapterChatbotSlots(chapterNode);
+          const items = slots.map((slot, slotIdx) => {
+            const apiIdx = apiCursor < maxLen ? apiCursor : null;
+            if (apiIdx != null) apiCursor += 1;
+            return {
+              chapterIdx,
+              slotIdx,
+              apiIdx,
+              id: slot.id,
+              title: slot.title,
+              scoreYou: apiIdx != null ? getChatbotScoreAt(perfCfg, apiIdx, "your") : null,
+              scoreAvg: apiIdx != null ? getChatbotScoreAt(perfCfg, apiIdx, "average") : null,
+              timeYou: apiIdx != null ? getChatbotTimeAt(speedCfg, apiIdx, "your") : null,
+              timeAvg: apiIdx != null ? getChatbotTimeAt(speedCfg, apiIdx, "average") : null
+            };
+          });
+          return { chapterIdx, items };
+        })
+      };
+    };
+
+    const rebuildChatbotOrderMap = () => {
+      if (!window.courseDetailData) {
+        window.chatbotOrderMap = null;
+        return;
+      }
+      window.chatbotOrderMap = buildChatbotOrderMap(window.courseDetailData, window.chatbotPerfData, window.chatbotSpeedRawData);
     };
 
     const pickTitle = (node, fallback) => decodeIfMojibake(node?.title || node?.fields?.title || fallback || "-");
@@ -1831,7 +1971,9 @@
       ).toLowerCase();
       if (aet === "bookroll") return "BookRoll";
       if (aet === "video") return "Video";
+      if (aet === "chatbot") return "Chatbot";
       const raw = [
+        aet,
         f.iframe_url, f.iframeUrl, f.launch_url, f.launchUrl, f.url, f.href, f.src,
         data.iframe_url, data.iframeUrl, JSON.stringify(data || {})
       ].filter(Boolean).join("\n");
@@ -1849,7 +1991,7 @@
         const isAe = n.kind === "aetool" || id.includes("type@aetool");
         if (isAe) {
           const subtype = inferAeSubtypeFromNode(n);
-          if (subtype === "BookRoll" || subtype === "Video") {
+          if (subtype === "BookRoll" || subtype === "Video" || subtype === "Chatbot") {
             const key = `${subtype}|${id || "-"}`;
             if (!seen.has(key)) {
               seen.add(key);
@@ -1872,8 +2014,11 @@
       const chapters = getSortedChapters(course);
       const user = userId;
       const courseKey = courseId;
+      const chatbotOrderMap = window.chatbotOrderMap;
 
       const out = chapters.map((chapterNode, chapterIdx) => {
+        const chapterChatbot = Array.isArray(chatbotOrderMap?.chapters) ? chatbotOrderMap.chapters[chapterIdx] : null;
+        let chatbotSlotIdx = 0;
         const sequentials = (chapterNode?.children || []).filter((c) => c?.kind === "sequential");
         const seqItems = sequentials.map((seq, sIdx) => {
           const verticals = (seq?.children || []).filter((c) => c?.kind === "vertical");
@@ -1889,6 +2034,10 @@
                 const video = entry.subtype === "Video"
                   ? (getVideoProgressForTitle(entryTitle) || getVideoProgressForVertical(v, tool))
                   : null;
+                const chatbotItem = entry.subtype === "Chatbot"
+                  ? (Array.isArray(chapterChatbot?.items) ? (chapterChatbot.items[chatbotSlotIdx] || null) : null)
+                  : null;
+                if (entry.subtype === "Chatbot") chatbotSlotIdx += 1;
                 const pct = reading?.progress ?? video?.progress ?? null;
                 return {
                   id: entry.id || resolveLearningItemId(v, tool),
@@ -1896,7 +2045,11 @@
                   tool,
                   pct,
                   reading,
-                  video
+                  video,
+                  chatbotScore: chatbotItem?.scoreYou || null,
+                  chatbotScoreAvg: chatbotItem?.scoreAvg || null,
+                  chatbotTime: chatbotItem?.timeYou ?? null,
+                  chatbotTimeAvg: chatbotItem?.timeAvg ?? null
                 };
               });
             const effectiveSubtools = subtools.length
@@ -2089,10 +2242,27 @@
 
       const blocks = sequentials.map((seq) => {
         const vHtml = (seq.verticals || []).map((v) => {
+          const subtoolList = Array.isArray(v.subtools) && v.subtools.length ? v.subtools : [v];
           const hasPct = Number.isFinite(v.pct);
           const pct = hasPct ? clamp(Number(v.pct), 0, 100) : null;
+          const hasChatbotTool = subtoolList.some((item) => String(item?.tool?.sublabel || "").toLowerCase() === "chatbot");
+          const hasChatbotMetrics = subtoolList.some((item) =>
+            Number.isFinite(item?.chatbotScore?.score) ||
+            Number.isFinite(item?.chatbotScoreAvg?.score) ||
+            Number.isFinite(item?.chatbotTime) ||
+            Number.isFinite(item?.chatbotTimeAvg)
+          );
+          const hasChatbotScore = subtoolList.some((item) => Number.isFinite(item?.chatbotScore?.score));
           const badge = !hasPct
-            ? `<span class="badge badge-locked">ไม่มีข้อมูล API</span>`
+            ? (
+              hasChatbotTool
+                ? (
+                  hasChatbotScore ? `<span class="badge badge-done">ทำแบบทดสอบแล้ว</span>` :
+                    hasChatbotMetrics ? `<span class="badge badge-todo">ยังไม่ทำแบบทดสอบ</span>` :
+                      `<span class="badge badge-locked">ยังไม่มีข้อมูลคะแนน</span>`
+                )
+                : `<span class="badge badge-locked">ไม่มีข้อมูล API</span>`
+            )
             : pct >= 100 ? `<span class="badge badge-done">ผ่านแล้ว</span>` :
               pct >= 50 ? `<span class="badge badge-doing">กำลังทำ</span>` :
               pct > 0 ? `<span class="badge badge-todo">เริ่มแล้ว</span>` :
@@ -2132,17 +2302,32 @@
             }
             return "";
           };
-          const toolItems = (Array.isArray(v.subtools) && v.subtools.length ? v.subtools : [v]).map((item) => {
+          const toolItems = subtoolList.map((item) => {
             const itemTool = item.tool || v.tool || inferVerticalTool(v.node || v);
             const itemSub = itemTool?.sublabel ? `<span class="badge ml-2">${escapeHtml(itemTool.sublabel)}</span>` : "";
             const itemHasPct = Number.isFinite(item?.pct);
             const itemPct = itemHasPct ? clamp(Number(item.pct), 0, 100) : null;
             const itemPctText = itemHasPct ? `${itemPct}%` : "-";
+            const isChatbot = String(itemTool?.sublabel || "").toLowerCase() === "chatbot";
             const reading = item.reading || null;
             const video = item.video || null;
-            const itemDetail = reading
-              ? `อ่าน ${reading.read ?? "-"} / ${reading.total ?? "-"} หน้า`
-              : (video ? `รับชม ${video.progress}%` : "");
+            const chatbotScoreText = item.chatbotScore
+              ? `คะแนน ${formatChatbotScore(item.chatbotScore)} • เฉลี่ย ${formatChatbotScore(item.chatbotScoreAvg)}`
+              : "";
+            const chatbotTimeText = (Number.isFinite(item.chatbotTime) || Number.isFinite(item.chatbotTimeAvg))
+              ? `ใช้เวลา ${formatDurationShort(item.chatbotTime)} • เฉลี่ย ${formatDurationShort(item.chatbotTimeAvg)}`
+              : "";
+            const itemDetail = isChatbot
+              ? [chatbotScoreText, chatbotTimeText].filter(Boolean).join(" • ")
+              : (reading
+                ? `อ่าน ${reading.read ?? "-"} / ${reading.total ?? "-"} หน้า`
+                : (video ? `รับชม ${video.progress}%` : ""));
+            const itemStatus = isChatbot
+              ? (
+                Number.isFinite(item?.chatbotScore?.score) ? "ทำแบบทดสอบแล้ว" :
+                  (chatbotScoreText || chatbotTimeText) ? "ยังไม่ทำแบบทดสอบ" : "ยังไม่มีข้อมูลคะแนน"
+              )
+              : "";
             return `
               <div class="flex items-start justify-between gap-3 rounded-xl bg-white/70 px-3 py-2 border border-slate-200">
                 <div class="flex items-center gap-2 min-w-0">
@@ -2151,10 +2336,11 @@
                     <div class="text-sm font-medium text-slate-700">
                       <span>${escapeHtml(item.title || v.title || "-")}</span>${itemSub}
                     </div>
+                    ${itemStatus ? `<div class="text-xs text-slate-500">${escapeHtml(itemStatus)}</div>` : ""}
                     ${itemDetail ? `<div class="text-xs text-slate-500">${escapeHtml(itemDetail)}</div>` : ""}
                   </div>
                 </div>
-                ${itemHasPct ? `<div class="text-xs font-bold text-slate-600 mono shrink-0">${escapeHtml(itemPctText)}</div>` : ""}
+                ${(!isChatbot && itemHasPct) ? `<div class="text-xs font-bold text-slate-600 mono shrink-0">${escapeHtml(itemPctText)}</div>` : ""}
               </div>
             `;
           }).join("");
@@ -2170,8 +2356,7 @@
                 ${toolItems}
               </div>
               ${progressBarHtml}
-              <div class="mt-1 flex items-center justify-between text-xs text-slate-500">
-                <span class="mono break-all">${escapeHtml(v.id || "")}</span>
+              <div class="mt-1 flex items-center justify-end text-xs text-slate-500">
                 <span class="mono font-bold">${progressTextHtml}</span>
               </div>
             </div>
@@ -2182,9 +2367,8 @@
           <div class="panel p-4">
             <div class="flex items-center justify-between gap-2">
               <div class="font-bold">${escapeHtml(seq.title || "-")}</div>
-              <div class="text-xs text-slate-500 mono">${(seq.verticals || []).length} vertical</div>
+              <div class="text-xs text-slate-500">${(seq.verticals || []).length} รายการ</div>
             </div>
-            ${seq.id ? `<div class="mt-1 text-xs text-slate-500 mono break-all">${escapeHtml(seq.id)}</div>` : ""}
             <div class="mt-3 grid gap-2">
               ${vHtml || `<div class="text-sm text-slate-600">ไม่มี vertical</div>`}
             </div>
@@ -2437,6 +2621,7 @@
         if (htmlEl) htmlEl.textContent = acc.html;
         renderCourseOutline(data);
         setCourseDeepData(data, false);
+        rebuildChatbotOrderMap();
 
         requestDashboardRender();
 
@@ -2756,6 +2941,54 @@
       }
     };
 
+    const fetchChatbotSpeed = async () => {
+      if (!userId || !courseId || !isLikelyCourseId(courseId)) {
+        window.chatbotSpeedRawData = null;
+        rebuildChatbotOrderMap();
+        requestDashboardRender();
+        return;
+      }
+      try {
+        const srcUrl = chatbotSpeedUrl(courseId, userId);
+        const res = await fetch(srcUrl);
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        window.chatbotSpeedRawData = getChartConfig(data);
+        const rawCategories = getCategoryAxisData(window.chatbotSpeedRawData);
+        window.chatbotSpeedRawData.__categoryMeta = rawCategories.map((label) => parseChatbotCategoryMeta(label));
+      } catch (err) {
+        window.chatbotSpeedRawData = null;
+        console.warn("Chatbot Speed API error:", err);
+      } finally {
+        rebuildChatbotOrderMap();
+        requestDashboardRender();
+      }
+    };
+
+    const fetchChatbotPerformance = async () => {
+      if (!userId || !courseId || !isLikelyCourseId(courseId)) {
+        window.chatbotPerfData = null;
+        rebuildChatbotOrderMap();
+        requestDashboardRender();
+        return;
+      }
+      try {
+        const srcUrl = chatbotPerformanceUrl(courseId, userId);
+        const res = await fetch(srcUrl);
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        window.chatbotPerfData = getChartConfig(data);
+        const rawCategories = getCategoryAxisData(window.chatbotPerfData);
+        window.chatbotPerfData.__categoryMeta = rawCategories.map((label) => parseChatbotCategoryMeta(label));
+      } catch (err) {
+        window.chatbotPerfData = null;
+        console.warn("Chatbot Performance API error:", err);
+      } finally {
+        rebuildChatbotOrderMap();
+        requestDashboardRender();
+      }
+    };
+
     document.getElementById("overall-value-wide").textContent = "0%";
     document.getElementById("overall-bar-wide").style.width = "0%";
     document.getElementById("bookroll-donut-done").textContent = "0";
@@ -2881,7 +3114,9 @@
       const tasks = [
         fetchBookrollReadingData,
         fetchVideoLearningProgress,
-        fetchCourseDetail
+        fetchCourseDetail,
+        fetchChatbotSpeed,
+        fetchChatbotPerformance
       ];
       if (SHOW_BOOKROLL) tasks.push(fetchBookroll);
       const cycleId = beginDashboardLoadCycle(tasks.length);
