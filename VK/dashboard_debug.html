@@ -2382,74 +2382,16 @@
 
         const unitHtml = model.chapters.map((ch, i) => {
           const accent = palette[i % palette.length];
-          const items = (ch.sequentials || []).flatMap((s) =>
-            (s.verticals || [])
-              .filter((v) => isBookrollOrVideoTool(v.tool))
-              .map((v) => ({
-                ...v,
-                seqTitle: s.title || ""
-              }))
-          );
-          const toolBlocks = items.flatMap((it) => {
-            const subs = Array.isArray(it.subtools) && it.subtools.length ? it.subtools : [it];
-            return subs.map((sub, idx) => ({
-              vertical: it,
-              sub,
-              idx
-            }));
-          });
+          const sequentialCount = Array.isArray(ch.sequentials) ? ch.sequentials.length : 0;
+          const verticalCount = (ch.sequentials || []).reduce((sum, seq) => {
+            return sum + ((seq?.verticals || []).length);
+          }, 0);
+          const chapterNode = chapters[i] || null;
           const openAttr = i === 0 ? " open" : "";
-          const countText = `(${toolBlocks.length} blocks)`;
+          const countText = `(${sequentialCount} groups • ${verticalCount} blocks)`;
           const hasChapterPct = Number.isFinite(ch.chapterPct);
           const pct = hasChapterPct ? clamp(Number(ch.chapterPct), 0, 100) : null;
-          const pctBadge = !hasChapterPct
-            ? "bg-slate-100 text-slate-500 border border-slate-200"
-            : pct >= 100 ? "grad-success text-white" :
-              pct >= 50 ? "bg-amber-100 text-amber-800 border border-amber-200" :
-              pct > 0 ? "bg-sky-100 text-sky-800 border border-sky-200" :
-              "bg-slate-100 text-slate-500 border border-slate-200";
-
-          const itemsHtml = toolBlocks.map((row) => {
-            const it = row.vertical;
-            const sub = row.sub;
-            const baseStatus = statusFromPct(sub.pct);
-            const kind = displayKind(sub.tool);
-            const pctText = Number.isFinite(sub.pct) ? `${clamp(Number(sub.pct), 0, 100)}%` : "-";
-            const reading = sub.reading || null;
-            const video = sub.video || null;
-            const isVideo = /video/i.test(String(sub.tool?.sublabel || ""));
-            const isBook = /bookroll/i.test(String(sub.tool?.sublabel || ""));
-            const kindPrefix = isVideo ? "[video] " : (isBook ? "[book] " : "");
-            const headingPrefix = kindPrefix;
-            const videoApiFailed = isVideo && String(window.videoApiStatus || "") === "error";
-            const st = videoApiFailed
-              ? { ...baseStatus, text: "ไม่สามารถดึง API ได้" }
-              : baseStatus;
-            const progressDetail = reading
-              ? `อ่าน ${reading.read ?? "-"} / ${reading.total ?? "-"} หน้า`
-              : (video ? `รับชม ${video.progress}%` : (videoApiFailed ? "ไม่สามารถดึง API ได้" : "ไม่มีข้อมูล API"));
-            const subId = sub.id || "-";
-            const seqTitle = it.seqTitle ? `<div class="text-[11px] text-slate-400">SEQ: ${escapeHtml(it.seqTitle)}</div>` : "";
-            return `
-              <div class="panel p-4 flex items-center justify-between gap-4">
-                <div class="flex items-start gap-4 min-w-0">
-                  <div class="mt-2 w-4 h-4 rounded-full ${st.dot} shrink-0"></div>
-                  <div class="min-w-0">
-                    <div class="text-lg font-bold truncate" title="${escapeHtml(`${headingPrefix}${it.title || ""}`)}">${escapeHtml(`${headingPrefix}${it.title || "-"}`)}</div>
-                    ${seqTitle}
-                    <div class="mt-1 text-slate-500 font-semibold mono text-xs break-all">
-                      <div>${escapeHtml(kind)} • ${escapeHtml(pctText)} • ${escapeHtml(progressDetail)}</div>
-                      <div>BLOCK • ID: ${escapeHtml(subId)}</div>
-                    </div>
-                  </div>
-                </div>
-                <div class="shrink-0 flex items-center gap-3">
-                  ${Number.isFinite(sub.pct) ? `<div class="info-pill px-3 py-2 text-sm font-bold bg-slate-100 text-slate-700 border border-slate-200">${escapeHtml(pctText)}</div>` : ""}
-                  <div class="info-pill px-4 py-2 text-sm font-semibold tracking-wide ${st.badge}">${escapeHtml(st.text)}</div>
-                </div>
-              </div>
-            `;
-          }).join("") || `<div class="panel p-4 text-sm text-slate-600">ยังไม่มีรายการย่อย</div>`;
+          const itemsHtml = renderChapterTools(chapterNode, i);
 
           return `
             <div class="panel p-0 overflow-hidden">

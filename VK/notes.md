@@ -46,7 +46,7 @@ https://sbs-backend.mooc.meca.in.th/stats/echart/bookrollMaxPage/${courseID}/${u
 
 https://sbs-backend.mooc.meca.in.th/stats/echart/chatbotSpeed/${courseID}/${userID}
 
-https://sbs-backend.mooc.meca.in.th/stats/stats/echart/chatbotPerformance/${courseID}/${userID}
+https://sbs-backend.mooc.meca.in.th/stats/echart/chatbotPerformance/${courseID}/${userID}
 
 https://vk-analysis.learning.app.meca.in.th/analysis/donechapterview/${userID}/course/${courseID}
 
