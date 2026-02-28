@@ -2097,7 +2097,9 @@
       ).toLowerCase();
       if (aet === "bookroll") return "BookRoll";
       if (aet === "video") return "Video";
+      if (aet === "chatbot") return "Chatbot";
       const raw = [
+        aet,
         f.iframe_url, f.iframeUrl, f.launch_url, f.launchUrl, f.url, f.href, f.src,
         data.iframe_url, data.iframeUrl, JSON.stringify(data || {})
       ].filter(Boolean).join("\n");
@@ -2369,7 +2371,12 @@
         const blocks = sequentials.map((seq) => {
           const vHtml = (seq.verticals || []).map((v) => {
             const tool = v.tool || inferVerticalTool(v);
-            const subtool = Array.isArray(v.subtools) && v.subtools.length ? v.subtools[0] : null;
+            const subtool = Array.isArray(v.subtools) && v.subtools.length
+              ? (
+                v.subtools.find((item) => String(item?.tool?.sublabel || "").toLowerCase() === "chatbot")
+                || v.subtools[0]
+              )
+              : null;
             const toolInfo = subtool || v;
             const sub = tool.sublabel ? `<span class="badge ml-2">${escapeHtml(tool.sublabel)}</span>` : "";
             const hasPct = Number.isFinite(v.pct);
