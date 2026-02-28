@@ -430,32 +430,6 @@
                     </div>
                   </div>
 
-                  <div class="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div class="clay-soft p-4 cat-card cat-2">
-                      <div class="text-sm text-slate-500">BookRoll Progress</div>
-                      <div class="mt-3 h-[220px]">
-                        <canvas class="chart-canvas" id="bookrollOverallChart"></canvas>
-                      </div>
-                      <div class="mt-2 text-xs text-slate-600">
-                        อ่านจบ <span class="mono font-bold" id="bookroll-donut-done">0</span> เรื่อง •
-                        กำลังอ่าน <span class="mono font-bold" id="bookroll-donut-doing">0</span> เรื่อง •
-                        ยังไม่ได้อ่าน <span class="mono font-bold" id="bookroll-donut-todo">0</span> เรื่อง
-                      </div>
-                    </div>
-
-                    <div class="clay-soft p-4 cat-card cat-3">
-                      <div class="text-sm text-slate-500">Video Progress</div>
-                      <div class="mt-3 h-[220px]">
-                        <canvas class="chart-canvas" id="videoOverallChart"></canvas>
-                      </div>
-                      <div class="mt-2 text-xs text-slate-600">
-                        ดูจบ <span class="mono font-bold" id="video-donut-done">0</span> เรื่อง •
-                        กำลังดู <span class="mono font-bold" id="video-donut-doing">0</span> เรื่อง •
-                        เหลือ <span class="mono font-bold" id="video-donut-remain">0</span> เรื่อง
-                      </div>
-                    </div>
-                  </div>
-
                   <div class="mt-5">
                     <div class="clay-soft p-4 cat-card cat-4">
                       <div class="flex items-start justify-between gap-3">
@@ -479,6 +453,40 @@
                       <div class="mt-3 grid gap-4" id="topic-units">
                         <div class="text-sm text-slate-600">รอข้อมูลบทเรียน...</div>
                       </div>
+                    </div>
+                  </div>
+
+                  <div class="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div class="clay-soft p-4 cat-card cat-2">
+                      <div class="text-sm text-slate-500">BookRoll Progress</div>
+                      <div class="mt-3 h-[220px]">
+                        <canvas class="chart-canvas" id="bookrollOverallChart"></canvas>
+                      </div>
+                      <div class="mt-2 text-xs text-slate-600">
+                        อ่านจบ <span class="mono font-bold" id="bookroll-donut-done">0</span> เรื่อง •
+                        กำลังอ่าน <span class="mono font-bold" id="bookroll-donut-doing">0</span> เรื่อง •
+                        ยังไม่ได้อ่าน <span class="mono font-bold" id="bookroll-donut-todo">0</span> เรื่อง
+                      </div>
+                    </div>
+
+                    <div class="clay-soft p-4 cat-card cat-3">
+                      <div class="text-sm text-slate-500">Video Progress</div>
+                      <div class="mt-3 h-[220px]">
+                        <canvas class="chart-canvas" id="videoOverallChart"></canvas>
+                      </div>
+                      <div class="mt-2 text-xs text-slate-600">
+                        ดูจบ <span class="mono font-bold" id="video-donut-done">0</span> เรื่อง •
+                        กำลังดู <span class="mono font-bold" id="video-donut-doing">0</span> เรื่อง •
+                        เหลือ <span class="mono font-bold" id="video-donut-remain">0</span> เรื่อง
+                      </div>
+                    </div>
+
+                    <div class="clay-soft p-4 cat-card cat-4">
+                      <div class="text-sm text-slate-500">Chatbot Quiz</div>
+                      <div class="mt-3 h-[220px]">
+                        <canvas class="chart-canvas" id="chatbotQuizOverallChart"></canvas>
+                      </div>
+                      <div class="mt-2 text-xs text-slate-600" id="chatbot-quiz-summary">ยังไม่มีข้อมูลคะแนน</div>
                     </div>
                   </div>
 
@@ -629,6 +637,7 @@
     };
     let bookrollOverallChartInstance = null;
     let videoOverallChartInstance = null;
+    let chatbotQuizOverallChartInstance = null;
     let userId = null;
     let courseId = getQueryParamPreservePlus("courseid") || params.get("courseid");
     if (courseId) {
@@ -2168,6 +2177,7 @@
       setText("video-donut-remain", stats.video.todo);
       renderBookrollStatusDonut(stats.book);
       renderVideoStatusDonut(stats.video);
+      renderChatbotQuizOverview(window.chatbotOrderMap);
     };
 
     const renderBookrollStatusDonut = (book) => {
@@ -2214,6 +2224,76 @@
           plugins: { legend: { position: "bottom" } }
         }
       });
+    };
+
+    const renderChatbotQuizOverview = (chatbotMap) => {
+      const ctx = document.getElementById("chatbotQuizOverallChart");
+      const summaryEl = document.getElementById("chatbot-quiz-summary");
+      if (!ctx) return;
+      if (chatbotQuizOverallChartInstance) chatbotQuizOverallChartInstance.destroy();
+
+      const items = (chatbotMap?.chapters || []).flatMap((chapter) => chapter?.items || []);
+      const scoreYou = items
+        .map((item) => Number(item?.scoreYou?.score))
+        .filter((n) => Number.isFinite(n))
+        .reduce((a, b) => a + b, 0);
+      const scoreAvg = items
+        .map((item) => Number(item?.scoreAvg?.score))
+        .filter((n) => Number.isFinite(n))
+        .reduce((a, b) => a + b, 0);
+      const totals = items
+        .map((item) => Number(item?.scoreYou?.total ?? item?.scoreAvg?.total))
+        .filter((n) => Number.isFinite(n) && n > 0);
+      const totalScore = totals.reduce((a, b) => a + b, 0);
+      const hasAny = items.length > 0 && (Number.isFinite(scoreYou) || Number.isFinite(scoreAvg) || Number.isFinite(totalScore));
+
+      if (!hasAny || totalScore <= 0) {
+        chatbotQuizOverallChartInstance = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: ["ยังไม่มีข้อมูล"],
+            datasets: [{
+              label: "คะแนน",
+              data: [0],
+              backgroundColor: "#cbd5e1",
+              borderRadius: 10
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+          }
+        });
+        if (summaryEl) summaryEl.textContent = "ยังไม่มีข้อมูลคะแนน";
+        return;
+      }
+
+      chatbotQuizOverallChartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: ["คะแนนของคุณ", "ค่าเฉลี่ย", "คะแนนเต็ม"],
+          datasets: [{
+            data: [scoreYou, scoreAvg, totalScore],
+            backgroundColor: ["#0f766e", "#38bdf8", "#cbd5e1"],
+            borderRadius: 12
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { beginAtZero: true, suggestedMax: totalScore }
+          }
+        }
+      });
+
+      if (summaryEl) {
+        summaryEl.textContent = `คะแนนของคุณ ${Math.round(scoreYou)}/${Math.round(totalScore)} • ค่าเฉลี่ย ${Math.round(scoreAvg)}/${Math.round(totalScore)}`;
+      }
     };
 
     const renderChapterTools = (chapterNode, chapterIdx) => {
@@ -2311,22 +2391,28 @@
             const isChatbot = String(itemTool?.sublabel || "").toLowerCase() === "chatbot";
             const reading = item.reading || null;
             const video = item.video || null;
-            const chatbotScoreText = item.chatbotScore
-              ? `คะแนน ${formatChatbotScore(item.chatbotScore)} • เฉลี่ย ${formatChatbotScore(item.chatbotScoreAvg)}`
-              : "";
+            const chatbotScoreMain = item.chatbotScore ? formatChatbotScore(item.chatbotScore) : "-";
+            const chatbotScoreAvg = item.chatbotScoreAvg ? formatChatbotScore(item.chatbotScoreAvg) : "-";
             const chatbotTimeText = (Number.isFinite(item.chatbotTime) || Number.isFinite(item.chatbotTimeAvg))
               ? `ใช้เวลา ${formatDurationShort(item.chatbotTime)} • เฉลี่ย ${formatDurationShort(item.chatbotTimeAvg)}`
               : "";
             const itemDetail = isChatbot
-              ? [chatbotScoreText, chatbotTimeText].filter(Boolean).join(" • ")
+              ? chatbotTimeText
               : (reading
                 ? `อ่าน ${reading.read ?? "-"} / ${reading.total ?? "-"} หน้า`
                 : (video ? `รับชม ${video.progress}%` : ""));
             const itemStatus = isChatbot
               ? (
                 Number.isFinite(item?.chatbotScore?.score) ? "ทำแบบทดสอบแล้ว" :
-                  (chatbotScoreText || chatbotTimeText) ? "ยังไม่ทำแบบทดสอบ" : "ยังไม่มีข้อมูลคะแนน"
+                  ((item.chatbotScoreAvg ? true : false) || chatbotTimeText) ? "ยังไม่ทำแบบทดสอบ" : "ยังไม่มีข้อมูลคะแนน"
               )
+              : "";
+            const chatbotScoreHero = isChatbot
+              ? `<div class="shrink-0 text-right">
+                  <div class="text-[11px] uppercase tracking-wide text-slate-400">คะแนน</div>
+                  <div class="text-xl font-extrabold text-sky-700 mono leading-none">${escapeHtml(chatbotScoreMain)}</div>
+                  <div class="mt-1 text-xs text-slate-500">เฉลี่ย ${escapeHtml(chatbotScoreAvg)}</div>
+                </div>`
               : "";
             return `
               <div class="flex items-start justify-between gap-3 rounded-xl bg-white/70 px-3 py-2 border border-slate-200">
@@ -2340,6 +2426,7 @@
                     ${itemDetail ? `<div class="text-xs text-slate-500">${escapeHtml(itemDetail)}</div>` : ""}
                   </div>
                 </div>
+                ${chatbotScoreHero}
                 ${(!isChatbot && itemHasPct) ? `<div class="text-xs font-bold text-slate-600 mono shrink-0">${escapeHtml(itemPctText)}</div>` : ""}
               </div>
             `;
