@@ -1660,9 +1660,20 @@
       return chapters.map((c, idx) => decodeIfMojibake(c.title || c.fields?.title || `บทที่ ${idx + 1}`));
     };
 
+    const getChartConfig = (cfg) => {
+      if (!cfg || typeof cfg !== "object") return cfg;
+      if (!cfg.chart || typeof cfg.chart !== "object") return cfg;
+      const chart = cfg.chart;
+      if (Array.isArray(cfg.__categoryMeta) && !Array.isArray(chart.__categoryMeta)) {
+        chart.__categoryMeta = cfg.__categoryMeta;
+      }
+      return chart;
+    };
+
     const getCategoryAxisData = (cfg) => {
-      const xAxis = Array.isArray(cfg?.xAxis) ? cfg.xAxis[0] : cfg?.xAxis;
-      const yAxis = Array.isArray(cfg?.yAxis) ? cfg.yAxis[0] : cfg?.yAxis;
+      const chartCfg = getChartConfig(cfg);
+      const xAxis = Array.isArray(chartCfg?.xAxis) ? chartCfg.xAxis[0] : chartCfg?.xAxis;
+      const yAxis = Array.isArray(chartCfg?.yAxis) ? chartCfg.yAxis[0] : chartCfg?.yAxis;
       if (xAxis?.type === "category" && Array.isArray(xAxis?.data)) return xAxis.data;
       if (yAxis?.type === "category" && Array.isArray(yAxis?.data)) return yAxis.data;
       return [];
@@ -1684,16 +1695,17 @@
 
     const applyCategoryLabels = (cfg, labels) => {
       if (!cfg || !Array.isArray(labels) || labels.length === 0) return cfg;
-      const xAxis = Array.isArray(cfg.xAxis) ? cfg.xAxis[0] : cfg.xAxis;
-      const yAxis = Array.isArray(cfg.yAxis) ? cfg.yAxis[0] : cfg.yAxis;
+      const chartCfg = getChartConfig(cfg);
+      const xAxis = Array.isArray(chartCfg?.xAxis) ? chartCfg.xAxis[0] : chartCfg?.xAxis;
+      const yAxis = Array.isArray(chartCfg?.yAxis) ? chartCfg.yAxis[0] : chartCfg?.yAxis;
       const xIsCat = xAxis?.type === "category";
       const yIsCat = yAxis?.type === "category";
       const rawCategories = getCategoryAxisData(cfg);
 
       const next =
         (typeof structuredClone === "function")
-          ? structuredClone(cfg)
-          : JSON.parse(JSON.stringify(cfg));
+          ? structuredClone(chartCfg)
+          : JSON.parse(JSON.stringify(chartCfg));
       if (xIsCat) {
         if (Array.isArray(next.xAxis)) next.xAxis[0] = { ...(next.xAxis[0] || {}), data: labels };
         else next.xAxis = { ...(next.xAxis || {}), data: labels };
@@ -1716,7 +1728,8 @@
     };
 
     const getSeriesAt = (cfg, idx, preferNameIncludes) => {
-      const series = Array.isArray(cfg?.series) ? cfg.series : [];
+      const chartCfg = getChartConfig(cfg);
+      const series = Array.isArray(chartCfg?.series) ? chartCfg.series : [];
       if (!series.length) return null;
       let s = series[0];
       if (preferNameIncludes) {
@@ -1729,7 +1742,8 @@
     };
 
     const getCategoryMetaAt = (cfg, idx) => {
-      const arr = Array.isArray(cfg?.__categoryMeta) ? cfg.__categoryMeta : [];
+      const chartCfg = getChartConfig(cfg);
+      const arr = Array.isArray(chartCfg?.__categoryMeta) ? chartCfg.__categoryMeta : [];
       return arr[idx] || null;
     };
 
@@ -2784,12 +2798,13 @@
       const ctx = document.getElementById(canvasId);
       if (!ctx) return;
       if (ctx._chartInstance) ctx._chartInstance.destroy();
-      const xAxis = Array.isArray(cfg?.xAxis) ? cfg.xAxis[0] : cfg?.xAxis;
-      const yAxis = Array.isArray(cfg?.yAxis) ? cfg.yAxis[0] : cfg?.yAxis;
+      const chartCfg = getChartConfig(cfg);
+      const xAxis = Array.isArray(chartCfg?.xAxis) ? chartCfg.xAxis[0] : chartCfg?.xAxis;
+      const yAxis = Array.isArray(chartCfg?.yAxis) ? chartCfg.yAxis[0] : chartCfg?.yAxis;
       const xIsCat = xAxis?.type === "category";
       const yIsCat = yAxis?.type === "category";
       const labels = (xIsCat ? xAxis?.data : yIsCat ? yAxis?.data : []) || [];
-      const series = Array.isArray(cfg?.series) ? cfg.series : [];
+      const series = Array.isArray(chartCfg?.series) ? chartCfg.series : [];
       if (!labels.length || !series.length) {
         ctx._chartInstance = new Chart(ctx, {
           type: "bar",
@@ -3059,9 +3074,9 @@
         const res = await fetch(srcUrl);
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
-        window.chatbotSpeedData = data;
+        window.chatbotSpeedData = getChartConfig(data);
         const labels = getCourseChapterTitles(window.courseDetailData);
-        const relabeled = labels.length ? applyCategoryLabels(data, labels) : data;
+        const relabeled = labels.length ? applyCategoryLabels(window.chatbotSpeedData, labels) : window.chatbotSpeedData;
         window.chatbotSpeedData = relabeled;
         renderEchartToChart(relabeled, "chatbotSpeedChart", "Chatbot Speed");
         if (summaryEl) {
@@ -3098,8 +3113,8 @@
         const res = await fetch(srcUrl);
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
-        window.chatbotPerfData = data;
-        const rawCategories = getCategoryAxisData(data);
+        window.chatbotPerfData = getChartConfig(data);
+        const rawCategories = getCategoryAxisData(window.chatbotPerfData);
         window.chatbotPerfData.__categoryMeta = rawCategories.map((label) => parseChatbotCategoryMeta(label));
         rebuildChatbotPerformanceOrderMap();
         renderEchartToChart(window.chatbotPerfData, "chatbotPerfChart", "Chatbot Performance");
