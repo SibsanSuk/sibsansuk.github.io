@@ -2180,7 +2180,7 @@
                 if (entry.subtype === "Chatbot") chatbotSlotIdx += 1;
                 const chatbot = chatbotSlot?.your || null;
                 const chatbotAverage = chatbotSlot?.average || null;
-                const pct = reading?.progress ?? video?.progress ?? chatbot?.pct ?? null;
+                const pct = reading?.progress ?? video?.progress ?? null;
                 return {
                   id: entry.id || resolveLearningItemId(v, tool),
                   title: entryTitle,
@@ -2190,6 +2190,7 @@
                   video,
                   chatbot,
                   chatbotAverage,
+                  chatbotDone: Number.isFinite(chatbot?.score),
                   chatbotOrder: chatbotSlot?.slotIdx ?? null,
                   chatbotApiOrder: chatbotSlot?.apiIdx ?? null
                 };
@@ -2392,19 +2393,32 @@
               )
               : null;
             const toolInfo = subtool || v;
+            const isChatbot = String(toolInfo?.tool?.sublabel || tool?.sublabel || "").toLowerCase() === "chatbot";
             const sub = tool.sublabel ? `<span class="badge ml-2">${escapeHtml(tool.sublabel)}</span>` : "";
             const hasPct = Number.isFinite(v.pct);
             const pct = hasPct ? clamp(Number(v.pct), 0, 100) : null;
-            const badge = !hasPct
-              ? `<span class="badge badge-locked">ไม่มีข้อมูล API</span>`
-            : pct >= 100 ? `<span class="badge badge-done">ผ่านแล้ว</span>` :
-              pct >= 50 ? `<span class="badge badge-doing">กำลังทำ</span>` :
-              pct > 0 ? `<span class="badge badge-todo">เริ่มแล้ว</span>` :
-              `<span class="badge badge-locked">ยังไม่เริ่ม</span>`;
-            const progressBarHtml = hasPct
+            const badge = isChatbot
+              ? (
+                Number.isFinite(toolInfo?.chatbot?.score)
+                  ? `<span class="badge badge-done">ทำแบบทดสอบแล้ว</span>`
+                  : (toolInfo?.chatbot || toolInfo?.chatbotAverage
+                    ? `<span class="badge badge-todo">ยังไม่ทำแบบทดสอบ</span>`
+                    : `<span class="badge badge-locked">ไม่มีข้อมูล API</span>`)
+              )
+              : (
+                !hasPct
+                  ? `<span class="badge badge-locked">ไม่มีข้อมูล API</span>`
+                  : pct >= 100 ? `<span class="badge badge-done">ผ่านแล้ว</span>` :
+                    pct >= 50 ? `<span class="badge badge-doing">กำลังทำ</span>` :
+                    pct > 0 ? `<span class="badge badge-todo">เริ่มแล้ว</span>` :
+                    `<span class="badge badge-locked">ยังไม่เริ่ม</span>`
+              );
+            const progressBarHtml = !isChatbot && hasPct
               ? `<div class="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden"><div class="h-full grad-brand" style="width:${pct}%"></div></div>`
               : "";
-            const progressTextHtml = hasPct ? `${pct}%` : "-";
+            const progressTextHtml = isChatbot
+              ? (Number.isFinite(toolInfo?.chatbot?.score) ? "มีคะแนน" : "-")
+              : (hasPct ? `${pct}%` : "-");
             const chatbotText = toolInfo?.chatbot
               ? `คะแนน ${formatChatbotScore(toolInfo.chatbot)} • เฉลี่ย ${formatChatbotScore(toolInfo.chatbotAverage)}`
               : "";
@@ -2668,7 +2682,7 @@
           <div class="panel p-4">
             <div class="text-sm font-bold">Learning Performance</div>
             <div class="mt-2 text-sm text-slate-600">Your: <span class="mono font-bold">${escapeHtml(formatChatbotScore(perfYou))}</span> • Avg: <span class="mono">${escapeHtml(formatChatbotScore(perfAvg))}</span></div>
-            ${bar(perfYou?.pct)}
+            <div class="mt-2 text-xs text-slate-500">คะแนนสอบจะแสดงแยกจากความคืบหน้า และไม่นำไปรวมเป็นเปอร์เซ็นต์ progress</div>
           </div>
         </div>
 
