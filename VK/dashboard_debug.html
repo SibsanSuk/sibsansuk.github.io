@@ -1753,6 +1753,98 @@
       return `${scoreText}/${info.total}${pctText}`;
     };
 
+    const sumChatbotScores = (items) => {
+      const list = (Array.isArray(items) ? items : []).filter(Boolean);
+      const scores = list.map((item) => Number(item?.score)).filter((n) => Number.isFinite(n));
+      if (!scores.length) return null;
+      const totals = list.map((item) => Number(item?.total)).filter((n) => Number.isFinite(n) && n > 0);
+      const score = Math.round(scores.reduce((a, b) => a + b, 0));
+      const total = totals.length === list.length ? Math.round(totals.reduce((a, b) => a + b, 0)) : null;
+      return {
+        score,
+        total,
+        pct: Number.isFinite(total) && total > 0 ? Math.round(clamp((score / total) * 100, 0, 100)) : null
+      };
+    };
+
+    const collectChapterChatbotSlots = (chapterNode) => {
+      const out = [];
+      const sequentials = (chapterNode?.children || []).filter((c) => c?.kind === "sequential");
+      sequentials.forEach((seq) => {
+        const verticals = (seq?.children || []).filter((c) => c?.kind === "vertical");
+        verticals.forEach((v) => {
+          const entries = collectVerticalAeSubtools(v).filter((entry) => entry?.subtype === "Chatbot");
+          entries.forEach((entry, entryIdx) => {
+            out.push({
+              id: entry?.id || "",
+              title: entry?.title || pickTitle(v, `Chatbot ${entryIdx + 1}`),
+              seqTitle: pickTitle(seq, "")
+            });
+          });
+        });
+      });
+      return out;
+    };
+
+    const buildChatbotPerformanceOrderMap = (course, cfg) => {
+      const chapters = getSortedChapters(course);
+      const series = Array.isArray(cfg?.series) ? cfg.series : [];
+      const categoryMeta = Array.isArray(cfg?.__categoryMeta) ? cfg.__categoryMeta : [];
+      const maxLen = Math.max(
+        categoryMeta.length,
+        ...series.map((s) => (Array.isArray(s?.data) ? s.data.length : 0))
+      );
+      let apiCursor = 0;
+      const chapterMaps = chapters.map((chapterNode, chapterIdx) => {
+        const slots = collectChapterChatbotSlots(chapterNode);
+        const items = slots.map((slot, slotIdx) => {
+          const apiIdx = apiCursor < maxLen ? apiCursor : null;
+          if (apiIdx != null) apiCursor += 1;
+          const average = apiIdx != null ? getChatbotScoreAt(cfg, apiIdx, "average") : null;
+          const your = apiIdx != null ? getChatbotScoreAt(cfg, apiIdx, "your") : null;
+          return {
+            chapterIdx,
+            slotIdx,
+            apiIdx,
+            id: slot.id,
+            title: slot.title,
+            seqTitle: slot.seqTitle,
+            meta: apiIdx != null ? getCategoryMetaAt(cfg, apiIdx) : null,
+            average,
+            your
+          };
+        });
+        return {
+          chapterIdx,
+          count: slots.length,
+          items,
+          average: sumChatbotScores(items.map((item) => item.average)),
+          your: sumChatbotScores(items.map((item) => item.your))
+        };
+      });
+
+      const unassigned = [];
+      while (apiCursor < maxLen) {
+        unassigned.push({
+          apiIdx: apiCursor,
+          meta: getCategoryMetaAt(cfg, apiCursor),
+          average: getChatbotScoreAt(cfg, apiCursor, "average"),
+          your: getChatbotScoreAt(cfg, apiCursor, "your")
+        });
+        apiCursor += 1;
+      }
+
+      return { chapters: chapterMaps, unassigned };
+    };
+
+    const rebuildChatbotPerformanceOrderMap = () => {
+      if (!window.courseDetailData || !window.chatbotPerfData) {
+        window.chatbotPerfOrderMap = null;
+        return;
+      }
+      window.chatbotPerfOrderMap = buildChatbotPerformanceOrderMap(window.courseDetailData, window.chatbotPerfData);
+    };
+
     const pickTitle = (node, fallback) => decodeIfMojibake(node?.title || node?.fields?.title || fallback || "-");
 
     const sortKeyFromTitle = (rawTitle) => {
@@ -2046,8 +2138,11 @@
       const chapters = getSortedChapters(course);
       const user = userId;
       const courseKey = courseId;
+      const perfOrderMap = window.chatbotPerfOrderMap;
 
       const out = chapters.map((chapterNode, chapterIdx) => {
+        const chapterPerf = Array.isArray(perfOrderMap?.chapters) ? perfOrderMap.chapters[chapterIdx] : null;
+        let chatbotSlotIdx = 0;
         const sequentials = (chapterNode?.children || []).filter((c) => c?.kind === "sequential");
         const seqItems = sequentials.map((seq, sIdx) => {
           const verticals = (seq?.children || []).filter((c) => c?.kind === "vertical");
@@ -2063,9 +2158,12 @@
                 const video = entry.subtype === "Video"
                   ? (getVideoProgressForTitle(entryTitle) || getVideoProgressForVertical(v, tool))
                   : null;
-                const chatbot = entry.subtype === "Chatbot"
-                  ? getChatbotScoreAt(window.chatbotPerfData, chapterIdx, "your")
+                const chatbotSlot = entry.subtype === "Chatbot"
+                  ? (Array.isArray(chapterPerf?.items) ? (chapterPerf.items[chatbotSlotIdx] || null) : null)
                   : null;
+                if (entry.subtype === "Chatbot") chatbotSlotIdx += 1;
+                const chatbot = chatbotSlot?.your || null;
+                const chatbotAverage = chatbotSlot?.average || null;
                 const pct = reading?.progress ?? video?.progress ?? chatbot?.pct ?? null;
                 return {
                   id: entry.id || resolveLearningItemId(v, tool),
@@ -2074,7 +2172,10 @@
                   pct,
                   reading,
                   video,
-                  chatbot
+                  chatbot,
+                  chatbotAverage,
+                  chatbotOrder: chatbotSlot?.slotIdx ?? null,
+                  chatbotApiOrder: chatbotSlot?.apiIdx ?? null
                 };
               });
             const effectiveSubtools = subtools.length
@@ -2283,11 +2384,19 @@
               ? `<div class="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden"><div class="h-full grad-brand" style="width:${pct}%"></div></div>`
               : "";
             const progressTextHtml = hasPct ? `${pct}%` : "-";
-            const chatbotText = toolInfo?.chatbot ? `คะแนน ${formatChatbotScore(toolInfo.chatbot)}` : "";
+            const chatbotText = toolInfo?.chatbot
+              ? `คะแนน ${formatChatbotScore(toolInfo.chatbot)} • เฉลี่ย ${formatChatbotScore(toolInfo.chatbotAverage)}`
+              : "";
+            const orderText = Number.isFinite(toolInfo?.chatbotOrder)
+              ? `Quiz ลำดับที่ ${Number(toolInfo.chatbotOrder) + 1} ของบทนี้`
+              : "";
             const apiText = chatbotText
               || (toolInfo?.reading ? `อ่าน ${toolInfo.reading.read ?? "-"} / ${toolInfo.reading.total ?? "-"} หน้า` : "")
               || (toolInfo?.video ? `รับชม ${toolInfo.video.progress}%` : "");
-            const metaHtml = apiText ? `<div class="mt-1 text-xs text-slate-500">${escapeHtml(apiText)}</div>` : "";
+            const metaLines = [orderText, apiText].filter(Boolean);
+            const metaHtml = metaLines.length
+              ? `<div class="mt-1 text-xs text-slate-500">${metaLines.map((line) => `<div>${escapeHtml(line)}</div>`).join("")}</div>`
+              : "";
             return `
             <div class="panel p-3">
               <div class="flex items-start justify-between gap-2">
@@ -2509,8 +2618,9 @@
 
       const speedAvg = getSeriesAt(window.chatbotSpeedData, idx, "average");
       const speedYou = getSeriesAt(window.chatbotSpeedData, idx, "your");
-      const perfAvg = getChatbotScoreAt(window.chatbotPerfData, idx, "average");
-      const perfYou = getChatbotScoreAt(window.chatbotPerfData, idx, "your");
+      const perfChapter = Array.isArray(window.chatbotPerfOrderMap?.chapters) ? window.chatbotPerfOrderMap.chapters[idx] : null;
+      const perfAvg = perfChapter?.average || null;
+      const perfYou = perfChapter?.your || null;
 
       const pct = (v) => (v == null || Number.isNaN(v)) ? "-" : `${Math.round(v)}%`;
       const bar = (v) => {
@@ -2597,8 +2707,8 @@
           const rawEl = document.getElementById("chatbot-speed-raw");
           if (rawEl) rawEl.textContent = JSON.stringify(window.chatbotSpeedData, null, 2);
         }
-        if (window.chatbotPerfData && chapterLabels.length) {
-          window.chatbotPerfData = applyCategoryLabels(window.chatbotPerfData, chapterLabels);
+        if (window.chatbotPerfData) {
+          rebuildChatbotPerformanceOrderMap();
           renderEchartToChart(window.chatbotPerfData, "chatbotPerfChart", "Chatbot Performance");
           const rawEl = document.getElementById("chatbot-perf-raw");
           if (rawEl) rawEl.textContent = JSON.stringify(window.chatbotPerfData, null, 2);
@@ -2982,20 +3092,21 @@
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
         window.chatbotPerfData = data;
-        const labels = getCourseChapterTitles(window.courseDetailData);
-        const relabeled = labels.length ? applyCategoryLabels(data, labels) : data;
-        window.chatbotPerfData = relabeled;
-        renderEchartToChart(relabeled, "chatbotPerfChart", "Chatbot Performance");
+        const rawCategories = getCategoryAxisData(data);
+        window.chatbotPerfData.__categoryMeta = rawCategories.map((label) => parseChatbotCategoryMeta(label));
+        rebuildChatbotPerformanceOrderMap();
+        renderEchartToChart(window.chatbotPerfData, "chatbotPerfChart", "Chatbot Performance");
         if (summaryEl) {
-          const firstAvg = getChatbotScoreAt(relabeled, 0, "average");
-          const firstYou = getChatbotScoreAt(relabeled, 0, "your");
-          if (Number.isFinite(firstAvg?.score) || Number.isFinite(firstYou?.score)) {
-            summaryEl.textContent = `ค่าเฉลี่ยผลการตอบ: ${formatChatbotScore(firstAvg)} • คะแนนของคุณ: ${formatChatbotScore(firstYou)}`;
+          const chapterItems = (window.chatbotPerfOrderMap?.chapters || []).flatMap((chapter) => chapter?.items || []);
+          const totalAvg = sumChatbotScores(chapterItems.map((item) => item.average));
+          const totalYou = sumChatbotScores(chapterItems.map((item) => item.your));
+          if (Number.isFinite(totalAvg?.score) || Number.isFinite(totalYou?.score)) {
+            summaryEl.textContent = `ค่าเฉลี่ยผลการตอบรวม: ${formatChatbotScore(totalAvg)} • คะแนนของคุณรวม: ${formatChatbotScore(totalYou)}`;
           } else {
             summaryEl.textContent = "ยังไม่มีข้อมูล";
           }
         }
-        if (rawEl) rawEl.textContent = JSON.stringify(relabeled, null, 2);
+        if (rawEl) rawEl.textContent = JSON.stringify(window.chatbotPerfData, null, 2);
         if (statusEl) statusEl.textContent = `โหลดสำเร็จ (${srcUrl})`;
         renderTopicTabsAndDetail();
       } catch (err) {
