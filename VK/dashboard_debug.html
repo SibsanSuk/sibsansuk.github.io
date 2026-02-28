@@ -1660,12 +1660,35 @@
       return chapters.map((c, idx) => decodeIfMojibake(c.title || c.fields?.title || `บทที่ ${idx + 1}`));
     };
 
+    const getCategoryAxisData = (cfg) => {
+      const xAxis = Array.isArray(cfg?.xAxis) ? cfg.xAxis[0] : cfg?.xAxis;
+      const yAxis = Array.isArray(cfg?.yAxis) ? cfg.yAxis[0] : cfg?.yAxis;
+      if (xAxis?.type === "category" && Array.isArray(xAxis?.data)) return xAxis.data;
+      if (yAxis?.type === "category" && Array.isArray(yAxis?.data)) return yAxis.data;
+      return [];
+    };
+
+    const parseChatbotCategoryMeta = (rawLabel) => {
+      const raw = decodeIfMojibake(String(rawLabel || "")).trim();
+      if (!raw) return null;
+      const m = raw.match(/^(.*?)(?:,\s*(\d+))$/);
+      if (!m) return { raw, key: raw, total: null };
+      const key = String(m[1] || "").trim() || raw;
+      const total = Number(m[2]);
+      return {
+        raw,
+        key,
+        total: Number.isFinite(total) ? total : null
+      };
+    };
+
     const applyCategoryLabels = (cfg, labels) => {
       if (!cfg || !Array.isArray(labels) || labels.length === 0) return cfg;
       const xAxis = Array.isArray(cfg.xAxis) ? cfg.xAxis[0] : cfg.xAxis;
       const yAxis = Array.isArray(cfg.yAxis) ? cfg.yAxis[0] : cfg.yAxis;
       const xIsCat = xAxis?.type === "category";
       const yIsCat = yAxis?.type === "category";
+      const rawCategories = getCategoryAxisData(cfg);
 
       const next =
         (typeof structuredClone === "function")
@@ -1688,6 +1711,7 @@
           return { ...(s || {}), data: padded };
         });
       }
+      next.__categoryMeta = labels.map((_, idx) => parseChatbotCategoryMeta(rawCategories[idx]));
       return next;
     };
 
@@ -1702,6 +1726,31 @@
       const arr = Array.isArray(s?.data) ? s.data : [];
       const v = arr[idx];
       return Number.isFinite(v) ? v : (typeof v === "string" ? Number(v) : null);
+    };
+
+    const getCategoryMetaAt = (cfg, idx) => {
+      const arr = Array.isArray(cfg?.__categoryMeta) ? cfg.__categoryMeta : [];
+      return arr[idx] || null;
+    };
+
+    const getChatbotScoreAt = (cfg, idx, preferNameIncludes) => {
+      const score = getSeriesAt(cfg, idx, preferNameIncludes);
+      const meta = getCategoryMetaAt(cfg, idx);
+      const total = Number(meta?.total);
+      const hasTotal = Number.isFinite(total) && total > 0;
+      return {
+        score: Number.isFinite(score) ? score : null,
+        total: hasTotal ? total : null,
+        pct: hasTotal && Number.isFinite(score) ? Math.round(clamp((Number(score) / total) * 100, 0, 100)) : null
+      };
+    };
+
+    const formatChatbotScore = (info) => {
+      if (!info || !Number.isFinite(info.score)) return "-";
+      const scoreText = String(Math.round(Number(info.score)));
+      if (!Number.isFinite(info.total) || info.total <= 0) return scoreText;
+      const pctText = Number.isFinite(info.pct) ? ` (${info.pct}%)` : "";
+      return `${scoreText}/${info.total}${pctText}`;
     };
 
     const pickTitle = (node, fallback) => decodeIfMojibake(node?.title || node?.fields?.title || fallback || "-");
@@ -1974,7 +2023,7 @@
         const isAe = n.kind === "aetool" || id.includes("type@aetool");
         if (isAe) {
           const subtype = inferAeSubtypeFromNode(n);
-          if (subtype === "BookRoll" || subtype === "Video") {
+          if (subtype === "BookRoll" || subtype === "Video" || subtype === "Chatbot") {
             const key = `${subtype}|${id || "-"}`;
             if (!seen.has(key)) {
               seen.add(key);
@@ -2014,14 +2063,18 @@
                 const video = entry.subtype === "Video"
                   ? (getVideoProgressForTitle(entryTitle) || getVideoProgressForVertical(v, tool))
                   : null;
-                const pct = reading?.progress ?? video?.progress ?? null;
+                const chatbot = entry.subtype === "Chatbot"
+                  ? getChatbotScoreAt(window.chatbotPerfData, chapterIdx, "your")
+                  : null;
+                const pct = reading?.progress ?? video?.progress ?? chatbot?.pct ?? null;
                 return {
                   id: entry.id || resolveLearningItemId(v, tool),
                   title: entryTitle,
                   tool,
                   pct,
                   reading,
-                  video
+                  video,
+                  chatbot
                 };
               });
             const effectiveSubtools = subtools.length
@@ -2212,23 +2265,30 @@
         }));
       if (!sequentials.length) return `<div class="text-sm text-slate-600">บทนี้ไม่มีรายการย่อย</div>`;
 
-      const blocks = sequentials.map((seq) => {
-        const vHtml = (seq.verticals || []).map((v) => {
-          const tool = v.tool || inferVerticalTool(v);
-          const sub = tool.sublabel ? `<span class="badge ml-2">${escapeHtml(tool.sublabel)}</span>` : "";
-          const hasPct = Number.isFinite(v.pct);
-          const pct = hasPct ? clamp(Number(v.pct), 0, 100) : null;
-          const badge = !hasPct
-            ? `<span class="badge badge-locked">ไม่มีข้อมูล API</span>`
+        const blocks = sequentials.map((seq) => {
+          const vHtml = (seq.verticals || []).map((v) => {
+            const tool = v.tool || inferVerticalTool(v);
+            const subtool = Array.isArray(v.subtools) && v.subtools.length ? v.subtools[0] : null;
+            const toolInfo = subtool || v;
+            const sub = tool.sublabel ? `<span class="badge ml-2">${escapeHtml(tool.sublabel)}</span>` : "";
+            const hasPct = Number.isFinite(v.pct);
+            const pct = hasPct ? clamp(Number(v.pct), 0, 100) : null;
+            const badge = !hasPct
+              ? `<span class="badge badge-locked">ไม่มีข้อมูล API</span>`
             : pct >= 100 ? `<span class="badge badge-done">ผ่านแล้ว</span>` :
               pct >= 50 ? `<span class="badge badge-doing">กำลังทำ</span>` :
               pct > 0 ? `<span class="badge badge-todo">เริ่มแล้ว</span>` :
               `<span class="badge badge-locked">ยังไม่เริ่ม</span>`;
-          const progressBarHtml = hasPct
-            ? `<div class="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden"><div class="h-full grad-brand" style="width:${pct}%"></div></div>`
-            : "";
-          const progressTextHtml = hasPct ? `${pct}%` : "-";
-          return `
+            const progressBarHtml = hasPct
+              ? `<div class="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden"><div class="h-full grad-brand" style="width:${pct}%"></div></div>`
+              : "";
+            const progressTextHtml = hasPct ? `${pct}%` : "-";
+            const chatbotText = toolInfo?.chatbot ? `คะแนน ${formatChatbotScore(toolInfo.chatbot)}` : "";
+            const apiText = chatbotText
+              || (toolInfo?.reading ? `อ่าน ${toolInfo.reading.read ?? "-"} / ${toolInfo.reading.total ?? "-"} หน้า` : "")
+              || (toolInfo?.video ? `รับชม ${toolInfo.video.progress}%` : "");
+            const metaHtml = apiText ? `<div class="mt-1 text-xs text-slate-500">${escapeHtml(apiText)}</div>` : "";
+            return `
             <div class="panel p-3">
               <div class="flex items-start justify-between gap-2">
                 <div class="font-medium">${escapeHtml(v.title || "-")}</div>
@@ -2237,6 +2297,7 @@
                   <span class="${tool.tone}">${escapeHtml(tool.label)}</span>${sub}
                 </div>
               </div>
+              ${metaHtml}
               ${progressBarHtml}
               <div class="mt-1 flex items-center justify-between text-xs text-slate-500">
                 <span class="mono break-all">${escapeHtml(v.id || "")}</span>
@@ -2448,8 +2509,8 @@
 
       const speedAvg = getSeriesAt(window.chatbotSpeedData, idx, "average");
       const speedYou = getSeriesAt(window.chatbotSpeedData, idx, "your");
-      const perfAvg = getSeriesAt(window.chatbotPerfData, idx, "average");
-      const perfYou = getSeriesAt(window.chatbotPerfData, idx, "your");
+      const perfAvg = getChatbotScoreAt(window.chatbotPerfData, idx, "average");
+      const perfYou = getChatbotScoreAt(window.chatbotPerfData, idx, "your");
 
       const pct = (v) => (v == null || Number.isNaN(v)) ? "-" : `${Math.round(v)}%`;
       const bar = (v) => {
@@ -2475,8 +2536,8 @@
           </div>
           <div class="panel p-4">
             <div class="text-sm font-bold">Learning Performance</div>
-            <div class="mt-2 text-sm text-slate-600">Your: <span class="mono font-bold">${escapeHtml(pct(perfYou))}</span> • Avg: <span class="mono">${escapeHtml(pct(perfAvg))}</span></div>
-            ${bar(perfYou)}
+            <div class="mt-2 text-sm text-slate-600">Your: <span class="mono font-bold">${escapeHtml(formatChatbotScore(perfYou))}</span> • Avg: <span class="mono">${escapeHtml(formatChatbotScore(perfAvg))}</span></div>
+            ${bar(perfYou?.pct)}
           </div>
         </div>
 
@@ -2926,10 +2987,13 @@
         window.chatbotPerfData = relabeled;
         renderEchartToChart(relabeled, "chatbotPerfChart", "Chatbot Performance");
         if (summaryEl) {
-          const series = relabeled?.series?.[0]?.data || [];
-          const nums = series.map((v) => Number(v) || 0);
-          const avg = nums.length ? Math.round(nums.reduce((a, b) => a + b, 0) / nums.length) : 0;
-          summaryEl.textContent = nums.length ? `ค่าเฉลี่ยผลการตอบ: ${avg}` : "ยังไม่มีข้อมูล";
+          const firstAvg = getChatbotScoreAt(relabeled, 0, "average");
+          const firstYou = getChatbotScoreAt(relabeled, 0, "your");
+          if (Number.isFinite(firstAvg?.score) || Number.isFinite(firstYou?.score)) {
+            summaryEl.textContent = `ค่าเฉลี่ยผลการตอบ: ${formatChatbotScore(firstAvg)} • คะแนนของคุณ: ${formatChatbotScore(firstYou)}`;
+          } else {
+            summaryEl.textContent = "ยังไม่มีข้อมูล";
+          }
         }
         if (rawEl) rawEl.textContent = JSON.stringify(relabeled, null, 2);
         if (statusEl) statusEl.textContent = `โหลดสำเร็จ (${srcUrl})`;
