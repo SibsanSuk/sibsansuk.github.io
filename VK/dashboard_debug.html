@@ -843,7 +843,7 @@
       `https://sbs-backend.mooc.meca.in.th/stats/echart/chatbotSpeed/${encodeURIComponent(cid)}/${encodeURIComponent(uid)}`;
 
     const chatbotPerformanceUrl = (cid, uid) =>
-      `https://sbs-backend.mooc.meca.in.th/stats/stats/echart/chatbotPerformance/${encodeURIComponent(cid)}/${encodeURIComponent(uid)}`;
+      `https://sbs-backend.mooc.meca.in.th/stats/echart/chatbotPerformance/${encodeURIComponent(cid)}/${encodeURIComponent(uid)}`;
 
     const isLikelyCourseId = (cid) =>
       typeof cid === "string" && cid.includes("course-v1:");
@@ -1276,7 +1276,7 @@
           { name: "BookRoll", param: `userID=${userId || "-"}&usageId=${courseId || "-"}` },
           { name: "Video Bar", param: `userName=${videoUser.value || "-"}&usageId=${courseId || "-"}` },
           { name: "Chatbot Speed", param: `/stats/echart/chatbotSpeed/${courseId || "-"}/${userId || "-"}` },
-          { name: "Chatbot Performance", param: `/stats/stats/echart/chatbotPerformance/${courseId || "-"}/${userId || "-"}` }
+          { name: "Chatbot Performance", param: `/stats/echart/chatbotPerformance/${courseId || "-"}/${userId || "-"}` }
         ];
         loginDebugTabDerivedEl.innerHTML = rows.map((r) => `
           <div class="mb-2 last:mb-0">
