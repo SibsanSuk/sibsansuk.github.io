@@ -2405,7 +2405,22 @@
             }
             return "";
           };
-          const toolItems = subtoolList.map((item) => {
+          const visibleToolItems = subtoolList.filter((item) => {
+            const itemTool = item.tool || v.tool || inferVerticalTool(v.node || v);
+            const itemHasPct = Number.isFinite(item?.pct);
+            const isChatbot = String(itemTool?.sublabel || "").toLowerCase() === "chatbot";
+            const hasChatbotData =
+              Number.isFinite(item?.chatbotScore?.score) ||
+              Number.isFinite(item?.chatbotScoreAvg?.score) ||
+              Number.isFinite(item?.chatbotTime) ||
+              Number.isFinite(item?.chatbotTimeAvg);
+            const hasApiData = itemHasPct || !!item?.reading || !!item?.video || hasChatbotData;
+            const labelLc = String(itemTool?.label || "").toLowerCase();
+            const isHtmlTool = labelLc.includes("html") || labelLc.includes("อ่านเนื้อหา");
+            if (isHtmlTool && !hasApiData && !isChatbot) return false;
+            return true;
+          });
+          const toolItems = visibleToolItems.map((item) => {
             const itemTool = item.tool || v.tool || inferVerticalTool(v.node || v);
             const itemHasPct = Number.isFinite(item?.pct);
             const itemPct = itemHasPct ? clamp(Number(item.pct), 0, 100) : null;
@@ -2425,10 +2440,20 @@
                 : (video ? `รับชม ${video.progress}%` : ""));
             const itemStatus = isChatbot
               ? (
-                Number.isFinite(item?.chatbotScore?.score) ? "ทำแบบทดสอบแล้ว" :
-                  ((item.chatbotScoreAvg ? true : false) || chatbotTimeText) ? "ยังไม่ทำแบบทดสอบ" : "ยังไม่มีข้อมูลคะแนน"
+                Number.isFinite(item?.chatbotScore?.score)
+                  ? { text: "ทำแบบทดสอบแล้ว", cls: "badge badge-done" }
+                  : (((item.chatbotScoreAvg ? true : false) || chatbotTimeText)
+                    ? { text: "ยังไม่ทำแบบทดสอบ", cls: "badge badge-todo" }
+                    : { text: "ยังไม่มีข้อมูลคะแนน", cls: "badge badge-locked" })
               )
-              : "";
+              : (
+                !itemHasPct
+                  ? { text: "ไม่มีข้อมูล API", cls: "badge badge-locked" }
+                  : itemPct >= 100 ? { text: "ผ่านแล้ว", cls: "badge badge-done" } :
+                    itemPct >= 50 ? { text: "กำลังทำ", cls: "badge badge-doing" } :
+                    itemPct > 0 ? { text: "เริ่มแล้ว", cls: "badge badge-todo" } :
+                    { text: "ยังไม่เริ่ม", cls: "badge badge-locked" }
+              );
             const chatbotScoreHero = isChatbot
               ? `<div class="shrink-0 text-right">
                   <div class="text-[11px] uppercase tracking-wide text-slate-400">คะแนน</div>
@@ -2441,10 +2466,12 @@
                 <div class="flex items-center gap-2 min-w-0">
                   ${renderToolIcon(itemTool)}
                   <div class="min-w-0">
-                    <div class="text-sm font-medium text-slate-700">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <div class="text-sm font-medium text-slate-700">
                       <span>${escapeHtml(item.title || v.title || "-")}</span>
+                      </div>
+                      ${itemStatus ? `<span class="${itemStatus.cls}">${escapeHtml(itemStatus.text)}</span>` : ""}
                     </div>
-                    ${itemStatus ? `<div class="text-xs text-slate-500">${escapeHtml(itemStatus)}</div>` : ""}
                     ${itemDetail ? `<div class="text-xs text-slate-500">${escapeHtml(itemDetail)}</div>` : ""}
                   </div>
                 </div>
@@ -2453,6 +2480,7 @@
               </div>
             `;
           }).join("");
+          if (!visibleToolItems.length && !hasPct) return "";
           return `
             <div class="panel p-3">
               <div class="flex items-start justify-between gap-2">
