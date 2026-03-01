@@ -2233,21 +2233,22 @@
       if (chatbotQuizOverallChartInstance) chatbotQuizOverallChartInstance.destroy();
 
       const items = (chatbotMap?.chapters || []).flatMap((chapter) => chapter?.items || []);
-      const scoreYou = items
-        .map((item) => Number(item?.scoreYou?.score))
-        .filter((n) => Number.isFinite(n))
-        .reduce((a, b) => a + b, 0);
-      const scoreAvg = items
-        .map((item) => Number(item?.scoreAvg?.score))
-        .filter((n) => Number.isFinite(n))
-        .reduce((a, b) => a + b, 0);
-      const totals = items
-        .map((item) => Number(item?.scoreYou?.total ?? item?.scoreAvg?.total))
-        .filter((n) => Number.isFinite(n) && n > 0);
-      const totalScore = totals.reduce((a, b) => a + b, 0);
-      const hasAny = items.length > 0 && (Number.isFinite(scoreYou) || Number.isFinite(scoreAvg) || Number.isFinite(totalScore));
+      const rows = items
+        .map((item, idx) => {
+          const total = Number(item?.scoreYou?.total ?? item?.scoreAvg?.total);
+          const scoreYou = Number(item?.scoreYou?.score);
+          const scoreAvg = Number(item?.scoreAvg?.score);
+          const label = String(item?.title || "").trim() || `Quiz ${idx + 1}`;
+          return {
+            label,
+            total: Number.isFinite(total) && total > 0 ? total : null,
+            scoreYou: Number.isFinite(scoreYou) ? scoreYou : 0,
+            scoreAvg: Number.isFinite(scoreAvg) ? scoreAvg : 0
+          };
+        })
+        .filter((row) => row.total != null || row.scoreYou > 0 || row.scoreAvg > 0);
 
-      if (!hasAny || totalScore <= 0) {
+      if (!rows.length) {
         chatbotQuizOverallChartInstance = new Chart(ctx, {
           type: "bar",
           data: {
@@ -2270,29 +2271,51 @@
         return;
       }
 
+      const totalScore = rows.reduce((sum, row) => sum + (Number(row.total) || 0), 0);
+      const totalYou = rows.reduce((sum, row) => sum + (Number(row.scoreYou) || 0), 0);
+      const totalAvg = rows.reduce((sum, row) => sum + (Number(row.scoreAvg) || 0), 0);
+
       chatbotQuizOverallChartInstance = new Chart(ctx, {
         type: "bar",
         data: {
-          labels: ["คะแนนของคุณ", "ค่าเฉลี่ย", "คะแนนเต็ม"],
-          datasets: [{
-            data: [scoreYou, scoreAvg, totalScore],
-            backgroundColor: ["#0f766e", "#38bdf8", "#cbd5e1"],
-            borderRadius: 12
-          }]
+          labels: rows.map((row, idx) => {
+            const label = row.label;
+            return label.length > 18 ? `Quiz ${idx + 1}` : label;
+          }),
+          datasets: [
+            {
+              label: "คะแนนของคุณ",
+              data: rows.map((row) => row.scoreYou),
+              backgroundColor: "#0f766e",
+              borderRadius: 10,
+            },
+            {
+              label: "ค่าเฉลี่ย",
+              data: rows.map((row) => row.scoreAvg),
+              backgroundColor: "#38bdf8",
+              borderRadius: 10,
+            },
+            {
+              label: "คะแนนเต็ม",
+              data: rows.map((row) => row.total || 0),
+              backgroundColor: "#cbd5e1",
+              borderRadius: 10,
+            }
+          ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+          plugins: { legend: { position: "bottom" } },
           scales: {
             x: { grid: { display: false } },
-            y: { beginAtZero: true, suggestedMax: totalScore }
+            y: { beginAtZero: true, suggestedMax: Math.max(...rows.map((row) => Number(row.total) || 0), 0) }
           }
         }
       });
 
       if (summaryEl) {
-        summaryEl.textContent = `คะแนนของคุณ ${Math.round(scoreYou)}/${Math.round(totalScore)} • ค่าเฉลี่ย ${Math.round(scoreAvg)}/${Math.round(totalScore)}`;
+        summaryEl.textContent = `มี ${rows.length} แบบทดสอบ • คะแนนรวมของคุณ ${Math.round(totalYou)}/${Math.round(totalScore)} • ค่าเฉลี่ยรวม ${Math.round(totalAvg)}/${Math.round(totalScore)}`;
       }
     };
 
@@ -2384,7 +2407,6 @@
           };
           const toolItems = subtoolList.map((item) => {
             const itemTool = item.tool || v.tool || inferVerticalTool(v.node || v);
-            const itemSub = itemTool?.sublabel ? `<span class="badge ml-2">${escapeHtml(itemTool.sublabel)}</span>` : "";
             const itemHasPct = Number.isFinite(item?.pct);
             const itemPct = itemHasPct ? clamp(Number(item.pct), 0, 100) : null;
             const itemPctText = itemHasPct ? `${itemPct}%` : "-";
@@ -2420,7 +2442,7 @@
                   ${renderToolIcon(itemTool)}
                   <div class="min-w-0">
                     <div class="text-sm font-medium text-slate-700">
-                      <span>${escapeHtml(item.title || v.title || "-")}</span>${itemSub}
+                      <span>${escapeHtml(item.title || v.title || "-")}</span>
                     </div>
                     ${itemStatus ? `<div class="text-xs text-slate-500">${escapeHtml(itemStatus)}</div>` : ""}
                     ${itemDetail ? `<div class="text-xs text-slate-500">${escapeHtml(itemDetail)}</div>` : ""}
