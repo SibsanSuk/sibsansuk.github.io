@@ -2356,7 +2356,7 @@
             Number.isFinite(item?.chatbotTimeAvg)
           );
           const hasChatbotScore = subtoolList.some((item) => Number.isFinite(item?.chatbotScore?.score));
-          const badge = !hasPct
+            const badge = !hasPct
             ? (
               hasChatbotTool
                 ? (
@@ -2367,8 +2367,7 @@
                 : `<span class="badge badge-locked">ไม่มีข้อมูล API</span>`
             )
             : pct >= 100 ? `<span class="badge badge-done">ผ่านแล้ว</span>` :
-              pct >= 50 ? `<span class="badge badge-doing">กำลังทำ</span>` :
-              pct > 0 ? `<span class="badge badge-todo">เริ่มแล้ว</span>` :
+              pct > 0 ? `<span class="badge badge-doing">กำลังทำ</span>` :
               `<span class="badge badge-locked">ยังไม่เริ่ม</span>`;
           const progressBarHtml = hasPct
             ? `<div class="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden"><div class="h-full grad-brand" style="width:${pct}%"></div></div>`
@@ -2416,8 +2415,15 @@
               Number.isFinite(item?.chatbotTimeAvg);
             const hasApiData = itemHasPct || !!item?.reading || !!item?.video || hasChatbotData;
             const labelLc = String(itemTool?.label || "").toLowerCase();
+            const subLc = String(itemTool?.sublabel || "").toLowerCase();
             const isHtmlTool = labelLc.includes("html") || labelLc.includes("อ่านเนื้อหา");
+            const isAeTool = labelLc.includes("ae tool") || labelLc.includes("aetool");
+            const isTrackedAeTool =
+              subLc.includes("bookroll") ||
+              subLc.includes("video") ||
+              subLc.includes("chatbot");
             if (isHtmlTool && !hasApiData && !isChatbot) return false;
+            if (isAeTool && !isTrackedAeTool && !hasApiData) return false;
             return true;
           });
           const toolItems = visibleToolItems.map((item) => {
@@ -2450,8 +2456,7 @@
                 !itemHasPct
                   ? { text: "ไม่มีข้อมูล API", cls: "badge badge-locked" }
                   : itemPct >= 100 ? { text: "ผ่านแล้ว", cls: "badge badge-done" } :
-                    itemPct >= 50 ? { text: "กำลังทำ", cls: "badge badge-doing" } :
-                    itemPct > 0 ? { text: "เริ่มแล้ว", cls: "badge badge-todo" } :
+                    itemPct > 0 ? { text: "กำลังทำ", cls: "badge badge-doing" } :
                     { text: "ยังไม่เริ่ม", cls: "badge badge-locked" }
               );
             const chatbotScoreHero = isChatbot
