@@ -1358,10 +1358,8 @@
           k: chapterSortKey(pickTitle(ch, `บท ${origIdx + 1}`)),
         }))
         .sort((a, b) => {
-          if (a.k.group !== b.k.group) return a.k.group - b.k.group;
-          if (a.k.num !== b.k.num) return a.k.num - b.k.num;
-          if (a.k.title < b.k.title) return -1;
-          if (a.k.title > b.k.title) return 1;
+          const cmp = compareChapterSortKey(a.k, b.k);
+          if (cmp !== 0) return cmp;
           return a.origIdx - b.origIdx;
         });
 
@@ -1532,6 +1530,18 @@
       outlineEl.innerHTML = rows.join("");
     };
 
+    const compareIndexParts = (aParts, bParts) => {
+      const a = Array.isArray(aParts) ? aParts : [];
+      const b = Array.isArray(bParts) ? bParts : [];
+      const len = Math.max(a.length, b.length);
+      for (let i = 0; i < len; i += 1) {
+        const av = Number.isFinite(a[i]) ? a[i] : -1;
+        const bv = Number.isFinite(b[i]) ? b[i] : -1;
+        if (av !== bv) return av - bv;
+      }
+      return 0;
+    };
+
     const chapterSortKey = (rawTitle) => {
       const titleRaw = String(rawTitle || "");
       const title = titleRaw
@@ -1539,18 +1549,36 @@
         .trim();
 
       // Try to pick the intended sequence from the human-readable prefix.
-      // Supports "กิจกรรมที่ 2", "บทที่ 3", "หน่วยที่ 1", "ใบกิจกรรมที่ 4.1", "ใบความรู้ที่ 2.2", etc.
-      const m = title.match(/(?:กิจกรรมที่|บทที่|หน่วยที่|ใบกิจกรรมที่|ใบความรู้ที่)\s*(\d+(?:\.\d+)*)/);
-      const num = m ? Number(m[1]) : null;
+      // Supports "1-10 ...", "1.10 ...", "กิจกรรมที่ 2", "บทที่ 3", "ใบความรู้ที่ 2.2", etc.
+      const m = title.match(
+        /^(?:\s*(\d+(?:[.-]\d+)*))|(?:.*?(?:กิจกรรมที่|บทที่|หน่วยที่|ใบกิจกรรมที่|ใบความรู้ที่)\s*(\d+(?:[.-]\d+)*))/
+      );
+      const seqText = String(m?.[1] || m?.[2] || "").trim();
+      const parts = seqText
+        ? seqText
+            .split(/[.-]/)
+            .map((part) => Number(part))
+            .filter((part) => Number.isFinite(part))
+        : [];
+      const hasIndex = parts.length > 0;
 
       // group: lower first
       // 0: pre-test/numbered lessons
       // 1: other items
       // 2: post-test
-      if (/ก่อนเรียน/.test(title)) return { group: 0, num: 0, title };
-      if (num != null && Number.isFinite(num)) return { group: 0, num, title };
-      if (/หลังเรียน|ปลายหน่วย|ปลายบท/.test(title)) return { group: 2, num: 9999, title };
-      return { group: 1, num: 9999, title };
+      if (/ก่อนเรียน/.test(title)) return { group: 0, parts: [0], title };
+      if (hasIndex) return { group: 0, parts, title };
+      if (/หลังเรียน|ปลายหน่วย|ปลายบท/.test(title)) return { group: 2, parts: [9999], title };
+      return { group: 1, parts: [9999], title };
+    };
+
+    const compareChapterSortKey = (a, b) => {
+      if (a.group !== b.group) return a.group - b.group;
+      const partCmp = compareIndexParts(a.parts, b.parts);
+      if (partCmp !== 0) return partCmp;
+      if (a.title < b.title) return -1;
+      if (a.title > b.title) return 1;
+      return 0;
     };
 
     const getSortedChapters = (data) => {
@@ -1562,11 +1590,8 @@
           return { c, idx, title, k: chapterSortKey(title) };
         })
         .sort((a, b) => {
-          if (a.k.group !== b.k.group) return a.k.group - b.k.group;
-          if (a.k.num !== b.k.num) return a.k.num - b.k.num;
-          // stabilize for non-numbered items
-          if (a.k.title < b.k.title) return -1;
-          if (a.k.title > b.k.title) return 1;
+          const cmp = compareChapterSortKey(a.k, b.k);
+          if (cmp !== 0) return cmp;
           return a.idx - b.idx;
         })
         .map((x) => x.c);
