@@ -1724,42 +1724,42 @@
     };
 
     const formatChapterMetric = (chapter) => {
-      const pct = Number(chapter?.chapterPct);
+      const pct = Number.isFinite(chapter?.chapterPct) ? Number(chapter.chapterPct) : null;
       const quiz = chapter?.chapterQuizScore;
       const hasQuiz = !!chapter?.chapterHasQuiz;
-      const score = Number(quiz?.score);
-      const total = Number(quiz?.total);
-      const showPct = Number.isFinite(pct) && (!hasQuiz || pct > 0);
+      const score = Number.isFinite(quiz?.score) ? Number(quiz.score) : null;
+      const total = Number.isFinite(quiz?.total) ? Number(quiz.total) : null;
+      const showPct = pct != null && (!hasQuiz || pct > 0);
       if (showPct) {
         const pctText = `${clamp(pct, 0, 100)}%`;
-        if (Number.isFinite(score) && Number.isFinite(total) && total > 0) {
+        if (score != null && total != null && total > 0) {
           return `${pctText} (${Math.round(score)}/${Math.round(total)} คะแนน)`;
         }
         if (hasQuiz) return `${pctText} (ยังไม่ได้ทำแบบทดสอบ)`;
         return pctText;
       }
-      if (Number.isFinite(score) && Number.isFinite(total) && total > 0) {
+      if (score != null && total != null && total > 0) {
         return `${Math.round(score)}/${Math.round(total)} คะแนน`;
       }
       return "";
     };
 
     const formatChapterProgressText = (chapter) => {
-      const pct = Number(chapter?.chapterPct);
+      const pct = Number.isFinite(chapter?.chapterPct) ? Number(chapter.chapterPct) : null;
       const quiz = chapter?.chapterQuizScore;
       const hasQuiz = !!chapter?.chapterHasQuiz;
-      const score = Number(quiz?.score);
-      const total = Number(quiz?.total);
-      const showPct = Number.isFinite(pct) && (!hasQuiz || pct > 0);
+      const score = Number.isFinite(quiz?.score) ? Number(quiz.score) : null;
+      const total = Number.isFinite(quiz?.total) ? Number(quiz.total) : null;
+      const showPct = pct != null && (!hasQuiz || pct > 0);
       if (showPct) {
         const pctText = `ความคืบหน้า ${clamp(pct, 0, 100)}%`;
-        if (Number.isFinite(score) && Number.isFinite(total) && total > 0) {
+        if (score != null && total != null && total > 0) {
           return `${pctText} (${Math.round(score)}/${Math.round(total)} คะแนน)`;
         }
         if (hasQuiz) return `${pctText} (ยังไม่ได้ทำแบบทดสอบ)`;
         return pctText;
       }
-      if (Number.isFinite(score) && Number.isFinite(total) && total > 0) {
+      if (score != null && total != null && total > 0) {
         return `${Math.round(score)}/${Math.round(total)} คะแนน`;
       }
       return "";
