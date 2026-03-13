@@ -1833,6 +1833,44 @@
         return 0;
       });
 
+    const isRegistrationOrProfileAeTool = (vertical, tool = null) => {
+      const resolvedTool = tool || inferVerticalTool(vertical);
+      const labelLc = String(resolvedTool?.label || "").toLowerCase();
+      const subLc = String(resolvedTool?.sublabel || "").toLowerCase();
+      const meta = findAeToolMeta(vertical);
+      const raw = [
+        pickTitle(vertical, ""),
+        meta?.aetool || "",
+        meta?.hint || "",
+        meta?.iframeUrl || ""
+      ].join("\n").toLowerCase();
+      const isAeTool = labelLc.includes("ae tool") || labelLc.includes("aetool") || subLc.includes("aetool");
+      if (!isAeTool && !meta) return false;
+      return (
+        raw.includes("ลงทะเบียน") ||
+        raw.includes("registration") ||
+        raw.includes("register") ||
+        raw.includes("profile") ||
+        raw.includes("โปรไฟล์")
+      );
+    };
+
+    const sortVerticalItemsHeuristic = (items) =>
+      (items || []).slice().sort((a, b) => {
+        const aPinned = isRegistrationOrProfileAeTool(a?.node || a, a?.tool) ? 0 : 1;
+        const bPinned = isRegistrationOrProfileAeTool(b?.node || b, b?.tool) ? 0 : 1;
+        if (aPinned !== bPinned) return aPinned - bPinned;
+        return (a?.idx ?? 0) - (b?.idx ?? 0);
+      });
+
+    const sortSequentialItemsHeuristic = (items) =>
+      (items || []).slice().sort((a, b) => {
+        const aPinned = (a?.verticals || []).some((v) => isRegistrationOrProfileAeTool(v?.node || v, v?.tool)) ? 0 : 1;
+        const bPinned = (b?.verticals || []).some((v) => isRegistrationOrProfileAeTool(v?.node || v, v?.tool)) ? 0 : 1;
+        if (aPinned !== bPinned) return aPinned - bPinned;
+        return (a?.idx ?? 0) - (b?.idx ?? 0);
+      });
+
     const collectKindsDeep = (node, set) => {
       if (!node) return;
       const kind = node.kind;
@@ -2081,9 +2119,9 @@
         const chapterChatbot = Array.isArray(chatbotOrderMap?.chapters) ? chatbotOrderMap.chapters[chapterIdx] : null;
         let chatbotSlotIdx = 0;
         const sequentials = (chapterNode?.children || []).filter((c) => c?.kind === "sequential");
-        const seqItems = sequentials.map((seq, sIdx) => {
+        const seqItems = sortSequentialItemsHeuristic(sequentials.map((seq, sIdx) => {
           const verticals = (seq?.children || []).filter((c) => c?.kind === "vertical");
-          const verts = verticals.map((v, vIdx) => {
+          const verts = sortVerticalItemsHeuristic(verticals.map((v, vIdx) => {
             const baseTool = inferVerticalTool(v);
             const subtools = collectVerticalAeSubtools(v)
               .map((entry) => {
@@ -2138,14 +2176,14 @@
               pct,
               subtools: effectiveSubtools
             };
-          });
+          }));
           return {
             idx: sIdx,
             id: seq?.id || "",
             title: pickTitle(seq, `Sequential ${sIdx + 1}`),
             verticals: verts
           };
-        });
+        }));
 
         const allPcts = seqItems
           .flatMap((s) => s.verticals.map((v) => v.pct))
@@ -2377,11 +2415,11 @@
       const chapter = (Number.isFinite(chapterIdx) ? model?.chapters?.[chapterIdx] : null) || null;
       const sequentials = chapter
         ? chapter.sequentials
-        : ((chapterNode.children || []).filter((c) => c?.kind === "sequential")).map((seq, sIdx) => ({
+        : sortSequentialItemsHeuristic(((chapterNode.children || []).filter((c) => c?.kind === "sequential")).map((seq, sIdx) => ({
           idx: sIdx,
           id: seq?.id || "",
           title: pickTitle(seq, `Sequential ${sIdx + 1}`),
-          verticals: ((seq?.children || []).filter((c) => c?.kind === "vertical")).map((v, vIdx) => {
+          verticals: sortVerticalItemsHeuristic(((seq?.children || []).filter((c) => c?.kind === "vertical")).map((v, vIdx) => {
             const tool = inferVerticalTool(v);
             return {
               idx: vIdx,
@@ -2391,8 +2429,8 @@
               tool,
               pct: null
             };
-          })
-        }));
+          }))
+        })));
       if (!sequentials.length) return "";
 
       const blocks = sequentials.map((seq) => {
