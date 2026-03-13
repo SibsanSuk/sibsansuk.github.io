@@ -1729,7 +1729,8 @@
       const hasQuiz = !!chapter?.chapterHasQuiz;
       const score = Number(quiz?.score);
       const total = Number(quiz?.total);
-      if (Number.isFinite(pct)) {
+      const showPct = Number.isFinite(pct) && (!hasQuiz || pct > 0);
+      if (showPct) {
         const pctText = `${clamp(pct, 0, 100)}%`;
         if (Number.isFinite(score) && Number.isFinite(total) && total > 0) {
           return `${pctText} (${Math.round(score)}/${Math.round(total)} คะแนน)`;
@@ -1749,7 +1750,8 @@
       const hasQuiz = !!chapter?.chapterHasQuiz;
       const score = Number(quiz?.score);
       const total = Number(quiz?.total);
-      if (Number.isFinite(pct)) {
+      const showPct = Number.isFinite(pct) && (!hasQuiz || pct > 0);
+      if (showPct) {
         const pctText = `ความคืบหน้า ${clamp(pct, 0, 100)}%`;
         if (Number.isFinite(score) && Number.isFinite(total) && total > 0) {
           return `${pctText} (${Math.round(score)}/${Math.round(total)} คะแนน)`;
