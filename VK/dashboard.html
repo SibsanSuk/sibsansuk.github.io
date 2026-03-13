@@ -2194,7 +2194,9 @@
                   ? (Array.isArray(chapterChatbot?.items) ? (chapterChatbot.items[chatbotSlotIdx] || null) : null)
                   : null;
                 if (entry.subtype === "Chatbot") chatbotSlotIdx += 1;
-                const pct = reading?.progress ?? video?.progress ?? null;
+                const pct = isRegistrationOrProfileAeTool(v, tool)
+                  ? null
+                  : (reading?.progress ?? video?.progress ?? null);
                 return {
                   id: entry.id || resolveLearningItemId(v, tool),
                   title: entryTitle,
@@ -2590,7 +2592,8 @@
           });
           const toolItems = visibleToolItems.map((item) => {
             const itemTool = item.tool || v.tool || inferVerticalTool(v.node || v);
-            const itemHasPct = Number.isFinite(item?.pct);
+            const isProfileTool = isRegistrationOrProfileAeTool(v.node || v, itemTool);
+            const itemHasPct = !isProfileTool && Number.isFinite(item?.pct);
             const itemPct = itemHasPct ? clamp(Number(item.pct), 0, 100) : null;
             const itemPctText = itemHasPct ? `${itemPct}%` : "-";
             const isChatbot = String(itemTool?.sublabel || "").toLowerCase() === "chatbot";
