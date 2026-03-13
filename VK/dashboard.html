@@ -1723,6 +1723,30 @@
       return `${scoreText}/${info.total}`;
     };
 
+    const formatChapterMetric = (chapter) => {
+      const pct = Number(chapter?.chapterPct);
+      if (Number.isFinite(pct)) return `${clamp(pct, 0, 100)}%`;
+      const quiz = chapter?.chapterQuizScore;
+      const score = Number(quiz?.score);
+      const total = Number(quiz?.total);
+      if (Number.isFinite(score) && Number.isFinite(total) && total > 0) {
+        return `คะแนน ${Math.round(score)}/${Math.round(total)}`;
+      }
+      return "-";
+    };
+
+    const formatChapterProgressText = (chapter) => {
+      const pct = Number(chapter?.chapterPct);
+      if (Number.isFinite(pct)) return `ความคืบหน้า ${clamp(pct, 0, 100)}%`;
+      const quiz = chapter?.chapterQuizScore;
+      const score = Number(quiz?.score);
+      const total = Number(quiz?.total);
+      if (Number.isFinite(score) && Number.isFinite(total) && total > 0) {
+        return `คะแนนแบบทดสอบ ${Math.round(score)}/${Math.round(total)}`;
+      }
+      return "ความคืบหน้า -";
+    };
+
     const formatDurationShort = (seconds) => {
       const n = Number(seconds);
       if (!Number.isFinite(n)) return "-";
@@ -2204,11 +2228,27 @@
           .flatMap((s) => s.verticals.map((v) => v.pct))
           .filter((v) => Number.isFinite(v));
         const chapterPct = allPcts.length ? Math.round(allPcts.reduce((a, b) => a + b, 0) / allPcts.length) : null;
+        const chatbotScores = seqItems
+          .flatMap((s) => s.verticals)
+          .flatMap((v) => Array.isArray(v?.subtools) && v.subtools.length ? v.subtools : [v])
+          .map((item) => ({
+            score: Number(item?.chatbotScore?.score),
+            total: Number(item?.chatbotScore?.total ?? item?.chatbotScoreAvg?.total)
+          }))
+          .filter((item) => Number.isFinite(item.score) && Number.isFinite(item.total) && item.total > 0);
+        const chapterQuizScore = chatbotScores.length
+          ? {
+            score: chatbotScores.reduce((sum, item) => sum + item.score, 0),
+            total: chatbotScores.reduce((sum, item) => sum + item.total, 0),
+            count: chatbotScores.length
+          }
+          : null;
         return {
           idx: chapterIdx,
           id: chapterNode?.id || "",
           title: pickTitle(chapterNode, `บทที่ ${chapterIdx + 1}`),
           chapterPct,
+          chapterQuizScore,
           sequentials: seqItems
         };
       });
@@ -2563,9 +2603,6 @@
                   <div class="h-2 bg-slate-200 rounded-full overflow-hidden">
                     <div class="h-full grad-brand" style="width:${itemPct}%"></div>
                   </div>
-                  <div class="mt-1 flex items-center justify-end text-xs text-slate-500">
-                    <span class="mono font-bold ${pctToneClass}">${escapeHtml(itemPctText)}</span>
-                  </div>
                 </div>
               `
               : "";
@@ -2744,19 +2781,19 @@
             return sum + ((seq?.verticals || []).length);
           }, 0);
           const chapterNode = chapters[i] || null;
-          const openAttr = i === 0 ? " open" : "";
           const countText = sequentialCount > 1
             ? `แบ่งเป็น ${sequentialCount} หมวด • ${verticalCount} รายการ`
             : `${verticalCount} รายการ`;
           const hasChapterPct = Number.isFinite(ch.chapterPct);
           const pct = hasChapterPct ? clamp(Number(ch.chapterPct), 0, 100) : null;
+          const chapterMetricText = formatChapterMetric(ch);
           const itemsHtml = renderChapterTools(chapterNode, i);
 
           return `
             <div class="panel p-0 overflow-hidden">
               <div class="flex">
                 <div class="w-2 ${accent.strip}"></div>
-                <details class="unit-details flex-1 p-4"${openAttr}>
+                <details class="unit-details flex-1 p-4">
                   <summary class="cursor-pointer select-none flex items-center justify-between gap-4">
                     <div class="flex-1 min-w-0">
                       <div class="panel p-3 relative overflow-hidden">
@@ -2766,7 +2803,7 @@
                             <div class="text-lg font-extrabold text-slate-800 truncate">${escapeHtml(ch.title || `บทที่ ${i + 1}`)}</div>
                             <div class="text-slate-500 font-semibold text-sm">${escapeHtml(countText)}</div>
                           </div>
-                          <div class="mono font-bold text-slate-700">${escapeHtml(hasChapterPct ? `${pct}%` : "-")}</div>
+                          <div class="mono font-bold text-slate-700">${escapeHtml(chapterMetricText)}</div>
                         </div>
                       </div>
                     </div>
@@ -2791,8 +2828,9 @@
         const cls = active
           ? "pill px-3 py-2 text-sm font-semibold text-white grad-brand"
           : "ghost px-3 py-2 text-sm text-slate-700";
-        const pct = window.progressModel?.chapters?.[i]?.chapterPct;
-        const suffix = Number.isFinite(pct) ? ` • ${pct}%` : "";
+        const chapter = window.progressModel?.chapters?.[i] || null;
+        const chapterMetric = formatChapterMetric(chapter);
+        const suffix = chapterMetric !== "-" ? ` • ${chapterMetric}` : "";
         return `<button class="${cls}" data-topic-idx="${i}">${escapeHtml(`บท ${i + 1}: ${t}${suffix}`)}</button>`;
       }).join("");
       if (tabsEl) tabsEl.innerHTML = tabHtml;
@@ -2801,8 +2839,9 @@
       const chapterTitle = titles[idx];
       const chapterNode = chapters[idx] || null;
 
-      const chapterPct = window.progressModel?.chapters?.[idx]?.chapterPct;
-      const progressText = Number.isFinite(chapterPct) ? `ความคืบหน้า ${chapterPct}%` : "ความคืบหน้า -";
+      const chapterModel = window.progressModel?.chapters?.[idx] || null;
+      const chapterPct = chapterModel?.chapterPct;
+      const progressText = formatChapterProgressText(chapterModel);
       const progressTone = Number.isFinite(chapterPct) && chapterPct >= 100 ? "grad-success text-white" : "btn-soft";
 
       if (!detailEl) return;
