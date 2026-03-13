@@ -1581,15 +1581,30 @@
       return 0;
     };
 
+    const chapterHasRegistrationOrProfileAeTool = (chapterNode) => {
+      const sequentials = Array.isArray(chapterNode?.children) ? chapterNode.children : [];
+      return sequentials.some((seq) => {
+        const verticals = Array.isArray(seq?.children) ? seq.children : [];
+        return verticals.some((v) => v?.kind === "vertical" && isRegistrationOrProfileAeTool(v));
+      });
+    };
+
     const getSortedChapters = (data) => {
       const chapters = Array.isArray(data?.children) ? data.children : [];
       return chapters
         .filter((c) => !c.kind || c.kind === "chapter")
         .map((c, idx) => {
           const title = decodeIfMojibake(c.title || c.fields?.title || `บทที่ ${idx + 1}`);
-          return { c, idx, title, k: chapterSortKey(title) };
+          return {
+            c,
+            idx,
+            title,
+            k: chapterSortKey(title),
+            pinned: chapterHasRegistrationOrProfileAeTool(c) ? 0 : 1
+          };
         })
         .sort((a, b) => {
+          if (a.pinned !== b.pinned) return a.pinned - b.pinned;
           const cmp = compareChapterSortKey(a.k, b.k);
           if (cmp !== 0) return cmp;
           return a.idx - b.idx;
