@@ -1725,26 +1725,42 @@
 
     const formatChapterMetric = (chapter) => {
       const pct = Number(chapter?.chapterPct);
-      if (Number.isFinite(pct)) return `${clamp(pct, 0, 100)}%`;
       const quiz = chapter?.chapterQuizScore;
+      const hasQuiz = !!chapter?.chapterHasQuiz;
       const score = Number(quiz?.score);
       const total = Number(quiz?.total);
-      if (Number.isFinite(score) && Number.isFinite(total) && total > 0) {
-        return `คะแนน ${Math.round(score)}/${Math.round(total)}`;
+      if (Number.isFinite(pct)) {
+        const pctText = `${clamp(pct, 0, 100)}%`;
+        if (Number.isFinite(score) && Number.isFinite(total) && total > 0) {
+          return `${pctText} (${Math.round(score)}/${Math.round(total)} คะแนน)`;
+        }
+        if (hasQuiz) return `${pctText} (ยังไม่ได้ทำแบบทดสอบ)`;
+        return pctText;
       }
-      return "-";
+      if (Number.isFinite(score) && Number.isFinite(total) && total > 0) {
+        return `${Math.round(score)}/${Math.round(total)} คะแนน`;
+      }
+      return "";
     };
 
     const formatChapterProgressText = (chapter) => {
       const pct = Number(chapter?.chapterPct);
-      if (Number.isFinite(pct)) return `ความคืบหน้า ${clamp(pct, 0, 100)}%`;
       const quiz = chapter?.chapterQuizScore;
+      const hasQuiz = !!chapter?.chapterHasQuiz;
       const score = Number(quiz?.score);
       const total = Number(quiz?.total);
-      if (Number.isFinite(score) && Number.isFinite(total) && total > 0) {
-        return `คะแนนแบบทดสอบ ${Math.round(score)}/${Math.round(total)}`;
+      if (Number.isFinite(pct)) {
+        const pctText = `ความคืบหน้า ${clamp(pct, 0, 100)}%`;
+        if (Number.isFinite(score) && Number.isFinite(total) && total > 0) {
+          return `${pctText} (${Math.round(score)}/${Math.round(total)} คะแนน)`;
+        }
+        if (hasQuiz) return `${pctText} (ยังไม่ได้ทำแบบทดสอบ)`;
+        return pctText;
       }
-      return "ความคืบหน้า -";
+      if (Number.isFinite(score) && Number.isFinite(total) && total > 0) {
+        return `${Math.round(score)}/${Math.round(total)} คะแนน`;
+      }
+      return "";
     };
 
     const formatDurationShort = (seconds) => {
@@ -2228,9 +2244,11 @@
           .flatMap((s) => s.verticals.map((v) => v.pct))
           .filter((v) => Number.isFinite(v));
         const chapterPct = allPcts.length ? Math.round(allPcts.reduce((a, b) => a + b, 0) / allPcts.length) : null;
-        const chatbotScores = seqItems
+        const chapterSubtools = seqItems
           .flatMap((s) => s.verticals)
-          .flatMap((v) => Array.isArray(v?.subtools) && v.subtools.length ? v.subtools : [v])
+          .flatMap((v) => Array.isArray(v?.subtools) && v.subtools.length ? v.subtools : [v]);
+        const chapterHasQuiz = chapterSubtools.some((item) => String(item?.tool?.sublabel || "").toLowerCase() === "chatbot");
+        const chatbotScores = chapterSubtools
           .map((item) => ({
             score: Number(item?.chatbotScore?.score),
             total: Number(item?.chatbotScore?.total ?? item?.chatbotScoreAvg?.total)
@@ -2248,6 +2266,7 @@
           id: chapterNode?.id || "",
           title: pickTitle(chapterNode, `บทที่ ${chapterIdx + 1}`),
           chapterPct,
+          chapterHasQuiz,
           chapterQuizScore,
           sequentials: seqItems
         };
@@ -2830,7 +2849,7 @@
           : "ghost px-3 py-2 text-sm text-slate-700";
         const chapter = window.progressModel?.chapters?.[i] || null;
         const chapterMetric = formatChapterMetric(chapter);
-        const suffix = chapterMetric !== "-" ? ` • ${chapterMetric}` : "";
+        const suffix = chapterMetric ? ` • ${chapterMetric}` : "";
         return `<button class="${cls}" data-topic-idx="${i}">${escapeHtml(`บท ${i + 1}: ${t}${suffix}`)}</button>`;
       }).join("");
       if (tabsEl) tabsEl.innerHTML = tabHtml;
@@ -2851,7 +2870,7 @@
             <div class="text-xs text-slate-500">รายละเอียดบทที่ ${idx + 1}</div>
             <div class="text-lg font-extrabold">${escapeHtml(chapterTitle)}</div>
           </div>
-          <div class="info-pill px-4 py-2 text-sm font-semibold tracking-wide ${progressTone}">${escapeHtml(progressText)}</div>
+          ${progressText ? `<div class="info-pill px-4 py-2 text-sm font-semibold tracking-wide ${progressTone}">${escapeHtml(progressText)}</div>` : ""}
         </div>
 
           <div class="mt-4 panel p-4">
