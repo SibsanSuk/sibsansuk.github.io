@@ -2474,10 +2474,6 @@
             : pct >= 100 ? `<span class="badge badge-done">ผ่านแล้ว</span>` :
               pct > 0 ? `<span class="badge badge-doing">กำลังทำ</span>` :
               `<span class="badge badge-locked">ยังไม่เริ่ม</span>`;
-          const progressBarHtml = hasPct
-            ? `<div class="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden"><div class="h-full grad-brand" style="width:${pct}%"></div></div>`
-            : "";
-          const progressTextHtml = hasPct ? `${pct}%` : "-";
           const renderToolIcon = (tool) => {
             const subLc = String(tool?.sublabel || "").toLowerCase();
             if (subLc.includes("bookroll")) {
@@ -2561,19 +2557,34 @@
                   <div class="mt-1 text-xs text-slate-500">เฉลี่ย ${escapeHtml(chatbotScoreAvg)}</div>
                 </div>`
               : "";
-            return `
-              <div class="flex items-start justify-between gap-3 rounded-xl bg-white/70 px-3 py-2 border border-slate-200">
-                <div class="flex items-center gap-2 min-w-0">
-                  ${renderToolIcon(itemTool)}
-                  <div class="min-w-0">
-                    <div class="text-sm font-medium text-slate-700">
-                      <span>${escapeHtml(item.title || v.title || "-")}</span>
-                    </div>
-                    ${itemDetail ? `<div class="text-xs text-slate-500">${escapeHtml(itemDetail)}</div>` : ""}
+            const itemProgressHtml = (!isChatbot && itemHasPct)
+              ? `
+                <div class="mt-2">
+                  <div class="h-2 bg-slate-200 rounded-full overflow-hidden">
+                    <div class="h-full grad-brand" style="width:${itemPct}%"></div>
+                  </div>
+                  <div class="mt-1 flex items-center justify-end text-xs text-slate-500">
+                    <span class="mono font-bold ${pctToneClass}">${escapeHtml(itemPctText)}</span>
                   </div>
                 </div>
-                ${chatbotScoreHero}
-                ${(!isChatbot && itemHasPct) ? `<div class="text-xs font-bold mono shrink-0 ${pctToneClass}">${escapeHtml(itemPctText)}</div>` : ""}
+              `
+              : "";
+            return `
+              <div class="rounded-xl bg-white/70 px-3 py-2 border border-slate-200">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-center gap-2 min-w-0">
+                    ${renderToolIcon(itemTool)}
+                    <div class="min-w-0">
+                      <div class="text-sm font-medium text-slate-700">
+                        <span>${escapeHtml(item.title || v.title || "-")}</span>
+                      </div>
+                      ${itemDetail ? `<div class="text-xs text-slate-500">${escapeHtml(itemDetail)}</div>` : ""}
+                    </div>
+                  </div>
+                  ${chatbotScoreHero}
+                  ${(!isChatbot && itemHasPct) ? `<div class="text-xs font-bold mono shrink-0 ${pctToneClass}">${escapeHtml(itemPctText)}</div>` : ""}
+                </div>
+                ${itemProgressHtml}
               </div>
             `;
           }).join("");
@@ -2588,10 +2599,6 @@
               </div>
               <div class="mt-3 grid gap-2">
                 ${toolItems}
-              </div>
-              ${progressBarHtml}
-              <div class="mt-1 flex items-center justify-end text-xs text-slate-500">
-                <span class="mono font-bold">${progressTextHtml}</span>
               </div>
             </div>
           `;
