@@ -1349,19 +1349,10 @@
       }
 
       const q = courseDeepState.search.trim();
-      const chaptersRaw = Array.isArray(courseDeepState.root.children) ? courseDeepState.root.children : [];
-      const chapters = chaptersRaw
-        .map((ch, origIdx) => ({
-          ch,
-          origIdx,
-          title: pickTitle(ch, `บท ${origIdx + 1}`),
-          k: chapterSortKey(pickTitle(ch, `บท ${origIdx + 1}`)),
-        }))
-        .sort((a, b) => {
-          const cmp = compareChapterSortKey(a.k, b.k);
-          if (cmp !== 0) return cmp;
-          return a.origIdx - b.origIdx;
-        });
+      const chapters = getSortedChapterEntries(courseDeepState.root).map(({ c: ch, idx: origIdx }) => ({
+        ch,
+        origIdx,
+      }));
 
       const filteredFlat = courseDeepState.flat.filter((r) => courseDeepMatchesSearch(r, q));
       if (statusEl) statusEl.textContent = q ? `ผลค้นหา: ${filteredFlat.length}` : `nodes: ${courseDeepState.flat.length}`;
@@ -1500,7 +1491,11 @@
         return;
       }
       courseDeepState.flat = flattenCourseTree(root);
-      const firstChapter = courseDeepState.flat.find((r) => r.path.startsWith("root.") && !r.path.includes(".", 5));
+      const firstChapterEntry = getSortedChapterEntries(root)[0] || null;
+      const firstChapterPath = firstChapterEntry ? `root.${firstChapterEntry.idx}` : null;
+      const firstChapter = firstChapterPath
+        ? courseDeepState.flat.find((r) => r.path === firstChapterPath)
+        : null;
       courseDeepState.selectedPath = firstChapter?.path || (courseDeepState.flat.length ? "root" : null);
       if (inputEl) inputEl.disabled = false;
       renderCourseDeepTree();
@@ -1542,11 +1537,39 @@
       return 0;
     };
 
-    const chapterSortKey = (rawTitle) => {
-      const titleRaw = String(rawTitle || "");
-      const title = titleRaw
+    const normalizeNumericText = (raw) =>
+      String(raw || "")
         .replace(/[๐-๙]/g, (d) => "๐๑๒๓๔๕๖๗๘๙".indexOf(d))
         .trim();
+
+    const sortKeyFromNodeSort = (node) => {
+      const raw = node?.sort ?? node?.fields?.sort ?? "";
+      const text = normalizeNumericText(raw);
+      if (!text) return null;
+      const parts = text
+        .split(".")
+        .map((part) => Number(part))
+        .filter((part) => Number.isFinite(part));
+      if (!parts.length) return null;
+      return { text, parts };
+    };
+
+    const compareNodeSort = (aNode, bNode) => {
+      const a = sortKeyFromNodeSort(aNode);
+      const b = sortKeyFromNodeSort(bNode);
+      if (!a && !b) return null;
+      if (!a) return 1;
+      if (!b) return -1;
+      const partCmp = compareIndexParts(a.parts, b.parts);
+      if (partCmp !== 0) return partCmp;
+      if (a.parts.length !== b.parts.length) return a.parts.length - b.parts.length;
+      if (a.text < b.text) return -1;
+      if (a.text > b.text) return 1;
+      return 0;
+    };
+
+    const chapterSortKey = (rawTitle) => {
+      const title = normalizeNumericText(rawTitle);
 
       // Try to pick the intended sequence from the human-readable prefix.
       // Supports "1-10 ...", "1.10 ...", "กิจกรรมที่ 2", "บทที่ 3", "ใบความรู้ที่ 2.2", etc.
@@ -1581,15 +1604,7 @@
       return 0;
     };
 
-    const chapterHasRegistrationOrProfileAeTool = (chapterNode) => {
-      const sequentials = Array.isArray(chapterNode?.children) ? chapterNode.children : [];
-      return sequentials.some((seq) => {
-        const verticals = Array.isArray(seq?.children) ? seq.children : [];
-        return verticals.some((v) => v?.kind === "vertical" && isRegistrationOrProfileAeTool(v));
-      });
-    };
-
-    const getSortedChapters = (data) => {
+    const getSortedChapterEntries = (data) => {
       const chapters = Array.isArray(data?.children) ? data.children : [];
       return chapters
         .filter((c) => !c.kind || c.kind === "chapter")
@@ -1599,18 +1614,19 @@
             c,
             idx,
             title,
-            k: chapterSortKey(title),
-            pinned: chapterHasRegistrationOrProfileAeTool(c) ? 0 : 1
+            k: chapterSortKey(title)
           };
         })
         .sort((a, b) => {
-          if (a.pinned !== b.pinned) return a.pinned - b.pinned;
+          const sortCmp = compareNodeSort(a.c, b.c);
+          if (sortCmp != null) return sortCmp || (a.idx - b.idx);
           const cmp = compareChapterSortKey(a.k, b.k);
           if (cmp !== 0) return cmp;
           return a.idx - b.idx;
-        })
-        .map((x) => x.c);
+        });
     };
+
+    const getSortedChapters = (data) => getSortedChapterEntries(data).map((x) => x.c);
 
     const getCourseChapterTitles = (data) => {
       const chapters = getSortedChapters(data);
@@ -1914,6 +1930,8 @@
 
     const sortVerticalItemsHeuristic = (items) =>
       (items || []).slice().sort((a, b) => {
+        const sortCmp = compareNodeSort(a?.node || a, b?.node || b);
+        if (sortCmp != null) return sortCmp || ((a?.idx ?? 0) - (b?.idx ?? 0));
         const aPinned = isRegistrationOrProfileAeTool(a?.node || a, a?.tool) ? 0 : 1;
         const bPinned = isRegistrationOrProfileAeTool(b?.node || b, b?.tool) ? 0 : 1;
         if (aPinned !== bPinned) return aPinned - bPinned;
@@ -1922,6 +1940,8 @@
 
     const sortSequentialItemsHeuristic = (items) =>
       (items || []).slice().sort((a, b) => {
+        const sortCmp = compareNodeSort(a?.node || a, b?.node || b);
+        if (sortCmp != null) return sortCmp || ((a?.idx ?? 0) - (b?.idx ?? 0));
         const aPinned = (a?.verticals || []).some((v) => isRegistrationOrProfileAeTool(v?.node || v, v?.tool)) ? 0 : 1;
         const bPinned = (b?.verticals || []).some((v) => isRegistrationOrProfileAeTool(v?.node || v, v?.tool)) ? 0 : 1;
         if (aPinned !== bPinned) return aPinned - bPinned;
@@ -2239,6 +2259,7 @@
           return {
             idx: sIdx,
             id: seq?.id || "",
+            node: seq,
             title: pickTitle(seq, `Sequential ${sIdx + 1}`),
             verticals: verts
           };
@@ -2496,6 +2517,7 @@
         : sortSequentialItemsHeuristic(((chapterNode.children || []).filter((c) => c?.kind === "sequential")).map((seq, sIdx) => ({
           idx: sIdx,
           id: seq?.id || "",
+          node: seq,
           title: pickTitle(seq, `Sequential ${sIdx + 1}`),
           verticals: sortVerticalItemsHeuristic(((seq?.children || []).filter((c) => c?.kind === "vertical")).map((v, vIdx) => {
             const tool = inferVerticalTool(v);

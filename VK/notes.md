@@ -67,4 +67,53 @@ https://sibsansuk.github.io/VK/dashboard.html?courseid=course-v1%3ANECTEC%2BAILO
 
 
 
+## 2026-03-16 AILOWERSECONDARY07 checks
+
+### Course
+
+- courseId: `course-v1:NECTEC+AILOWERSECONDARY07+NECTEC_000022`
+- course detail URL:
+  `https://sbs-backend.mooc.meca.in.th/lms/course-v1:NECTEC+AILOWERSECONDARY07+NECTEC_000022`
+- note:
+  LMS payload returns full course tree down to `chapter -> sequential -> vertical -> aetool`
+
+### BookRoll URLs
+
+- BR_activity:
+  `https://bookroll.thaidlt.com/meca/student/BR_activity?userID=d23c25da-0d2c-4217-9e99-9be650a8712e&usageId=course-v1%3ANECTEC%2BAILOWERSECONDARY07%2BNECTEC_000022`
+- readingData:
+  `https://bookroll.thaidlt.com/meca/student/readingData?userID=d23c25da-0d2c-4217-9e99-9be650a8712e&usageId=course-v1%3ANECTEC%2BAILOWERSECONDARY07%2BNECTEC_000022&view=student&ts=1770000000000`
+- bookrollMaxPage:
+  `https://sbs-backend.mooc.meca.in.th/stats/echart/bookrollMaxPage/course-v1:NECTEC+AILOWERSECONDARY07+NECTEC_000022/d23c25da-0d2c-4217-9e99-9be650a8712e`
+
+### Results
+
+- `readingData`:
+  returns `results` map with 32 topics, all values `0:0`
+- `BR_activity`:
+  returns ECharts config with the same 32 topics, all activity counts `0`
+- `bookrollMaxPage`:
+  returns ECharts config with the same 32 topics, all bar values `0`
+
+### LMS observations
+
+- course contains BookRoll blocks in LMS payload
+- counted from LMS payload:
+  32 blocks with `fields.aetool = "bookroll"`
+- BookRoll-like URLs in LMS payload:
+  34 items total
+- 2 items use BookRoll URL but are stored as `aetool = "iframe"`:
+  - `block-v1:NECTEC+AILOWERSECONDARY07+NECTEC_000022+type@aetool+block@7cc80ec3dba64a49bcdb9407c1c1b3a6`
+  - `block-v1:NECTEC+AILOWERSECONDARY07+NECTEC_000022+type@aetool+block@ea182781893e4f3b93603fefa6490be5`
+
+### donechapterview checks
+
+- ae-backend:
+  `https://ae-backend.learning.app.meca.in.th/analysis/donechapterview/d23c25da-0d2c-4217-9e99-9be650a8712e/course/course-v1:NECTEC+AILOWERSECONDARY07+NECTEC_000022`
+- result:
+  `404 Not Found`
+- vk-analysis:
+  `https://vk-analysis.learning.app.meca.in.th/analysis/donechapterview/d23c25da-0d2c-4217-9e99-9be650a8712e/course/course-v1:NECTEC+AILOWERSECONDARY07+NECTEC_000022`
+- result:
+  `{"error":"An error occurred: list index out of range"}`
 
