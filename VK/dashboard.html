@@ -1969,6 +1969,32 @@
       return `${text.slice(0, Math.max(1, max - 1)).trimEnd()}…`;
     };
 
+    const inferQuizTotalHint = (...candidates) => {
+      for (const raw of candidates) {
+        const text = decodeIfMojibake(String(raw || "")).trim();
+        if (!text) continue;
+        const patterns = [
+          /\b(\d+)\s*(?:questions?|question)\b/i,
+          /(?:แบบ|จำนวน)\s*(\d+)\s*ข้อ/i,
+          /\((\d+)\s*ข้อ\)/i
+        ];
+        for (const pattern of patterns) {
+          const match = text.match(pattern);
+          const total = Number(match?.[1]);
+          if (Number.isFinite(total) && total > 0) return total;
+        }
+      }
+      return null;
+    };
+
+    const applyChatbotTotalHint = (scoreInfo, totalHint) => {
+      if (!scoreInfo || typeof scoreInfo !== "object") return scoreInfo;
+      const total = Number(scoreInfo.total);
+      if (Number.isFinite(total) && total > 0) return scoreInfo;
+      const hint = Number(totalHint);
+      return Number.isFinite(hint) && hint > 0 ? { ...scoreInfo, total: hint } : scoreInfo;
+    };
+
     const collectChapterChatbotSlots = (chapterNode) => {
       const out = [];
       const sequentials = (chapterNode?.children || []).filter((c) => c?.kind === "sequential");
@@ -1977,9 +2003,13 @@
         verticals.forEach((v) => {
           const entries = collectVerticalAeSubtools(v).filter((entry) => entry?.subtype === "Chatbot");
           entries.forEach((entry, entryIdx) => {
+            const title = entry?.title || decodeIfMojibake(String(v?.title || `Chatbot ${entryIdx + 1}`));
+            const verticalTitle = decodeIfMojibake(String(v?.title || ""));
             out.push({
               id: entry?.id || "",
-              title: entry?.title || decodeIfMojibake(String(v?.title || `Chatbot ${entryIdx + 1}`))
+              title,
+              verticalTitle,
+              totalHint: inferQuizTotalHint(title, verticalTitle)
             });
           });
         });
@@ -2006,14 +2036,18 @@
           const items = slots.map((slot, slotIdx) => {
             const apiIdx = apiCursor < maxLen ? apiCursor : null;
             if (apiIdx != null) apiCursor += 1;
+            const scoreYou = apiIdx != null ? applyChatbotTotalHint(getChatbotScoreAt(perfCfg, apiIdx, "your"), slot.totalHint) : null;
+            const scoreAvg = apiIdx != null ? applyChatbotTotalHint(getChatbotScoreAt(perfCfg, apiIdx, "average"), slot.totalHint) : null;
             return {
               chapterIdx,
               slotIdx,
               apiIdx,
               id: slot.id,
               title: slot.title,
-              scoreYou: apiIdx != null ? getChatbotScoreAt(perfCfg, apiIdx, "your") : null,
-              scoreAvg: apiIdx != null ? getChatbotScoreAt(perfCfg, apiIdx, "average") : null,
+              verticalTitle: slot.verticalTitle,
+              totalHint: slot.totalHint,
+              scoreYou,
+              scoreAvg,
               timeYou: apiIdx != null ? getChatbotTimeAt(speedCfg, apiIdx, "your") : null,
               timeAvg: apiIdx != null ? getChatbotTimeAt(speedCfg, apiIdx, "average") : null
             };
@@ -2666,18 +2700,16 @@
       const items = (chatbotMap?.chapters || []).flatMap((chapter) => chapter?.items || []);
       const rows = items
         .map((item, idx) => {
-          const total = Number(item?.scoreYou?.total ?? item?.scoreAvg?.total);
           const scoreYou = Number(item?.scoreYou?.score);
           const scoreAvg = Number(item?.scoreAvg?.score);
           const label = String(item?.title || "").trim() || `Quiz ${idx + 1}`;
           return {
             label,
-            total: Number.isFinite(total) && total > 0 ? total : null,
             scoreYou: Number.isFinite(scoreYou) ? scoreYou : 0,
             scoreAvg: Number.isFinite(scoreAvg) ? scoreAvg : 0
           };
         })
-        .filter((row) => row.total != null || row.scoreYou > 0 || row.scoreAvg > 0);
+        .filter((row) => row.label);
 
       if (!rows.length) {
         chatbotQuizOverallChartInstance = new Chart(ctx, {
@@ -2702,13 +2734,14 @@
         return;
       }
 
-      const totalScore = rows.reduce((sum, row) => sum + (Number(row.total) || 0), 0);
-      const totalYou = rows.reduce((sum, row) => sum + (Number(row.scoreYou) || 0), 0);
-      const totalAvg = rows.reduce((sum, row) => sum + (Number(row.scoreAvg) || 0), 0);
       const chartLabels = rows.map((row, idx) => {
         const label = String(row.label || "").trim() || `Quiz ${idx + 1}`;
         return shortenChartLabel(label, 20);
       });
+      const suggestedMax = Math.max(
+        ...rows.map((row) => Math.max(Number(row.scoreYou) || 0, Number(row.scoreAvg) || 0)),
+        1
+      );
 
       chatbotQuizOverallChartInstance = new Chart(ctx, {
         type: "bar",
@@ -2725,12 +2758,6 @@
               label: "ค่าเฉลี่ย",
               data: rows.map((row) => row.scoreAvg),
               backgroundColor: "#38bdf8",
-              borderRadius: 10,
-            },
-            {
-              label: "คะแนนเต็ม",
-              data: rows.map((row) => row.total || 0),
-              backgroundColor: "#cbd5e1",
               borderRadius: 10,
             }
           ]
@@ -2752,13 +2779,13 @@
           },
           scales: {
             x: { grid: { display: false } },
-            y: { beginAtZero: true, suggestedMax: Math.max(...rows.map((row) => Number(row.total) || 0), 0) }
+            y: { beginAtZero: true, suggestedMax }
           }
         }
       });
 
       if (summaryEl) {
-        summaryEl.textContent = `มี ${rows.length} แบบทดสอบ • คะแนนรวมของคุณ ${Math.round(totalYou)}/${Math.round(totalScore)} • ค่าเฉลี่ยรวม ${Math.round(totalAvg)}/${Math.round(totalScore)}`;
+        summaryEl.textContent = `มี ${rows.length} แบบทดสอบ • แสดงคะแนนของคุณและค่าเฉลี่ยรายแบบทดสอบ`;
       }
     };
 
