@@ -712,7 +712,7 @@
       </div>
       <div id="global-loading-list" class="global-loading-list"></div>
       <div class="global-loading-actions">
-        <button id="global-loading-retry-failed" type="button" class="global-loading-btn primary">Retry failed</button>
+        <button id="global-loading-retry-failed" type="button" class="global-loading-btn primary">ลองใหม่</button>
       </div>
     </div>
   </div>
@@ -3800,7 +3800,7 @@
               const meta = dashboardTaskStateMeta[task.state] || dashboardTaskStateMeta.pending;
               const message = task.message || meta.label;
               const retryBtn = task.state === "error"
-                ? `<button type="button" class="global-loading-btn" data-dashboard-task-retry="${escapeHtml(task.id)}">Retry</button>`
+                ? `<button type="button" class="global-loading-btn" data-dashboard-task-retry="${escapeHtml(task.id)}">ลองใหม่</button>`
                 : "";
               return `
                 <div class="global-loading-item ${meta.tone}">
