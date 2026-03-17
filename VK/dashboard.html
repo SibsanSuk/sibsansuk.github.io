@@ -1923,11 +1923,6 @@
       return `${scoreText}/${info.total}`;
     };
 
-    const formatChatbotTotal = (total) => {
-      const n = Number(total);
-      return Number.isFinite(n) && n > 0 ? String(Math.round(n)) : "";
-    };
-
     const hasChatbotAttemptStarted = (item) => {
       const time = Number(item?.chatbotTime);
       if (Number.isFinite(time)) return time > 0;
@@ -2924,11 +2919,8 @@
             const chatbotStarted = isChatbot && hasChatbotAttemptStarted(item);
             const reading = item.reading || null;
             const video = item.video || null;
-            const chatbotTotal = Number(item?.chatbotScore?.total ?? item?.chatbotScoreAvg?.total ?? item?.totalHint);
-            const chatbotHasTotal = Number.isFinite(chatbotTotal) && chatbotTotal > 0;
             const chatbotScoreMain = chatbotStarted && item.chatbotScore ? formatChatbotScore(item.chatbotScore) : "";
             const chatbotScoreAvg = item.chatbotScoreAvg ? formatChatbotScore(item.chatbotScoreAvg) : "";
-            const chatbotTotalText = formatChatbotTotal(chatbotTotal);
             const chatbotTimeText = chatbotStarted && (Number.isFinite(item.chatbotTime) || Number.isFinite(item.chatbotTimeAvg))
               ? `ใช้เวลา ${formatDurationShort(item.chatbotTime)} • เฉลี่ย ${formatDurationShort(item.chatbotTimeAvg)}`
               : "";
@@ -2942,12 +2934,11 @@
               : itemPct >= 100 ? "text-emerald-600"
                 : itemPct > 0 ? "text-blue-600"
                   : "text-slate-400";
-            const chatbotScoreHero = isChatbot && (chatbotStarted || chatbotHasTotal || chatbotScoreAvg)
+            const chatbotScoreHero = isChatbot && chatbotStarted
               ? `<div class="shrink-0 text-right">
-                  <div class="text-[11px] uppercase tracking-wide text-slate-400">${chatbotStarted ? "คะแนนของคุณ" : "คะแนนเต็ม"}</div>
-                  <div class="text-xl font-extrabold text-sky-700 mono leading-none">${escapeHtml(chatbotStarted ? chatbotScoreMain : (chatbotTotalText || "-"))}</div>
+                  <div class="text-[11px] uppercase tracking-wide text-slate-400">คะแนนของคุณ</div>
+                  <div class="text-xl font-extrabold text-sky-700 mono leading-none">${escapeHtml(chatbotScoreMain)}</div>
                   ${chatbotScoreAvg ? `<div class="mt-1 text-xs text-slate-500">เฉลี่ย ${escapeHtml(chatbotScoreAvg)}</div>` : ""}
-                  ${chatbotStarted && chatbotHasTotal ? `<div class="mt-1 text-xs text-slate-500">เต็ม ${escapeHtml(chatbotTotalText)}</div>` : ""}
                 </div>`
               : "";
             const itemProgressHtml = (!isChatbot && itemHasPct)
