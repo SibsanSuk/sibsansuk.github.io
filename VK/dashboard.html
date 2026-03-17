@@ -1923,6 +1923,14 @@
       return `${scoreText}/${info.total}`;
     };
 
+    const hasChatbotAttemptStarted = (item) => {
+      const time = Number(item?.chatbotTime);
+      if (Number.isFinite(time)) return time > 0;
+      const score = Number(item?.chatbotScore?.score);
+      const total = Number(item?.chatbotScore?.total ?? item?.chatbotScoreAvg?.total);
+      return Number.isFinite(score) && Number.isFinite(total) && total > 0 && score > 0;
+    };
+
     const formatBookrollReadingDetail = (reading) => {
       if (!reading) return "";
       const read = Number(reading.read);
@@ -1936,44 +1944,12 @@
 
     const formatChapterMetric = (chapter) => {
       const pct = Number.isFinite(chapter?.chapterPct) ? Number(chapter.chapterPct) : null;
-      const quiz = chapter?.chapterQuizScore;
-      const hasQuiz = !!chapter?.chapterHasQuiz;
-      const score = Number.isFinite(quiz?.score) ? Number(quiz.score) : null;
-      const total = Number.isFinite(quiz?.total) ? Number(quiz.total) : null;
-      const showPct = pct != null && (!hasQuiz || pct > 0);
-      if (showPct) {
-        const pctText = `${clamp(pct, 0, 100)}%`;
-        if (score != null && total != null && total > 0) {
-          return `${pctText} (${Math.round(score)}/${Math.round(total)} คะแนน)`;
-        }
-        if (hasQuiz) return `${pctText} (ยังไม่ได้ทำแบบทดสอบ)`;
-        return pctText;
-      }
-      if (score != null && total != null && total > 0) {
-        return `${Math.round(score)}/${Math.round(total)} คะแนน`;
-      }
-      return "";
+      return pct != null ? `${clamp(pct, 0, 100)}%` : "";
     };
 
     const formatChapterProgressText = (chapter) => {
       const pct = Number.isFinite(chapter?.chapterPct) ? Number(chapter.chapterPct) : null;
-      const quiz = chapter?.chapterQuizScore;
-      const hasQuiz = !!chapter?.chapterHasQuiz;
-      const score = Number.isFinite(quiz?.score) ? Number(quiz.score) : null;
-      const total = Number.isFinite(quiz?.total) ? Number(quiz.total) : null;
-      const showPct = pct != null && (!hasQuiz || pct > 0);
-      if (showPct) {
-        const pctText = `ความคืบหน้า ${clamp(pct, 0, 100)}%`;
-        if (score != null && total != null && total > 0) {
-          return `${pctText} (${Math.round(score)}/${Math.round(total)} คะแนน)`;
-        }
-        if (hasQuiz) return `${pctText} (ยังไม่ได้ทำแบบทดสอบ)`;
-        return pctText;
-      }
-      if (score != null && total != null && total > 0) {
-        return `${Math.round(score)}/${Math.round(total)} คะแนน`;
-      }
-      return "";
+      return pct != null ? `ความคืบหน้า ${clamp(pct, 0, 100)}%` : "";
     };
 
     const formatDurationShort = (seconds) => {
@@ -2804,13 +2780,13 @@
             Number.isFinite(item?.chatbotTime) ||
             Number.isFinite(item?.chatbotTimeAvg)
           );
-          const hasChatbotScore = subtoolList.some((item) => Number.isFinite(item?.chatbotScore?.score));
+          const hasChatbotStarted = subtoolList.some((item) => hasChatbotAttemptStarted(item));
             const badge = !hasPct
             ? (
               hasChatbotTool
                 ? (
-                  hasChatbotScore ? `<span class="badge badge-done">ทำแบบทดสอบแล้ว</span>` :
-                    hasChatbotMetrics ? `<span class="badge badge-todo">ยังไม่ทำแบบทดสอบ</span>` :
+                  hasChatbotStarted ? `<span class="badge badge-done">ทำแบบทดสอบแล้ว</span>` :
+                    hasChatbotMetrics ? `<span class="badge badge-locked">ยังไม่ได้เริ่ม</span>` :
                       `<span class="badge badge-locked">ยังไม่มีข้อมูลคะแนน</span>`
                 )
                 : `<span class="badge badge-locked">ไม่มีข้อมูล API</span>`
@@ -2878,15 +2854,16 @@
             const itemPct = itemHasPct ? clamp(Number(item.pct), 0, 100) : null;
             const itemPctText = itemHasPct ? `${itemPct}%` : "-";
             const isChatbot = String(itemTool?.sublabel || "").toLowerCase() === "chatbot";
+            const chatbotStarted = isChatbot && hasChatbotAttemptStarted(item);
             const reading = item.reading || null;
             const video = item.video || null;
-            const chatbotScoreMain = item.chatbotScore ? formatChatbotScore(item.chatbotScore) : "-";
-            const chatbotScoreAvg = item.chatbotScoreAvg ? formatChatbotScore(item.chatbotScoreAvg) : "-";
-            const chatbotTimeText = (Number.isFinite(item.chatbotTime) || Number.isFinite(item.chatbotTimeAvg))
+            const chatbotScoreMain = chatbotStarted && item.chatbotScore ? formatChatbotScore(item.chatbotScore) : "";
+            const chatbotScoreAvg = chatbotStarted && item.chatbotScoreAvg ? formatChatbotScore(item.chatbotScoreAvg) : "";
+            const chatbotTimeText = chatbotStarted && (Number.isFinite(item.chatbotTime) || Number.isFinite(item.chatbotTimeAvg))
               ? `ใช้เวลา ${formatDurationShort(item.chatbotTime)} • เฉลี่ย ${formatDurationShort(item.chatbotTimeAvg)}`
               : "";
             const itemDetail = isChatbot
-              ? chatbotTimeText
+              ? (chatbotStarted ? chatbotTimeText : "ยังไม่ได้เริ่ม")
               : (reading
                 ? formatBookrollReadingDetail(reading)
                 : (video ? `รับชม ${video.progress}%` : ""));
@@ -2895,7 +2872,7 @@
               : itemPct >= 100 ? "text-emerald-600"
                 : itemPct > 0 ? "text-blue-600"
                   : "text-slate-400";
-            const chatbotScoreHero = isChatbot
+            const chatbotScoreHero = isChatbot && chatbotStarted
               ? `<div class="shrink-0 text-right">
                   <div class="text-[11px] uppercase tracking-wide text-slate-400">คะแนน</div>
                   <div class="text-xl font-extrabold text-sky-700 mono leading-none">${escapeHtml(chatbotScoreMain)}</div>
