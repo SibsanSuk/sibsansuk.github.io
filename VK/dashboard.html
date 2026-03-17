@@ -1962,6 +1962,13 @@
       return `${mins}:${String(secs).padStart(2, "0")} นาที`;
     };
 
+    const shortenChartLabel = (label, max = 18) => {
+      const text = String(label || "").trim();
+      if (!text) return "";
+      if (text.length <= max) return text;
+      return `${text.slice(0, Math.max(1, max - 1)).trimEnd()}…`;
+    };
+
     const collectChapterChatbotSlots = (chapterNode) => {
       const out = [];
       const sequentials = (chapterNode?.children || []).filter((c) => c?.kind === "sequential");
@@ -2698,14 +2705,15 @@
       const totalScore = rows.reduce((sum, row) => sum + (Number(row.total) || 0), 0);
       const totalYou = rows.reduce((sum, row) => sum + (Number(row.scoreYou) || 0), 0);
       const totalAvg = rows.reduce((sum, row) => sum + (Number(row.scoreAvg) || 0), 0);
+      const chartLabels = rows.map((row, idx) => {
+        const label = String(row.label || "").trim() || `Quiz ${idx + 1}`;
+        return shortenChartLabel(label, 20);
+      });
 
       chatbotQuizOverallChartInstance = new Chart(ctx, {
         type: "bar",
         data: {
-          labels: rows.map((row, idx) => {
-            const label = row.label;
-            return label.length > 18 ? `Quiz ${idx + 1}` : label;
-          }),
+          labels: chartLabels,
           datasets: [
             {
               label: "คะแนนของคุณ",
@@ -2730,7 +2738,18 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { position: "bottom" } },
+          plugins: {
+            legend: { position: "bottom" },
+            tooltip: {
+              callbacks: {
+                title: (items) => {
+                  const idx = Number(items?.[0]?.dataIndex);
+                  const label = rows[idx]?.label;
+                  return label || "";
+                }
+              }
+            }
+          },
           scales: {
             x: { grid: { display: false } },
             y: { beginAtZero: true, suggestedMax: Math.max(...rows.map((row) => Number(row.total) || 0), 0) }
