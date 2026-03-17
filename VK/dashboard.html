@@ -628,8 +628,8 @@
                     </div>
                   </div>
 
-                  <div class="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
-                    <div class="clay-soft p-4 cat-card cat-2">
+                  <div class="mt-5 grid grid-cols-1 gap-4 hidden" id="overall-tool-cards">
+                    <div class="clay-soft p-4 cat-card cat-2" id="overall-card-bookroll">
                       <div class="flex items-center gap-2 text-sm text-slate-500">
                         <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-amber-100 text-amber-700 border border-amber-200" aria-hidden="true">
                           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -650,7 +650,7 @@
                       </div>
                     </div>
 
-                    <div class="clay-soft p-4 cat-card cat-3">
+                    <div class="clay-soft p-4 cat-card cat-3" id="overall-card-video">
                       <div class="flex items-center gap-2 text-sm text-slate-500">
                         <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-red-100 text-red-600 border border-red-200" aria-hidden="true">
                           <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
@@ -669,7 +669,7 @@
                       </div>
                     </div>
 
-                    <div class="clay-soft p-4 cat-card cat-4">
+                    <div class="clay-soft p-4 cat-card cat-4" id="overall-card-chatbot">
                       <div class="flex items-center gap-2 text-sm text-slate-500">
                         <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-sky-100 text-sky-700 border border-sky-200" aria-hidden="true">
                           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -1923,6 +1923,17 @@
       return `${scoreText}/${info.total}`;
     };
 
+    const formatBookrollReadingDetail = (reading) => {
+      if (!reading) return "";
+      const read = Number(reading.read);
+      const total = Number(reading.total);
+      const hasRead = Number.isFinite(read);
+      const hasTotal = Number.isFinite(total);
+      if (!hasRead && !hasTotal) return "";
+      if ((read || 0) <= 0 && (total || 0) <= 0) return "";
+      return `อ่าน ${hasRead ? read : "-"} / ${hasTotal ? total : "-"} หน้า`;
+    };
+
     const formatChapterMetric = (chapter) => {
       const pct = Number.isFinite(chapter?.chapterPct) ? Number(chapter.chapterPct) : null;
       const quiz = chapter?.chapterQuizScore;
@@ -2369,6 +2380,70 @@
       return out;
     };
 
+    const normalizeTrackedToolKey = (rawSubtype) => {
+      const t = String(rawSubtype || "").toLowerCase();
+      if (t.includes("bookroll")) return "bookroll";
+      if (t.includes("video")) return "video";
+      if (t.includes("chatbot")) return "chatbot";
+      return "";
+    };
+
+    const collectCourseToolInventory = (course) => {
+      const counts = { bookroll: 0, video: 0, chatbot: 0 };
+      const addTool = (rawSubtype) => {
+        const key = normalizeTrackedToolKey(rawSubtype);
+        if (key) counts[key] += 1;
+      };
+      const chapters = getSortedChapters(course);
+      chapters.forEach((chapterNode) => {
+        const sequentials = (chapterNode?.children || []).filter((c) => c?.kind === "sequential");
+        sequentials.forEach((seq) => {
+          const verticals = (seq?.children || []).filter((c) => c?.kind === "vertical");
+          verticals.forEach((v) => {
+            const subtools = collectVerticalAeSubtools(v);
+            if (subtools.length) {
+              subtools.forEach((entry) => addTool(entry?.subtype));
+              return;
+            }
+            const tool = inferVerticalTool(v);
+            addTool(tool?.sublabel || tool?.label || "");
+          });
+        });
+      });
+      return {
+        counts,
+        hasBookroll: counts.bookroll > 0,
+        hasVideo: counts.video > 0,
+        hasChatbot: counts.chatbot > 0
+      };
+    };
+
+    const syncOverallToolCards = () => {
+      const containerEl = document.getElementById("overall-tool-cards");
+      const bookrollEl = document.getElementById("overall-card-bookroll");
+      const videoEl = document.getElementById("overall-card-video");
+      const chatbotEl = document.getElementById("overall-card-chatbot");
+      if (!containerEl) return;
+
+      const counts = window.courseToolInventory?.counts || {};
+      const visibility = {
+        bookroll: Number(counts.bookroll) > 0,
+        video: Number(counts.video) > 0,
+        chatbot: Number(counts.chatbot) > 0
+      };
+
+      if (bookrollEl) bookrollEl.classList.toggle("hidden", !visibility.bookroll);
+      if (videoEl) videoEl.classList.toggle("hidden", !visibility.video);
+      if (chatbotEl) chatbotEl.classList.toggle("hidden", !visibility.chatbot);
+
+      const visibleCount = Object.values(visibility).filter(Boolean).length;
+      containerEl.classList.toggle("hidden", visibleCount === 0);
+      containerEl.classList.remove("lg:grid-cols-1", "lg:grid-cols-2", "lg:grid-cols-3");
+      if (visibleCount >= 3) containerEl.classList.add("lg:grid-cols-3");
+      else if (visibleCount === 2) containerEl.classList.add("lg:grid-cols-2");
+      else if (visibleCount === 1) containerEl.classList.add("lg:grid-cols-1");
+    };
+
     const buildProgressModel = () => {
       const course = window.courseDetailData;
       const chapters = getSortedChapters(course);
@@ -2813,7 +2888,7 @@
             const itemDetail = isChatbot
               ? chatbotTimeText
               : (reading
-                ? `อ่าน ${reading.read ?? "-"} / ${reading.total ?? "-"} หน้า`
+                ? formatBookrollReadingDetail(reading)
                 : (video ? `รับชม ${video.progress}%` : ""));
             const pctToneClass = !itemHasPct
               ? "text-slate-400"
@@ -3115,10 +3190,14 @@
       const vertEl = document.getElementById("course-vert");
       const htmlEl = document.getElementById("course-html");
       if (!courseId) {
+        window.courseToolInventory = null;
+        syncOverallToolCards();
         if (statusEl) statusEl.textContent = "ขาด courseid";
         return { state: "skipped", message: "ขาด courseid" };
       }
       if (!isLikelyCourseId(courseId)) {
+        window.courseToolInventory = null;
+        syncOverallToolCards();
         if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
         return { state: "skipped", message: "courseid ไม่ถูกต้อง" };
       }
@@ -3135,6 +3214,8 @@
         const headerCourseNameEl = document.getElementById("header-course-name");
         if (headerCourseNameEl) headerCourseNameEl.textContent = title;
         window.courseDetailData = data;
+        window.courseToolInventory = collectCourseToolInventory(data);
+        syncOverallToolCards();
         const acc = { chapter: 0, sequential: 0, vertical: 0, html: 0 };
         countKinds(data, acc);
         if (chapEl) chapEl.textContent = acc.chapter;
@@ -3150,6 +3231,8 @@
         if (statusEl) statusEl.textContent = `โหลดสำเร็จ (${srcUrl})`;
         return { state: "success", message: "โหลดโครงสร้างคอร์สสำเร็จ" };
       } catch (err) {
+        window.courseToolInventory = null;
+        syncOverallToolCards();
         if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
         console.warn("Course API error:", err);
         return { state: "error", message: err?.message || "โหลดโครงสร้างคอร์สไม่สำเร็จ" };
@@ -3620,17 +3703,35 @@
       skipped: { label: "ข้าม", tone: "skipped" }
     };
     const dashboardTaskFinishedStates = new Set(["success", "error", "skipped"]);
+    const dashboardTaskToolLabels = {
+      bookroll: "BookRoll",
+      video: "Video",
+      chatbot: "Chatbot"
+    };
 
     const getDashboardTaskDefs = () => {
       const tasks = [
-        { id: "bookroll-reading", label: "BookRoll readingData", run: fetchBookrollReadingData },
-        { id: "video-progress", label: "Video progress", run: fetchVideoLearningProgress },
         { id: "course-detail", label: "Course structure", run: fetchCourseDetail },
-        { id: "chatbot-speed", label: "Chatbot speed", run: fetchChatbotSpeed },
-        { id: "chatbot-performance", label: "Chatbot performance", run: fetchChatbotPerformance }
+        { id: "bookroll-reading", label: "BookRoll readingData", run: fetchBookrollReadingData, requiresTool: "bookroll" },
+        { id: "video-progress", label: "Video progress", run: fetchVideoLearningProgress, requiresTool: "video" },
+        { id: "chatbot-speed", label: "Chatbot speed", run: fetchChatbotSpeed, requiresTool: "chatbot" },
+        { id: "chatbot-performance", label: "Chatbot performance", run: fetchChatbotPerformance, requiresTool: "chatbot" }
       ];
-      if (SHOW_BOOKROLL) tasks.push({ id: "bookroll-activity", label: "BookRoll activity", run: fetchBookroll });
+      if (SHOW_BOOKROLL) tasks.push({ id: "bookroll-activity", label: "BookRoll activity", run: fetchBookroll, requiresTool: "bookroll" });
       return tasks;
+    };
+
+    const getDashboardTaskPrecondition = (taskDef, courseTaskResult) => {
+      if (!taskDef || taskDef.id === "course-detail") return { run: true };
+      if (courseTaskResult?.state !== "success") {
+        return { run: false, state: "skipped", message: "ไม่โหลดเพราะอ่าน Course structure ไม่สำเร็จ" };
+      }
+      if (!taskDef.requiresTool) return { run: true };
+      const inventory = window.courseToolInventory?.counts || {};
+      const count = Number(inventory[taskDef.requiresTool]) || 0;
+      if (count > 0) return { run: true };
+      const label = dashboardTaskToolLabels[taskDef.requiresTool] || taskDef.requiresTool;
+      return { run: false, state: "skipped", message: `วิชานี้ไม่มีเครื่องมือ ${label}` };
     };
 
     const dashboardLoadState = {
@@ -3745,6 +3846,7 @@
         dashboardLoadState.pendingRender = true;
         return;
       }
+      syncOverallToolCards();
       renderTopicTabsAndDetail();
     };
 
@@ -3792,8 +3894,17 @@
     };
 
     const retryDashboardTask = async (taskId) => {
+      if (taskId === "course-detail") {
+        await loadDashboardData();
+        return;
+      }
       const taskDef = getDashboardTaskDefs().find((task) => task.id === taskId);
       if (!taskDef) return;
+      const prereq = getDashboardTaskPrecondition(taskDef, getDashboardTaskById("course-detail"));
+      if (!prereq.run) {
+        setDashboardTaskState(taskDef.id, prereq, dashboardLoadState.cycle);
+        return;
+      }
       setGlobalLoadingOverlay(true);
       await runDashboardTask(taskDef, dashboardLoadState.cycle);
     };
@@ -3803,6 +3914,10 @@
         .filter((task) => task.state === "error")
         .map((task) => task.id);
       if (!failedTaskIds.length) return;
+      if (failedTaskIds.includes("course-detail")) {
+        await loadDashboardData();
+        return;
+      }
       setGlobalLoadingOverlay(true);
       await Promise.all(failedTaskIds.map((taskId) => retryDashboardTask(taskId)));
     };
@@ -3812,7 +3927,19 @@
       updateVideoJsonDrawer();
       const tasks = getDashboardTaskDefs();
       const cycleId = beginDashboardLoadCycle(tasks);
-      const wrapped = tasks.map((task) => runDashboardTask(task, cycleId));
+      const courseTask = tasks.find((task) => task.id === "course-detail") || null;
+      const courseTaskResult = courseTask
+        ? await runDashboardTask(courseTask, cycleId)
+        : { state: "success", message: "" };
+      const nextTasks = tasks.filter((task) => task.id !== "course-detail");
+      const wrapped = nextTasks.map((task) => {
+        const prereq = getDashboardTaskPrecondition(task, courseTaskResult);
+        if (!prereq.run) {
+          setDashboardTaskState(task.id, prereq, cycleId);
+          return Promise.resolve(prereq);
+        }
+        return runDashboardTask(task, cycleId);
+      });
       await Promise.allSettled(wrapped);
       endDashboardLoadCycle(cycleId);
     };
