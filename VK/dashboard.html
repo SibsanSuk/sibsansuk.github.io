@@ -1923,6 +1923,11 @@
       return `${scoreText}/${info.total}`;
     };
 
+    const formatChatbotTotal = (total) => {
+      const n = Number(total);
+      return Number.isFinite(n) && n > 0 ? String(Math.round(n)) : "";
+    };
+
     const hasChatbotAttemptStarted = (item) => {
       const time = Number(item?.chatbotTime);
       if (Number.isFinite(time)) return time > 0;
@@ -2700,11 +2705,13 @@
       const items = (chatbotMap?.chapters || []).flatMap((chapter) => chapter?.items || []);
       const rows = items
         .map((item, idx) => {
+          const total = Number(item?.scoreYou?.total ?? item?.scoreAvg?.total ?? item?.totalHint);
           const scoreYou = Number(item?.scoreYou?.score);
           const scoreAvg = Number(item?.scoreAvg?.score);
           const label = String(item?.title || "").trim() || `Quiz ${idx + 1}`;
           return {
             label,
+            total: Number.isFinite(total) && total > 0 ? total : null,
             scoreYou: Number.isFinite(scoreYou) ? scoreYou : 0,
             scoreAvg: Number.isFinite(scoreAvg) ? scoreAvg : 0
           };
@@ -2739,9 +2746,14 @@
         return shortenChartLabel(label, 20);
       });
       const suggestedMax = Math.max(
-        ...rows.map((row) => Math.max(Number(row.scoreYou) || 0, Number(row.scoreAvg) || 0)),
+        ...rows.map((row) => Math.max(Number(row.total) || 0, Number(row.scoreYou) || 0, Number(row.scoreAvg) || 0)),
         1
       );
+      const hasAllTotals = rows.every((row) => Number.isFinite(row.total) && row.total > 0);
+      const hasAnyTotals = rows.some((row) => Number.isFinite(row.total) && row.total > 0);
+      const totalScore = hasAllTotals ? rows.reduce((sum, row) => sum + (Number(row.total) || 0), 0) : null;
+      const totalYou = rows.reduce((sum, row) => sum + (Number(row.scoreYou) || 0), 0);
+      const totalAvg = rows.reduce((sum, row) => sum + (Number(row.scoreAvg) || 0), 0);
 
       chatbotQuizOverallChartInstance = new Chart(ctx, {
         type: "bar",
@@ -2759,6 +2771,13 @@
               data: rows.map((row) => row.scoreAvg),
               backgroundColor: "#38bdf8",
               borderRadius: 10,
+            },
+            {
+              label: "คะแนนเต็ม",
+              data: rows.map((row) => Number.isFinite(row.total) && row.total > 0 ? row.total : null),
+              backgroundColor: "#cbd5e1",
+              borderRadius: 10,
+              hidden: !hasAnyTotals
             }
           ]
         },
@@ -2785,7 +2804,9 @@
       });
 
       if (summaryEl) {
-        summaryEl.textContent = `มี ${rows.length} แบบทดสอบ • แสดงคะแนนของคุณและค่าเฉลี่ยรายแบบทดสอบ`;
+        summaryEl.textContent = hasAllTotals && Number.isFinite(totalScore) && totalScore > 0
+          ? `มี ${rows.length} แบบทดสอบ • คะแนนรวมของคุณ ${Math.round(totalYou)}/${Math.round(totalScore)} • ค่าเฉลี่ยรวม ${Math.round(totalAvg)}/${Math.round(totalScore)}`
+          : `มี ${rows.length} แบบทดสอบ • แสดงคะแนนของคุณ ค่าเฉลี่ย และคะแนนเต็มรายแบบทดสอบ`;
       }
     };
 
@@ -2903,8 +2924,11 @@
             const chatbotStarted = isChatbot && hasChatbotAttemptStarted(item);
             const reading = item.reading || null;
             const video = item.video || null;
+            const chatbotTotal = Number(item?.chatbotScore?.total ?? item?.chatbotScoreAvg?.total ?? item?.totalHint);
+            const chatbotHasTotal = Number.isFinite(chatbotTotal) && chatbotTotal > 0;
             const chatbotScoreMain = chatbotStarted && item.chatbotScore ? formatChatbotScore(item.chatbotScore) : "";
-            const chatbotScoreAvg = chatbotStarted && item.chatbotScoreAvg ? formatChatbotScore(item.chatbotScoreAvg) : "";
+            const chatbotScoreAvg = item.chatbotScoreAvg ? formatChatbotScore(item.chatbotScoreAvg) : "";
+            const chatbotTotalText = formatChatbotTotal(chatbotTotal);
             const chatbotTimeText = chatbotStarted && (Number.isFinite(item.chatbotTime) || Number.isFinite(item.chatbotTimeAvg))
               ? `ใช้เวลา ${formatDurationShort(item.chatbotTime)} • เฉลี่ย ${formatDurationShort(item.chatbotTimeAvg)}`
               : "";
@@ -2918,11 +2942,12 @@
               : itemPct >= 100 ? "text-emerald-600"
                 : itemPct > 0 ? "text-blue-600"
                   : "text-slate-400";
-            const chatbotScoreHero = isChatbot && chatbotStarted
+            const chatbotScoreHero = isChatbot && (chatbotStarted || chatbotHasTotal || chatbotScoreAvg)
               ? `<div class="shrink-0 text-right">
-                  <div class="text-[11px] uppercase tracking-wide text-slate-400">คะแนน</div>
-                  <div class="text-xl font-extrabold text-sky-700 mono leading-none">${escapeHtml(chatbotScoreMain)}</div>
-                  <div class="mt-1 text-xs text-slate-500">เฉลี่ย ${escapeHtml(chatbotScoreAvg)}</div>
+                  <div class="text-[11px] uppercase tracking-wide text-slate-400">${chatbotStarted ? "คะแนนของคุณ" : "คะแนนเต็ม"}</div>
+                  <div class="text-xl font-extrabold text-sky-700 mono leading-none">${escapeHtml(chatbotStarted ? chatbotScoreMain : (chatbotTotalText || "-"))}</div>
+                  ${chatbotScoreAvg ? `<div class="mt-1 text-xs text-slate-500">เฉลี่ย ${escapeHtml(chatbotScoreAvg)}</div>` : ""}
+                  ${chatbotStarted && chatbotHasTotal ? `<div class="mt-1 text-xs text-slate-500">เต็ม ${escapeHtml(chatbotTotalText)}</div>` : ""}
                 </div>`
               : "";
             const itemProgressHtml = (!isChatbot && itemHasPct)
