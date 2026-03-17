@@ -369,13 +369,28 @@
       display: flex;
     }
     .global-loading-card{
-      min-width: min(92vw, 360px);
+      width: min(92vw, 720px);
       border-radius: 18px;
       border: 1px solid rgba(255,255,255,.45);
       background: linear-gradient(180deg, #ffffff, #eaf7f7);
       box-shadow: 0 20px 36px rgba(12,34,46,.25);
       padding: 18px 20px;
-      text-align: center;
+      text-align: left;
+    }
+    .global-loading-header{
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .global-loading-header-main{
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .global-loading-header-copy{
+      min-width: 0;
     }
     .global-loading-spinner{
       width: 42px;
@@ -383,8 +398,165 @@
       border-radius: 999px;
       border: 4px solid rgba(15,107,114,.18);
       border-top-color: var(--brand-600);
-      margin: 0 auto 10px;
       animation: globalSpin .8s linear infinite;
+      flex: 0 0 auto;
+    }
+    .global-loading-list{
+      margin-top: 14px;
+      display: grid;
+      gap: 10px;
+      max-height: min(48vh, 420px);
+      overflow: auto;
+    }
+    .global-loading-item{
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.82);
+    }
+    .global-loading-item.success{
+      border-color: rgba(34,197,94,.28);
+      background: rgba(240,253,244,.92);
+    }
+    .global-loading-item.error{
+      border-color: rgba(239,68,68,.24);
+      background: rgba(254,242,242,.94);
+    }
+    .global-loading-item.requesting{
+      border-color: rgba(59,130,246,.24);
+      background: rgba(239,246,255,.94);
+    }
+    .global-loading-item.skipped{
+      border-color: rgba(148,163,184,.26);
+      background: rgba(248,250,252,.94);
+    }
+    .global-loading-item-main{
+      min-width: 0;
+    }
+    .global-loading-item-title{
+      font-size: 14px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .global-loading-item-msg{
+      margin-top: 3px;
+      font-size: 12px;
+      color: #64748b;
+      word-break: break-word;
+    }
+    .global-loading-item-side{
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .global-loading-badge{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 92px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .global-loading-badge.pending{
+      background: #f8fafc;
+      color: #64748b;
+      border-color: #cbd5e1;
+    }
+    .global-loading-badge.requesting{
+      background: #eff6ff;
+      color: #1d4ed8;
+      border-color: #bfdbfe;
+    }
+    .global-loading-badge.success{
+      background: #f0fdf4;
+      color: #15803d;
+      border-color: #bbf7d0;
+    }
+    .global-loading-badge.error{
+      background: #fef2f2;
+      color: #b91c1c;
+      border-color: #fecaca;
+    }
+    .global-loading-badge.skipped{
+      background: #f8fafc;
+      color: #475569;
+      border-color: #cbd5e1;
+    }
+    .global-loading-actions{
+      margin-top: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .global-loading-btn{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 9px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: #0f172a;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s ease, border-color .15s ease, transform .12s ease;
+    }
+    .global-loading-btn:hover{
+      background: #f8fafc;
+      border-color: rgba(15,107,114,.18);
+      transform: translateY(-1px);
+    }
+    .global-loading-btn.primary{
+      background: linear-gradient(135deg, var(--brand-600), var(--brand-500));
+      border-color: transparent;
+      color: #fff;
+    }
+    .global-loading-btn.primary:hover{
+      background: linear-gradient(135deg, var(--brand-700), var(--brand-600));
+    }
+    .global-loading-toggle{
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 9998;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(15,107,114,.18);
+      background: rgba(255,255,255,.94);
+      box-shadow: 0 12px 24px rgba(15,23,42,.12);
+      color: #0f172a;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .global-loading-toggle.active{
+      display: inline-flex;
+    }
+    .global-loading-toggle.error{
+      border-color: rgba(239,68,68,.22);
+      color: #b91c1c;
+    }
+    .global-loading-toggle.success{
+      border-color: rgba(34,197,94,.22);
+      color: #166534;
     }
     @keyframes globalSpin{
       from { transform: rotate(0deg); }
@@ -528,11 +700,23 @@
   </div>
   <div id="global-loading-overlay" class="global-loading-overlay" aria-live="polite" aria-busy="true">
     <div class="global-loading-card">
-      <div class="global-loading-spinner" aria-hidden="true"></div>
-      <div class="font-bold text-slate-700">กำลังโหลดข้อมูลจาก API</div>
-      <div id="global-loading-text" class="mt-1 text-sm text-slate-500">โปรดรอสักครู่...</div>
+      <div class="global-loading-header">
+        <div class="global-loading-header-main">
+          <div id="global-loading-spinner" class="global-loading-spinner" aria-hidden="true"></div>
+          <div class="global-loading-header-copy">
+            <div class="font-bold text-slate-700">กำลังโหลดข้อมูลจาก API</div>
+            <div id="global-loading-text" class="mt-1 text-sm text-slate-500">โปรดรอสักครู่...</div>
+          </div>
+        </div>
+        <button id="global-loading-close" type="button" class="global-loading-btn">ปิด</button>
+      </div>
+      <div id="global-loading-list" class="global-loading-list"></div>
+      <div class="global-loading-actions">
+        <button id="global-loading-retry-failed" type="button" class="global-loading-btn primary">Retry failed</button>
+      </div>
     </div>
   </div>
+  <button id="global-loading-toggle" type="button" class="global-loading-toggle">สถานะ API</button>
 
   <script>
     const qs = new URLSearchParams(window.location.search);
@@ -2910,6 +3094,18 @@
       `;
     };
 
+    const createHttpError = async (res) => {
+      const code = Number(res?.status);
+      let detail = "";
+      try {
+        detail = String(await res.text()).replace(/\s+/g, " ").trim();
+      } catch {
+        detail = "";
+      }
+      const short = detail ? detail.slice(0, 180) : "";
+      return new Error(short ? `HTTP ${code}: ${short}` : `HTTP ${code}`);
+    };
+
     const fetchCourseDetail = async () => {
       const statusEl = document.getElementById("course-status");
       const titleEl = document.getElementById("course-title");
@@ -2920,17 +3116,17 @@
       const htmlEl = document.getElementById("course-html");
       if (!courseId) {
         if (statusEl) statusEl.textContent = "ขาด courseid";
-        return;
+        return { state: "skipped", message: "ขาด courseid" };
       }
       if (!isLikelyCourseId(courseId)) {
         if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
-        return;
+        return { state: "skipped", message: "courseid ไม่ถูกต้อง" };
       }
       if (statusEl) statusEl.textContent = "กำลังโหลด...";
       try {
         const srcUrl = courseUrl(courseId);
         const res = await fetch(srcUrl);
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) throw await createHttpError(res);
         const data = await res.json();
         const title = decodeIfMojibake(data.courseTitle || data.title || "-");
         const key = data.courseKey || data.course_key || courseId;
@@ -2952,9 +3148,11 @@
         requestDashboardRender();
 
         if (statusEl) statusEl.textContent = `โหลดสำเร็จ (${srcUrl})`;
+        return { state: "success", message: "โหลดโครงสร้างคอร์สสำเร็จ" };
       } catch (err) {
         if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
         console.warn("Course API error:", err);
+        return { state: "error", message: err?.message || "โหลดโครงสร้างคอร์สไม่สำเร็จ" };
       }
     };
 
@@ -3061,18 +3259,18 @@
       if (!userId || !courseId) {
         if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
         updateBookrollJsonDrawer();
-        return;
+        return { state: "skipped", message: "ขาด userId หรือ courseid" };
       }
       if (!isLikelyCourseId(courseId)) {
         if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
         updateBookrollJsonDrawer();
-        return;
+        return { state: "skipped", message: "courseid ไม่ถูกต้อง" };
       }
       if (statusEl) statusEl.textContent = "กำลังโหลด...";
       try {
         const srcUrl = bookrollUrl(userId, courseId);
         const res = await fetch(srcUrl);
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) throw await createHttpError(res);
         const data = await res.json();
         window.bookrollData = data;
         renderBookrollChart(data);
@@ -3098,11 +3296,13 @@
         if (statusEl) statusEl.textContent = `โหลดสำเร็จ (${srcUrl})`;
         if (rawEl) rawEl.textContent = JSON.stringify(data, null, 2);
         updateBookrollJsonDrawer();
+        return { state: "success", message: "โหลด BookRoll activity สำเร็จ" };
       } catch (err) {
         if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
         if (rawEl) rawEl.textContent = err?.message || "เกิดข้อผิดพลาด";
         console.warn("Bookroll API error:", err);
         updateBookrollJsonDrawer();
+        return { state: "error", message: err?.message || "โหลด BookRoll activity ไม่สำเร็จ" };
       }
     };
 
@@ -3112,7 +3312,7 @@
         window.bookrollReadingProgress = [];
         updateBookrollJsonDrawer();
         requestDashboardRender();
-        return;
+        return { state: "skipped", message: "ขาด userId หรือ courseid" };
       }
       const mergeReadingEntries = (list) => {
         const map = new Map();
@@ -3134,7 +3334,7 @@
       const fetchReadingEntriesByUsageId = async (usageId, titleHint = "") => {
         const srcUrl = bookrollReadingDataUrl(userId, usageId);
         const res = await fetch(srcUrl);
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) throw await createHttpError(res);
         const data = await res.json();
         return {
           sourceUrl: srcUrl,
@@ -3180,6 +3380,8 @@
             const data = await res.json();
             debugSources.push({ url: srcUrl, data });
             aggregate.push(...buildReadingProgressMap(data, { usageId: courseId }));
+          } else {
+            console.warn("Bookroll readingData API error:", await createHttpError(res));
           }
         } catch (err) {
           console.warn("Bookroll readingData API error:", err);
@@ -3204,10 +3406,16 @@
 
         window.bookrollReadingData = debugSources.length ? debugSources[0].data : null;
         window.bookrollReadingProgress = mergeReadingEntries(aggregate);
+        const hasData = window.bookrollReadingProgress.length > 0 || !!window.bookrollReadingData;
+        return {
+          state: hasData ? "success" : "error",
+          message: hasData ? `ได้ readingData ${window.bookrollReadingProgress.length} รายการ` : "readingData ว่างหรือเรียกไม่สำเร็จ"
+        };
       } catch (err) {
         window.bookrollReadingData = null;
         window.bookrollReadingProgress = [];
         console.warn("Bookroll reading progress error:", err);
+        return { state: "error", message: err?.message || "โหลด BookRoll readingData ไม่สำเร็จ" };
       } finally {
         updateBookrollJsonDrawer();
         requestDashboardRender();
@@ -3222,7 +3430,7 @@
         window.videoApiStatus = "invalid-course";
         requestDashboardRender();
         updateLoginDebugPanel();
-        return;
+        return { state: "skipped", message: "courseid ไม่ถูกต้อง" };
       }
       const candidates = resolveVideoUserNameCandidates();
       if (!candidates.length) {
@@ -3232,7 +3440,7 @@
         window.videoApiStatus = "missing-username";
         requestDashboardRender();
         updateLoginDebugPanel();
-        return;
+        return { state: "skipped", message: "ไม่มี userName สำหรับ video API" };
       }
       try {
         let best = { entries: [], data: null, info: null };
@@ -3254,12 +3462,19 @@
         window.videoProgressData = best.entries;
         window.videoUserNameResolved = best.info || candidates[0] || null;
         window.videoApiStatus = okResponseCount > 0 ? "ok" : "error";
+        return {
+          state: okResponseCount > 0 ? "success" : "error",
+          message: okResponseCount > 0
+            ? `โหลด Video progress ${best.entries.length} รายการ`
+            : "video API ไม่ตอบกลับข้อมูล"
+        };
       } catch (err) {
         window.videoLearningRaw = null;
         window.videoProgressData = [];
         window.videoUserNameResolved = null;
         window.videoApiStatus = "error";
         console.warn("Video learning API error:", err);
+        return { state: "error", message: err?.message || "โหลด Video progress ไม่สำเร็จ" };
       } finally {
         updateLoginDebugPanel();
         updateVideoJsonDrawer();
@@ -3272,19 +3487,21 @@
         window.chatbotSpeedRawData = null;
         rebuildChatbotOrderMap();
         requestDashboardRender();
-        return;
+        return { state: "skipped", message: "ขาด userId หรือ courseid" };
       }
       try {
         const srcUrl = chatbotSpeedUrl(courseId, userId);
         const res = await fetch(srcUrl);
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) throw await createHttpError(res);
         const data = await res.json();
         window.chatbotSpeedRawData = getChartConfig(data);
         const rawCategories = getCategoryAxisData(window.chatbotSpeedRawData);
         window.chatbotSpeedRawData.__categoryMeta = rawCategories.map((label) => parseChatbotCategoryMeta(label));
+        return { state: "success", message: "โหลด Chatbot speed สำเร็จ" };
       } catch (err) {
         window.chatbotSpeedRawData = null;
         console.warn("Chatbot Speed API error:", err);
+        return { state: "error", message: err?.message || "โหลด Chatbot speed ไม่สำเร็จ" };
       } finally {
         rebuildChatbotOrderMap();
         requestDashboardRender();
@@ -3296,19 +3513,21 @@
         window.chatbotPerfData = null;
         rebuildChatbotOrderMap();
         requestDashboardRender();
-        return;
+        return { state: "skipped", message: "ขาด userId หรือ courseid" };
       }
       try {
         const srcUrl = chatbotPerformanceUrl(courseId, userId);
         const res = await fetch(srcUrl);
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) throw await createHttpError(res);
         const data = await res.json();
         window.chatbotPerfData = getChartConfig(data);
         const rawCategories = getCategoryAxisData(window.chatbotPerfData);
         window.chatbotPerfData.__categoryMeta = rawCategories.map((label) => parseChatbotCategoryMeta(label));
+        return { state: "success", message: "โหลด Chatbot performance สำเร็จ" };
       } catch (err) {
         window.chatbotPerfData = null;
         console.warn("Chatbot Performance API error:", err);
+        return { state: "error", message: err?.message || "โหลด Chatbot performance ไม่สำเร็จ" };
       } finally {
         rebuildChatbotOrderMap();
         requestDashboardRender();
@@ -3325,6 +3544,13 @@
     document.getElementById("video-donut-remain").textContent = "0";
     const loginBtn = document.getElementById("btn-login");
     const logoutBtn = document.getElementById("btn-logout");
+    const globalLoadingOverlayEl = document.getElementById("global-loading-overlay");
+    const globalLoadingSpinnerEl = document.getElementById("global-loading-spinner");
+    const globalLoadingTextEl = document.getElementById("global-loading-text");
+    const globalLoadingListEl = document.getElementById("global-loading-list");
+    const globalLoadingCloseEl = document.getElementById("global-loading-close");
+    const globalLoadingRetryFailedEl = document.getElementById("global-loading-retry-failed");
+    const globalLoadingToggleEl = document.getElementById("global-loading-toggle");
     const courseDeepTreeEl = document.getElementById("course-deep-tree");
     if (courseDeepTreeEl) {
       courseDeepTreeEl.addEventListener("click", (e) => {
@@ -3386,19 +3612,132 @@
       updateLoginDebugPanel();
     };
 
+    const dashboardTaskStateMeta = {
+      pending: { label: "รอ request", tone: "pending" },
+      requesting: { label: "กำลังรอตอบกลับ", tone: "requesting" },
+      success: { label: "ได้ข้อมูลแล้ว", tone: "success" },
+      error: { label: "ผิดพลาด", tone: "error" },
+      skipped: { label: "ข้าม", tone: "skipped" }
+    };
+    const dashboardTaskFinishedStates = new Set(["success", "error", "skipped"]);
+
+    const getDashboardTaskDefs = () => {
+      const tasks = [
+        { id: "bookroll-reading", label: "BookRoll readingData", run: fetchBookrollReadingData },
+        { id: "video-progress", label: "Video progress", run: fetchVideoLearningProgress },
+        { id: "course-detail", label: "Course structure", run: fetchCourseDetail },
+        { id: "chatbot-speed", label: "Chatbot speed", run: fetchChatbotSpeed },
+        { id: "chatbot-performance", label: "Chatbot performance", run: fetchChatbotPerformance }
+      ];
+      if (SHOW_BOOKROLL) tasks.push({ id: "bookroll-activity", label: "BookRoll activity", run: fetchBookroll });
+      return tasks;
+    };
+
     const dashboardLoadState = {
       cycle: 0,
       deferRender: false,
       pendingRender: false,
       total: 0,
-      done: 0
+      done: 0,
+      tasks: [],
+      overlayOpen: false
     };
 
-    const setGlobalLoadingOverlay = (visible, text = "") => {
-      const overlayEl = document.getElementById("global-loading-overlay");
-      const textEl = document.getElementById("global-loading-text");
-      if (overlayEl) overlayEl.classList.toggle("active", !!visible);
-      if (textEl) textEl.textContent = text || "โปรดรอสักครู่...";
+    const recalcDashboardLoadProgress = () => {
+      const tasks = Array.isArray(dashboardLoadState.tasks) ? dashboardLoadState.tasks : [];
+      dashboardLoadState.total = tasks.length;
+      dashboardLoadState.done = tasks.filter((task) => dashboardTaskFinishedStates.has(task.state)).length;
+    };
+
+    const getDashboardTaskById = (taskId) =>
+      (Array.isArray(dashboardLoadState.tasks) ? dashboardLoadState.tasks : []).find((task) => task.id === taskId) || null;
+
+    const normalizeDashboardTaskResult = (result) => {
+      if (!result || typeof result !== "object") return { state: "success", message: "" };
+      const state = typeof result.state === "string" ? result.state : "success";
+      const message = typeof result.message === "string" ? result.message : "";
+      return { state, message };
+    };
+
+    const renderGlobalLoadingOverlay = () => {
+      recalcDashboardLoadProgress();
+      const tasks = Array.isArray(dashboardLoadState.tasks) ? dashboardLoadState.tasks : [];
+      const running = tasks.filter((task) => task.state === "requesting").length;
+      const success = tasks.filter((task) => task.state === "success").length;
+      const errors = tasks.filter((task) => task.state === "error").length;
+      const skipped = tasks.filter((task) => task.state === "skipped").length;
+      const total = dashboardLoadState.total;
+      const done = dashboardLoadState.done;
+      const allFinished = total > 0 && running === 0 && done >= total;
+
+      if (globalLoadingOverlayEl) globalLoadingOverlayEl.classList.toggle("active", !!dashboardLoadState.overlayOpen);
+      if (globalLoadingSpinnerEl) globalLoadingSpinnerEl.style.display = running > 0 ? "" : "none";
+      if (globalLoadingTextEl) {
+        const summary = [
+          success ? `สำเร็จ ${success}` : "",
+          errors ? `ผิดพลาด ${errors}` : "",
+          skipped ? `ข้าม ${skipped}` : ""
+        ].filter(Boolean).join(" • ");
+        if (running > 0) {
+          globalLoadingTextEl.textContent = `กำลังโหลด ${done}/${total} รายการ${summary ? ` • ${summary}` : ""}`;
+        } else if (total > 0) {
+          globalLoadingTextEl.textContent = `โหลดครบ ${done}/${total} รายการ${summary ? ` • ${summary}` : ""}`;
+        } else {
+          globalLoadingTextEl.textContent = "โปรดรอสักครู่...";
+        }
+      }
+      if (globalLoadingListEl) {
+        globalLoadingListEl.innerHTML = tasks.length
+          ? tasks.map((task) => {
+              const meta = dashboardTaskStateMeta[task.state] || dashboardTaskStateMeta.pending;
+              const message = task.message || meta.label;
+              const retryBtn = task.state === "error"
+                ? `<button type="button" class="global-loading-btn" data-dashboard-task-retry="${escapeHtml(task.id)}">Retry</button>`
+                : "";
+              return `
+                <div class="global-loading-item ${meta.tone}">
+                  <div class="global-loading-item-main">
+                    <div class="global-loading-item-title">${escapeHtml(task.label)}</div>
+                    <div class="global-loading-item-msg">${escapeHtml(message)}</div>
+                  </div>
+                  <div class="global-loading-item-side">
+                    <span class="global-loading-badge ${meta.tone}">${escapeHtml(meta.label)}</span>
+                    ${retryBtn}
+                  </div>
+                </div>
+              `;
+            }).join("")
+          : `<div class="text-sm text-slate-500">ยังไม่มีรายการ API</div>`;
+      }
+      if (globalLoadingCloseEl) globalLoadingCloseEl.style.display = allFinished ? "inline-flex" : "none";
+      if (globalLoadingRetryFailedEl) globalLoadingRetryFailedEl.style.display = errors > 0 ? "inline-flex" : "none";
+      if (globalLoadingToggleEl) {
+        const shouldShowToggle = !dashboardLoadState.overlayOpen && tasks.length > 0 && (errors > 0 || running > 0);
+        globalLoadingToggleEl.classList.toggle("active", shouldShowToggle);
+        globalLoadingToggleEl.classList.toggle("error", shouldShowToggle && errors > 0);
+        globalLoadingToggleEl.classList.toggle("success", shouldShowToggle && errors === 0 && allFinished);
+        if (shouldShowToggle) {
+          globalLoadingToggleEl.textContent = errors > 0
+            ? `API ผิดพลาด ${errors}`
+            : `API ${done}/${total}`;
+        }
+      }
+    };
+
+    const setGlobalLoadingOverlay = (visible) => {
+      dashboardLoadState.overlayOpen = !!visible;
+      renderGlobalLoadingOverlay();
+    };
+
+    const setDashboardTaskState = (taskId, next, cycleId = dashboardLoadState.cycle) => {
+      if (cycleId !== dashboardLoadState.cycle) return;
+      const task = getDashboardTaskById(taskId);
+      if (!task) return;
+      if (next && typeof next === "object") {
+        if (typeof next.state === "string") task.state = next.state;
+        if (typeof next.message === "string") task.message = next.message;
+      }
+      renderGlobalLoadingOverlay();
     };
 
     const requestDashboardRender = () => {
@@ -3409,21 +3748,38 @@
       renderTopicTabsAndDetail();
     };
 
-    const beginDashboardLoadCycle = (total) => {
+    const beginDashboardLoadCycle = (taskDefs) => {
       dashboardLoadState.cycle += 1;
       dashboardLoadState.deferRender = true;
       dashboardLoadState.pendingRender = false;
-      dashboardLoadState.total = Math.max(0, Number(total) || 0);
-      dashboardLoadState.done = 0;
+      dashboardLoadState.tasks = (Array.isArray(taskDefs) ? taskDefs : []).map((task) => ({
+        id: task.id,
+        label: task.label,
+        state: "pending",
+        message: "รอ request"
+      }));
+      recalcDashboardLoadProgress();
       const cycleId = dashboardLoadState.cycle;
-      setGlobalLoadingOverlay(true, `กำลังโหลด 0/${dashboardLoadState.total} รายการ`);
+      setGlobalLoadingOverlay(true);
       return cycleId;
     };
 
-    const markDashboardTaskDone = (cycleId) => {
-      if (cycleId !== dashboardLoadState.cycle) return;
-      dashboardLoadState.done = Math.min(dashboardLoadState.done + 1, dashboardLoadState.total);
-      setGlobalLoadingOverlay(true, `กำลังโหลด ${dashboardLoadState.done}/${dashboardLoadState.total} รายการ`);
+    const runDashboardTask = async (taskDef, cycleId = dashboardLoadState.cycle) => {
+      if (!taskDef?.id || typeof taskDef.run !== "function") return null;
+      setDashboardTaskState(taskDef.id, { state: "requesting", message: "กำลังรอตอบกลับ..." }, cycleId);
+      let result = { state: "success", message: "" };
+      try {
+        result = normalizeDashboardTaskResult(await taskDef.run());
+      } catch (err) {
+        result = { state: "error", message: err?.message || "เกิดข้อผิดพลาด" };
+        console.warn(`Dashboard task error [${taskDef.id}]:`, err);
+      }
+      setDashboardTaskState(taskDef.id, result, cycleId);
+      if (!dashboardLoadState.deferRender) {
+        const stillRunning = (dashboardLoadState.tasks || []).some((task) => task.state === "requesting");
+        if (!stillRunning) setGlobalLoadingOverlay(false);
+      }
+      return result;
     };
 
     const endDashboardLoadCycle = (cycleId) => {
@@ -3431,29 +3787,56 @@
       dashboardLoadState.deferRender = false;
       renderTopicTabsAndDetail();
       dashboardLoadState.pendingRender = false;
+      recalcDashboardLoadProgress();
       setGlobalLoadingOverlay(false);
+    };
+
+    const retryDashboardTask = async (taskId) => {
+      const taskDef = getDashboardTaskDefs().find((task) => task.id === taskId);
+      if (!taskDef) return;
+      setGlobalLoadingOverlay(true);
+      await runDashboardTask(taskDef, dashboardLoadState.cycle);
+    };
+
+    const retryFailedDashboardTasks = async () => {
+      const failedTaskIds = (dashboardLoadState.tasks || [])
+        .filter((task) => task.state === "error")
+        .map((task) => task.id);
+      if (!failedTaskIds.length) return;
+      setGlobalLoadingOverlay(true);
+      await Promise.all(failedTaskIds.map((taskId) => retryDashboardTask(taskId)));
     };
 
     const loadDashboardData = async () => {
       updateBookrollJsonDrawer();
       updateVideoJsonDrawer();
-      const tasks = [
-        fetchBookrollReadingData,
-        fetchVideoLearningProgress,
-        fetchCourseDetail,
-        fetchChatbotSpeed,
-        fetchChatbotPerformance
-      ];
-      if (SHOW_BOOKROLL) tasks.push(fetchBookroll);
-      const cycleId = beginDashboardLoadCycle(tasks.length);
-      const wrapped = tasks.map((task) =>
-        Promise.resolve()
-          .then(() => task())
-          .finally(() => markDashboardTaskDone(cycleId))
-      );
+      const tasks = getDashboardTaskDefs();
+      const cycleId = beginDashboardLoadCycle(tasks);
+      const wrapped = tasks.map((task) => runDashboardTask(task, cycleId));
       await Promise.allSettled(wrapped);
       endDashboardLoadCycle(cycleId);
     };
+
+    if (globalLoadingCloseEl) {
+      globalLoadingCloseEl.addEventListener("click", () => setGlobalLoadingOverlay(false));
+    }
+    if (globalLoadingToggleEl) {
+      globalLoadingToggleEl.addEventListener("click", () => setGlobalLoadingOverlay(true));
+    }
+    if (globalLoadingRetryFailedEl) {
+      globalLoadingRetryFailedEl.addEventListener("click", () => {
+        retryFailedDashboardTasks();
+      });
+    }
+    if (globalLoadingListEl) {
+      globalLoadingListEl.addEventListener("click", (e) => {
+        const btn = e.target?.closest?.("[data-dashboard-task-retry]");
+        if (!btn) return;
+        const taskId = btn.getAttribute("data-dashboard-task-retry");
+        if (!taskId) return;
+        retryDashboardTask(taskId);
+      });
+    }
 
     if (loginBtn) loginBtn.addEventListener("click", startLogin);
     if (logoutBtn) logoutBtn.addEventListener("click", () => logout(auth));
