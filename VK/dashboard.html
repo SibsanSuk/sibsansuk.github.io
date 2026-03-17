@@ -3703,6 +3703,7 @@
       skipped: { label: "ข้าม", tone: "skipped" }
     };
     const dashboardTaskFinishedStates = new Set(["success", "error", "skipped"]);
+    const dashboardTaskProgressFinishedStates = new Set(["success", "error"]);
     const dashboardTaskToolLabels = {
       bookroll: "BookRoll",
       video: "Video",
@@ -3746,8 +3747,9 @@
 
     const recalcDashboardLoadProgress = () => {
       const tasks = Array.isArray(dashboardLoadState.tasks) ? dashboardLoadState.tasks : [];
-      dashboardLoadState.total = tasks.length;
-      dashboardLoadState.done = tasks.filter((task) => dashboardTaskFinishedStates.has(task.state)).length;
+      const activeTasks = tasks.filter((task) => task.state !== "skipped");
+      dashboardLoadState.total = activeTasks.length;
+      dashboardLoadState.done = activeTasks.filter((task) => dashboardTaskProgressFinishedStates.has(task.state)).length;
     };
 
     const getDashboardTaskById = (taskId) =>
@@ -3769,7 +3771,10 @@
       const skipped = tasks.filter((task) => task.state === "skipped").length;
       const total = dashboardLoadState.total;
       const done = dashboardLoadState.done;
-      const allFinished = total > 0 && running === 0 && done >= total;
+      const resolved = tasks.filter((task) => dashboardTaskFinishedStates.has(task.state)).length;
+      const allFinished = total > 0
+        ? running === 0 && done >= total
+        : tasks.length > 0 && running === 0 && resolved >= tasks.length;
 
       if (globalLoadingOverlayEl) globalLoadingOverlayEl.classList.toggle("active", !!dashboardLoadState.overlayOpen);
       if (globalLoadingSpinnerEl) globalLoadingSpinnerEl.style.display = running > 0 ? "" : "none";
@@ -3783,6 +3788,8 @@
           globalLoadingTextEl.textContent = `กำลังโหลด ${done}/${total} รายการ${summary ? ` • ${summary}` : ""}`;
         } else if (total > 0) {
           globalLoadingTextEl.textContent = `โหลดครบ ${done}/${total} รายการ${summary ? ` • ${summary}` : ""}`;
+        } else if (tasks.length > 0) {
+          globalLoadingTextEl.textContent = `ไม่มี API ที่ต้องโหลด${summary ? ` • ${summary}` : ""}`;
         } else {
           globalLoadingTextEl.textContent = "โปรดรอสักครู่...";
         }
@@ -3820,7 +3827,7 @@
         if (shouldShowToggle) {
           globalLoadingToggleEl.textContent = errors > 0
             ? `API ผิดพลาด ${errors}`
-            : `API ${done}/${total}`;
+            : (total > 0 ? `API ${done}/${total}` : `API ข้าม ${skipped}`);
         }
       }
     };
