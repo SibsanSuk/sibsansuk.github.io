@@ -614,8 +614,7 @@
       color: var(--brand-900);
     }
     .video-progress-stack{
-      position: relative;
-      margin-top: 10px;
+      margin-top: 8px;
     }
     .video-progress-track{
       position: relative;
@@ -625,20 +624,20 @@
       overflow: hidden;
     }
     .video-progress-fill{
-      position: absolute;
-      inset: 0 auto 0 0;
+      height: 100%;
       height: 100%;
       border-radius: 999px;
     }
-    .video-heatmap-overlay{
-      position: absolute;
-      inset: 0;
+    .video-heatmap-block{
+      margin-top: 10px;
+    }
+    .video-heatmap-track{
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(10px, 1fr));
       gap: 2px;
       align-items: end;
-      padding: 1px 2px;
-      pointer-events: none;
+      height: 26px;
+      padding: 0 2px;
     }
     .video-heatmap-bar{
       display: block;
@@ -647,7 +646,6 @@
       align-self: end;
       border-radius: 999px 999px 4px 4px;
       border: 1px solid rgba(148,163,184,.16);
-      pointer-events: auto;
     }
     .debug-api-entry{
       border: 1px solid rgba(148,163,184,.18);
@@ -1617,7 +1615,14 @@
         const title = `${bucket.label} • ดู ${count} ครั้ง`;
         return `<span class="video-heatmap-bar" style="height:${height};background:${bg};border-color:${border}" title="${escapeHtml(title)}"></span>`;
       }).join("");
-      return `<div class="video-heatmap-overlay" aria-label="${escapeHtml(formatVideoHeatmapSummary(entry) || "ช่วงเวลาการรับชม")}">${bars}</div>`;
+      const summary = formatVideoHeatmapSummary(entry);
+      return `
+        <div class="video-heatmap-block">
+          <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">ช่วงเวลาการรับชม</div>
+          <div class="video-heatmap-track" aria-label="${escapeHtml(summary || "ช่วงเวลาการรับชม")}">${bars}</div>
+          ${summary ? `<div class="mt-1 text-[11px] text-slate-500">${escapeHtml(summary)}</div>` : ""}
+        </div>
+      `;
     };
 
     const resolveVideoUserNameCandidates = () => {
@@ -3399,10 +3404,12 @@
                 <div class="video-progress-stack">
                   <div class="video-progress-track">
                     <div class="video-progress-fill grad-brand" style="width:${itemPct}%"></div>
-                    ${String(itemTool?.sublabel || "").toLowerCase().includes("video") ? renderVideoHeatmapStrip(videoHeatmap) : ""}
                   </div>
                 </div>
               `
+              : "";
+            const itemHeatmapHtml = String(itemTool?.sublabel || "").toLowerCase().includes("video")
+              ? renderVideoHeatmapStrip(videoHeatmap)
               : "";
             return `
               <div class="rounded-xl bg-white/70 px-3 py-2 border border-slate-200">
@@ -3419,6 +3426,7 @@
                   ${chatbotScoreHero}
                   ${(!isChatbot && itemHasPct) ? `<div class="text-xs font-bold mono shrink-0 ${pctToneClass}">${escapeHtml(itemPctText)}</div>` : ""}
                 </div>
+                ${itemHeatmapHtml}
                 ${itemProgressHtml}
               </div>
             `;
