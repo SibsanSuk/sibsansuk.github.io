@@ -1105,8 +1105,8 @@
       return out.filter((x) => Number.isFinite(x.progress));
     };
 
-    const getReadingProgressForTitle = (title) => {
-      const entries = Array.isArray(window.bookrollReadingProgress) ? window.bookrollReadingProgress : [];
+    const getReadingProgressForTitle = (title, sourceEntries = null) => {
+      const entries = Array.isArray(sourceEntries) ? sourceEntries : (Array.isArray(window.bookrollReadingProgress) ? window.bookrollReadingProgress : []);
       if (!entries.length) return null;
       const key = normalizeTopicKey(title);
       if (!key) return null;
@@ -1116,6 +1116,25 @@
         .filter((x) => x.key.includes(key) || key.includes(x.key))
         .sort((a, b) => b.key.length - a.key.length)[0];
       return loose || null;
+    };
+
+    const normalizeTitleHints = (titleHints) => {
+      const values = Array.isArray(titleHints) ? titleHints : [titleHints];
+      const out = [];
+      const seen = new Set();
+      values.forEach((value) => {
+        const title = decodeIfMojibake(String(value || "")).trim();
+        const key = normalizeTopicKey(title);
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        out.push(title);
+      });
+      return out;
+    };
+
+    const isGenericAeSubtoolTitle = (title) => {
+      const key = normalizeTopicKey(title);
+      return key === "ae tool" || key === "bookroll" || key === "video" || key === "chatbot";
     };
 
     const getBookrollUsageIdsFromVertical = (vertical) => {
@@ -1160,12 +1179,23 @@
     const getReadingProgressForUsageId = (usageId, titleHint = "") => {
       const entries = Array.isArray(window.bookrollReadingProgress) ? window.bookrollReadingProgress : [];
       if (!entries.length) return null;
+      const titleHints = normalizeTitleHints(titleHint);
       const key = normalizeUsageId(usageId);
       if (key) {
-        const exact = entries.find((x) => normalizeUsageId(x?.usageId || "") === key);
-        if (exact?.progress != null) return exact;
+        const candidates = entries.filter((x) => normalizeUsageId(x?.usageId || "") === key);
+        if (candidates.length) {
+          for (const hint of titleHints) {
+            const match = getReadingProgressForTitle(hint, candidates);
+            if (match?.progress != null) return match;
+          }
+          if (candidates.length === 1 && candidates[0]?.progress != null) return candidates[0];
+        }
       }
-      return getReadingProgressForTitle(titleHint);
+      for (const hint of titleHints) {
+        const match = getReadingProgressForTitle(hint, entries);
+        if (match?.progress != null) return match;
+      }
+      return null;
     };
 
     const getChartCategoryAxis = (axis) => {
@@ -2479,9 +2509,11 @@
             const subtools = collectVerticalAeSubtools(v)
               .map((entry) => {
                 const tool = { label: "AE Tool", sublabel: entry.subtype, tone: "badge kind-sequential" };
-                const entryTitle = entry.title || pickTitle(v, `Vertical ${vIdx + 1}`);
+                const verticalTitle = pickTitle(v, `Vertical ${vIdx + 1}`);
+                const rawEntryTitle = entry.title || verticalTitle;
+                const entryTitle = isGenericAeSubtoolTitle(rawEntryTitle) ? verticalTitle : rawEntryTitle;
                 const reading = entry.subtype === "BookRoll"
-                  ? getReadingProgressForUsageId(entry.id, entryTitle)
+                  ? getReadingProgressForUsageId(entry.id, [rawEntryTitle, verticalTitle])
                   : null;
                 const video = entry.subtype === "Video"
                   ? (getVideoProgressForTitle(entryTitle) || getVideoProgressForVertical(v, tool))
