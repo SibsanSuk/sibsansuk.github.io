@@ -564,6 +564,25 @@
     .debug-api-card summary::-webkit-details-marker{
       display: none;
     }
+    .debug-api-summary-icon{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: 999px;
+      border: 1px solid rgba(15,107,114,.14);
+      background: #ffffff;
+      color: var(--brand-800);
+      font-size: .95rem;
+      line-height: 1;
+      transition: transform .18s ease, background-color .18s ease, color .18s ease;
+    }
+    .debug-api-card[open] .debug-api-summary-icon{
+      transform: rotate(180deg);
+      background: var(--brand-100);
+      color: var(--brand-900);
+    }
     .debug-api-entry{
       border: 1px solid rgba(148,163,184,.18);
       border-radius: 18px;
@@ -767,7 +786,10 @@
                         <div class="font-bold">ข้อมูลการเชื่อมต่อ</div>
                         <div class="mt-1 text-sm text-slate-600">ใช้สำหรับตรวจสอบเส้นทางที่เรียกและผลลัพธ์ที่ได้รับ</div>
                       </div>
-                      <span class="text-xs font-semibold text-slate-500">แสดงรายละเอียด</span>
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-semibold text-slate-500">แสดงรายละเอียด</span>
+                        <span class="debug-api-summary-icon" aria-hidden="true">▾</span>
+                      </div>
                     </summary>
                     <div id="debug-api-content" class="mt-4"></div>
                   </details>
@@ -4198,6 +4220,18 @@
     const getDashboardTaskById = (taskId) =>
       (Array.isArray(dashboardLoadState.tasks) ? dashboardLoadState.tasks : []).find((task) => task.id === taskId) || null;
 
+    const hasDashboardRunningTasks = () =>
+      (Array.isArray(dashboardLoadState.tasks) ? dashboardLoadState.tasks : []).some((task) => task.state === "requesting");
+
+    const hasDashboardErrorTasks = () =>
+      (Array.isArray(dashboardLoadState.tasks) ? dashboardLoadState.tasks : []).some((task) => task.state === "error");
+
+    const closeGlobalLoadingOverlayIfResolved = () => {
+      if (hasDashboardRunningTasks()) return;
+      if (hasDashboardErrorTasks()) return;
+      setGlobalLoadingOverlay(false);
+    };
+
     const normalizeDashboardTaskResult = (result) => {
       if (!result || typeof result !== "object") return { state: "success", message: "" };
       const state = typeof result.state === "string" ? result.state : "success";
@@ -4329,8 +4363,7 @@
       }
       setDashboardTaskState(taskDef.id, result, cycleId);
       if (!dashboardLoadState.deferRender) {
-        const stillRunning = (dashboardLoadState.tasks || []).some((task) => task.state === "requesting");
-        if (!stillRunning) setGlobalLoadingOverlay(false);
+        closeGlobalLoadingOverlayIfResolved();
       }
       return result;
     };
@@ -4341,7 +4374,7 @@
       renderTopicTabsAndDetail();
       dashboardLoadState.pendingRender = false;
       recalcDashboardLoadProgress();
-      setGlobalLoadingOverlay(false);
+      closeGlobalLoadingOverlayIfResolved();
     };
 
     const retryDashboardTask = async (taskId) => {
