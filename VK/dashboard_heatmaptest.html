@@ -631,21 +631,10 @@
     .video-heatmap-block{
       margin-top: 10px;
     }
-    .video-heatmap-track{
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(10px, 1fr));
-      gap: 2px;
-      align-items: end;
-      height: 26px;
-      padding: 0 2px;
-    }
-    .video-heatmap-bar{
+    .video-heatmap-svg{
       display: block;
       width: 100%;
-      min-width: 0;
-      align-self: end;
-      border-radius: 999px 999px 4px 4px;
-      border: 1px solid rgba(148,163,184,.16);
+      height: 34px;
     }
     .debug-api-entry{
       border: 1px solid rgba(148,163,184,.18);
@@ -1590,37 +1579,44 @@
       return entries[idx];
     };
 
-    const formatVideoHeatmapSummary = (entry) => {
-      if (!entry || !Array.isArray(entry.buckets) || !entry.buckets.length) return "";
-      if (entry.activeBuckets > 0) {
-        const range = entry.firstActiveLabel && entry.lastActiveLabel
-          ? ` • พบร่องรอยที่ ${entry.firstActiveLabel}-${entry.lastActiveLabel}`
-          : "";
-        return `พบการรับชม ${entry.activeBuckets} ช่วงเวลา • สูงสุด ${entry.maxCount} ครั้ง${range}`;
-      }
-      return "ยังไม่พบช่วงเวลาการรับชม";
-    };
-
     const renderVideoHeatmapStrip = (entry) => {
       if (!entry || !Array.isArray(entry.buckets) || !entry.buckets.length) return "";
-      const maxValue = Math.max(...entry.buckets.map((bucket) => Number(bucket.value) || 0), 0);
-      const bars = entry.buckets.map((bucket) => {
+      const buckets = entry.buckets;
+      const maxValue = Math.max(...buckets.map((bucket) => Number(bucket.value) || 0), 0);
+      const width = Math.max(buckets.length * 12, 120);
+      const height = 34;
+      const padX = 4;
+      const padY = 3;
+      const innerW = Math.max(width - (padX * 2), 1);
+      const innerH = Math.max(height - (padY * 2), 1);
+      const step = buckets.length > 1 ? innerW / (buckets.length - 1) : innerW;
+      const points = buckets.map((bucket, idx) => {
         const count = Number(bucket.value) || 0;
         const ratio = maxValue > 0 ? (count / maxValue) : 0;
-        const bg = count > 0
-          ? `rgba(15,107,114,${(0.18 + (ratio * 0.72)).toFixed(3)})`
-          : "rgba(203,213,225,.55)";
-        const border = count > 0 ? "rgba(15,107,114,.16)" : "rgba(148,163,184,.18)";
-        const height = count > 0 ? `${Math.max(18, Math.round(20 + (ratio * 78)))}%` : "18%";
-        const title = `${bucket.label} • ดู ${count} ครั้ง`;
-        return `<span class="video-heatmap-bar" style="height:${height};background:${bg};border-color:${border}" title="${escapeHtml(title)}"></span>`;
+        const x = padX + (idx * step);
+        const y = padY + ((1 - (maxValue > 0 ? ratio : 0)) * innerH);
+        return { x, y, count, label: bucket.label };
+      });
+      const linePoints = points.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ");
+      const areaPath = [
+        `M ${padX} ${height - padY}`,
+        ...points.map((point, idx) => `${idx === 0 ? "L" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`),
+        `L ${padX + innerW} ${height - padY}`,
+        "Z"
+      ].join(" ");
+      const hitWidth = Math.max(innerW / Math.max(buckets.length, 1), 10);
+      const hitRects = points.map((point) => {
+        const title = `${point.label} • ดู ${point.count} ครั้ง`;
+        const rectX = Math.max(point.x - (hitWidth / 2), 0);
+        return `<rect x="${rectX.toFixed(2)}" y="0" width="${hitWidth.toFixed(2)}" height="${height}" fill="transparent"><title>${escapeHtml(title)}</title></rect>`;
       }).join("");
-      const summary = formatVideoHeatmapSummary(entry);
       return `
         <div class="video-heatmap-block">
-          <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">ช่วงเวลาการรับชม</div>
-          <div class="video-heatmap-track" aria-label="${escapeHtml(summary || "ช่วงเวลาการรับชม")}">${bars}</div>
-          ${summary ? `<div class="mt-1 text-[11px] text-slate-500">${escapeHtml(summary)}</div>` : ""}
+          <svg class="video-heatmap-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-label="video heatmap">
+            <path d="${areaPath}" fill="rgba(15,107,114,0.18)"></path>
+            <polyline points="${linePoints}" fill="none" stroke="rgba(15,107,114,0.88)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline>
+            ${hitRects}
+          </svg>
         </div>
       `;
     };
