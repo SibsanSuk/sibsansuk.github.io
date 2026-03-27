@@ -636,6 +636,12 @@
       width: 100%;
       height: 34px;
     }
+    .video-heatmap-focus-line{
+      stroke: rgba(15, 107, 114, .22);
+      stroke-width: 1;
+      stroke-dasharray: 2 2;
+      opacity: 0;
+    }
     .video-hover-tooltip{
       position: fixed;
       left: 0;
@@ -656,6 +662,16 @@
     }
     .video-hover-tooltip.active{
       opacity: 1;
+    }
+    .video-hover-tooltip-top{
+      text-align: center;
+      white-space: nowrap;
+    }
+    .video-hover-tooltip-bottom{
+      margin-top: 2px;
+      text-align: center;
+      color: rgba(255,255,255,.78);
+      white-space: nowrap;
     }
     .debug-api-entry{
       border: 1px solid rgba(148,163,184,.18);
@@ -1612,6 +1628,27 @@
       const innerW = Math.max(width - (padX * 2), 1);
       const innerH = Math.max(height - (padY * 2), 1);
       const step = buckets.length > 1 ? innerW / (buckets.length - 1) : innerW;
+      const addSecondsToClockLabel = (label, deltaSeconds = 30) => {
+        const match = String(label || "").match(/^(\d{1,2}):(\d{2})$/);
+        if (!match) return String(label || "");
+        const totalSeconds = (Number(match[1]) * 60) + Number(match[2]) + deltaSeconds;
+        const mins = Math.floor(totalSeconds / 60);
+        const secs = totalSeconds % 60;
+        return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+      };
+      const toYoutubeTimeLabel = (label) => {
+        const match = String(label || "").match(/^(\d{1,2}):(\d{2})$/);
+        if (!match) return String(label || "");
+        return `${Number(match[1])}:${match[2]}`;
+      };
+      const formatBucketRange = (startLabel, nextLabel = "") => {
+        const start = String(startLabel || "");
+        if (!start) return "";
+        const end = String(nextLabel || addSecondsToClockLabel(start, 30) || "");
+        const youtubeStart = toYoutubeTimeLabel(start);
+        const youtubeEnd = toYoutubeTimeLabel(end);
+        return youtubeEnd && youtubeEnd !== youtubeStart ? `${youtubeStart}-${youtubeEnd}` : youtubeStart;
+      };
       const buildSmoothLinePath = (points) => {
         if (!Array.isArray(points) || !points.length) return "";
         if (points.length === 1) return `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
@@ -1638,15 +1675,17 @@
       const areaPath = `${linePath} L ${lastPoint.x.toFixed(2)} ${(height - padY).toFixed(2)} L ${padX.toFixed(2)} ${(height - padY).toFixed(2)} Z`;
       const hitWidth = Math.max(innerW / Math.max(buckets.length, 1), 10);
       const hitRects = points.map((point, idx) => {
+        const timeRange = formatBucketRange(point.label, points[idx + 1]?.label || "");
         const title = `ดู ${point.count} ครั้ง`;
         const rectX = Math.max(point.x - (hitWidth / 2), 0);
-        return `<rect class="video-heatmap-hit" x="${rectX.toFixed(2)}" y="0" width="${hitWidth.toFixed(2)}" height="${height}" fill="rgba(0,0,0,0.001)" pointer-events="all" data-tooltip="${escapeHtml(title)}"></rect>`;
+        return `<rect class="video-heatmap-hit" x="${rectX.toFixed(2)}" y="0" width="${hitWidth.toFixed(2)}" height="${height}" fill="rgba(0,0,0,0.001)" pointer-events="all" data-tooltip-top="${escapeHtml(title)}" data-tooltip-bottom="${escapeHtml(timeRange)}" data-center-x="${point.x.toFixed(2)}"></rect>`;
       }).join("");
       return `
         <div class="video-heatmap-block">
           <svg class="video-heatmap-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-label="video heatmap">
             <path d="${areaPath}" fill="rgba(15,107,114,0.18)"></path>
             <path d="${linePath}" fill="none" stroke="rgba(15,107,114,0.88)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
+            <line class="video-heatmap-focus-line" x1="0" y1="0" x2="0" y2="${height}"></line>
             ${hitRects}
           </svg>
         </div>
@@ -4723,16 +4762,20 @@
       videoHoverTooltipEl.classList.remove("active");
       videoHoverTooltipEl.setAttribute("aria-hidden", "true");
     };
-    const showVideoHoverTooltip = (text, x, y) => {
-      if (!videoHoverTooltipEl || !text) return;
-      videoHoverTooltipEl.textContent = text;
+    const hideVideoHeatmapFocusLines = () => {
+      document.querySelectorAll(".video-heatmap-focus-line").forEach((line) => {
+        line.style.opacity = "0";
+      });
+    };
+    const showVideoHoverTooltip = (topText, bottomText, x, y) => {
+      if (!videoHoverTooltipEl || !topText) return;
+      videoHoverTooltipEl.innerHTML = `<div class="video-hover-tooltip-top">${escapeHtml(topText)}</div>${bottomText ? `<div class="video-hover-tooltip-bottom">${escapeHtml(bottomText)}</div>` : ""}`;
       videoHoverTooltipEl.classList.add("active");
       videoHoverTooltipEl.setAttribute("aria-hidden", "false");
-      const offset = 14;
-      const maxX = window.innerWidth - videoHoverTooltipEl.offsetWidth - 8;
-      const maxY = window.innerHeight - videoHoverTooltipEl.offsetHeight - 8;
-      const left = Math.min(x + offset, Math.max(8, maxX));
-      const top = Math.min(y + offset, Math.max(8, maxY));
+      const width = videoHoverTooltipEl.offsetWidth;
+      const height = videoHoverTooltipEl.offsetHeight;
+      const left = Math.min(Math.max(8, x - (width / 2)), Math.max(8, window.innerWidth - width - 8));
+      const top = Math.min(Math.max(8, y - height - 14), Math.max(8, window.innerHeight - height - 8));
       videoHoverTooltipEl.style.left = `${left}px`;
       videoHoverTooltipEl.style.top = `${top}px`;
     };
@@ -4740,12 +4783,34 @@
       const hit = e.target?.closest?.(".video-heatmap-hit");
       if (!hit) {
         hideVideoHoverTooltip();
+        hideVideoHeatmapFocusLines();
         return;
       }
-      showVideoHoverTooltip(hit.getAttribute("data-tooltip") || "", e.clientX, e.clientY);
+      const svg = hit.closest?.("svg");
+      const focusLine = svg?.querySelector?.(".video-heatmap-focus-line");
+      if (focusLine) {
+        const centerX = Number(hit.getAttribute("data-center-x"));
+        if (Number.isFinite(centerX)) {
+          focusLine.setAttribute("x1", String(centerX));
+          focusLine.setAttribute("x2", String(centerX));
+          focusLine.style.opacity = "1";
+        }
+      }
+      showVideoHoverTooltip(
+        hit.getAttribute("data-tooltip-top") || "",
+        hit.getAttribute("data-tooltip-bottom") || "",
+        e.clientX,
+        e.clientY
+      );
     });
-    document.addEventListener("pointerleave", hideVideoHoverTooltip);
-    document.addEventListener("scroll", hideVideoHoverTooltip, true);
+    document.addEventListener("pointerleave", () => {
+      hideVideoHoverTooltip();
+      hideVideoHeatmapFocusLines();
+    });
+    document.addEventListener("scroll", () => {
+      hideVideoHoverTooltip();
+      hideVideoHeatmapFocusLines();
+    }, true);
 
     if (loginBtn) loginBtn.addEventListener("click", startLogin);
     if (logoutBtn) logoutBtn.addEventListener("click", () => logout(auth));
