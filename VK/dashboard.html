@@ -583,6 +583,36 @@
       background: var(--brand-100);
       color: var(--brand-900);
     }
+    .debug-api-request-summary{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .debug-api-request-summary-copy{
+      flex: 1;
+      min-width: 0;
+    }
+    .debug-api-request-summary-icon{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.35rem;
+      height: 1.35rem;
+      border-radius: 999px;
+      border: 1px solid rgba(15,107,114,.14);
+      background: #ffffff;
+      color: var(--brand-800);
+      font-size: .9rem;
+      line-height: 1;
+      transition: transform .18s ease, background-color .18s ease, color .18s ease;
+      flex: 0 0 auto;
+    }
+    details[open] > summary .debug-api-request-summary-icon{
+      transform: rotate(180deg);
+      background: var(--brand-100);
+      color: var(--brand-900);
+    }
     .debug-api-entry{
       border: 1px solid rgba(148,163,184,.18);
       border-radius: 18px;
@@ -1534,7 +1564,12 @@
               const payload = formatDebugPayload(req.payload);
               return `
                 <details class="mt-3">
-                  <summary class="cursor-pointer text-sm font-semibold text-slate-700">คำขอ ${idx + 1}${req.label ? ` • ${escapeHtml(req.label)}` : ""}</summary>
+                  <summary class="cursor-pointer text-sm font-semibold text-slate-700">
+                    <span class="debug-api-request-summary">
+                      <span class="debug-api-request-summary-copy">คำขอ ${idx + 1}${req.label ? ` • ${escapeHtml(req.label)}` : ""}</span>
+                      <span class="debug-api-request-summary-icon" aria-hidden="true">▾</span>
+                    </span>
+                  </summary>
                   <div class="debug-api-url mono">${escapeHtml(req.url || "-")}</div>
                   <div class="mt-2"><span class="debug-api-badge ${reqTone}">${escapeHtml(req.message || req.state || "-")}</span></div>
                   <pre class="debug-api-pre">${escapeHtml(payload)}</pre>
