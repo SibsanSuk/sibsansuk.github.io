@@ -984,7 +984,7 @@
           : (SHOW_BOOKROLL ? "ยังไม่มีข้อมูล" : "ไม่ได้โหลด (เปิดด้วย ?bookroll=1)");
       }
       if (statusEl) {
-        const readingCount = Number(Array.isArray(window.bookrollReadingProgress) ? window.bookrollReadingProgress.length : 0);
+        const readingCount = getBookrollReadingDisplayCount();
         const activityLoaded = !!activity;
         statusEl.textContent = `reading: ${readingCount} รายการ • activity: ${activityLoaded ? "โหลดแล้ว" : "ยังไม่โหลด"}`;
       }
@@ -1130,6 +1130,19 @@
         out.push(title);
       });
       return out;
+    };
+
+    const getBookrollReadingDisplayCount = (sourceEntries = null) => {
+      const entries = Array.isArray(sourceEntries) ? sourceEntries : (Array.isArray(window.bookrollReadingProgress) ? window.bookrollReadingProgress : []);
+      if (!entries.length) return 0;
+      const seen = new Set();
+      entries.forEach((entry) => {
+        const titleKey = normalizeTopicKey(entry?.title || entry?.key || "");
+        const usageKey = normalizeUsageId(entry?.usageId || "");
+        const dedupeKey = titleKey || usageKey;
+        if (dedupeKey) seen.add(dedupeKey);
+      });
+      return seen.size;
     };
 
     const isGenericAeSubtoolTitle = (title) => {
@@ -3526,14 +3539,17 @@
       try {
         const aggregate = [];
         const debugSources = [];
+        let hasCourseLevelReading = false;
 
         try {
           const srcUrl = bookrollReadingDataUrl(userId, courseId);
           const res = await fetch(srcUrl);
           if (res.ok) {
             const data = await res.json();
+            const courseEntries = buildReadingProgressMap(data, { usageId: courseId });
             debugSources.push({ url: srcUrl, data });
-            aggregate.push(...buildReadingProgressMap(data, { usageId: courseId }));
+            aggregate.push(...courseEntries);
+            hasCourseLevelReading = courseEntries.length > 0;
           } else {
             console.warn("Bookroll readingData API error:", await createHttpError(res));
           }
@@ -3542,7 +3558,7 @@
         }
 
         const targets = collectBookrollUsageTargets();
-        if (targets.length) {
+        if (!hasCourseLevelReading && targets.length) {
           const responses = await Promise.all(
             targets.map(async (target) => {
               try {
@@ -3560,10 +3576,11 @@
 
         window.bookrollReadingData = debugSources.length ? debugSources[0].data : null;
         window.bookrollReadingProgress = mergeReadingEntries(aggregate);
+        const displayCount = getBookrollReadingDisplayCount(window.bookrollReadingProgress);
         const hasData = window.bookrollReadingProgress.length > 0 || !!window.bookrollReadingData;
         return {
           state: hasData ? "success" : "error",
-          message: hasData ? `ได้ readingData ${window.bookrollReadingProgress.length} รายการ` : "readingData ว่างหรือเรียกไม่สำเร็จ"
+          message: hasData ? `ได้ readingData ${displayCount} รายการ` : "readingData ว่างหรือเรียกไม่สำเร็จ"
         };
       } catch (err) {
         window.bookrollReadingData = null;
