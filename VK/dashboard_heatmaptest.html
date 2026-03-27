@@ -636,10 +636,10 @@
       width: 100%;
       height: 34px;
     }
-    .video-heatmap-focus-line{
-      stroke: rgba(15, 107, 114, .22);
+    .video-heatmap-focus-band{
+      fill: rgba(15, 107, 114, .08);
+      stroke: rgba(15, 107, 114, .18);
       stroke-width: 1;
-      stroke-dasharray: 2 2;
       opacity: 0;
     }
     .video-hover-tooltip{
@@ -1685,7 +1685,7 @@
           <svg class="video-heatmap-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-label="video heatmap">
             <path d="${areaPath}" fill="rgba(15,107,114,0.18)"></path>
             <path d="${linePath}" fill="none" stroke="rgba(15,107,114,0.88)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
-            <line class="video-heatmap-focus-line" x1="0" y1="0" x2="0" y2="${height}"></line>
+            <rect class="video-heatmap-focus-band" x="0" y="0" width="0" height="${height}"></rect>
             ${hitRects}
           </svg>
         </div>
@@ -4762,9 +4762,9 @@
       videoHoverTooltipEl.classList.remove("active");
       videoHoverTooltipEl.setAttribute("aria-hidden", "true");
     };
-    const hideVideoHeatmapFocusLines = () => {
-      document.querySelectorAll(".video-heatmap-focus-line").forEach((line) => {
-        line.style.opacity = "0";
+    const hideVideoHeatmapFocusBands = () => {
+      document.querySelectorAll(".video-heatmap-focus-band").forEach((band) => {
+        band.style.opacity = "0";
       });
     };
     const showVideoHoverTooltip = (topText, bottomText, x, y) => {
@@ -4783,17 +4783,18 @@
       const hit = e.target?.closest?.(".video-heatmap-hit");
       if (!hit) {
         hideVideoHoverTooltip();
-        hideVideoHeatmapFocusLines();
+        hideVideoHeatmapFocusBands();
         return;
       }
       const svg = hit.closest?.("svg");
-      const focusLine = svg?.querySelector?.(".video-heatmap-focus-line");
-      if (focusLine) {
-        const centerX = Number(hit.getAttribute("data-center-x"));
-        if (Number.isFinite(centerX)) {
-          focusLine.setAttribute("x1", String(centerX));
-          focusLine.setAttribute("x2", String(centerX));
-          focusLine.style.opacity = "1";
+      const focusBand = svg?.querySelector?.(".video-heatmap-focus-band");
+      if (focusBand) {
+        const rectX = Number(hit.getAttribute("x"));
+        const rectWidth = Number(hit.getAttribute("width"));
+        if (Number.isFinite(rectX) && Number.isFinite(rectWidth)) {
+          focusBand.setAttribute("x", String(rectX));
+          focusBand.setAttribute("width", String(rectWidth));
+          focusBand.style.opacity = "1";
         }
       }
       showVideoHoverTooltip(
@@ -4805,11 +4806,11 @@
     });
     document.addEventListener("pointerleave", () => {
       hideVideoHoverTooltip();
-      hideVideoHeatmapFocusLines();
+      hideVideoHeatmapFocusBands();
     });
     document.addEventListener("scroll", () => {
       hideVideoHoverTooltip();
-      hideVideoHeatmapFocusLines();
+      hideVideoHeatmapFocusBands();
     }, true);
 
     if (loginBtn) loginBtn.addEventListener("click", startLogin);
