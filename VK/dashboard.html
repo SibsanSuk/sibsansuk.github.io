@@ -585,8 +585,8 @@
                       </div>
                     </div>
                     <div class="flex items-center gap-2">
-                      <button id="btn-login" class="pill text-sm px-4 py-3 font-semibold tracking-wide text-white grad-brand"><span>Login</span></button>
-                      <button id="btn-logout" class="pill text-sm px-4 py-3 font-semibold tracking-wide text-white grad-danger"><span>Logout</span></button>
+                      <button id="btn-login" class="pill text-sm px-4 py-3 font-semibold tracking-wide text-white grad-brand"><span>เข้าสู่ระบบ</span></button>
+                      <button id="btn-logout" class="pill text-sm px-4 py-3 font-semibold tracking-wide text-white grad-danger"><span>ออกจากระบบ</span></button>
                     </div>
                   </div>
 
@@ -638,7 +638,7 @@
                             <path d="M12 5.2v16.6"/>
                           </svg>
                         </span>
-                        <span>BookRoll Progress</span>
+                        <span>ความคืบหน้าการอ่าน</span>
                       </div>
                       <div class="mt-3 h-[220px]">
                         <canvas class="chart-canvas" id="bookrollOverallChart"></canvas>
@@ -657,7 +657,7 @@
                             <path d="M8 6.8a1 1 0 0 1 1.53-.85l7.1 4.6a1.72 1.72 0 0 1 0 2.9l-7.1 4.6A1 1 0 0 1 8 17.2V6.8z"/>
                           </svg>
                         </span>
-                        <span>Video Progress</span>
+                        <span>ความคืบหน้าวิดีโอ</span>
                       </div>
                       <div class="mt-3 h-[220px]">
                         <canvas class="chart-canvas" id="videoOverallChart"></canvas>
@@ -680,7 +680,7 @@
                             <path d="M15 11h.01"/>
                           </svg>
                         </span>
-                        <span>Chatbot Quiz</span>
+                        <span>ผลการทำแบบฝึกหัด</span>
                       </div>
                       <div class="mt-3 h-[220px]">
                         <canvas class="chart-canvas" id="chatbotQuizOverallChart"></canvas>
@@ -704,7 +704,7 @@
         <div class="global-loading-header-main">
           <div id="global-loading-spinner" class="global-loading-spinner" aria-hidden="true"></div>
           <div class="global-loading-header-copy">
-            <div class="font-bold text-slate-700">กำลังโหลดข้อมูลจาก API</div>
+            <div class="font-bold text-slate-700">กำลังอัปเดตข้อมูลการเรียนรู้</div>
             <div id="global-loading-text" class="mt-1 text-sm text-slate-500">โปรดรอสักครู่...</div>
           </div>
         </div>
@@ -712,11 +712,11 @@
       </div>
       <div id="global-loading-list" class="global-loading-list"></div>
       <div class="global-loading-actions">
-        <button id="global-loading-retry-failed" type="button" class="global-loading-btn primary">ลองใหม่</button>
+        <button id="global-loading-retry-failed" type="button" class="global-loading-btn primary">ลองอีกครั้ง</button>
       </div>
     </div>
   </div>
-  <button id="global-loading-toggle" type="button" class="global-loading-toggle">สถานะ API</button>
+  <button id="global-loading-toggle" type="button" class="global-loading-toggle">สถานะการอัปเดต</button>
 
   <script>
     const qs = new URLSearchParams(window.location.search);
@@ -764,7 +764,7 @@
 
     const startLogin = async () => {
       if (OIDC.clientId === "YOUR_CLIENT_ID") {
-        alert("กรุณาใส่ client_id ก่อนใช้งานปุ่ม Login");
+        alert("กรุณาตั้งค่า client_id ก่อนใช้งานการเข้าสู่ระบบ");
         return;
       }
       if (courseId) {
@@ -3276,16 +3276,16 @@
       if (!courseId) {
         window.courseToolInventory = null;
         syncOverallToolCards();
-        if (statusEl) statusEl.textContent = "ขาด courseid";
-        return { state: "skipped", message: "ขาด courseid" };
+        if (statusEl) statusEl.textContent = "ยังไม่พร้อมแสดงข้อมูลรายวิชา";
+        return { state: "skipped", message: "ยังไม่พร้อมแสดงข้อมูลรายวิชา" };
       }
       if (!isLikelyCourseId(courseId)) {
         window.courseToolInventory = null;
         syncOverallToolCards();
-        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
-        return { state: "skipped", message: "courseid ไม่ถูกต้อง" };
+        if (statusEl) statusEl.textContent = "ยังไม่พร้อมแสดงข้อมูลรายวิชา";
+        return { state: "skipped", message: "ยังไม่พร้อมแสดงข้อมูลรายวิชา" };
       }
-      if (statusEl) statusEl.textContent = "กำลังโหลด...";
+      if (statusEl) statusEl.textContent = "กำลังอัปเดตข้อมูลรายวิชา";
       try {
         const srcUrl = courseUrl(courseId);
         const res = await fetch(srcUrl);
@@ -3312,14 +3312,14 @@
 
         requestDashboardRender();
 
-        if (statusEl) statusEl.textContent = `โหลดสำเร็จ (${srcUrl})`;
-        return { state: "success", message: "โหลดโครงสร้างคอร์สสำเร็จ" };
+        if (statusEl) statusEl.textContent = "ข้อมูลรายวิชาพร้อมแสดงผล";
+        return { state: "success", message: "ข้อมูลรายวิชาพร้อมแสดงผล" };
       } catch (err) {
         window.courseToolInventory = null;
         syncOverallToolCards();
-        if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
+        if (statusEl) statusEl.textContent = "ไม่สามารถแสดงข้อมูลรายวิชาได้ในขณะนี้";
         console.warn("Course API error:", err);
-        return { state: "error", message: err?.message || "โหลดโครงสร้างคอร์สไม่สำเร็จ" };
+        return { state: "error", message: "ไม่สามารถแสดงข้อมูลรายวิชาได้ในขณะนี้" };
       }
     };
 
@@ -3424,16 +3424,16 @@
       const progressEl = document.getElementById("br-progress");
       const summaryEl = document.getElementById("bookroll-activity-summary");
       if (!userId || !courseId) {
-        if (statusEl) statusEl.textContent = "ขาด userId หรือ courseid";
+        if (statusEl) statusEl.textContent = "ยังไม่พร้อมแสดงข้อมูลการอ่าน";
         updateBookrollJsonDrawer();
-        return { state: "skipped", message: "ขาด userId หรือ courseid" };
+        return { state: "skipped", message: "ยังไม่พร้อมแสดงข้อมูลการอ่าน" };
       }
       if (!isLikelyCourseId(courseId)) {
-        if (statusEl) statusEl.textContent = "courseid ไม่ถูกต้อง";
+        if (statusEl) statusEl.textContent = "ยังไม่พร้อมแสดงข้อมูลการอ่าน";
         updateBookrollJsonDrawer();
-        return { state: "skipped", message: "courseid ไม่ถูกต้อง" };
+        return { state: "skipped", message: "ยังไม่พร้อมแสดงข้อมูลการอ่าน" };
       }
-      if (statusEl) statusEl.textContent = "กำลังโหลด...";
+      if (statusEl) statusEl.textContent = "กำลังอัปเดตข้อมูลการอ่าน";
       try {
         const srcUrl = bookrollUrl(userId, courseId);
         const res = await fetch(srcUrl);
@@ -3460,16 +3460,16 @@
             progressEl.textContent = "-";
           }
         }
-        if (statusEl) statusEl.textContent = `โหลดสำเร็จ (${srcUrl})`;
+        if (statusEl) statusEl.textContent = "ข้อมูลการอ่านพร้อมแสดงผล";
         if (rawEl) rawEl.textContent = JSON.stringify(data, null, 2);
         updateBookrollJsonDrawer();
-        return { state: "success", message: "โหลด BookRoll activity สำเร็จ" };
+        return { state: "success", message: "ข้อมูลการอ่านพร้อมแสดงผล" };
       } catch (err) {
-        if (statusEl) statusEl.textContent = "โหลดไม่สำเร็จ";
+        if (statusEl) statusEl.textContent = "ไม่พบข้อมูลการอ่าน";
         if (rawEl) rawEl.textContent = err?.message || "เกิดข้อผิดพลาด";
         console.warn("Bookroll API error:", err);
         updateBookrollJsonDrawer();
-        return { state: "error", message: err?.message || "โหลด BookRoll activity ไม่สำเร็จ" };
+        return { state: "error", message: "ไม่พบข้อมูลการอ่าน" };
       }
     };
 
@@ -3479,7 +3479,7 @@
         window.bookrollReadingProgress = [];
         updateBookrollJsonDrawer();
         requestDashboardRender();
-        return { state: "skipped", message: "ขาด userId หรือ courseid" };
+        return { state: "skipped", message: "ยังไม่พร้อมแสดงความคืบหน้าการอ่าน" };
       }
       const mergeReadingEntries = (list) => {
         const map = new Map();
@@ -3580,13 +3580,13 @@
         const hasData = window.bookrollReadingProgress.length > 0 || !!window.bookrollReadingData;
         return {
           state: hasData ? "success" : "error",
-          message: hasData ? `ได้ readingData ${displayCount} รายการ` : "readingData ว่างหรือเรียกไม่สำเร็จ"
+          message: hasData ? `พบข้อมูลการอ่าน ${displayCount} รายการ` : "ไม่พบข้อมูลการอ่าน"
         };
       } catch (err) {
         window.bookrollReadingData = null;
         window.bookrollReadingProgress = [];
         console.warn("Bookroll reading progress error:", err);
-        return { state: "error", message: err?.message || "โหลด BookRoll readingData ไม่สำเร็จ" };
+        return { state: "error", message: "ไม่สามารถแสดงข้อมูลการอ่านได้ในขณะนี้" };
       } finally {
         updateBookrollJsonDrawer();
         requestDashboardRender();
@@ -3601,7 +3601,7 @@
         window.videoApiStatus = "invalid-course";
         requestDashboardRender();
         updateLoginDebugPanel();
-        return { state: "skipped", message: "courseid ไม่ถูกต้อง" };
+        return { state: "skipped", message: "ยังไม่พร้อมแสดงความคืบหน้าวิดีโอ" };
       }
       const candidates = resolveVideoUserNameCandidates();
       if (!candidates.length) {
@@ -3611,7 +3611,7 @@
         window.videoApiStatus = "missing-username";
         requestDashboardRender();
         updateLoginDebugPanel();
-        return { state: "skipped", message: "ไม่มี userName สำหรับ video API" };
+        return { state: "skipped", message: "ยังไม่พร้อมแสดงความคืบหน้าวิดีโอ" };
       }
       try {
         let best = { entries: [], data: null, info: null };
@@ -3636,8 +3636,8 @@
         return {
           state: okResponseCount > 0 ? "success" : "error",
           message: okResponseCount > 0
-            ? `โหลด Video progress ${best.entries.length} รายการ`
-            : "video API ไม่ตอบกลับข้อมูล"
+            ? `พบข้อมูลวิดีโอ ${best.entries.length} รายการ`
+            : "ไม่พบข้อมูลวิดีโอ"
         };
       } catch (err) {
         window.videoLearningRaw = null;
@@ -3645,7 +3645,7 @@
         window.videoUserNameResolved = null;
         window.videoApiStatus = "error";
         console.warn("Video learning API error:", err);
-        return { state: "error", message: err?.message || "โหลด Video progress ไม่สำเร็จ" };
+        return { state: "error", message: "ไม่สามารถแสดงข้อมูลวิดีโอได้ในขณะนี้" };
       } finally {
         updateLoginDebugPanel();
         updateVideoJsonDrawer();
@@ -3658,7 +3658,7 @@
         window.chatbotSpeedRawData = null;
         rebuildChatbotOrderMap();
         requestDashboardRender();
-        return { state: "skipped", message: "ขาด userId หรือ courseid" };
+        return { state: "skipped", message: "ยังไม่พร้อมแสดงระยะเวลาการทำแบบฝึกหัด" };
       }
       try {
         const srcUrl = chatbotSpeedUrl(courseId, userId);
@@ -3668,11 +3668,11 @@
         window.chatbotSpeedRawData = getChartConfig(data);
         const rawCategories = getCategoryAxisData(window.chatbotSpeedRawData);
         window.chatbotSpeedRawData.__categoryMeta = rawCategories.map((label) => parseChatbotCategoryMeta(label));
-        return { state: "success", message: "โหลด Chatbot speed สำเร็จ" };
+        return { state: "success", message: "ข้อมูลระยะเวลาการทำแบบฝึกหัดพร้อมแสดงผล" };
       } catch (err) {
         window.chatbotSpeedRawData = null;
         console.warn("Chatbot Speed API error:", err);
-        return { state: "error", message: err?.message || "โหลด Chatbot speed ไม่สำเร็จ" };
+        return { state: "error", message: "ไม่สามารถแสดงข้อมูลระยะเวลาการทำแบบฝึกหัดได้ในขณะนี้" };
       } finally {
         rebuildChatbotOrderMap();
         requestDashboardRender();
@@ -3684,7 +3684,7 @@
         window.chatbotPerfData = null;
         rebuildChatbotOrderMap();
         requestDashboardRender();
-        return { state: "skipped", message: "ขาด userId หรือ courseid" };
+        return { state: "skipped", message: "ยังไม่พร้อมแสดงผลการทำแบบฝึกหัด" };
       }
       try {
         const srcUrl = chatbotPerformanceUrl(courseId, userId);
@@ -3694,11 +3694,11 @@
         window.chatbotPerfData = getChartConfig(data);
         const rawCategories = getCategoryAxisData(window.chatbotPerfData);
         window.chatbotPerfData.__categoryMeta = rawCategories.map((label) => parseChatbotCategoryMeta(label));
-        return { state: "success", message: "โหลด Chatbot performance สำเร็จ" };
+        return { state: "success", message: "ผลการทำแบบฝึกหัดพร้อมแสดงผล" };
       } catch (err) {
         window.chatbotPerfData = null;
         console.warn("Chatbot Performance API error:", err);
-        return { state: "error", message: err?.message || "โหลด Chatbot performance ไม่สำเร็จ" };
+        return { state: "error", message: "ไม่สามารถแสดงผลการทำแบบฝึกหัดได้ในขณะนี้" };
       } finally {
         rebuildChatbotOrderMap();
         requestDashboardRender();
@@ -3784,43 +3784,43 @@
     };
 
     const dashboardTaskStateMeta = {
-      pending: { label: "รอ request", tone: "pending" },
-      requesting: { label: "กำลังรอตอบกลับ", tone: "requesting" },
-      success: { label: "ได้ข้อมูลแล้ว", tone: "success" },
-      error: { label: "ผิดพลาด", tone: "error" },
-      skipped: { label: "ข้าม", tone: "skipped" }
+      pending: { label: "กำลังเตรียม", tone: "pending" },
+      requesting: { label: "กำลังอัปเดต", tone: "requesting" },
+      success: { label: "พร้อมแสดงผล", tone: "success" },
+      error: { label: "มีปัญหา", tone: "error" },
+      skipped: { label: "ไม่มีข้อมูล", tone: "skipped" }
     };
     const dashboardTaskFinishedStates = new Set(["success", "error", "skipped"]);
     const dashboardTaskProgressFinishedStates = new Set(["success", "error"]);
     const dashboardTaskToolLabels = {
       bookroll: "BookRoll",
-      video: "Video",
-      chatbot: "Chatbot"
+      video: "วิดีโอ",
+      chatbot: "แบบฝึกหัด"
     };
 
     const getDashboardTaskDefs = () => {
       const tasks = [
-        { id: "course-detail", label: "Course structure", run: fetchCourseDetail },
-        { id: "bookroll-reading", label: "BookRoll readingData", run: fetchBookrollReadingData, requiresTool: "bookroll" },
-        { id: "video-progress", label: "Video progress", run: fetchVideoLearningProgress, requiresTool: "video" },
-        { id: "chatbot-speed", label: "Chatbot speed", run: fetchChatbotSpeed, requiresTool: "chatbot" },
-        { id: "chatbot-performance", label: "Chatbot performance", run: fetchChatbotPerformance, requiresTool: "chatbot" }
+        { id: "course-detail", label: "โครงสร้างบทเรียน", run: fetchCourseDetail },
+        { id: "bookroll-reading", label: "ความคืบหน้าการอ่าน", run: fetchBookrollReadingData, requiresTool: "bookroll" },
+        { id: "video-progress", label: "ความคืบหน้าวิดีโอ", run: fetchVideoLearningProgress, requiresTool: "video" },
+        { id: "chatbot-speed", label: "ระยะเวลาการทำแบบฝึกหัด", run: fetchChatbotSpeed, requiresTool: "chatbot" },
+        { id: "chatbot-performance", label: "ผลการทำแบบฝึกหัด", run: fetchChatbotPerformance, requiresTool: "chatbot" }
       ];
-      if (SHOW_BOOKROLL) tasks.push({ id: "bookroll-activity", label: "BookRoll activity", run: fetchBookroll, requiresTool: "bookroll" });
+      if (SHOW_BOOKROLL) tasks.push({ id: "bookroll-activity", label: "พฤติกรรมการอ่าน", run: fetchBookroll, requiresTool: "bookroll" });
       return tasks;
     };
 
     const getDashboardTaskPrecondition = (taskDef, courseTaskResult) => {
       if (!taskDef || taskDef.id === "course-detail") return { run: true };
       if (courseTaskResult?.state !== "success") {
-        return { run: false, state: "skipped", message: "ไม่โหลดเพราะอ่าน Course structure ไม่สำเร็จ" };
+        return { run: false, state: "skipped", message: "ยังไม่พร้อมแสดงผล เพราะข้อมูลรายวิชายังไม่สมบูรณ์" };
       }
       if (!taskDef.requiresTool) return { run: true };
       const inventory = window.courseToolInventory?.counts || {};
       const count = Number(inventory[taskDef.requiresTool]) || 0;
       if (count > 0) return { run: true };
       const label = dashboardTaskToolLabels[taskDef.requiresTool] || taskDef.requiresTool;
-      return { run: false, state: "skipped", message: `วิชานี้ไม่มีเครื่องมือ ${label}` };
+      return { run: false, state: "skipped", message: `วิชานี้ไม่มีข้อมูล ${label} ในบทเรียน` };
     };
 
     const dashboardLoadState = {
@@ -3868,16 +3868,16 @@
       if (globalLoadingSpinnerEl) globalLoadingSpinnerEl.style.display = running > 0 ? "" : "none";
       if (globalLoadingTextEl) {
         const summary = [
-          success ? `สำเร็จ ${success}` : "",
-          errors ? `ผิดพลาด ${errors}` : "",
-          skipped ? `ข้าม ${skipped}` : ""
+          success ? `พร้อมแสดงผล ${success}` : "",
+          errors ? `มีปัญหา ${errors}` : "",
+          skipped ? `ไม่มีข้อมูล ${skipped}` : ""
         ].filter(Boolean).join(" • ");
         if (running > 0) {
-          globalLoadingTextEl.textContent = `กำลังโหลด ${done}/${total} รายการ${summary ? ` • ${summary}` : ""}`;
+          globalLoadingTextEl.textContent = `กำลังอัปเดตข้อมูล ${done}/${total} รายการ${summary ? ` • ${summary}` : ""}`;
         } else if (total > 0) {
-          globalLoadingTextEl.textContent = `โหลดครบ ${done}/${total} รายการ${summary ? ` • ${summary}` : ""}`;
+          globalLoadingTextEl.textContent = `อัปเดตข้อมูลครบ ${done}/${total} รายการ${summary ? ` • ${summary}` : ""}`;
         } else if (tasks.length > 0) {
-          globalLoadingTextEl.textContent = `ไม่มี API ที่ต้องโหลด${summary ? ` • ${summary}` : ""}`;
+          globalLoadingTextEl.textContent = `ไม่มีข้อมูลที่ต้องอัปเดต${summary ? ` • ${summary}` : ""}`;
         } else {
           globalLoadingTextEl.textContent = "โปรดรอสักครู่...";
         }
@@ -3888,7 +3888,7 @@
               const meta = dashboardTaskStateMeta[task.state] || dashboardTaskStateMeta.pending;
               const message = task.message || meta.label;
               const retryBtn = task.state === "error"
-                ? `<button type="button" class="global-loading-btn" data-dashboard-task-retry="${escapeHtml(task.id)}">ลองใหม่</button>`
+                ? `<button type="button" class="global-loading-btn" data-dashboard-task-retry="${escapeHtml(task.id)}">ลองอีกครั้ง</button>`
                 : "";
               return `
                 <div class="global-loading-item ${meta.tone}">
@@ -3914,8 +3914,8 @@
         globalLoadingToggleEl.classList.toggle("success", shouldShowToggle && errors === 0 && allFinished);
         if (shouldShowToggle) {
           globalLoadingToggleEl.textContent = errors > 0
-            ? `API ผิดพลาด ${errors}`
-            : (total > 0 ? `API ${done}/${total}` : `API ข้าม ${skipped}`);
+            ? `มีปัญหา ${errors}`
+            : (total > 0 ? `กำลังอัปเดต ${done}/${total}` : `ไม่มีข้อมูล ${skipped}`);
         }
       }
     };
@@ -3953,7 +3953,7 @@
         id: task.id,
         label: task.label,
         state: "pending",
-        message: "รอ request"
+        message: "กำลังเตรียม"
       }));
       recalcDashboardLoadProgress();
       const cycleId = dashboardLoadState.cycle;
@@ -3963,7 +3963,7 @@
 
     const runDashboardTask = async (taskDef, cycleId = dashboardLoadState.cycle) => {
       if (!taskDef?.id || typeof taskDef.run !== "function") return null;
-      setDashboardTaskState(taskDef.id, { state: "requesting", message: "กำลังรอตอบกลับ..." }, cycleId);
+      setDashboardTaskState(taskDef.id, { state: "requesting", message: "กำลังอัปเดตข้อมูล..." }, cycleId);
       let result = { state: "success", message: "" };
       try {
         result = normalizeDashboardTaskResult(await taskDef.run());
