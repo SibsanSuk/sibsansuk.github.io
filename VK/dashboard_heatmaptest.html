@@ -613,21 +613,41 @@
       background: var(--brand-100);
       color: var(--brand-900);
     }
-    .video-heatmap-block{
+    .video-progress-stack{
+      position: relative;
       margin-top: 10px;
     }
-    .video-heatmap-strip{
+    .video-progress-track{
+      position: relative;
+      height: 14px;
+      background: rgb(226 232 240);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .video-progress-fill{
+      position: absolute;
+      inset: 0 auto 0 0;
+      height: 100%;
+      border-radius: 999px;
+    }
+    .video-heatmap-overlay{
+      position: absolute;
+      inset: 0;
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(10px, 1fr));
-      gap: 4px;
-      margin-top: 6px;
+      gap: 2px;
+      align-items: end;
+      padding: 1px 2px;
+      pointer-events: none;
     }
-    .video-heatmap-cell{
+    .video-heatmap-bar{
       display: block;
-      height: 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(148,163,184,.16);
+      width: 100%;
       min-width: 0;
+      align-self: end;
+      border-radius: 999px 999px 4px 4px;
+      border: 1px solid rgba(148,163,184,.16);
+      pointer-events: auto;
     }
     .debug-api-entry{
       border: 1px solid rgba(148,163,184,.18);
@@ -1586,24 +1606,18 @@
     const renderVideoHeatmapStrip = (entry) => {
       if (!entry || !Array.isArray(entry.buckets) || !entry.buckets.length) return "";
       const maxValue = Math.max(...entry.buckets.map((bucket) => Number(bucket.value) || 0), 0);
-      const cells = entry.buckets.map((bucket) => {
+      const bars = entry.buckets.map((bucket) => {
         const count = Number(bucket.value) || 0;
         const ratio = maxValue > 0 ? (count / maxValue) : 0;
         const bg = count > 0
           ? `rgba(15,107,114,${(0.18 + (ratio * 0.72)).toFixed(3)})`
           : "rgba(203,213,225,.55)";
         const border = count > 0 ? "rgba(15,107,114,.16)" : "rgba(148,163,184,.18)";
-        const title = `${bucket.label} • ${count} ครั้ง`;
-        return `<span class="video-heatmap-cell" style="background:${bg};border-color:${border}" title="${escapeHtml(title)}"></span>`;
+        const height = count > 0 ? `${Math.max(18, Math.round(20 + (ratio * 78)))}%` : "18%";
+        const title = `${bucket.label} • ดู ${count} ครั้ง`;
+        return `<span class="video-heatmap-bar" style="height:${height};background:${bg};border-color:${border}" title="${escapeHtml(title)}"></span>`;
       }).join("");
-      const summary = formatVideoHeatmapSummary(entry);
-      return `
-        <div class="video-heatmap-block">
-          <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">ช่วงเวลาการรับชม</div>
-          <div class="video-heatmap-strip" aria-label="${escapeHtml(summary || "ช่วงเวลาการรับชม")}">${cells}</div>
-          ${summary ? `<div class="mt-1 text-[11px] text-slate-500">${escapeHtml(summary)}</div>` : ""}
-        </div>
-      `;
+      return `<div class="video-heatmap-overlay" aria-label="${escapeHtml(formatVideoHeatmapSummary(entry) || "ช่วงเวลาการรับชม")}">${bars}</div>`;
     };
 
     const resolveVideoUserNameCandidates = () => {
@@ -3382,15 +3396,13 @@
               : "";
             const itemProgressHtml = (!isChatbot && itemHasPct)
               ? `
-                <div class="mt-2">
-                  <div class="h-2 bg-slate-200 rounded-full overflow-hidden">
-                    <div class="h-full grad-brand" style="width:${itemPct}%"></div>
+                <div class="video-progress-stack">
+                  <div class="video-progress-track">
+                    <div class="video-progress-fill grad-brand" style="width:${itemPct}%"></div>
+                    ${String(itemTool?.sublabel || "").toLowerCase().includes("video") ? renderVideoHeatmapStrip(videoHeatmap) : ""}
                   </div>
                 </div>
               `
-              : "";
-            const itemHeatmapHtml = String(itemTool?.sublabel || "").toLowerCase().includes("video")
-              ? renderVideoHeatmapStrip(videoHeatmap)
               : "";
             return `
               <div class="rounded-xl bg-white/70 px-3 py-2 border border-slate-200">
@@ -3408,7 +3420,6 @@
                   ${(!isChatbot && itemHasPct) ? `<div class="text-xs font-bold mono shrink-0 ${pctToneClass}">${escapeHtml(itemPctText)}</div>` : ""}
                 </div>
                 ${itemProgressHtml}
-                ${itemHeatmapHtml}
               </div>
             `;
           }).join("");
