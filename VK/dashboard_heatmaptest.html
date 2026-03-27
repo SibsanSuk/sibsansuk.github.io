@@ -1663,6 +1663,35 @@
         d += ` Q ${prev.x.toFixed(2)} ${prev.y.toFixed(2)} ${last.x.toFixed(2)} ${last.y.toFixed(2)}`;
         return d;
       };
+      const buildSmoothSegmentPath = (points, idx) => {
+        const p0 = points[idx - 1] || points[idx];
+        const p1 = points[idx];
+        const p2 = points[idx + 1];
+        const p3 = points[idx + 2] || p2;
+        if (!p1 || !p2) return "";
+        const cp1x = p1.x + ((p2.x - p0.x) / 6);
+        const cp1y = p1.y + ((p2.y - p0.y) / 6);
+        const cp2x = p2.x - ((p3.x - p1.x) / 6);
+        const cp2y = p2.y - ((p3.y - p1.y) / 6);
+        return `M ${p1.x.toFixed(2)} ${p1.y.toFixed(2)} C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)} ${cp2x.toFixed(2)} ${cp2y.toFixed(2)} ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+      };
+      const toneFromRatio = (ratio) => {
+        const n = Math.max(0, Math.min(1, Number(ratio) || 0));
+        if (n <= 0) return {
+          stroke: "rgba(148,163,184,0.34)",
+          fill: "rgba(203,213,225,0.46)",
+          dotFill: "rgba(241,245,249,0.92)",
+          dotStroke: "rgba(148,163,184,0.42)",
+          width: 1.45
+        };
+        return {
+          stroke: `rgba(15,107,114,${(0.34 + (n * 0.58)).toFixed(3)})`,
+          fill: `rgba(15,107,114,${(0.10 + (n * 0.18)).toFixed(3)})`,
+          dotFill: `rgba(15,107,114,${(0.16 + (n * 0.72)).toFixed(3)})`,
+          dotStroke: `rgba(15,107,114,${(0.28 + (n * 0.56)).toFixed(3)})`,
+          width: 1.45 + (n * 0.95)
+        };
+      };
       const points = buckets.map((bucket, idx) => {
         const count = Number(bucket.value) || 0;
         const ratio = maxValue > 0 ? (count / maxValue) : 0;
@@ -1673,6 +1702,21 @@
       const linePath = buildSmoothLinePath(points);
       const lastPoint = points[points.length - 1];
       const areaPath = `${linePath} L ${lastPoint.x.toFixed(2)} ${(height - padY).toFixed(2)} L ${padX.toFixed(2)} ${(height - padY).toFixed(2)} Z`;
+      const segmentPaths = points.slice(0, -1).map((point, idx) => {
+        const next = points[idx + 1];
+        const ratio = maxValue > 0 ? (((point.count + next.count) / 2) / maxValue) : 0;
+        const tone = toneFromRatio(ratio);
+        const d = buildSmoothSegmentPath(points, idx);
+        return d
+          ? `<path d="${d}" fill="none" stroke="${tone.stroke}" stroke-width="${tone.width.toFixed(2)}" stroke-linejoin="round" stroke-linecap="round"></path>`
+          : "";
+      }).join("");
+      const pointDots = points.map((point) => {
+        const ratio = maxValue > 0 ? (point.count / maxValue) : 0;
+        const tone = toneFromRatio(ratio);
+        const radius = point.count > 0 ? (1.9 + (ratio * 1.6)) : 1.65;
+        return `<circle cx="${point.x.toFixed(2)}" cy="${point.y.toFixed(2)}" r="${radius.toFixed(2)}" fill="${tone.dotFill}" stroke="${tone.dotStroke}" stroke-width="0.9"></circle>`;
+      }).join("");
       const hitWidth = Math.max(innerW / Math.max(buckets.length, 1), 10);
       const hitRects = points.map((point, idx) => {
         const timeRange = formatBucketRange(point.label, points[idx + 1]?.label || "");
@@ -1683,8 +1727,9 @@
       return `
         <div class="video-heatmap-block">
           <svg class="video-heatmap-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-label="video heatmap">
-            <path d="${areaPath}" fill="rgba(15,107,114,0.18)"></path>
-            <path d="${linePath}" fill="none" stroke="rgba(15,107,114,0.88)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
+            <path d="${areaPath}" fill="rgba(15,107,114,0.10)"></path>
+            ${segmentPaths}
+            ${pointDots}
             <rect class="video-heatmap-focus-band" x="0" y="0" width="0" height="${height}"></rect>
             ${hitRects}
           </svg>
