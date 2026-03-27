@@ -558,6 +558,76 @@
       border-color: rgba(34,197,94,.22);
       color: #166534;
     }
+    .debug-api-card summary{
+      list-style: none;
+    }
+    .debug-api-card summary::-webkit-details-marker{
+      display: none;
+    }
+    .debug-api-entry{
+      border: 1px solid rgba(148,163,184,.18);
+      border-radius: 18px;
+      background: rgba(255,255,255,.82);
+      padding: 14px 16px;
+    }
+    .debug-api-entry + .debug-api-entry{
+      margin-top: 12px;
+    }
+    .debug-api-entry-head{
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .debug-api-entry-title{
+      font-weight: 800;
+      color: #0f172a;
+    }
+    .debug-api-badge{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .debug-api-badge.success{
+      background: rgba(34,197,94,.12);
+      color: #166534;
+    }
+    .debug-api-badge.error{
+      background: rgba(239,68,68,.12);
+      color: #b91c1c;
+    }
+    .debug-api-badge.pending{
+      background: rgba(59,130,246,.12);
+      color: #1d4ed8;
+    }
+    .debug-api-badge.skipped{
+      background: rgba(148,163,184,.14);
+      color: #475569;
+    }
+    .debug-api-url{
+      margin-top: 8px;
+      font-size: 12px;
+      color: #475569;
+      word-break: break-all;
+    }
+    .debug-api-pre{
+      margin-top: 10px;
+      border-radius: 14px;
+      background: #f8fafc;
+      border: 1px solid rgba(148,163,184,.18);
+      padding: 12px;
+      font-size: 12px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-all;
+      overflow: auto;
+      max-height: 280px;
+    }
     @keyframes globalSpin{
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
@@ -698,6 +768,18 @@
       </div>
     </div>
   </div>
+  <div id="debug-api-card" class="hidden px-5 pb-8 sm:px-6">
+    <details class="clay-soft p-4 debug-api-card">
+      <summary class="flex cursor-pointer items-center justify-between gap-3">
+        <div>
+          <div class="font-bold">ข้อมูลการเชื่อมต่อ</div>
+          <div class="mt-1 text-sm text-slate-600">ใช้สำหรับตรวจสอบเส้นทางที่เรียกและผลลัพธ์ที่ได้รับ</div>
+        </div>
+        <span class="text-xs font-semibold text-slate-500">แสดงรายละเอียด</span>
+      </summary>
+      <div id="debug-api-content" class="mt-4"></div>
+    </details>
+  </div>
   <div id="global-loading-overlay" class="global-loading-overlay" aria-live="polite" aria-busy="true">
     <div class="global-loading-card">
       <div class="global-loading-header">
@@ -721,6 +803,7 @@
   <script>
     const qs = new URLSearchParams(window.location.search);
     const SHOW_BOOKROLL = qs.get("bookroll") === "1";
+    const SHOW_DEBUG_CARD = qs.get("debug") === "1";
     const SHOW_LOGIN_BUTTONS = qs.get("loginbtn") === "true";
     const OIDC = {
       authorizationEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/auth",
@@ -1372,6 +1455,102 @@
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+
+    const debugApiState = {};
+
+    const formatDebugPayload = (value, maxLen = 12000) => {
+      if (value == null) return "-";
+      let text = "";
+      try {
+        text = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+      } catch {
+        text = String(value);
+      }
+      if (text.length > maxLen) return `${text.slice(0, maxLen)}\n...`;
+      return text;
+    };
+
+    const renderDebugApiCard = () => {
+      if (!SHOW_DEBUG_CARD) return;
+      const cardEl = document.getElementById("debug-api-card");
+      const contentEl = document.getElementById("debug-api-content");
+      if (!cardEl || !contentEl) return;
+      cardEl.classList.remove("hidden");
+      const order = [
+        "course-detail",
+        "bookroll-reading",
+        "bookroll-activity",
+        "video-progress",
+        "chatbot-speed",
+        "chatbot-performance"
+      ];
+      const items = order
+        .map((id) => ({ id, ...debugApiState[id] }))
+        .filter((item) => item && item.label);
+      if (!items.length) {
+        contentEl.innerHTML = `<div class="text-sm text-slate-600">ยังไม่มีข้อมูลสำหรับการตรวจสอบ</div>`;
+        return;
+      }
+      contentEl.innerHTML = items.map((item) => {
+        const badgeTone = item.state === "success"
+          ? "success"
+          : item.state === "error"
+            ? "error"
+            : item.state === "skipped"
+              ? "skipped"
+              : "pending";
+        const requests = Array.isArray(item.requests) ? item.requests : [];
+        const requestsHtml = requests.length
+          ? requests.map((req, idx) => {
+              const reqTone = req.state === "success"
+                ? "success"
+                : req.state === "error"
+                  ? "error"
+                  : req.state === "skipped"
+                    ? "skipped"
+                    : "pending";
+              const payload = formatDebugPayload(req.payload);
+              return `
+                <details class="mt-3">
+                  <summary class="cursor-pointer text-sm font-semibold text-slate-700">คำขอ ${idx + 1}${req.label ? ` • ${escapeHtml(req.label)}` : ""}</summary>
+                  <div class="debug-api-url mono">${escapeHtml(req.url || "-")}</div>
+                  <div class="mt-2"><span class="debug-api-badge ${reqTone}">${escapeHtml(req.message || req.state || "-")}</span></div>
+                  <pre class="debug-api-pre">${escapeHtml(payload)}</pre>
+                </details>
+              `;
+            }).join("")
+          : `<div class="mt-3 text-sm text-slate-500">ยังไม่มีคำขอที่บันทึกไว้</div>`;
+        return `
+          <div class="debug-api-entry">
+            <div class="debug-api-entry-head">
+              <div>
+                <div class="debug-api-entry-title">${escapeHtml(item.label)}</div>
+                <div class="mt-1 text-sm text-slate-600">${escapeHtml(item.message || "-")}</div>
+              </div>
+              <span class="debug-api-badge ${badgeTone}">${escapeHtml(item.badge || item.state || "-")}</span>
+            </div>
+            ${requestsHtml}
+          </div>
+        `;
+      }).join("");
+    };
+
+    const setDebugApiEntry = (id, patch) => {
+      if (!SHOW_DEBUG_CARD || !id || !patch || typeof patch !== "object") return;
+      const prev = debugApiState[id] && typeof debugApiState[id] === "object" ? debugApiState[id] : {};
+      debugApiState[id] = {
+        ...prev,
+        ...patch,
+        requests: Array.isArray(patch.requests) ? patch.requests : (Array.isArray(prev.requests) ? prev.requests : [])
+      };
+      renderDebugApiCard();
+    };
+
+    const resetDebugApiState = () => {
+      if (!SHOW_DEBUG_CARD) return;
+      Object.keys(debugApiState).forEach((key) => delete debugApiState[key]);
+      renderDebugApiCard();
+    };
 
     const setLoginDebugTab = (tab) => {
       const next = tab === "derived" || tab === "raw" ? tab : "summary";
@@ -3277,12 +3456,26 @@
         window.courseToolInventory = null;
         syncOverallToolCards();
         if (statusEl) statusEl.textContent = "ยังไม่พร้อมแสดงข้อมูลรายวิชา";
+        setDebugApiEntry("course-detail", {
+          label: "โครงสร้างบทเรียน",
+          state: "skipped",
+          badge: "ไม่มีข้อมูล",
+          message: "ยังไม่พร้อมแสดงข้อมูลรายวิชา",
+          requests: []
+        });
         return { state: "skipped", message: "ยังไม่พร้อมแสดงข้อมูลรายวิชา" };
       }
       if (!isLikelyCourseId(courseId)) {
         window.courseToolInventory = null;
         syncOverallToolCards();
         if (statusEl) statusEl.textContent = "ยังไม่พร้อมแสดงข้อมูลรายวิชา";
+        setDebugApiEntry("course-detail", {
+          label: "โครงสร้างบทเรียน",
+          state: "skipped",
+          badge: "ไม่มีข้อมูล",
+          message: "ยังไม่พร้อมแสดงข้อมูลรายวิชา",
+          requests: []
+        });
         return { state: "skipped", message: "ยังไม่พร้อมแสดงข้อมูลรายวิชา" };
       }
       if (statusEl) statusEl.textContent = "กำลังอัปเดตข้อมูลรายวิชา";
@@ -3313,12 +3506,30 @@
         requestDashboardRender();
 
         if (statusEl) statusEl.textContent = "ข้อมูลรายวิชาพร้อมแสดงผล";
+        setDebugApiEntry("course-detail", {
+          label: "โครงสร้างบทเรียน",
+          state: "success",
+          badge: "พร้อมแสดงผล",
+          message: "ข้อมูลรายวิชาพร้อมแสดงผล",
+          requests: [
+            { label: "ข้อมูลรายวิชา", url: srcUrl, state: "success", message: "พร้อมแสดงผล", payload: data }
+          ]
+        });
         return { state: "success", message: "ข้อมูลรายวิชาพร้อมแสดงผล" };
       } catch (err) {
         window.courseToolInventory = null;
         syncOverallToolCards();
         if (statusEl) statusEl.textContent = "ไม่สามารถแสดงข้อมูลรายวิชาได้ในขณะนี้";
         console.warn("Course API error:", err);
+        setDebugApiEntry("course-detail", {
+          label: "โครงสร้างบทเรียน",
+          state: "error",
+          badge: "มีปัญหา",
+          message: "ไม่สามารถแสดงข้อมูลรายวิชาได้ในขณะนี้",
+          requests: [
+            { label: "ข้อมูลรายวิชา", url: courseUrl(courseId), state: "error", message: "มีปัญหา", payload: err?.message || "เกิดข้อผิดพลาด" }
+          ]
+        });
         return { state: "error", message: "ไม่สามารถแสดงข้อมูลรายวิชาได้ในขณะนี้" };
       }
     };
@@ -3426,11 +3637,25 @@
       if (!userId || !courseId) {
         if (statusEl) statusEl.textContent = "ยังไม่พร้อมแสดงข้อมูลการอ่าน";
         updateBookrollJsonDrawer();
+        setDebugApiEntry("bookroll-activity", {
+          label: "พฤติกรรมการอ่าน",
+          state: "skipped",
+          badge: "ไม่มีข้อมูล",
+          message: "ยังไม่พร้อมแสดงข้อมูลการอ่าน",
+          requests: []
+        });
         return { state: "skipped", message: "ยังไม่พร้อมแสดงข้อมูลการอ่าน" };
       }
       if (!isLikelyCourseId(courseId)) {
         if (statusEl) statusEl.textContent = "ยังไม่พร้อมแสดงข้อมูลการอ่าน";
         updateBookrollJsonDrawer();
+        setDebugApiEntry("bookroll-activity", {
+          label: "พฤติกรรมการอ่าน",
+          state: "skipped",
+          badge: "ไม่มีข้อมูล",
+          message: "ยังไม่พร้อมแสดงข้อมูลการอ่าน",
+          requests: []
+        });
         return { state: "skipped", message: "ยังไม่พร้อมแสดงข้อมูลการอ่าน" };
       }
       if (statusEl) statusEl.textContent = "กำลังอัปเดตข้อมูลการอ่าน";
@@ -3463,12 +3688,30 @@
         if (statusEl) statusEl.textContent = "ข้อมูลการอ่านพร้อมแสดงผล";
         if (rawEl) rawEl.textContent = JSON.stringify(data, null, 2);
         updateBookrollJsonDrawer();
+        setDebugApiEntry("bookroll-activity", {
+          label: "พฤติกรรมการอ่าน",
+          state: "success",
+          badge: "พร้อมแสดงผล",
+          message: "ข้อมูลการอ่านพร้อมแสดงผล",
+          requests: [
+            { label: "พฤติกรรมการอ่าน", url: srcUrl, state: "success", message: "พร้อมแสดงผล", payload: data }
+          ]
+        });
         return { state: "success", message: "ข้อมูลการอ่านพร้อมแสดงผล" };
       } catch (err) {
         if (statusEl) statusEl.textContent = "ไม่พบข้อมูลการอ่าน";
         if (rawEl) rawEl.textContent = err?.message || "เกิดข้อผิดพลาด";
         console.warn("Bookroll API error:", err);
         updateBookrollJsonDrawer();
+        setDebugApiEntry("bookroll-activity", {
+          label: "พฤติกรรมการอ่าน",
+          state: "error",
+          badge: "มีปัญหา",
+          message: "ไม่พบข้อมูลการอ่าน",
+          requests: [
+            { label: "พฤติกรรมการอ่าน", url: bookrollUrl(userId, courseId), state: "error", message: "มีปัญหา", payload: err?.message || "เกิดข้อผิดพลาด" }
+          ]
+        });
         return { state: "error", message: "ไม่พบข้อมูลการอ่าน" };
       }
     };
@@ -3479,6 +3722,13 @@
         window.bookrollReadingProgress = [];
         updateBookrollJsonDrawer();
         requestDashboardRender();
+        setDebugApiEntry("bookroll-reading", {
+          label: "ความคืบหน้าการอ่าน",
+          state: "skipped",
+          badge: "ไม่มีข้อมูล",
+          message: "ยังไม่พร้อมแสดงความคืบหน้าการอ่าน",
+          requests: []
+        });
         return { state: "skipped", message: "ยังไม่พร้อมแสดงความคืบหน้าการอ่าน" };
       }
       const mergeReadingEntries = (list) => {
@@ -3504,6 +3754,7 @@
         if (!res.ok) throw await createHttpError(res);
         const data = await res.json();
         return {
+          title: titleHint,
           sourceUrl: srcUrl,
           data,
           entries: buildReadingProgressMap(data, { usageId, titleHint })
@@ -3539,6 +3790,7 @@
       try {
         const aggregate = [];
         const debugSources = [];
+        const debugRequests = [];
         let hasCourseLevelReading = false;
 
         try {
@@ -3548,12 +3800,16 @@
             const data = await res.json();
             const courseEntries = buildReadingProgressMap(data, { usageId: courseId });
             debugSources.push({ url: srcUrl, data });
+            debugRequests.push({ label: "ระดับรายวิชา", url: srcUrl, state: "success", message: "พร้อมแสดงผล", payload: data });
             aggregate.push(...courseEntries);
             hasCourseLevelReading = courseEntries.length > 0;
           } else {
-            console.warn("Bookroll readingData API error:", await createHttpError(res));
+            const err = await createHttpError(res);
+            debugRequests.push({ label: "ระดับรายวิชา", url: srcUrl, state: "error", message: "มีปัญหา", payload: err?.message || "เกิดข้อผิดพลาด" });
+            console.warn("Bookroll readingData API error:", err);
           }
         } catch (err) {
+          debugRequests.push({ label: "ระดับรายวิชา", url: bookrollReadingDataUrl(userId, courseId), state: "error", message: "มีปัญหา", payload: err?.message || "เกิดข้อผิดพลาด" });
           console.warn("Bookroll readingData API error:", err);
         }
 
@@ -3570,6 +3826,7 @@
           );
           responses.filter(Boolean).forEach((hit) => {
             debugSources.push({ url: hit.sourceUrl, data: hit.data });
+            debugRequests.push({ label: hit.title || "ระดับบทเรียน", url: hit.sourceUrl, state: "success", message: "พร้อมแสดงผล", payload: hit.data });
             aggregate.push(...hit.entries);
           });
         }
@@ -3578,6 +3835,13 @@
         window.bookrollReadingProgress = mergeReadingEntries(aggregate);
         const displayCount = getBookrollReadingDisplayCount(window.bookrollReadingProgress);
         const hasData = window.bookrollReadingProgress.length > 0 || !!window.bookrollReadingData;
+        setDebugApiEntry("bookroll-reading", {
+          label: "ความคืบหน้าการอ่าน",
+          state: hasData ? "success" : "error",
+          badge: hasData ? "พร้อมแสดงผล" : "มีปัญหา",
+          message: hasData ? `พบข้อมูลการอ่าน ${displayCount} รายการ` : "ไม่พบข้อมูลการอ่าน",
+          requests: debugRequests
+        });
         return {
           state: hasData ? "success" : "error",
           message: hasData ? `พบข้อมูลการอ่าน ${displayCount} รายการ` : "ไม่พบข้อมูลการอ่าน"
@@ -3586,6 +3850,13 @@
         window.bookrollReadingData = null;
         window.bookrollReadingProgress = [];
         console.warn("Bookroll reading progress error:", err);
+        setDebugApiEntry("bookroll-reading", {
+          label: "ความคืบหน้าการอ่าน",
+          state: "error",
+          badge: "มีปัญหา",
+          message: "ไม่สามารถแสดงข้อมูลการอ่านได้ในขณะนี้",
+          requests: []
+        });
         return { state: "error", message: "ไม่สามารถแสดงข้อมูลการอ่านได้ในขณะนี้" };
       } finally {
         updateBookrollJsonDrawer();
@@ -3601,6 +3872,13 @@
         window.videoApiStatus = "invalid-course";
         requestDashboardRender();
         updateLoginDebugPanel();
+        setDebugApiEntry("video-progress", {
+          label: "ความคืบหน้าวิดีโอ",
+          state: "skipped",
+          badge: "ไม่มีข้อมูล",
+          message: "ยังไม่พร้อมแสดงความคืบหน้าวิดีโอ",
+          requests: []
+        });
         return { state: "skipped", message: "ยังไม่พร้อมแสดงความคืบหน้าวิดีโอ" };
       }
       const candidates = resolveVideoUserNameCandidates();
@@ -3611,18 +3889,30 @@
         window.videoApiStatus = "missing-username";
         requestDashboardRender();
         updateLoginDebugPanel();
+        setDebugApiEntry("video-progress", {
+          label: "ความคืบหน้าวิดีโอ",
+          state: "skipped",
+          badge: "ไม่มีข้อมูล",
+          message: "ยังไม่พร้อมแสดงความคืบหน้าวิดีโอ",
+          requests: []
+        });
         return { state: "skipped", message: "ยังไม่พร้อมแสดงความคืบหน้าวิดีโอ" };
       }
       try {
         let best = { entries: [], data: null, info: null };
         let okResponseCount = 0;
+        const debugRequests = [];
         for (const info of candidates) {
           const srcUrl = videoBarUrl(info.value, courseId);
           const res = await fetch(srcUrl);
-          if (!res.ok) continue;
+          if (!res.ok) {
+            debugRequests.push({ label: info.source, url: srcUrl, state: "error", message: "มีปัญหา", payload: `HTTP ${res.status}` });
+            continue;
+          }
           okResponseCount += 1;
           const data = await res.json();
           const entries = buildVideoProgressMap(data);
+          debugRequests.push({ label: info.source, url: srcUrl, state: "success", message: "พร้อมแสดงผล", payload: data });
           if (entries.length) {
             best = { entries, data, info };
             break;
@@ -3633,6 +3923,13 @@
         window.videoProgressData = best.entries;
         window.videoUserNameResolved = best.info || candidates[0] || null;
         window.videoApiStatus = okResponseCount > 0 ? "ok" : "error";
+        setDebugApiEntry("video-progress", {
+          label: "ความคืบหน้าวิดีโอ",
+          state: okResponseCount > 0 ? "success" : "error",
+          badge: okResponseCount > 0 ? "พร้อมแสดงผล" : "มีปัญหา",
+          message: okResponseCount > 0 ? `พบข้อมูลวิดีโอ ${best.entries.length} รายการ` : "ไม่พบข้อมูลวิดีโอ",
+          requests: debugRequests
+        });
         return {
           state: okResponseCount > 0 ? "success" : "error",
           message: okResponseCount > 0
@@ -3645,6 +3942,13 @@
         window.videoUserNameResolved = null;
         window.videoApiStatus = "error";
         console.warn("Video learning API error:", err);
+        setDebugApiEntry("video-progress", {
+          label: "ความคืบหน้าวิดีโอ",
+          state: "error",
+          badge: "มีปัญหา",
+          message: "ไม่สามารถแสดงข้อมูลวิดีโอได้ในขณะนี้",
+          requests: []
+        });
         return { state: "error", message: "ไม่สามารถแสดงข้อมูลวิดีโอได้ในขณะนี้" };
       } finally {
         updateLoginDebugPanel();
@@ -3658,6 +3962,13 @@
         window.chatbotSpeedRawData = null;
         rebuildChatbotOrderMap();
         requestDashboardRender();
+        setDebugApiEntry("chatbot-speed", {
+          label: "ระยะเวลาการทำแบบฝึกหัด",
+          state: "skipped",
+          badge: "ไม่มีข้อมูล",
+          message: "ยังไม่พร้อมแสดงระยะเวลาการทำแบบฝึกหัด",
+          requests: []
+        });
         return { state: "skipped", message: "ยังไม่พร้อมแสดงระยะเวลาการทำแบบฝึกหัด" };
       }
       try {
@@ -3668,10 +3979,28 @@
         window.chatbotSpeedRawData = getChartConfig(data);
         const rawCategories = getCategoryAxisData(window.chatbotSpeedRawData);
         window.chatbotSpeedRawData.__categoryMeta = rawCategories.map((label) => parseChatbotCategoryMeta(label));
+        setDebugApiEntry("chatbot-speed", {
+          label: "ระยะเวลาการทำแบบฝึกหัด",
+          state: "success",
+          badge: "พร้อมแสดงผล",
+          message: "ข้อมูลระยะเวลาการทำแบบฝึกหัดพร้อมแสดงผล",
+          requests: [
+            { label: "ระยะเวลาการทำแบบฝึกหัด", url: srcUrl, state: "success", message: "พร้อมแสดงผล", payload: data }
+          ]
+        });
         return { state: "success", message: "ข้อมูลระยะเวลาการทำแบบฝึกหัดพร้อมแสดงผล" };
       } catch (err) {
         window.chatbotSpeedRawData = null;
         console.warn("Chatbot Speed API error:", err);
+        setDebugApiEntry("chatbot-speed", {
+          label: "ระยะเวลาการทำแบบฝึกหัด",
+          state: "error",
+          badge: "มีปัญหา",
+          message: "ไม่สามารถแสดงข้อมูลระยะเวลาการทำแบบฝึกหัดได้ในขณะนี้",
+          requests: [
+            { label: "ระยะเวลาการทำแบบฝึกหัด", url: chatbotSpeedUrl(courseId, userId), state: "error", message: "มีปัญหา", payload: err?.message || "เกิดข้อผิดพลาด" }
+          ]
+        });
         return { state: "error", message: "ไม่สามารถแสดงข้อมูลระยะเวลาการทำแบบฝึกหัดได้ในขณะนี้" };
       } finally {
         rebuildChatbotOrderMap();
@@ -3684,6 +4013,13 @@
         window.chatbotPerfData = null;
         rebuildChatbotOrderMap();
         requestDashboardRender();
+        setDebugApiEntry("chatbot-performance", {
+          label: "ผลการทำแบบฝึกหัด",
+          state: "skipped",
+          badge: "ไม่มีข้อมูล",
+          message: "ยังไม่พร้อมแสดงผลการทำแบบฝึกหัด",
+          requests: []
+        });
         return { state: "skipped", message: "ยังไม่พร้อมแสดงผลการทำแบบฝึกหัด" };
       }
       try {
@@ -3694,10 +4030,28 @@
         window.chatbotPerfData = getChartConfig(data);
         const rawCategories = getCategoryAxisData(window.chatbotPerfData);
         window.chatbotPerfData.__categoryMeta = rawCategories.map((label) => parseChatbotCategoryMeta(label));
+        setDebugApiEntry("chatbot-performance", {
+          label: "ผลการทำแบบฝึกหัด",
+          state: "success",
+          badge: "พร้อมแสดงผล",
+          message: "ผลการทำแบบฝึกหัดพร้อมแสดงผล",
+          requests: [
+            { label: "ผลการทำแบบฝึกหัด", url: srcUrl, state: "success", message: "พร้อมแสดงผล", payload: data }
+          ]
+        });
         return { state: "success", message: "ผลการทำแบบฝึกหัดพร้อมแสดงผล" };
       } catch (err) {
         window.chatbotPerfData = null;
         console.warn("Chatbot Performance API error:", err);
+        setDebugApiEntry("chatbot-performance", {
+          label: "ผลการทำแบบฝึกหัด",
+          state: "error",
+          badge: "มีปัญหา",
+          message: "ไม่สามารถแสดงผลการทำแบบฝึกหัดได้ในขณะนี้",
+          requests: [
+            { label: "ผลการทำแบบฝึกหัด", url: chatbotPerformanceUrl(courseId, userId), state: "error", message: "มีปัญหา", payload: err?.message || "เกิดข้อผิดพลาด" }
+          ]
+        });
         return { state: "error", message: "ไม่สามารถแสดงผลการทำแบบฝึกหัดได้ในขณะนี้" };
       } finally {
         rebuildChatbotOrderMap();
@@ -3722,6 +4076,7 @@
     const globalLoadingCloseEl = document.getElementById("global-loading-close");
     const globalLoadingRetryFailedEl = document.getElementById("global-loading-retry-failed");
     const globalLoadingToggleEl = document.getElementById("global-loading-toggle");
+    if (SHOW_DEBUG_CARD) renderDebugApiCard();
     const courseDeepTreeEl = document.getElementById("course-deep-tree");
     if (courseDeepTreeEl) {
       courseDeepTreeEl.addEventListener("click", (e) => {
@@ -3949,6 +4304,7 @@
       dashboardLoadState.cycle += 1;
       dashboardLoadState.deferRender = true;
       dashboardLoadState.pendingRender = false;
+      resetDebugApiState();
       dashboardLoadState.tasks = (Array.isArray(taskDefs) ? taskDefs : []).map((task) => ({
         id: task.id,
         label: task.label,
