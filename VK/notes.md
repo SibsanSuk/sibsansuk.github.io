@@ -117,3 +117,78 @@ https://sibsansuk.github.io/VK/dashboard.html?courseid=course-v1%3ANECTEC%2BAILO
 - result:
   `{"error":"An error occurred: list index out of range"}`
 
+## 2026-03-27 Virtual KidBright note
+
+- User-reported API example:
+  `https://vk-analysis.learning.app.meca.in.th/analysis/donechapterview/deaff5c4-0c7d-47e4-a2df-72b4a3bdfe92/course/course-v1:NECTEC+KBAISIM_0002+NECTEC_000021`
+- API pattern:
+  `https://vk-analysis.learning.app.meca.in.th/analysis/donechapterview/{userId}/course/{courseId}`
+- How to use:
+  replace `{userId}` with learner UUID and `{courseId}` with LMS course key in format `course-v1:...`
+- Example call:
+  `https://vk-analysis.learning.app.meca.in.th/analysis/donechapterview/deaff5c4-0c7d-47e4-a2df-72b4a3bdfe92/course/course-v1:NECTEC+KBAISIM_0002+NECTEC_000021`
+- Example response seen on 2026-03-27:
+  ```json
+  [
+    {
+      "locate": [2],
+      "max": 1,
+      "name": "การจำแนกท่าทางมือ Hand Pose Classification",
+      "value": 1
+    },
+    {
+      "locate": [3],
+      "max": 1,
+      "name": "การสื่อสารด้วยโปรโตคอล MQTT",
+      "value": 1
+    }
+  ]
+  ```
+- Observed response shape:
+  returns an array of topic/result rows
+  each row currently contains `locate`, `name`, `value`, `max`
+- Current interpretation:
+  `name` = topic name
+  `locate` = chapter/topic position
+  `value` / `max` = completion or pass status for that simulator-related topic
+- Working assumption from user:
+  this endpoint is related to Virtual KidBright / simulator analytics in courses that use AE Tool `vk` (or simulator-type AE tools).
+- Likely purpose:
+  fetch learner results/progress for simulator activity and show VK-related learning outcomes.
+- Important:
+  treat `aetool = vk` as a hypothesis until confirmed from LMS payload or real course detail data.
+
+## 2026-03-27 Video heatmapTime note
+
+- API pattern:
+  `https://viola.thaidlt.com/meca/chart/heatmapTime/?userName={userName}&usageId={courseId}`
+- Related video progress API:
+  `https://viola.thaidlt.com/meca/chart/bar/?userName={userName}&usageId={courseId}`
+- Purpose:
+  `bar` = watched percentage per video topic
+  `heatmapTime` = watch distribution / watch frequency by time bucket
+- Example call:
+  `https://viola.thaidlt.com/meca/chart/heatmapTime/?userName=sibsan.suk%40gmail.com&usageId=course-v1%3ANECTEC%2BAIUPPERSECONDARY01%2BNECTEC_000006`
+- Example response shape:
+  ```json
+  {
+    "Option": {
+      "xAxis": { "data": ["00:00", "00:30", "01:00"] },
+      "yAxis": { "data": ["1-1 ยุคของ AI ตอนที่ 1", "1-2 ยุคของ AI ตอนที่ 2"] },
+      "series": [
+        {
+          "name": "ช่วงการดู (ครั้ง)",
+          "type": "heatmap",
+          "data": [[0, 0, 2], [1, 0, 2], [2, 0, 1]]
+        }
+      ]
+    }
+  }
+  ```
+- Current interpretation:
+  `series[0].data` uses `[xIndex, yIndex, value]`
+  `xIndex` = index in `xAxis.data` (time bucket)
+  `yIndex` = index in `yAxis.data` (video/topic)
+  `value` = number of watch events in that bucket
+- Note:
+  `dashboard.html` currently uses only `/meca/chart/bar/` and does not yet use `/meca/chart/heatmapTime/`
