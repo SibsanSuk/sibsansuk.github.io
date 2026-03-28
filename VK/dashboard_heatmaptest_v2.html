@@ -1628,6 +1628,7 @@
       const innerH = Math.max(height - (padY * 2), 1);
       const segmentWidth = Math.max(innerW / Math.max(buckets.length, 1), 4);
       const transitionSeed = Math.random().toString(36).slice(2, 10);
+      const clipId = `video-heatmap-clip-${transitionSeed}`;
       const addSecondsToClockLabel = (label, deltaSeconds = 30) => {
         const match = String(label || "").match(/^(\d{1,2}):(\d{2})$/);
         if (!match) return String(label || "");
@@ -1715,8 +1716,9 @@
       }).join("");
       const firstTone = segments[0]?.tone?.fill || "rgba(226,232,240,0.92)";
       const lastTone = segments[segments.length - 1]?.tone?.fill || "rgba(226,232,240,0.92)";
-      const startCap = `<rect x="${padX.toFixed(2)}" y="${padY.toFixed(2)}" width="${transitionSize.toFixed(2)}" height="${innerH.toFixed(2)}" rx="${capRadius.toFixed(2)}" ry="${capRadius.toFixed(2)}" fill="${firstTone}" stroke="none"></rect>`;
-      const endCapX = padX + innerW - transitionSize;
+      const startCapX = padX - (transitionSize / 2);
+      const endCapX = (padX + innerW) - (transitionSize / 2);
+      const startCap = `<rect x="${startCapX.toFixed(2)}" y="${padY.toFixed(2)}" width="${transitionSize.toFixed(2)}" height="${innerH.toFixed(2)}" rx="${capRadius.toFixed(2)}" ry="${capRadius.toFixed(2)}" fill="${firstTone}" stroke="none"></rect>`;
       const endCap = `<rect x="${endCapX.toFixed(2)}" y="${padY.toFixed(2)}" width="${transitionSize.toFixed(2)}" height="${innerH.toFixed(2)}" rx="${capRadius.toFixed(2)}" ry="${capRadius.toFixed(2)}" fill="${lastTone}" stroke="none"></rect>`;
       const hitRects = segments.map((segment, idx) => {
         const timeRange = formatBucketRange(segment.label, segments[idx + 1]?.label || "");
@@ -1727,13 +1729,18 @@
         <div class="video-heatmap-block">
           <svg class="video-heatmap-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-label="video heatmap">
             <defs>
+              <clipPath id="${clipId}">
+                <rect x="${padX.toFixed(2)}" y="${padY.toFixed(2)}" width="${innerW.toFixed(2)}" height="${innerH.toFixed(2)}" rx="${cornerRadius.toFixed(2)}" ry="${cornerRadius.toFixed(2)}"></rect>
+              </clipPath>
               ${transitionDefs}
             </defs>
             <rect x="${padX.toFixed(2)}" y="${padY.toFixed(2)}" width="${innerW.toFixed(2)}" height="${innerH.toFixed(2)}" rx="${cornerRadius.toFixed(2)}" ry="${cornerRadius.toFixed(2)}" fill="rgba(226,232,240,0.48)" stroke="rgba(203,213,225,0.75)" stroke-width="0.8"></rect>
-            ${segmentRects}
-            ${transitionRects}
-            ${startCap}
-            ${endCap}
+            <g clip-path="url(#${clipId})">
+              ${segmentRects}
+              ${transitionRects}
+              ${startCap}
+              ${endCap}
+            </g>
             <rect class="video-heatmap-focus-band" x="0" y="0" width="0" height="${height}"></rect>
             ${hitRects}
           </svg>
