@@ -1660,8 +1660,8 @@
         }
         if (value === 1) {
           return {
-            fill: asRgba([183, 241, 236]),
-            stroke: asRgba([183, 241, 236])
+            fill: asRgba([135, 226, 218]),
+            stroke: asRgba([135, 226, 218])
           };
         }
         if (value === 2) {
@@ -1687,6 +1687,7 @@
           stroke: asRgba([19, 138, 146])
         };
       };
+      const cornerRadius = Math.min(5, innerH * 0.34);
       const segments = buckets.map((bucket, idx) => {
         const count = Number(bucket.value) || 0;
         const x = padX + (idx * segmentWidth);
@@ -1707,10 +1708,10 @@
           <svg class="video-heatmap-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-label="video heatmap">
             <defs>
               <clipPath id="${clipId}">
-                <rect x="${padX.toFixed(2)}" y="${padY.toFixed(2)}" width="${innerW.toFixed(2)}" height="${innerH.toFixed(2)}" rx="${(innerH / 2).toFixed(2)}" ry="${(innerH / 2).toFixed(2)}"></rect>
+                <rect x="${padX.toFixed(2)}" y="${padY.toFixed(2)}" width="${innerW.toFixed(2)}" height="${innerH.toFixed(2)}" rx="${cornerRadius.toFixed(2)}" ry="${cornerRadius.toFixed(2)}"></rect>
               </clipPath>
             </defs>
-            <rect x="${padX.toFixed(2)}" y="${padY.toFixed(2)}" width="${innerW.toFixed(2)}" height="${innerH.toFixed(2)}" rx="${(innerH / 2).toFixed(2)}" ry="${(innerH / 2).toFixed(2)}" fill="rgba(226,232,240,0.48)" stroke="rgba(203,213,225,0.75)" stroke-width="0.8"></rect>
+            <rect x="${padX.toFixed(2)}" y="${padY.toFixed(2)}" width="${innerW.toFixed(2)}" height="${innerH.toFixed(2)}" rx="${cornerRadius.toFixed(2)}" ry="${cornerRadius.toFixed(2)}" fill="rgba(226,232,240,0.48)" stroke="rgba(203,213,225,0.75)" stroke-width="0.8"></rect>
             <g clip-path="url(#${clipId})">
               ${segmentRects}
             </g>
@@ -3495,8 +3496,17 @@
                   ${chatbotScoreAvg ? `<div class="mt-1 text-xs text-slate-500">เฉลี่ย ${escapeHtml(chatbotScoreAvg)}</div>` : ""}
                 </div>`
               : "";
-            const itemProgressHtml = "";
-            const itemHeatmapHtml = String(itemTool?.sublabel || "").toLowerCase().includes("video")
+            const isVideoTool = String(itemTool?.sublabel || "").toLowerCase().includes("video");
+            const itemProgressHtml = (!isChatbot && itemHasPct && !isVideoTool)
+              ? `
+                <div class="video-progress-stack">
+                  <div class="video-progress-track">
+                    <div class="video-progress-fill grad-brand" style="width:${itemPct}%"></div>
+                  </div>
+                </div>
+              `
+              : "";
+            const itemHeatmapHtml = isVideoTool
               ? renderVideoHeatmapStrip(videoHeatmap)
               : "";
             return `
