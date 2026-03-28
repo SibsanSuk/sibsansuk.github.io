@@ -1660,21 +1660,19 @@
         }
         if (value === 1) {
           return {
-            fill: "rgba(183, 241, 236, 0.98)",
-            stroke: "rgba(135, 226, 218, 0.98)"
+            fill: "rgba(31,185,183,0.98)",
+            stroke: "rgba(31,185,183,0.98)"
           };
         }
-        const repeatRatio = maxValue > 1 ? Math.max(0, Math.min(1, (value - 1) / (maxValue - 1))) : 1;
-        const fillGreen = Math.round(241 - (repeatRatio * 56));
-        const fillBlue = Math.round(236 - (repeatRatio * 53));
-        const strokeRed = Math.round(135 - (repeatRatio * 116));
-        const strokeGreen = Math.round(226 - (repeatRatio * 41));
-        const strokeBlue = Math.round(218 - (repeatRatio * 35));
-        const fillAlpha = 0.98;
-        const strokeAlpha = 0.98;
+        if (value === 2) {
+          return {
+            fill: "rgba(24,164,170,0.98)",
+            stroke: "rgba(24,164,170,0.98)"
+          };
+        }
         return {
-          fill: `rgba(31,${fillGreen},${fillBlue},${fillAlpha.toFixed(3)})`,
-          stroke: `rgba(${strokeRed},${strokeGreen},${strokeBlue},${strokeAlpha.toFixed(3)})`
+          fill: "rgba(19,138,146,0.98)",
+          stroke: "rgba(19,138,146,0.98)"
         };
       };
       const segments = buckets.map((bucket, idx) => {
