@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>YouTube Duration Test</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --ink: #12202f;
+      --muted: #5f6b7a;
+      --line: #d8e0ea;
+      --brand: #0f766e;
+      --brand-2: #d9f3ef;
+      --danger: #b42318;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Kanit", "Noto Sans Thai", system-ui, sans-serif;
+      background: linear-gradient(180deg, #f8fbfd, var(--bg));
+      color: var(--ink);
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .wrap {
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 10px 24px rgba(18, 32, 47, 0.08);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+    }
+    p {
+      margin: 0;
+      color: var(--muted);
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      margin-top: 18px;
+    }
+    input, button {
+      font: inherit;
+    }
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      outline: none;
+    }
+    input:focus {
+      border-color: var(--brand);
+      box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
+    }
+    button {
+      border: 0;
+      border-radius: 12px;
+      background: var(--brand);
+      color: white;
+      padding: 12px 16px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+    .result {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: var(--brand-2);
+      border: 1px solid #b9e5dd;
+    }
+    .result.error {
+      background: #fff2f0;
+      border-color: #f3c1bb;
+      color: var(--danger);
+    }
+    .label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+    .value {
+      margin-top: 6px;
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .hint {
+      margin-top: 16px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    #player-host {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>YouTube Duration Test</h1>
+      <p>ใส่ `videoId` เช่น `n5EEPN1xKPk` แล้วกดตรวจสอบความยาววิดีโอ</p>
+
+      <div class="row">
+        <input id="video-id-input" type="text" placeholder="ใส่ YouTube videoId" value="n5EEPN1xKPk" />
+        <button id="check-btn" type="button">ตรวจสอบ</button>
+      </div>
+
+      <div id="result" class="result" hidden>
+        <div class="label">Result</div>
+        <div id="result-text" class="value">-</div>
+      </div>
+
+      <div class="hint">
+        ฟังก์ชันหลักคือ <code>getYouTubeDuration(videoId)</code> ซึ่งคืนค่าเป็น Promise ของ object ที่มีทั้งวินาทีและข้อความเวลา
+      </div>
+    </div>
+  </div>
+
+  <div id="player-host"></div>
+
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script>
+    let ytApiReadyResolve;
+    const ytApiReady = new Promise((resolve) => {
+      ytApiReadyResolve = resolve;
+    });
+
+    let playerReadyResolver = null;
+    let player = null;
+
+    window.onYouTubeIframeAPIReady = () => {
+      const playerVars = {
+        playsinline: 1
+      };
+      if (window.location.protocol !== "file:" && window.location.origin && window.location.origin !== "null") {
+        playerVars.origin = window.location.origin;
+      }
+      player = new YT.Player("player-host", {
+        height: "1",
+        width: "1",
+        videoId: "",
+        playerVars,
+        events: {
+          onReady: () => {
+            if (playerReadyResolver) {
+              playerReadyResolver();
+              playerReadyResolver = null;
+            }
+          }
+        }
+      });
+      ytApiReadyResolve();
+    };
+
+    const waitForPlayerReady = async () => {
+      await ytApiReady;
+      if (player && typeof player.getDuration === "function") return;
+      await new Promise((resolve) => {
+        playerReadyResolver = resolve;
+      });
+    };
+
+    const formatDuration = (seconds) => {
+      const total = Math.max(0, Math.round(Number(seconds) || 0));
+      const hrs = Math.floor(total / 3600);
+      const mins = Math.floor((total % 3600) / 60);
+      const secs = total % 60;
+      if (hrs > 0) return `${hrs}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+      return `${mins}:${String(secs).padStart(2, "0")}`;
+    };
+
+    async function getYouTubeDuration(videoId) {
+      const cleanId = String(videoId || "").trim();
+      if (!cleanId) {
+        throw new Error("กรุณาระบุ videoId");
+      }
+
+      await waitForPlayerReady();
+      player.cueVideoById({ videoId: cleanId });
+
+      const started = Date.now();
+      let duration = 0;
+      while (Date.now() - started < 10000) {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        duration = Number(player.getDuration()) || 0;
+        if (duration > 0) {
+          return {
+            videoId: cleanId,
+            seconds: Math.round(duration),
+            text: formatDuration(duration)
+          };
+        }
+      }
+
+      throw new Error("ไม่สามารถอ่านความยาววิดีโอได้");
+    }
+
+    const inputEl = document.getElementById("video-id-input");
+    const buttonEl = document.getElementById("check-btn");
+    const resultEl = document.getElementById("result");
+    const resultTextEl = document.getElementById("result-text");
+
+    const showResult = (text, isError) => {
+      resultEl.hidden = false;
+      resultEl.classList.toggle("error", !!isError);
+      resultTextEl.textContent = text;
+    };
+
+    buttonEl.addEventListener("click", async () => {
+      const videoId = inputEl.value;
+      buttonEl.disabled = true;
+      showResult("กำลังตรวจสอบ...", false);
+      try {
+        const result = await getYouTubeDuration(videoId);
+        showResult(`${result.text} (${result.seconds} วินาที)`, false);
+        console.log("YouTube duration result:", result);
+      } catch (err) {
+        showResult(err && err.message ? err.message : "เกิดข้อผิดพลาด", true);
+      } finally {
+        buttonEl.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
