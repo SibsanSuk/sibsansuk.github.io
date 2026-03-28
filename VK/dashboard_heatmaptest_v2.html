@@ -634,7 +634,7 @@
     .video-heatmap-svg{
       display: block;
       width: 100%;
-      height: 22px;
+      height: 14px;
     }
     .video-heatmap-focus-band{
       fill: rgba(15, 107, 114, .07);
@@ -1621,9 +1621,9 @@
       if (!entry || !Array.isArray(entry.buckets) || !entry.buckets.length) return "";
       const buckets = entry.buckets;
       const width = Math.max(buckets.length * 18, 132);
-      const height = 22;
-      const padX = 2;
-      const padY = 2;
+      const height = 14;
+      const padX = 0;
+      const padY = 0;
       const innerW = Math.max(width - (padX * 2), 1);
       const innerH = Math.max(height - (padY * 2), 1);
       const segmentWidth = Math.max(innerW / Math.max(buckets.length, 1), 4);
@@ -1661,26 +1661,26 @@
         }
         if (value === 1) {
           return {
-            fill: asRgba([135, 226, 218]),
-            stroke: asRgba([135, 226, 218])
-          };
-        }
-        if (value === 2) {
-          return {
             fill: asRgba([79, 208, 200]),
             stroke: asRgba([79, 208, 200])
           };
         }
-        if (value === 3) {
+        if (value === 2) {
           return {
             fill: asRgba([31, 185, 183]),
             stroke: asRgba([31, 185, 183])
           };
         }
-        if (value === 4) {
+        if (value === 3) {
           return {
             fill: asRgba([24, 164, 170]),
             stroke: asRgba([24, 164, 170])
+          };
+        }
+        if (value === 4) {
+          return {
+            fill: asRgba([19, 138, 146]),
+            stroke: asRgba([19, 138, 146])
           };
         }
         return {
@@ -1688,9 +1688,10 @@
           stroke: asRgba([19, 138, 146])
         };
       };
-      const cornerRadius = Math.min(5.5, innerH * 0.34);
-      const capRadius = Math.min(6.25, innerH * 0.38);
-      const transitionSize = innerH;
+      const cornerRadius = innerH / 2;
+      const capRadius = innerH / 2;
+      const transitionSize = Math.max(6, innerH * 0.58);
+      const capSize = innerH;
       const segments = buckets.map((bucket, idx) => {
         const count = Number(bucket.value) || 0;
         const x = padX + (idx * segmentWidth);
@@ -1716,10 +1717,10 @@
       }).join("");
       const firstTone = segments[0]?.tone?.fill || "rgba(226,232,240,0.92)";
       const lastTone = segments[segments.length - 1]?.tone?.fill || "rgba(226,232,240,0.92)";
-      const startCapX = padX - (transitionSize / 2);
-      const endCapX = (padX + innerW) - (transitionSize / 2);
-      const startCap = `<rect x="${startCapX.toFixed(2)}" y="${padY.toFixed(2)}" width="${transitionSize.toFixed(2)}" height="${innerH.toFixed(2)}" rx="${capRadius.toFixed(2)}" ry="${capRadius.toFixed(2)}" fill="${firstTone}" stroke="none"></rect>`;
-      const endCap = `<rect x="${endCapX.toFixed(2)}" y="${padY.toFixed(2)}" width="${transitionSize.toFixed(2)}" height="${innerH.toFixed(2)}" rx="${capRadius.toFixed(2)}" ry="${capRadius.toFixed(2)}" fill="${lastTone}" stroke="none"></rect>`;
+      const startCapX = padX - (capSize / 2);
+      const endCapX = (padX + innerW) - (capSize / 2);
+      const startCap = `<rect x="${startCapX.toFixed(2)}" y="${padY.toFixed(2)}" width="${capSize.toFixed(2)}" height="${innerH.toFixed(2)}" rx="${capRadius.toFixed(2)}" ry="${capRadius.toFixed(2)}" fill="${firstTone}" stroke="none"></rect>`;
+      const endCap = `<rect x="${endCapX.toFixed(2)}" y="${padY.toFixed(2)}" width="${capSize.toFixed(2)}" height="${innerH.toFixed(2)}" rx="${capRadius.toFixed(2)}" ry="${capRadius.toFixed(2)}" fill="${lastTone}" stroke="none"></rect>`;
       const hitRects = segments.map((segment, idx) => {
         const timeRange = formatBucketRange(segment.label, segments[idx + 1]?.label || "");
         const title = `ดู ${segment.count} ครั้ง`;
@@ -1741,7 +1742,7 @@
               ${startCap}
               ${endCap}
             </g>
-            <rect class="video-heatmap-focus-band" x="0" y="0" width="0" height="${height}"></rect>
+            <rect class="video-heatmap-focus-band" x="0" y="0" width="0" height="${height}" rx="${cornerRadius.toFixed(2)}" ry="${cornerRadius.toFixed(2)}"></rect>
             ${hitRects}
           </svg>
         </div>
