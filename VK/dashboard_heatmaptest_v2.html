@@ -1620,15 +1620,13 @@
     const renderVideoHeatmapStrip = (entry) => {
       if (!entry || !Array.isArray(entry.buckets) || !entry.buckets.length) return "";
       const buckets = entry.buckets;
-      const maxValue = Math.max(...buckets.map((bucket) => Number(bucket.value) || 0), 0);
       const width = Math.max(buckets.length * 14, 120);
       const height = 22;
       const padX = 2;
       const padY = 2;
-      const gap = buckets.length > 1 ? 2 : 0;
       const innerW = Math.max(width - (padX * 2), 1);
       const innerH = Math.max(height - (padY * 2), 1);
-      const segmentWidth = Math.max((innerW - (gap * Math.max(buckets.length - 1, 0))) / Math.max(buckets.length, 1), 4);
+      const segmentWidth = Math.max(innerW / Math.max(buckets.length, 1), 4);
       const addSecondsToClockLabel = (label, deltaSeconds = 30) => {
         const match = String(label || "").match(/^(\d{1,2}):(\d{2})$/);
         if (!match) return String(label || "");
@@ -1652,6 +1650,11 @@
       };
       const toneFromCount = (count) => {
         const value = Math.max(0, Number(count) || 0);
+        const asRgba = (rgb, alpha = 0.98) => `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;
+        const mix = (from, to, ratio) => from.map((channel, idx) => Math.round(channel + ((to[idx] - channel) * ratio)));
+        const green = [31, 185, 183];
+        const yellow = [250, 204, 21];
+        const orange = [249, 115, 22];
         if (value <= 0) {
           return {
             fill: "rgba(226,232,240,0.92)",
@@ -1660,29 +1663,44 @@
         }
         if (value === 1) {
           return {
-            fill: "rgba(31,185,183,0.98)",
-            stroke: "rgba(31,185,183,0.98)"
+            fill: asRgba(green),
+            stroke: asRgba(green)
           };
         }
         if (value === 2) {
+          const tone = mix(green, yellow, 0.52);
           return {
-            fill: "rgba(24,164,170,0.98)",
-            stroke: "rgba(24,164,170,0.98)"
+            fill: asRgba(tone),
+            stroke: asRgba(tone)
+          };
+        }
+        if (value === 3) {
+          return {
+            fill: asRgba(yellow),
+            stroke: asRgba(yellow)
+          };
+        }
+        if (value === 4) {
+          const tone = mix(yellow, orange, 0.48);
+          return {
+            fill: asRgba(tone),
+            stroke: asRgba(tone)
           };
         }
         return {
-          fill: "rgba(19,138,146,0.98)",
-          stroke: "rgba(19,138,146,0.98)"
+          fill: asRgba(orange),
+          stroke: asRgba(orange)
         };
       };
       const segments = buckets.map((bucket, idx) => {
         const count = Number(bucket.value) || 0;
-        const x = padX + (idx * (segmentWidth + gap));
+        const x = padX + (idx * segmentWidth);
         const tone = toneFromCount(count);
         return { x, count, tone, label: bucket.label };
       });
       const segmentRects = segments.map((segment) => {
-        return `<rect x="${segment.x.toFixed(2)}" y="${padY.toFixed(2)}" width="${segmentWidth.toFixed(2)}" height="${innerH.toFixed(2)}" rx="5" ry="5" fill="${segment.tone.fill}" stroke="${segment.tone.stroke}" stroke-width="0.8"></rect>`;
+        const widthWithOverlap = Math.min(segmentWidth + 0.45, width - segment.x);
+        return `<rect x="${segment.x.toFixed(2)}" y="${padY.toFixed(2)}" width="${widthWithOverlap.toFixed(2)}" height="${innerH.toFixed(2)}" rx="1.2" ry="1.2" fill="${segment.tone.fill}" stroke="none"></rect>`;
       }).join("");
       const hitRects = segments.map((segment, idx) => {
         const timeRange = formatBucketRange(segment.label, segments[idx + 1]?.label || "");
@@ -3474,15 +3492,7 @@
                   ${chatbotScoreAvg ? `<div class="mt-1 text-xs text-slate-500">เฉลี่ย ${escapeHtml(chatbotScoreAvg)}</div>` : ""}
                 </div>`
               : "";
-            const itemProgressHtml = (!isChatbot && itemHasPct)
-              ? `
-                <div class="video-progress-stack">
-                  <div class="video-progress-track">
-                    <div class="video-progress-fill grad-brand" style="width:${itemPct}%"></div>
-                  </div>
-                </div>
-              `
-              : "";
+            const itemProgressHtml = "";
             const itemHeatmapHtml = String(itemTool?.sublabel || "").toLowerCase().includes("video")
               ? renderVideoHeatmapStrip(videoHeatmap)
               : "";

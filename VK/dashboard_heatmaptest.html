@@ -1652,15 +1652,19 @@
       const buildSmoothLinePath = (points) => {
         if (!Array.isArray(points) || !points.length) return "";
         if (points.length === 1) return `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+        const tension = 0.18;
         let d = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
-        for (let i = 1; i < points.length - 1; i += 1) {
-          const midX = (points[i].x + points[i + 1].x) / 2;
-          const midY = (points[i].y + points[i + 1].y) / 2;
-          d += ` Q ${points[i].x.toFixed(2)} ${points[i].y.toFixed(2)} ${midX.toFixed(2)} ${midY.toFixed(2)}`;
+        for (let i = 0; i < points.length - 1; i += 1) {
+          const prev = points[i - 1] || points[i];
+          const curr = points[i];
+          const next = points[i + 1];
+          const nextNext = points[i + 2] || next;
+          const cp1x = curr.x + ((next.x - prev.x) * tension);
+          const cp1y = curr.y + ((next.y - prev.y) * tension);
+          const cp2x = next.x - ((nextNext.x - curr.x) * tension);
+          const cp2y = next.y - ((nextNext.y - curr.y) * tension);
+          d += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)} ${cp2x.toFixed(2)} ${cp2y.toFixed(2)} ${next.x.toFixed(2)} ${next.y.toFixed(2)}`;
         }
-        const last = points[points.length - 1];
-        const prev = points[points.length - 2];
-        d += ` Q ${prev.x.toFixed(2)} ${prev.y.toFixed(2)} ${last.x.toFixed(2)} ${last.y.toFixed(2)}`;
         return d;
       };
       const toneFromRatio = (ratio) => {
