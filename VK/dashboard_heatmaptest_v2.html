@@ -1627,6 +1627,7 @@
       const innerW = Math.max(width - (padX * 2), 1);
       const innerH = Math.max(height - (padY * 2), 1);
       const segmentWidth = Math.max(innerW / Math.max(buckets.length, 1), 4);
+      const clipId = `video-heatmap-clip-${Math.random().toString(36).slice(2, 10)}`;
       const addSecondsToClockLabel = (label, deltaSeconds = 30) => {
         const match = String(label || "").match(/^(\d{1,2}):(\d{2})$/);
         if (!match) return String(label || "");
@@ -1651,10 +1652,6 @@
       const toneFromCount = (count) => {
         const value = Math.max(0, Number(count) || 0);
         const asRgba = (rgb, alpha = 0.98) => `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;
-        const mix = (from, to, ratio) => from.map((channel, idx) => Math.round(channel + ((to[idx] - channel) * ratio)));
-        const green = [31, 185, 183];
-        const yellow = [250, 204, 21];
-        const orange = [249, 115, 22];
         if (value <= 0) {
           return {
             fill: "rgba(226,232,240,0.92)",
@@ -1663,33 +1660,31 @@
         }
         if (value === 1) {
           return {
-            fill: asRgba(green),
-            stroke: asRgba(green)
+            fill: asRgba([183, 241, 236]),
+            stroke: asRgba([183, 241, 236])
           };
         }
         if (value === 2) {
-          const tone = mix(green, yellow, 0.52);
           return {
-            fill: asRgba(tone),
-            stroke: asRgba(tone)
+            fill: asRgba([79, 208, 200]),
+            stroke: asRgba([79, 208, 200])
           };
         }
         if (value === 3) {
           return {
-            fill: asRgba(yellow),
-            stroke: asRgba(yellow)
+            fill: asRgba([31, 185, 183]),
+            stroke: asRgba([31, 185, 183])
           };
         }
         if (value === 4) {
-          const tone = mix(yellow, orange, 0.48);
           return {
-            fill: asRgba(tone),
-            stroke: asRgba(tone)
+            fill: asRgba([24, 164, 170]),
+            stroke: asRgba([24, 164, 170])
           };
         }
         return {
-          fill: asRgba(orange),
-          stroke: asRgba(orange)
+          fill: asRgba([19, 138, 146]),
+          stroke: asRgba([19, 138, 146])
         };
       };
       const segments = buckets.map((bucket, idx) => {
@@ -1700,7 +1695,7 @@
       });
       const segmentRects = segments.map((segment) => {
         const widthWithOverlap = Math.min(segmentWidth + 0.45, width - segment.x);
-        return `<rect x="${segment.x.toFixed(2)}" y="${padY.toFixed(2)}" width="${widthWithOverlap.toFixed(2)}" height="${innerH.toFixed(2)}" rx="1.2" ry="1.2" fill="${segment.tone.fill}" stroke="none"></rect>`;
+        return `<rect x="${segment.x.toFixed(2)}" y="${padY.toFixed(2)}" width="${widthWithOverlap.toFixed(2)}" height="${innerH.toFixed(2)}" fill="${segment.tone.fill}" stroke="none"></rect>`;
       }).join("");
       const hitRects = segments.map((segment, idx) => {
         const timeRange = formatBucketRange(segment.label, segments[idx + 1]?.label || "");
@@ -1710,7 +1705,15 @@
       return `
         <div class="video-heatmap-block">
           <svg class="video-heatmap-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-label="video heatmap">
-            ${segmentRects}
+            <defs>
+              <clipPath id="${clipId}">
+                <rect x="${padX.toFixed(2)}" y="${padY.toFixed(2)}" width="${innerW.toFixed(2)}" height="${innerH.toFixed(2)}" rx="${(innerH / 2).toFixed(2)}" ry="${(innerH / 2).toFixed(2)}"></rect>
+              </clipPath>
+            </defs>
+            <rect x="${padX.toFixed(2)}" y="${padY.toFixed(2)}" width="${innerW.toFixed(2)}" height="${innerH.toFixed(2)}" rx="${(innerH / 2).toFixed(2)}" ry="${(innerH / 2).toFixed(2)}" fill="rgba(226,232,240,0.48)" stroke="rgba(203,213,225,0.75)" stroke-width="0.8"></rect>
+            <g clip-path="url(#${clipId})">
+              ${segmentRects}
+            </g>
             <rect class="video-heatmap-focus-band" x="0" y="0" width="0" height="${height}"></rect>
             ${hitRects}
           </svg>
