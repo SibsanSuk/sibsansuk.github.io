@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#eef2f8">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Voice Calc</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg-top: #f8fbff;
+      --bg-bottom: #e6edf9;
+      --panel: rgba(255, 255, 255, 0.8);
+      --panel-strong: rgba(255, 255, 255, 0.96);
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: rgba(148, 163, 184, 0.2);
+      --accent: #0f172a;
+      --accent-strong: #020617;
+      --accent-text: #ffffff;
+      --shadow: 0 24px 60px rgba(15, 23, 42, 0.14);
+      --radius-xl: 30px;
+      --radius-lg: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: "SF Pro Display", "SF Pro Text", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(191, 219, 254, 0.7), transparent 42%),
+        linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+      color: var(--ink);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      min-height: 100dvh;
+      padding:
+        calc(env(safe-area-inset-top, 0px) + 18px)
+        18px
+        calc(env(safe-area-inset-bottom, 0px) + 18px);
+      overscroll-behavior: none;
+      touch-action: manipulation;
+    }
+
+    .shell {
+      min-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 36px);
+      display: grid;
+      align-items: stretch;
+    }
+
+    .app {
+      width: min(100%, 480px);
+      margin: 0 auto;
+      display: grid;
+      gap: 16px;
+      grid-template-rows: 1fr auto;
+    }
+
+    .display,
+    .controls {
+      border-radius: var(--radius-xl);
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(24px);
+    }
+
+    .display {
+      min-height: 46dvh;
+      padding: 22px;
+      display: grid;
+      align-content: end;
+      gap: 12px;
+    }
+
+    .expression {
+      min-height: 1.3em;
+      font-size: 0.98rem;
+      color: var(--muted);
+      letter-spacing: -0.02em;
+      word-break: break-all;
+    }
+
+    .result {
+      margin: 0;
+      font-size: clamp(3.3rem, 17vw, 6rem);
+      line-height: 0.9;
+      letter-spacing: -0.1em;
+      overflow-wrap: anywhere;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    .result.is-idle {
+      opacity: 0.85;
+    }
+
+    .result.is-invalid {
+      opacity: 0.38;
+      transform: scale(0.985);
+    }
+
+    .controls {
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .field {
+      width: 100%;
+      min-height: 78px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      font: inherit;
+      font-size: clamp(1.15rem, 4.9vw, 1.35rem);
+      color: var(--ink);
+      background: var(--panel-strong);
+      outline: none;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
+    }
+
+    .field::placeholder {
+      color: #94a3b8;
+    }
+
+    .field:focus {
+      border-color: rgba(15, 23, 42, 0.32);
+      box-shadow:
+        0 0 0 5px rgba(15, 23, 42, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    }
+
+    .reset {
+      width: 100%;
+      min-height: 62px;
+      border: 0;
+      border-radius: var(--radius-lg);
+      padding: 16px 20px;
+      font: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--accent-text);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 30%),
+        linear-gradient(180deg, var(--accent), var(--accent-strong));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.15),
+        0 18px 32px rgba(2, 6, 23, 0.22);
+    }
+
+    .reset:active {
+      transform: translateY(1px) scale(0.998);
+    }
+
+    @media (min-width: 700px) {
+      body {
+        padding-left: 24px;
+        padding-right: 24px;
+      }
+
+      .display {
+        min-height: 360px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="app" aria-label="เครื่องคิดเลขเสียง">
+      <section class="display" aria-live="polite">
+        <div class="expression" id="expressionPreview"></div>
+        <p class="result is-idle" id="resultValue">0</p>
+      </section>
+
+      <section class="controls">
+        <input
+          id="expressionInput"
+          class="field"
+          type="text"
+          inputmode="text"
+          enterkeyhint="done"
+          autocomplete="off"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+          placeholder="3+5+3.5+2"
+          aria-label="ช่องกรอกสูตรคำนวณ"
+          autofocus
+        >
+        <button class="reset" id="resetButton" type="button">Reset</button>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const input = document.getElementById("expressionInput");
+    const resultValue = document.getElementById("resultValue");
+    const expressionPreview = document.getElementById("expressionPreview");
+    const resetButton = document.getElementById("resetButton");
+
+    const thaiDigits = {
+      "๐": "0",
+      "๑": "1",
+      "๒": "2",
+      "๓": "3",
+      "๔": "4",
+      "๕": "5",
+      "๖": "6",
+      "๗": "7",
+      "๘": "8",
+      "๙": "9"
+    };
+
+    const operatorMap = [
+      [/เท่ากับ|equals?/gi, ""],
+      [/หารด้วย|หาร/gi, "/"],
+      [/คูณด้วย|คูณ|times/gi, "*"],
+      [/บวก|plus/gi, "+"],
+      [/ลบ|minus/gi, "-"],
+      [/จุด|point/gi, "."],
+      [/÷/g, "/"],
+      [/×|x/gi, "*"],
+      [/[−–—]/g, "-"],
+      [/[＋]/g, "+"],
+      [/[＊]/g, "*"],
+      [/[／]/g, "/"]
+    ];
+
+    function focusInput() {
+      try {
+        input.focus({ preventScroll: true });
+      } catch {
+        input.focus();
+      }
+    }
+
+    function normalizeExpression(raw) {
+      let text = raw.trim().replace(/[๐-๙]/g, (digit) => thaiDigits[digit] || digit);
+
+      operatorMap.forEach(([pattern, replacement]) => {
+        text = text.replace(pattern, replacement);
+      });
+
+      return text
+        .replace(/\s+/g, "")
+        .replace(/=+$/g, "")
+        .replace(/(\d),(\d)/g, "$1.$2");
+    }
+
+    function formatResult(value) {
+      const rounded = Number.parseFloat(value.toFixed(10));
+      return new Intl.NumberFormat("en-US", {
+        maximumFractionDigits: 10
+      }).format(rounded);
+    }
+
+    function evaluateExpression(raw) {
+      const normalized = normalizeExpression(raw);
+
+      if (!normalized) {
+        return { state: "idle", normalized: "" };
+      }
+
+      if (!/^[\d+\-*/().]+$/.test(normalized)) {
+        return { state: "invalid", normalized };
+      }
+
+      try {
+        const result = Function(`"use strict"; return (${normalized});`)();
+
+        if (!Number.isFinite(result)) {
+          return { state: "invalid", normalized };
+        }
+
+        return { state: "valid", normalized, result };
+      } catch {
+        return { state: "invalid", normalized };
+      }
+    }
+
+    function render(state) {
+      expressionPreview.textContent = state.normalized;
+      resultValue.classList.remove("is-idle", "is-invalid");
+
+      if (state.state === "idle") {
+        resultValue.textContent = "0";
+        resultValue.classList.add("is-idle");
+        return;
+      }
+
+      if (state.state === "valid") {
+        resultValue.textContent = formatResult(state.result);
+        return;
+      }
+
+      resultValue.textContent = "—";
+      resultValue.classList.add("is-invalid");
+    }
+
+    function refresh() {
+      render(evaluateExpression(input.value));
+    }
+
+    function reset() {
+      input.value = "";
+      refresh();
+      focusInput();
+    }
+
+    input.addEventListener("input", refresh);
+    resetButton.addEventListener("click", reset);
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        refresh();
+      }
+    });
+
+    refresh();
+  </script>
+</body>
+</html>
