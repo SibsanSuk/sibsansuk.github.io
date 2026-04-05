@@ -80,15 +80,58 @@
       padding: 22px;
       display: grid;
       align-content: end;
-      gap: 12px;
+      gap: 14px;
+    }
+
+    .number-strip {
+      min-height: 38px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .number-chip {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 8px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid var(--tone);
+      color: #0f172a;
+      line-height: 1;
+    }
+
+    .number-chip-index {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--tone);
+    }
+
+    .number-chip-value {
+      font-size: 0.88rem;
+      font-weight: 700;
     }
 
     .expression {
       min-height: 1.3em;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.2em;
+      align-items: center;
       font-size: 0.98rem;
-      color: var(--muted);
       letter-spacing: -0.02em;
       word-break: break-all;
+    }
+
+    .token-number {
+      color: var(--tone);
+      font-weight: 700;
+    }
+
+    .token-operator {
+      color: var(--muted);
     }
 
     .result {
@@ -179,6 +222,7 @@
   <main class="shell">
     <section class="app" aria-label="เครื่องคิดเลขเสียง">
       <section class="display" aria-live="polite">
+        <div class="number-strip" id="numberStrip"></div>
         <div class="expression" id="expressionPreview"></div>
         <p class="result is-idle" id="resultValue">0</p>
       </section>
@@ -205,9 +249,21 @@
 
   <script>
     const input = document.getElementById("expressionInput");
+    const numberStrip = document.getElementById("numberStrip");
     const resultValue = document.getElementById("resultValue");
     const expressionPreview = document.getElementById("expressionPreview");
     const resetButton = document.getElementById("resetButton");
+
+    const numberColors = [
+      "#2563eb",
+      "#dc2626",
+      "#059669",
+      "#d97706",
+      "#7c3aed",
+      "#0891b2",
+      "#ea580c",
+      "#4f46e5"
+    ];
 
     const thaiDigits = {
       "๐": "0",
@@ -265,6 +321,100 @@
       }).format(rounded);
     }
 
+    function getNumberColor(index) {
+      return numberColors[index % numberColors.length];
+    }
+
+    function tokenizeExpression(normalized) {
+      const tokens = [];
+      let buffer = "";
+      let numberIndex = 0;
+
+      for (const char of normalized) {
+        if (/[0-9.]/.test(char)) {
+          buffer += char;
+          continue;
+        }
+
+        if (buffer) {
+          tokens.push({
+            type: "number",
+            value: buffer,
+            numberIndex
+          });
+          numberIndex += 1;
+          buffer = "";
+        }
+
+        tokens.push({
+          type: "operator",
+          value: char
+        });
+      }
+
+      if (buffer) {
+        tokens.push({
+          type: "number",
+          value: buffer,
+          numberIndex
+        });
+      }
+
+      return tokens;
+    }
+
+    function renderExpression(normalized) {
+      expressionPreview.replaceChildren();
+
+      if (!normalized) {
+        return;
+      }
+
+      const tokens = tokenizeExpression(normalized);
+
+      tokens.forEach((token) => {
+        const part = document.createElement("span");
+        part.textContent = token.value;
+
+        if (token.type === "number") {
+          part.className = "token-number";
+          part.style.setProperty("--tone", getNumberColor(token.numberIndex));
+        } else {
+          part.className = "token-operator";
+        }
+
+        expressionPreview.append(part);
+      });
+    }
+
+    function renderNumberStrip(normalized) {
+      numberStrip.replaceChildren();
+
+      if (!normalized) {
+        return;
+      }
+
+      tokenizeExpression(normalized)
+        .filter((token) => token.type === "number")
+        .forEach((token) => {
+          const chip = document.createElement("span");
+          const index = document.createElement("span");
+          const value = document.createElement("span");
+
+          chip.className = "number-chip";
+          chip.style.setProperty("--tone", getNumberColor(token.numberIndex));
+
+          index.className = "number-chip-index";
+          index.textContent = `#${token.numberIndex + 1}`;
+
+          value.className = "number-chip-value";
+          value.textContent = token.value;
+
+          chip.append(index, value);
+          numberStrip.append(chip);
+        });
+    }
+
     function evaluateExpression(raw) {
       const normalized = normalizeExpression(raw);
 
@@ -290,7 +440,8 @@
     }
 
     function render(state) {
-      expressionPreview.textContent = state.normalized;
+      renderNumberStrip(state.normalized);
+      renderExpression(state.normalized);
       resultValue.classList.remove("is-idle", "is-invalid");
 
       if (state.state === "idle") {
