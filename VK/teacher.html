@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Teacher Dashboard</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700;800&family=Noto+Sans+Thai:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <link rel="stylesheet" href="./dashboard.css" />
+</head>
+
+<body class="min-h-screen dots">
+  <div class="app-frame">
+    <div class="app-body">
+      <div class="app-content">
+        <div class="app-shell">
+          <main class="app-main">
+            <div class="page-screen">
+              <div class="page-scroll">
+                <div class="clay p-5 sm:p-6">
+                  <div class="flex flex-col xl:flex-row xl:items-start justify-between gap-4">
+                    <div class="min-w-0">
+                      <div class="text-2xl font-extrabold">ภาพรวมผู้เรียน</div>
+                      <div class="mt-2 text-sm text-slate-600">
+                        ชื่อวิชา: <span id="teacher-course-name" class="font-semibold">-</span>
+                      </div>
+                      <div class="mt-1 text-sm text-slate-600">
+                        Course ID: <span id="teacher-course-id" class="mono font-semibold">-</span>
+                      </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
+                      <input id="teacher-search" class="field rounded-full px-4 py-3 text-sm min-w-[260px]" type="search" placeholder="ค้นหาชื่อหรืออีเมล" />
+                      <select id="teacher-filter" class="field rounded-full px-4 py-3 text-sm">
+                        <option value="all">ผู้เรียนทั้งหมด</option>
+                        <option value="done">เรียนครบ 100%</option>
+                        <option value="active">กำลังเรียน</option>
+                        <option value="risk">ต้องติดตาม</option>
+                        <option value="noscore">ยังไม่มีคะแนน</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div id="teacher-status" class="mt-4 text-sm text-slate-500">กำลังโหลดข้อมูล...</div>
+
+                  <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <div class="clay-soft p-4 cat-card cat-1">
+                      <div class="text-sm text-slate-500">ผู้เรียนทั้งหมด</div>
+                      <div id="metric-students" class="mt-2 text-3xl font-black mono text-brand-soft">0</div>
+                    </div>
+                    <div class="clay-soft p-4 cat-card cat-3">
+                      <div class="text-sm text-slate-500">ความคืบหน้าเฉลี่ย</div>
+                      <div id="metric-progress" class="mt-2 text-3xl font-black mono text-brand-soft">0%</div>
+                    </div>
+                    <div class="clay-soft p-4 cat-card cat-2">
+                      <div class="text-sm text-slate-500">เรียนครบแล้ว</div>
+                      <div id="metric-completed" class="mt-2 text-3xl font-black mono text-brand-soft">0</div>
+                    </div>
+                    <div class="clay-soft p-4 cat-card cat-4">
+                      <div class="text-sm text-slate-500">คะแนน Quiz เฉลี่ย</div>
+                      <div id="metric-score" class="mt-2 text-3xl font-black mono text-brand-soft">-</div>
+                    </div>
+                  </div>
+
+                  <div class="mt-5 grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    <div class="clay-soft p-4 cat-card cat-3">
+                      <div class="flex items-start justify-between gap-3">
+                        <div>
+                          <div class="font-bold">การกระจายความคืบหน้า</div>
+                          <div class="mt-1 text-sm text-slate-600">จำนวนผู้เรียนตามช่วงเปอร์เซ็นต์</div>
+                        </div>
+                        <div id="progress-bucket-summary" class="text-xs text-slate-500 mono">-</div>
+                      </div>
+                      <div class="mt-4 h-[250px]">
+                        <canvas class="chart-canvas" id="teacherProgressChart"></canvas>
+                      </div>
+                    </div>
+
+                    <div class="clay-soft p-4 cat-card cat-4">
+                      <div class="flex items-start justify-between gap-3">
+                        <div>
+                          <div class="font-bold">ภาพรวมคะแนน Quiz</div>
+                          <div class="mt-1 text-sm text-slate-600">คะแนนรวมจากข้อมูล score.json</div>
+                        </div>
+                        <div id="score-summary" class="text-xs text-slate-500 mono">-</div>
+                      </div>
+                      <div class="mt-4 h-[250px]">
+                        <canvas class="chart-canvas" id="teacherScoreChart"></canvas>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mt-5 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-4">
+                    <div class="clay-soft p-4 cat-card cat-1">
+                      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <div class="font-bold">รายชื่อผู้เรียน</div>
+                          <div id="teacher-table-summary" class="mt-1 text-sm text-slate-600">-</div>
+                        </div>
+                        <button id="teacher-sort-toggle" type="button" class="ghost px-4 py-2 text-sm font-semibold">เรียง: ต้องติดตามก่อน</button>
+                      </div>
+                      <div class="mt-4 teacher-table-wrap">
+                        <table class="teacher-table">
+                          <thead>
+                            <tr>
+                              <th>ผู้เรียน</th>
+                              <th>ความคืบหน้า</th>
+                              <th>คะแนน</th>
+                              <th>อัปเดตล่าสุด</th>
+                              <th>สถานะ</th>
+                            </tr>
+                          </thead>
+                          <tbody id="teacher-student-rows">
+                            <tr><td colspan="5" class="text-center text-slate-500">กำลังโหลดข้อมูล...</td></tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    <div class="clay-soft p-4 cat-card cat-5">
+                      <div class="font-bold">ผู้เรียนที่ควรติดตาม</div>
+                      <div class="mt-1 text-sm text-slate-600">เรียงจากความคืบหน้าและคะแนนต่ำสุด</div>
+                      <div id="teacher-watch-list" class="mt-4 grid gap-3">
+                        <div class="text-sm text-slate-500">กำลังโหลดข้อมูล...</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mt-5 clay-soft p-4 cat-card cat-2">
+                    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                      <div>
+                        <div class="font-bold">กิจกรรมในรายวิชา</div>
+                        <div class="mt-1 text-sm text-slate-600">ดึงจาก course.json เพื่อให้ครูเห็นว่าแต่ละบทมีเครื่องมือใดบ้าง</div>
+                      </div>
+                      <div id="teacher-activity-summary" class="text-xs text-slate-500 mono">-</div>
+                    </div>
+                    <div id="teacher-activity-list" class="mt-4 grid gap-3"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.TEACHER_DASHBOARD_CONFIG = {
+      // source: "api",
+      // apiBaseUrl: "https://example.com",
+      // endpoints: {
+      //   course: "/teacher/course",
+      //   progress: "/teacher/progress",
+      //   score: "/teacher/score",
+      // },
+    };
+    const teacherScript = document.createElement("script");
+    teacherScript.src = `./teacher.js?v=${Date.now()}`;
+    teacherScript.async = false;
+    document.currentScript.after(teacherScript);
+  </script>
+</body>
+</html>

@@ -183,6 +183,16 @@
   <button id="global-loading-toggle" type="button" class="global-loading-toggle">สถานะการอัปเดต</button>
   <div id="video-hover-tooltip" class="video-hover-tooltip" role="tooltip" aria-hidden="true"></div>
 
-  <script src="./student.js"></script>
+  <script>
+    window.STUDENT_DASHBOARD_CONFIG = {
+      // oidc: {
+      //   redirectUri: "https://example.com/student.html",
+      // },
+    };
+    const studentScript = document.createElement("script");
+    studentScript.src = `./student.js?v=${Date.now()}`;
+    studentScript.async = false;
+    document.currentScript.after(studentScript);
+  </script>
 </body>
 </html>

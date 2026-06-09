@@ -727,3 +727,118 @@ details[open] > summary .debug-api-request-summary-icon{
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+.teacher-table-wrap{
+  width: 100%;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+}
+.teacher-table{
+  width: 100%;
+  min-width: 920px;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px;
+}
+.teacher-table th,
+.teacher-table td{
+  padding: 12px 14px;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border);
+}
+.teacher-table th{
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.teacher-table tbody tr:hover{
+  background: rgba(224,250,248,.42);
+}
+.teacher-table tbody tr:last-child td{
+  border-bottom: 0;
+}
+.teacher-progress-cell{
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 190px;
+}
+.teacher-progress-track{
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+.teacher-progress-fill{
+  height: 100%;
+  border-radius: inherit;
+}
+.teacher-status-pill{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.teacher-status-pill.success{
+  background: rgba(24,184,121,.14);
+  color: #047857;
+}
+.teacher-status-pill.info{
+  background: rgba(79,140,255,.14);
+  color: #1d4ed8;
+}
+.teacher-status-pill.danger{
+  background: rgba(245,106,106,.16);
+  color: #b91c1c;
+}
+.badge{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-decoration: none;
+  border: 1px solid rgba(0,0,0,.08);
+  background: rgba(148,163,184,.18);
+  color: #334155;
+  white-space: nowrap;
+}
+.badge.tool-ae{ background: rgba(245,158,11,.16); color: #7c2d12; }
+.badge.tool-bookroll{ background: rgba(79,140,255,.16); color: #1e3a8a; }
+.badge.tool-video{ background: rgba(197,156,255,.16); color: #3b0764; }
+.badge.tool-chatbot{ background: rgba(245,106,106,.16); color: #7f1d1d; }
+.badge.tool-sim{ background: rgba(31,185,183,.16); color: #0b4f55; }
+.badge.tool-iframe{ background: rgba(246,184,106,.18); color: #7c2d12; }
+.badge.tool-mixed{ background: rgba(148,163,184,.22); color: #334155; }
+a.badge:hover{
+  filter: brightness(.98);
+  transform: translateY(-1px);
+}
+.teacher-activity-row{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+}
+@media (max-width: 640px){
+  .teacher-activity-row{
+    grid-template-columns: 1fr;
+  }
+}

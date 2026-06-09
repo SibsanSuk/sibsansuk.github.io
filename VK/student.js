@@ -2,14 +2,22 @@ const qs = new URLSearchParams(window.location.search);
 const SHOW_BOOKROLL = qs.get("bookroll") === "1";
 const SHOW_DEBUG_CARD = qs.get("debug") === "1";
 const SHOW_LOGIN_BUTTONS = qs.get("loginbtn") === "true";
+const getCurrentPageUrl = () => {
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+};
+const STUDENT_CONFIG = window.STUDENT_DASHBOARD_CONFIG || {};
 const OIDC = {
   authorizationEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/auth",
   tokenEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/token",
   userinfoEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/userinfo",
   logoutEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/logout",
   clientId: "dashboard",
-  redirectUri: "https://sibsansuk.github.io/VK/student.html",
+  redirectUri: getCurrentPageUrl(),
   scope: "openid profile email",
+  ...(STUDENT_CONFIG.oidc || {}),
 };
 
 const base64Url = (buffer) => {
