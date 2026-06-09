@@ -904,6 +904,7 @@ const renderDebugApiCard = () => {
   if (!cardEl || !contentEl) return;
   cardEl.classList.remove("hidden");
   const order = [
+    "login-auth",
     "course-detail",
     "bookroll-reading",
     "bookroll-activity",
@@ -980,7 +981,9 @@ const setDebugApiEntry = (id, patch) => {
 
 const resetDebugApiState = () => {
   if (!SHOW_DEBUG_CARD) return;
+  const loginAuthEntry = debugApiState["login-auth"] || null;
   Object.keys(debugApiState).forEach((key) => delete debugApiState[key]);
+  if (loginAuthEntry) debugApiState["login-auth"] = loginAuthEntry;
   renderDebugApiCard();
 };
 
@@ -1053,6 +1056,46 @@ const updateLoginDebugPanel = () => {
     };
     loginDebugTabRawEl.textContent = JSON.stringify(raw, null, 2);
   }
+
+  setDebugApiEntry("login-auth", {
+    label: "ข้อมูลจากการเข้าสู่ระบบ",
+    state: loggedIn ? "success" : "skipped",
+    badge: loggedIn ? "ล็อกอินแล้ว" : "ยังไม่ล็อกอิน",
+    message: loggedIn
+      ? `userId: ${sessionUser}`
+      : "ยังไม่มีข้อมูล login ใน sessionStorage",
+    requests: [{
+      label: "ข้อมูล login ทั้งหมด",
+      url: OIDC.redirectUri,
+      state: loggedIn ? "success" : "skipped",
+      message: loggedIn ? "พบข้อมูลจาก OIDC" : "ยังไม่มีข้อมูล",
+      payload: {
+        auth: auth || null,
+        oidc: {
+          authorizationEndpoint: OIDC.authorizationEndpoint,
+          tokenEndpoint: OIDC.tokenEndpoint,
+          userinfoEndpoint: OIDC.userinfoEndpoint,
+          logoutEndpoint: OIDC.logoutEndpoint,
+          clientId: OIDC.clientId,
+          redirectUri: OIDC.redirectUri,
+          scope: OIDC.scope,
+        },
+        decoded: {
+          idToken: token.id_token ? decodeJwt(token.id_token) : null,
+          accessToken: token.access_token ? decodeJwt(token.access_token) : null,
+        },
+        derived: {
+          loggedIn,
+          userId: userId || null,
+          courseId: courseId || null,
+          profileEmail: profile.email || null,
+          preferredUsername: profile.preferred_username || null,
+          videoUserName: videoUser.value || null,
+          videoUserNameSource: videoUser.source,
+        },
+      },
+    }],
+  });
 };
 
 setLoginDebugTab(window.loginDebugTab || "summary");
@@ -3828,10 +3871,13 @@ if (error) {
       const authPayload = {
         userId: resolvedUserId,
         profile: userinfo || claims || {},
+        claims,
+        userinfo,
         token: {
           access_token: token.access_token,
           id_token: token.id_token,
           expires_in: token.expires_in,
+          raw: token,
         },
       };
       storeAuth(authPayload);
