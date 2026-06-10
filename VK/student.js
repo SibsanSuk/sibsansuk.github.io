@@ -278,6 +278,7 @@ const extractAdaptiveQuizRefFromIframeUrl = (url) => {
 
 const getAdaptiveQuizBlockIdFromCourse = (course) => {
   const stack = course && typeof course === "object" ? [course] : [];
+  const candidates = [];
   while (stack.length) {
     const node = stack.shift();
     if (!node || typeof node !== "object") continue;
@@ -286,14 +287,22 @@ const getAdaptiveQuizBlockIdFromCourse = (course) => {
     const data = fields.data && typeof fields.data === "object" ? fields.data : {};
     const aetool = String(fields.aetool || fields.tool_type || fields.toolType || data.aetool || "").toLowerCase();
     const iframeUrl = String(fields.iframe_url || fields.iframeUrl || fields.launch_url || fields.launchUrl || fields.url || fields.href || fields.src || data.iframe_url || "");
-    const isAdaptiveQuiz = aetool === "chatbot" || iframeUrl.includes("/chat/adaptive/");
+    const isSharedDashboardLead = iframeUrl.includes("/adaptive-quiz/lead");
+    const isAdaptiveQuiz = isSharedDashboardLead || aetool === "chatbot" || iframeUrl.includes("/chat/adaptive/");
     if (isAdaptiveQuiz) {
-      return extractBlockRefFromId(id) || extractAdaptiveQuizRefFromIframeUrl(iframeUrl);
+      const refCode = extractBlockRefFromId(id) || extractAdaptiveQuizRefFromIframeUrl(iframeUrl);
+      if (refCode) {
+        candidates.push({
+          refCode,
+          priority: isSharedDashboardLead ? 0 : (iframeUrl.includes("/chat/adaptive/") ? 1 : 2)
+        });
+      }
     }
     const kids = Array.isArray(node.children) ? node.children : [];
     if (kids.length) stack.push(...kids);
   }
-  return "";
+  candidates.sort((a, b) => a.priority - b.priority);
+  return candidates[0]?.refCode || "";
 };
 
 const getAdaptiveQuizLearnerEmail = () => {
