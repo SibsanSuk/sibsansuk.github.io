@@ -239,6 +239,37 @@ const chatbotSpeedUrl = (cid, uid) =>
 const chatbotPerformanceUrl = (cid, uid) =>
   `https://sbs-backend.mooc.meca.in.th/stats/echart/chatbotPerformance/${encodeURIComponent(cid)}/${encodeURIComponent(uid)}`;
 
+const adaptiveQuizSharedDashboardUrl = (learnerEmail, leadLabel, refCode) =>
+  `https://edubot.abdul.in.th/adaptive-quiz/api/v1/shared-dashboard/learner/${encodeURIComponent(learnerEmail)}/by-lead-label/${encodeURIComponent(leadLabel)}?ref_code=${encodeURIComponent(refCode)}`;
+
+const normalizeAdaptiveQuizLeadLabel = (cid) =>
+  String(cid || "").replace(/^course-v1:/, "");
+
+const ADAPTIVE_QUIZ_READONLY_API_KEY = "MvljPE_NrchnS7tJLU5pWck444BtpYC6d1V0GeuWucI";
+
+const getAdaptiveQuizApiKey = () => ADAPTIVE_QUIZ_READONLY_API_KEY;
+
+const getAdaptiveQuizRefCode = () =>
+  STUDENT_CONFIG.adaptiveQuiz?.refCode ||
+  qs.get("ref_code") ||
+  qs.get("refCode") ||
+  qs.get("adaptive_ref_code") ||
+  "";
+
+const getAdaptiveQuizLearnerEmail = () => {
+  const profile = auth?.profile && typeof auth.profile === "object" ? auth.profile : {};
+  const candidates = [
+    STUDENT_CONFIG.adaptiveQuiz?.learnerEmail,
+    qs.get("learner_email"),
+    qs.get("learnerEmail"),
+    profile.email,
+    auth?.userinfo?.email,
+    auth?.claims?.email,
+    userId
+  ];
+  return String(candidates.find((value) => typeof value === "string" && value.includes("@")) || "").trim();
+};
+
 const isLikelyCourseId = (cid) =>
   typeof cid === "string" && cid.includes("course-v1:");
 
@@ -910,7 +941,8 @@ const renderDebugApiCard = () => {
     "bookroll-activity",
     "video-progress",
     "chatbot-speed",
-    "chatbot-performance"
+    "chatbot-performance",
+    "adaptive-quiz-shared-dashboard"
   ];
   const items = order
     .map((id) => ({ id, ...debugApiState[id] }))
@@ -3423,6 +3455,97 @@ const fetchChatbotPerformance = async () => {
   }
 };
 
+const fetchAdaptiveQuizSharedDashboard = async () => {
+  window.adaptiveQuizSharedDashboardRaw = null;
+  const apiKey = getAdaptiveQuizApiKey();
+  const refCode = getAdaptiveQuizRefCode();
+  const learnerEmail = getAdaptiveQuizLearnerEmail();
+  const leadLabel = normalizeAdaptiveQuizLeadLabel(courseId);
+  const srcUrl = learnerEmail && leadLabel && refCode
+    ? adaptiveQuizSharedDashboardUrl(learnerEmail, leadLabel, refCode)
+    : "";
+
+  if (!courseId || !isLikelyCourseId(courseId)) {
+    setDebugApiEntry("adaptive-quiz-shared-dashboard", {
+      label: "Adaptive Quiz shared dashboard",
+      state: "skipped",
+      badge: "ไม่มีข้อมูล",
+      message: "ยังไม่พร้อมเรียก Adaptive Quiz เพราะไม่มี courseid",
+      requests: []
+    });
+    return { state: "skipped", message: "ยังไม่พร้อมเรียก Adaptive Quiz เพราะไม่มี courseid" };
+  }
+  if (!learnerEmail) {
+    setDebugApiEntry("adaptive-quiz-shared-dashboard", {
+      label: "Adaptive Quiz shared dashboard",
+      state: "skipped",
+      badge: "ไม่มีข้อมูล",
+      message: "ยังไม่พร้อมเรียก Adaptive Quiz เพราะไม่พบ learner email",
+      requests: []
+    });
+    return { state: "skipped", message: "ยังไม่พร้อมเรียก Adaptive Quiz เพราะไม่พบ learner email" };
+  }
+  if (!refCode) {
+    setDebugApiEntry("adaptive-quiz-shared-dashboard", {
+      label: "Adaptive Quiz shared dashboard",
+      state: "skipped",
+      badge: "ไม่มีข้อมูล",
+      message: "ยังไม่พร้อมเรียก Adaptive Quiz เพราะไม่พบ ref_code",
+      requests: []
+    });
+    return { state: "skipped", message: "ยังไม่พร้อมเรียก Adaptive Quiz เพราะไม่พบ ref_code" };
+  }
+  if (!apiKey) {
+    setDebugApiEntry("adaptive-quiz-shared-dashboard", {
+      label: "Adaptive Quiz shared dashboard",
+      state: "skipped",
+      badge: "ไม่มีข้อมูล",
+      message: "ยังไม่พร้อมเรียก Adaptive Quiz เพราะไม่พบ x-api-key",
+      requests: [
+        { label: "shared learner dashboard", url: srcUrl, state: "skipped", message: "ไม่มี x-api-key", payload: "ตั้งค่า key ผ่าน STUDENT_DASHBOARD_CONFIG.adaptiveQuiz.apiKey, sessionStorage.adaptive_quiz_api_key, หรือ query adaptive_api_key" }
+      ]
+    });
+    return { state: "skipped", message: "ยังไม่พร้อมเรียก Adaptive Quiz เพราะไม่พบ x-api-key" };
+  }
+
+  try {
+    const res = await fetch(srcUrl, {
+      headers: { "x-api-key": apiKey }
+    });
+    if (!res.ok) throw await createHttpError(res);
+    const data = await res.json();
+    window.adaptiveQuizSharedDashboardRaw = data;
+    const collectionCount = Number(data?.total_collections) || (Array.isArray(data?.collections) ? data.collections.length : 0);
+    const quizCount = Array.isArray(data?.collections)
+      ? data.collections.reduce((sum, collection) => sum + (Number(collection?.total_quizzes) || (Array.isArray(collection?.quizzes) ? collection.quizzes.length : 0)), 0)
+      : 0;
+    const message = `โหลด Adaptive Quiz สำเร็จ ${collectionCount} collection • ${quizCount} quiz`;
+    setDebugApiEntry("adaptive-quiz-shared-dashboard", {
+      label: "Adaptive Quiz shared dashboard",
+      state: "success",
+      badge: "พร้อมตรวจสอบ",
+      message,
+      requests: [
+        { label: "shared learner dashboard", url: srcUrl, state: "success", message: "พร้อมตรวจสอบ", payload: data }
+      ]
+    });
+    return { state: "success", message };
+  } catch (err) {
+    window.adaptiveQuizSharedDashboardRaw = null;
+    console.warn("Adaptive Quiz shared dashboard API error:", err);
+    setDebugApiEntry("adaptive-quiz-shared-dashboard", {
+      label: "Adaptive Quiz shared dashboard",
+      state: "error",
+      badge: "มีปัญหา",
+      message: "ไม่สามารถโหลด Adaptive Quiz shared dashboard ได้",
+      requests: [
+        { label: "shared learner dashboard", url: srcUrl, state: "error", message: "มีปัญหา", payload: err?.message || "เกิดข้อผิดพลาด" }
+      ]
+    });
+    return { state: "error", message: "ไม่สามารถโหลด Adaptive Quiz shared dashboard ได้" };
+  }
+};
+
 document.getElementById("overall-value-wide").textContent = "0%";
 document.getElementById("overall-bar-wide").style.width = "0%";
 document.getElementById("bookroll-donut-done").textContent = "0";
@@ -3524,7 +3647,8 @@ const getDashboardTaskDefs = () => {
     { id: "bookroll-reading", label: "ความคืบหน้าการอ่าน", run: fetchBookrollReadingData, requiresTool: "bookroll" },
     { id: "video-progress", label: "ความคืบหน้าวิดีโอ", run: fetchVideoLearningProgress, requiresTool: "video" },
     { id: "chatbot-speed", label: "ระยะเวลาการทำแบบฝึกหัด", run: fetchChatbotSpeed, requiresTool: "chatbot" },
-    { id: "chatbot-performance", label: "ผลการทำแบบฝึกหัด", run: fetchChatbotPerformance, requiresTool: "chatbot" }
+    { id: "chatbot-performance", label: "ผลการทำแบบฝึกหัด", run: fetchChatbotPerformance, requiresTool: "chatbot" },
+    { id: "adaptive-quiz-shared-dashboard", label: "Adaptive Quiz shared dashboard", run: fetchAdaptiveQuizSharedDashboard }
   ];
   if (SHOW_BOOKROLL) tasks.push({ id: "bookroll-activity", label: "พฤติกรรมการอ่าน", run: fetchBookroll, requiresTool: "bookroll" });
   return tasks;
