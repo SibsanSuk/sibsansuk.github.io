@@ -248,7 +248,53 @@ const getAdaptiveQuizRefCode = () =>
   qs.get("ref_code") ||
   qs.get("refCode") ||
   qs.get("adaptive_ref_code") ||
+  getAdaptiveQuizBlockIdFromCourse(window.courseDetailData) ||
   "";
+
+const extractBlockRefFromId = (id) => {
+  const match = String(id || "").match(/(?:^|[+])block@([^+@/?#&]+)/);
+  return match?.[1] || "";
+};
+
+const extractAdaptiveQuizRefFromIframeUrl = (url) => {
+  const raw = String(url || "");
+  if (!raw) return "";
+  try {
+    const parsed = new URL(raw, window.location.href);
+    const msg = parsed.searchParams.get("msg") || "";
+    const parts = decodeURIComponent(msg).split(",");
+    return String(parts[1] || "").trim();
+  } catch {
+    const match = raw.match(/[?&]msg=([^&#]+)/);
+    if (!match) return "";
+    try {
+      const parts = decodeURIComponent(match[1]).split(",");
+      return String(parts[1] || "").trim();
+    } catch {
+      return "";
+    }
+  }
+};
+
+const getAdaptiveQuizBlockIdFromCourse = (course) => {
+  const stack = course && typeof course === "object" ? [course] : [];
+  while (stack.length) {
+    const node = stack.shift();
+    if (!node || typeof node !== "object") continue;
+    const id = String(node.id || "");
+    const fields = node.fields && typeof node.fields === "object" ? node.fields : {};
+    const data = fields.data && typeof fields.data === "object" ? fields.data : {};
+    const aetool = String(fields.aetool || fields.tool_type || fields.toolType || data.aetool || "").toLowerCase();
+    const iframeUrl = String(fields.iframe_url || fields.iframeUrl || fields.launch_url || fields.launchUrl || fields.url || fields.href || fields.src || data.iframe_url || "");
+    const isAdaptiveQuiz = aetool === "chatbot" || iframeUrl.includes("/chat/adaptive/");
+    if (isAdaptiveQuiz) {
+      return extractBlockRefFromId(id) || extractAdaptiveQuizRefFromIframeUrl(iframeUrl);
+    }
+    const kids = Array.isArray(node.children) ? node.children : [];
+    if (kids.length) stack.push(...kids);
+  }
+  return "";
+};
 
 const getAdaptiveQuizLearnerEmail = () => {
   const profile = auth?.profile && typeof auth.profile === "object" ? auth.profile : {};
