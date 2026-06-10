@@ -1,4 +1,5 @@
 const qs = new URLSearchParams(window.location.search);
+const SHOW_BOOKROLL = qs.get("bookroll") === "1";
 const SHOW_DEBUG_CARD = qs.get("debug") === "1";
 const SHOW_LOGIN_BUTTONS = qs.get("loginbtn") === "true";
 const getCurrentPageUrl = () => {
@@ -211,6 +212,11 @@ if (topicTabsEl) {
   });
 }
 
+document.querySelectorAll("[data-login-tab]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    setLoginDebugTab(btn.getAttribute("data-login-tab"));
+  });
+});
 
 const bookrollUrl = (uid, cid) =>
   `https://bookroll.thaidlt.com/meca/student/BR_activity?userID=${encodeURIComponent(uid)}&usageId=${encodeURIComponent(cid)}`;
@@ -276,6 +282,54 @@ const pickNumber = (obj, keys) => {
   return null;
 };
 
+const normalizeBookroll = (data) => {
+  if (!data) return { read: null, total: null, progress: null };
+  const row = Array.isArray(data) ? data[0] : data;
+  const read = pickNumber(row, ["readPage", "read_page", "pageRead", "pagesRead", "read_pages", "readCount"]);
+  const total = pickNumber(row, ["totalPage", "total_page", "pageTotal", "pagesTotal", "total_pages", "pageCount"]);
+  const progress = pickNumber(row, ["progress", "progressRate", "rate", "percent", "percentage"]);
+  return { read, total, progress };
+};
+
+const updateBookrollJsonDrawer = () => {
+  const statusEl = document.getElementById("bookroll-json-status");
+  const readingRawEl = document.getElementById("bookroll-reading-raw");
+  const activityRawEl = document.getElementById("bookroll-activity-raw-debug");
+  const reading = window.bookrollReadingData ?? null;
+  const activity = window.bookrollData ?? null;
+  if (readingRawEl) {
+    readingRawEl.textContent = reading ? JSON.stringify(reading, null, 2) : "ยังไม่มีข้อมูล";
+  }
+  if (activityRawEl) {
+    activityRawEl.textContent = activity
+      ? JSON.stringify(activity, null, 2)
+      : (SHOW_BOOKROLL ? "ยังไม่มีข้อมูล" : "ไม่ได้โหลด (เปิดด้วย ?bookroll=1)");
+  }
+  if (statusEl) {
+    const readingCount = getBookrollReadingDisplayCount();
+    const activityLoaded = !!activity;
+    statusEl.textContent = `reading: ${readingCount} รายการ • activity: ${activityLoaded ? "โหลดแล้ว" : "ยังไม่โหลด"}`;
+  }
+};
+
+const updateVideoJsonDrawer = () => {
+  const statusEl = document.getElementById("video-json-status");
+  const rawEl = document.getElementById("video-raw-debug");
+  const raw = window.videoLearningRaw ?? null;
+  const user = resolveVideoUserNameInfo();
+  if (rawEl) {
+    rawEl.textContent = raw ? JSON.stringify(raw, null, 2) : "ยังไม่มีข้อมูล";
+  }
+  if (statusEl) {
+    const count = Number(Array.isArray(window.videoProgressData) ? window.videoProgressData.length : 0);
+    const heatmapCount = Number(Array.isArray(window.videoHeatmapData) ? window.videoHeatmapData.length : 0);
+    const activeHeatmapCount = Number(Array.isArray(window.videoHeatmapData)
+      ? window.videoHeatmapData.filter((entry) => Number(entry?.activeBuckets) > 0).length
+      : 0);
+    const apiStatus = String(window.videoApiStatus || "idle");
+    statusEl.textContent = `entries: ${count} • heatmap: ${activeHeatmapCount}/${heatmapCount} • api: ${apiStatus} • userName: ${user?.value || "-"}`;
+  }
+};
 
 const normalizeTopicKey = (s) =>
   decodeIfMojibake(String(s || ""))
@@ -965,6 +1019,20 @@ const resetDebugApiState = () => {
   renderDebugApiCard();
 };
 
+const setLoginDebugTab = (tab) => {
+  const next = tab === "derived" || tab === "raw" ? tab : "summary";
+  const tabs = document.querySelectorAll("[data-login-tab]");
+  tabs.forEach((btn) => {
+    const active = btn.getAttribute("data-login-tab") === next;
+    btn.className = active
+      ? "pill px-3 py-1.5 text-xs font-semibold tracking-wide text-white grad-brand"
+      : "ghost px-3 py-1.5 text-xs text-slate-700";
+  });
+  if (loginDebugTabSummaryEl) loginDebugTabSummaryEl.classList.toggle("hidden", next !== "summary");
+  if (loginDebugTabDerivedEl) loginDebugTabDerivedEl.classList.toggle("hidden", next !== "derived");
+  if (loginDebugTabRawEl) loginDebugTabRawEl.classList.toggle("hidden", next !== "raw");
+  window.loginDebugTab = next;
+};
 
 const updateLoginDebugPanel = () => {
   const profile = auth?.profile && typeof auth.profile === "object" ? auth.profile : {};
@@ -1060,6 +1128,314 @@ const updateLoginDebugPanel = () => {
       },
     }],
   });
+};
+
+setLoginDebugTab(window.loginDebugTab || "summary");
+
+const courseDeepState = {
+  root: null,
+  flat: [],
+  selectedPath: null,
+  search: "",
+  verticalToolCache: new Map(),
+};
+
+const flattenCourseTree = (root) => {
+  const out = [];
+  const walk = (node, path, parentPath) => {
+    if (!node || typeof node !== "object" || Array.isArray(node)) return;
+    const kind = node.kind || (node.courseKey ? "course" : "node");
+    const title = decodeIfMojibake(node.courseTitle || node.title || node.fields?.title || "-");
+    const id = node.id || node.courseKey || "";
+    out.push({ node, path, parentPath, kind, title, id });
+    const kids = Array.isArray(node.children) ? node.children : [];
+    kids.forEach((c, i) => walk(c, `${path}.${i}`, path));
+  };
+  walk(root, "root", null);
+  return out;
+};
+
+const courseDeepBadgeHtml = (kind) => {
+  const k = String(kind || "node");
+  const cls =
+    k === "chapter" ? "badge kind-chapter" :
+    k === "sequential" ? "badge kind-sequential" :
+    k === "vertical" ? "badge kind-vertical" :
+    k === "html" ? "badge kind-html" :
+    "badge";
+  return `<span class="${cls}">${escapeHtml(k)}</span>`;
+};
+
+const courseDeepToolBadgeHtml = (path, node, kind) => {
+  if (kind !== "vertical") return "";
+  if (courseDeepState.verticalToolCache.has(path)) return courseDeepState.verticalToolCache.get(path);
+  const tool = inferVerticalTool(node);
+  if (!tool) return "";
+  const label = tool.sublabel ? `${tool.label}: ${tool.sublabel}` : tool.label;
+  const t = String(label).toLowerCase();
+  const cls =
+    t.includes("bookroll") ? "badge tool-bookroll" :
+    t.includes("video") ? "badge tool-video" :
+    t.includes("chatbot") ? "badge tool-chatbot" :
+    t.includes("simulator") ? "badge tool-sim" :
+    t.includes("iframe") ? "badge tool-iframe" :
+    t.includes("ae tool") ? "badge tool-ae" :
+    "badge tool-mixed";
+  const html = `<span class="${cls}">${escapeHtml(label)}</span>`;
+  courseDeepState.verticalToolCache.set(path, html);
+  return html;
+};
+
+const courseDeepMatchesSearch = (row, q) => {
+  if (!q) return true;
+  const s = q.toLowerCase();
+  return (
+    String(row?.title || "").toLowerCase().includes(s) ||
+    String(row?.id || "").toLowerCase().includes(s) ||
+    String(row?.kind || "").toLowerCase().includes(s)
+  );
+};
+
+const renderCourseDeepSubtree = (parentPath, parentNode, depth = 1) => {
+  const q = courseDeepState.search.trim();
+  const kids = Array.isArray(parentNode?.children) ? parentNode.children : [];
+  if (!kids.length) return "";
+
+  return kids.map((k, i) => {
+    const path = `${parentPath}.${i}`;
+    const row = courseDeepState.flat.find((r) => r.path === path);
+    const title = row?.title || pickTitle(k, "-");
+    const kind = row?.kind || k?.kind || "node";
+    const id = row?.id || k?.id || "";
+    const childKids = Array.isArray(k?.children) ? k.children : [];
+    const selfMatch = courseDeepMatchesSearch({ title, id, kind }, q);
+    const anyChild = !q ? true : courseDeepState.flat.some((r) => r.path.startsWith(path + ".") && courseDeepMatchesSearch(r, q));
+    if (q && !selfMatch && !anyChild) return "";
+
+    const active = courseDeepState.selectedPath === path ? "active" : "";
+    const pad = Math.min(depth * 10, 32);
+    if (!childKids.length) {
+      return `
+        <button class="course-tree-btn ${active}" style="padding-left:${12 + pad}px" data-course-path="${escapeHtml(path)}">
+          <div class="flex items-center justify-between gap-2">
+            <div class="truncate">${escapeHtml(title)}</div>
+            <div class="flex items-center gap-2">
+              ${courseDeepBadgeHtml(kind)}
+              ${courseDeepToolBadgeHtml(path, k, kind)}
+            </div>
+          </div>
+          ${id ? `<div class="mt-1 text-xs text-slate-500 mono break-all">${escapeHtml(id)}</div>` : ""}
+        </button>
+      `;
+    }
+
+    return `
+      <details class="panel p-2">
+        <summary>
+          <button class="course-tree-btn ${active}" style="padding-left:${12 + pad}px" data-course-path="${escapeHtml(path)}">
+            <div class="flex items-center justify-between gap-2">
+              <div class="font-semibold">${escapeHtml(title)}</div>
+              <div class="flex items-center gap-2">
+                ${courseDeepBadgeHtml(kind)}
+                ${courseDeepToolBadgeHtml(path, k, kind)}
+              </div>
+            </div>
+            ${id ? `<div class="mt-1 text-xs text-slate-500 mono break-all">${escapeHtml(id)}</div>` : ""}
+          </button>
+        </summary>
+        <div class="mt-2 grid gap-2">
+          ${renderCourseDeepSubtree(path, k, depth + 1)}
+        </div>
+      </details>
+    `;
+  }).filter(Boolean).join("");
+};
+
+const renderCourseDeepTree = () => {
+  const treeEl = document.getElementById("course-deep-tree");
+  const statusEl = document.getElementById("course-deep-status");
+  if (!treeEl) return;
+  if (!courseDeepState.root) {
+    treeEl.innerHTML = `<div class="text-sm text-slate-600">ยังไม่มีข้อมูล</div>`;
+    if (statusEl) statusEl.textContent = "รอข้อมูล";
+    return;
+  }
+
+  const q = courseDeepState.search.trim();
+  const chapters = getSortedChapterEntries(courseDeepState.root).map(({ c: ch, idx: origIdx }) => ({
+    ch,
+    origIdx,
+  }));
+
+  const filteredFlat = courseDeepState.flat.filter((r) => courseDeepMatchesSearch(r, q));
+  if (statusEl) statusEl.textContent = q ? `ผลค้นหา: ${filteredFlat.length}` : `nodes: ${courseDeepState.flat.length}`;
+
+  const chapterRows = chapters.map(({ ch, origIdx }) => {
+    const path = `root.${origIdx}`;
+    const row = courseDeepState.flat.find((r) => r.path === path);
+    const title = row?.title || pickTitle(ch, `บท ${origIdx + 1}`);
+    const id = row?.id || ch?.id || "";
+    if (q && !courseDeepMatchesSearch({ title, id, kind: "chapter" }, q)) {
+      const anyChild = filteredFlat.some((r) => r.path.startsWith(path + "."));
+      if (!anyChild) return "";
+    }
+    const active = courseDeepState.selectedPath === path ? "active" : "";
+    const kidCount = Array.isArray(ch?.children) ? ch.children.length : 0;
+    return `
+      <details class="panel p-2" open>
+        <summary>
+          <button class="course-tree-btn ${active}" data-course-path="${escapeHtml(path)}">
+            <div class="flex items-center justify-between gap-2">
+              <div class="font-semibold">${escapeHtml(title)}</div>
+              ${courseDeepBadgeHtml("chapter")}
+            </div>
+            ${id ? `<div class="mt-1 text-xs text-slate-500 mono break-all">${escapeHtml(id)}</div>` : ""}
+          </button>
+        </summary>
+        <div class="mt-2 grid gap-2">
+          ${kidCount ? renderCourseDeepSubtree(path, ch, 1) : `<div class="text-sm text-slate-600">ไม่มีรายการย่อย</div>`}
+        </div>
+      </details>
+    `;
+  }).filter(Boolean).join("");
+
+  treeEl.innerHTML = chapterRows || `<div class="text-sm text-slate-600">ไม่พบผลลัพธ์</div>`;
+};
+
+const renderCourseDeepInspector = () => {
+  const inspectorEl = document.getElementById("course-deep-inspector");
+  if (!inspectorEl) return;
+  if (!courseDeepState.root || !courseDeepState.selectedPath) {
+    inspectorEl.innerHTML = `<div class="text-sm text-slate-600">คลิกโหนดทางซ้ายเพื่อดูรายละเอียด</div>`;
+    return;
+  }
+  const row = courseDeepState.flat.find((r) => r.path === courseDeepState.selectedPath);
+  if (!row) {
+    inspectorEl.innerHTML = `<div class="text-sm text-slate-600">ไม่พบโหนดที่เลือก</div>`;
+    return;
+  }
+
+  const node = row.node || {};
+  const kids = Array.isArray(node.children) ? node.children : [];
+  const tool = row.kind === "vertical" ? inferVerticalTool(node) : null;
+  const fieldsText = node.fields ? JSON.stringify(node.fields, null, 2) : "";
+  const rawText = JSON.stringify(node, null, 2);
+  const childButtons = kids.map((k, i) => {
+    const nextPath = `${row.path}.${i}`;
+    const title = pickTitle(k, `${k?.kind || "node"} ${i + 1}`);
+    const id = k?.id || "";
+    return `
+      <button class="course-tree-btn panel ${courseDeepState.selectedPath === nextPath ? "active" : ""}" data-course-path="${escapeHtml(nextPath)}">
+        <div class="flex items-center justify-between gap-2">
+          <div class="truncate">${escapeHtml(title)}</div>
+          ${courseDeepBadgeHtml(k?.kind || "node")}
+        </div>
+        ${id ? `<div class="mt-1 text-xs text-slate-500 mono break-all">${escapeHtml(id)}</div>` : ""}
+      </button>
+    `;
+  }).join("");
+
+  inspectorEl.innerHTML = `
+    <div class="grid gap-3">
+      <div>
+        <div class="text-xs text-slate-500">Path</div>
+        <div class="mono text-sm break-all">${escapeHtml(row.path)}</div>
+      </div>
+      <div>
+        <div class="text-xs text-slate-500">Title</div>
+        <div class="font-semibold text-slate-800">${escapeHtml(row.title || "-")}</div>
+      </div>
+      <div class="flex items-center flex-wrap gap-2">
+        ${courseDeepBadgeHtml(row.kind)}
+        ${tool ? `<span class="badge tool-mixed">${escapeHtml(tool.sublabel ? `${tool.label}: ${tool.sublabel}` : tool.label)}</span>` : ""}
+      </div>
+      <div>
+        <div class="text-xs text-slate-500">ID</div>
+        <div class="mono text-xs break-all">${escapeHtml(row.id || "-")}</div>
+      </div>
+      <div>
+        <div class="text-xs text-slate-500">Children</div>
+        <div class="text-sm">${kids.length}</div>
+      </div>
+      <div>
+        <div class="text-xs text-slate-500">Fields</div>
+        <pre class="mt-1 panel p-3 text-xs whitespace-pre-wrap break-all">${escapeHtml(fieldsText || "ไม่มี fields")}</pre>
+      </div>
+      <div>
+        <div class="text-xs text-slate-500">Raw JSON</div>
+        <pre class="mt-1 panel p-3 text-xs whitespace-pre-wrap break-all">${escapeHtml(rawText)}</pre>
+      </div>
+      <div>
+        <div class="text-xs text-slate-500">Children List</div>
+        <div class="mt-2 grid gap-2">
+          ${childButtons || `<div class="text-sm text-slate-600">ไม่มีรายการย่อย</div>`}
+        </div>
+      </div>
+    </div>
+  `;
+};
+
+const setCourseDeepData = (root, renderNow = false) => {
+  const statusEl = document.getElementById("course-deep-status");
+  const treeEl = document.getElementById("course-deep-tree");
+  const inspectorEl = document.getElementById("course-deep-inspector");
+  const inputEl = document.getElementById("course-deep-search");
+  courseDeepState.root = root || null;
+  courseDeepState.search = "";
+  courseDeepState.verticalToolCache.clear();
+  if (inputEl) {
+    inputEl.value = "";
+    inputEl.disabled = !renderNow;
+  }
+  if (!root) {
+    courseDeepState.flat = [];
+    courseDeepState.selectedPath = null;
+    if (statusEl) statusEl.textContent = "รอข้อมูล";
+    if (treeEl) treeEl.innerHTML = `<div class="text-sm text-slate-600">ยังไม่มีข้อมูล</div>`;
+    if (inspectorEl) inspectorEl.innerHTML = `<div class="text-sm text-slate-600">คลิกโหนดทางซ้ายเพื่อดูรายละเอียด</div>`;
+    return;
+  }
+  if (!renderNow) {
+    courseDeepState.flat = [];
+    courseDeepState.selectedPath = null;
+    if (statusEl) statusEl.textContent = "พร้อมโหลด";
+    if (treeEl) treeEl.innerHTML = `<div class="text-sm text-slate-600">กด "โหลดโครงสร้างลึก" เพื่อแสดงข้อมูล</div>`;
+    if (inspectorEl) inspectorEl.innerHTML = `<div class="text-sm text-slate-600">ยังไม่ได้โหลดโครงสร้างลึก</div>`;
+    return;
+  }
+  courseDeepState.flat = flattenCourseTree(root);
+  const firstChapterEntry = getSortedChapterEntries(root)[0] || null;
+  const firstChapterPath = firstChapterEntry ? `root.${firstChapterEntry.idx}` : null;
+  const firstChapter = firstChapterPath
+    ? courseDeepState.flat.find((r) => r.path === firstChapterPath)
+    : null;
+  courseDeepState.selectedPath = firstChapter?.path || (courseDeepState.flat.length ? "root" : null);
+  if (inputEl) inputEl.disabled = false;
+  renderCourseDeepTree();
+  renderCourseDeepInspector();
+};
+
+const renderCourseOutline = (data) => {
+  const outlineEl = document.getElementById("course-outline");
+  if (!outlineEl) return;
+  const chapters = getSortedChapters(data);
+  if (!chapters.length) {
+    outlineEl.textContent = "-";
+    return;
+  }
+  const rows = chapters.map((ch, idx) => {
+    const title = decodeIfMojibake(ch.title || ch.fields?.title || `Chapter ${idx + 1}`);
+    const counts = countKindsIn(ch);
+    return `
+      <div class="flex items-center justify-between gap-3">
+        <div class="font-medium">${escapeHtml(title)}</div>
+        <div class="text-xs text-slate-500 mono">
+          seq:${counts.sequential} • vert:${counts.vertical} • html:${counts.html}
+        </div>
+      </div>
+    `;
+  });
+  outlineEl.innerHTML = rows.join("");
 };
 
 const compareIndexParts = (aParts, bParts) => {
@@ -2539,6 +2915,8 @@ const fetchCourseDetail = async () => {
     if (seqEl) seqEl.textContent = acc.sequential;
     if (vertEl) vertEl.textContent = acc.vertical;
     if (htmlEl) htmlEl.textContent = acc.html;
+    renderCourseOutline(data);
+    setCourseDeepData(data, false);
     rebuildChatbotOrderMap();
 
     requestDashboardRender();
@@ -2584,10 +2962,136 @@ const decodeIfMojibake = (text) => {
   }
 };
 
+const renderBookrollChart = (cfg) => {
+  const labels = cfg?.xAxis?.data || [];
+  const series = Array.isArray(cfg?.series) ? cfg.series : [];
+  const ctx = document.getElementById("bookrollChart");
+  if (!ctx) return;
+  if (window.bookrollChart) window.bookrollChart.destroy();
+  if (!labels.length || !series.length) {
+    window.bookrollChart = new Chart(ctx, {
+      type: "bar",
+      data: { labels: ["ไม่มีข้อมูล"], datasets: [{ label: "กิจกรรม", data: [0], backgroundColor: "#b7f1ec" }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    });
+    return;
+  }
+  const colors = ["#1fb9b7", "#4fd0c8", "#b7f1ec", "#f6b86a", "#f56a6a", "#5f76c8", "#c59cff", "#18b879"];
+  const datasets = series.map((s, i) => ({
+    label: decodeIfMojibake(s.name) || `Series ${i + 1}`,
+    data: s.data || [],
+    backgroundColor: colors[i % colors.length],
+    borderRadius: 8
+  }));
+  window.bookrollChart = new Chart(ctx, {
+    type: "bar",
+    data: { labels: labels.map(decodeIfMojibake), datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom" } },
+      scales: {
+        x: { stacked: true },
+        y: { stacked: true, beginAtZero: true }
+      }
+    }
+  });
+};
+
+const fetchBookroll = async () => {
+  const statusEl = document.getElementById("bookroll-status");
+  const rawEl = document.getElementById("bookroll-raw");
+  const readEl = document.getElementById("br-pages-read");
+  const totalEl = document.getElementById("br-pages-total");
+  const progressEl = document.getElementById("br-progress");
+  const summaryEl = document.getElementById("bookroll-activity-summary");
+  if (!userId || !courseId) {
+    if (statusEl) statusEl.textContent = "ยังไม่พร้อมแสดงข้อมูลการอ่าน";
+    updateBookrollJsonDrawer();
+    setDebugApiEntry("bookroll-activity", {
+      label: "พฤติกรรมการอ่าน",
+      state: "skipped",
+      badge: "ไม่มีข้อมูล",
+      message: "ยังไม่พร้อมแสดงข้อมูลการอ่าน",
+      requests: []
+    });
+    return { state: "skipped", message: "ยังไม่พร้อมแสดงข้อมูลการอ่าน" };
+  }
+  if (!isLikelyCourseId(courseId)) {
+    if (statusEl) statusEl.textContent = "ยังไม่พร้อมแสดงข้อมูลการอ่าน";
+    updateBookrollJsonDrawer();
+    setDebugApiEntry("bookroll-activity", {
+      label: "พฤติกรรมการอ่าน",
+      state: "skipped",
+      badge: "ไม่มีข้อมูล",
+      message: "ยังไม่พร้อมแสดงข้อมูลการอ่าน",
+      requests: []
+    });
+    return { state: "skipped", message: "ยังไม่พร้อมแสดงข้อมูลการอ่าน" };
+  }
+  if (statusEl) statusEl.textContent = "กำลังอัปเดตข้อมูลการอ่าน";
+  try {
+    const srcUrl = bookrollUrl(userId, courseId);
+    const res = await fetch(srcUrl);
+    if (!res.ok) throw await createHttpError(res);
+    const data = await res.json();
+    window.bookrollData = data;
+    renderBookrollChart(data);
+    if (summaryEl) {
+      const series = Array.isArray(data?.series) ? data.series : [];
+      const totals = series.map((s) => (s.data || []).reduce((a, b) => a + (Number(b) || 0), 0));
+      const maxIdx = totals.reduce((m, v, i) => (v > totals[m] ? i : m), 0);
+      const name = decodeIfMojibake(series[maxIdx]?.name || "กิจกรรม");
+      const total = totals[maxIdx] || 0;
+      summaryEl.textContent = total ? `กิจกรรมเด่น: ${name} (${total} ครั้ง)` : "ยังไม่พบกิจกรรม";
+    }
+    const summary = normalizeBookroll(data);
+    if (readEl) readEl.textContent = summary.read ?? "-";
+    if (totalEl) totalEl.textContent = summary.total ?? "-";
+    if (progressEl) {
+      if (summary.progress != null) progressEl.textContent = `${Math.round(summary.progress)}%`;
+      else if (summary.read != null && summary.total) {
+        progressEl.textContent = `${Math.round((summary.read / summary.total) * 100)}%`;
+      } else {
+        progressEl.textContent = "-";
+      }
+    }
+    if (statusEl) statusEl.textContent = "ข้อมูลการอ่านพร้อมแสดงผล";
+    if (rawEl) rawEl.textContent = JSON.stringify(data, null, 2);
+    updateBookrollJsonDrawer();
+    setDebugApiEntry("bookroll-activity", {
+      label: "พฤติกรรมการอ่าน",
+      state: "success",
+      badge: "พร้อมแสดงผล",
+      message: "ข้อมูลการอ่านพร้อมแสดงผล",
+      requests: [
+        { label: "พฤติกรรมการอ่าน", url: srcUrl, state: "success", message: "พร้อมแสดงผล", payload: data }
+      ]
+    });
+    return { state: "success", message: "ข้อมูลการอ่านพร้อมแสดงผล" };
+  } catch (err) {
+    if (statusEl) statusEl.textContent = "ไม่พบข้อมูลการอ่าน";
+    if (rawEl) rawEl.textContent = err?.message || "เกิดข้อผิดพลาด";
+    console.warn("Bookroll API error:", err);
+    updateBookrollJsonDrawer();
+    setDebugApiEntry("bookroll-activity", {
+      label: "พฤติกรรมการอ่าน",
+      state: "error",
+      badge: "มีปัญหา",
+      message: "ไม่พบข้อมูลการอ่าน",
+      requests: [
+        { label: "พฤติกรรมการอ่าน", url: bookrollUrl(userId, courseId), state: "error", message: "มีปัญหา", payload: err?.message || "เกิดข้อผิดพลาด" }
+      ]
+    });
+    return { state: "error", message: "ไม่พบข้อมูลการอ่าน" };
+  }
+};
+
 const fetchBookrollReadingData = async () => {
   if (!userId || !courseId || !isLikelyCourseId(courseId)) {
     window.bookrollReadingData = null;
     window.bookrollReadingProgress = [];
+    updateBookrollJsonDrawer();
     requestDashboardRender();
     setDebugApiEntry("bookroll-reading", {
       label: "ความคืบหน้าการอ่าน",
@@ -2726,6 +3230,7 @@ const fetchBookrollReadingData = async () => {
     });
     return { state: "error", message: "ไม่สามารถแสดงข้อมูลการอ่านได้ในขณะนี้" };
   } finally {
+    updateBookrollJsonDrawer();
     requestDashboardRender();
   }
 };
@@ -2843,6 +3348,7 @@ const fetchVideoLearningProgress = async () => {
     return { state: "error", message: "ไม่สามารถแสดงข้อมูลวิดีโอได้ในขณะนี้" };
   } finally {
     updateLoginDebugPanel();
+    updateVideoJsonDrawer();
     requestDashboardRender();
   }
 };
@@ -3059,6 +3565,44 @@ const globalLoadingRetryFailedEl = document.getElementById("global-loading-retry
 const globalLoadingToggleEl = document.getElementById("global-loading-toggle");
 const videoHoverTooltipEl = document.getElementById("video-hover-tooltip");
 if (SHOW_DEBUG_CARD) renderDebugApiCard();
+const courseDeepTreeEl = document.getElementById("course-deep-tree");
+if (courseDeepTreeEl) {
+  courseDeepTreeEl.addEventListener("click", (e) => {
+    const btn = e.target?.closest?.("[data-course-path]");
+    if (!btn) return;
+    courseDeepState.selectedPath = btn.getAttribute("data-course-path");
+    renderCourseDeepTree();
+    renderCourseDeepInspector();
+  });
+}
+const courseDeepInspectorEl = document.getElementById("course-deep-inspector");
+if (courseDeepInspectorEl) {
+  courseDeepInspectorEl.addEventListener("click", (e) => {
+    const btn = e.target?.closest?.("[data-course-path]");
+    if (!btn) return;
+    courseDeepState.selectedPath = btn.getAttribute("data-course-path");
+    renderCourseDeepTree();
+    renderCourseDeepInspector();
+  });
+}
+const courseDeepSearchEl = document.getElementById("course-deep-search");
+if (courseDeepSearchEl) {
+  courseDeepSearchEl.addEventListener("input", (e) => {
+    courseDeepState.search = e.target.value || "";
+    renderCourseDeepTree();
+  });
+}
+const courseDeepLoadEl = document.getElementById("course-deep-load");
+if (courseDeepLoadEl) {
+  courseDeepLoadEl.addEventListener("click", () => {
+    if (!window.courseDetailData) {
+      const statusEl = document.getElementById("course-deep-status");
+      if (statusEl) statusEl.textContent = "ยังไม่มี course data";
+      return;
+    }
+    setCourseDeepData(window.courseDetailData, true);
+  });
+}
 let auth = readAuth();
 
 const updateAuthUi = () => {
@@ -3106,6 +3650,7 @@ const getDashboardTaskDefs = () => {
     { id: "chatbot-performance", label: "ผลการทำแบบฝึกหัด", run: fetchChatbotPerformance, requiresTool: "chatbot" },
     { id: "adaptive-quiz-shared-dashboard", label: "Adaptive Quiz shared dashboard", run: fetchAdaptiveQuizSharedDashboard }
   ];
+  if (SHOW_BOOKROLL) tasks.push({ id: "bookroll-activity", label: "พฤติกรรมการอ่าน", run: fetchBookroll, requiresTool: "bookroll" });
   return tasks;
 };
 
@@ -3329,6 +3874,8 @@ const retryFailedDashboardTasks = async () => {
 };
 
 const loadDashboardData = async () => {
+  updateBookrollJsonDrawer();
+  updateVideoJsonDrawer();
   const tasks = getDashboardTaskDefs();
   const cycleId = beginDashboardLoadCycle(tasks);
   const courseTask = tasks.find((task) => task.id === "course-detail") || null;
@@ -3479,4 +4026,35 @@ if (error) {
   setAuthState(auth);
   if (!SHOW_LOGIN_BUTTONS && !auth?.userId) startLogin();
   else loadDashboardData();
+}
+
+const unitCtx = document.getElementById("unitChart");
+if (unitCtx) {
+  new Chart(unitCtx, {
+    type: "bar",
+    data: {
+      labels: ["ยังไม่มีข้อมูล"],
+      datasets: [{
+        label: "คะแนนรวมต่อหน่วย",
+        data: [0],
+        backgroundColor: ["#1fb9b7", "#4fd0c8", "#b7f1ec"],
+        borderRadius: 12
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100,
+          ticks: { callback: (value) => `${value}%` }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.raw}%` } }
+      }
+    }
+  });
 }
