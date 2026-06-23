@@ -469,42 +469,6 @@ const renderStudentTable = () => {
   `).join("");
 };
 
-const renderWatchList = () => {
-  const el = document.getElementById("teacher-watch-list");
-  if (!el) return;
-  const rows = [...teacherState.students]
-    .filter((student) => student.status.key === "risk" || !student.score)
-    .sort((a, b) => {
-      if (a.progress !== b.progress) return a.progress - b.progress;
-      return (scoreRate(a.score) ?? -1) - (scoreRate(b.score) ?? -1);
-    })
-    .slice(0, 8);
-
-  if (!rows.length) {
-    el.innerHTML = `<div class="text-sm text-slate-500">ไม่มีรายการที่ต้องติดตาม</div>`;
-    return;
-  }
-
-  el.innerHTML = rows.map((student) => {
-    const score = student.score ? `${student.score.score}/${student.score.max}` : "ยังไม่มีคะแนน";
-    return `
-      <div class="panel p-3">
-        <div class="flex items-start justify-between gap-2">
-          <div class="min-w-0">
-            <div class="font-semibold truncate">${escapeHtml(student.name)}</div>
-            <div class="mt-1 text-xs text-slate-500 truncate">${escapeHtml(student.email)}</div>
-          </div>
-          <span class="teacher-status-pill ${student.status.tone}">${escapeHtml(student.status.label)}</span>
-        </div>
-        <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600">
-          <div>ความคืบหน้า <span class="mono font-bold">${student.progress}%</span></div>
-          <div>คะแนน <span class="mono font-bold">${escapeHtml(score)}</span></div>
-        </div>
-      </div>
-    `;
-  }).join("");
-};
-
 const renderActivities = () => {
   const listEl = document.getElementById("teacher-activity-list");
   if (!listEl) return;
@@ -541,11 +505,35 @@ const renderAll = () => {
   renderMetrics();
   renderCharts();
   renderStudentTable();
-  renderWatchList();
   renderActivities();
 };
 
+const showTeacherView = (view) => {
+  document.querySelectorAll("[data-teacher-panel]").forEach((panel) => {
+    panel.hidden = panel.dataset.teacherPanel !== view;
+  });
+
+  document.querySelectorAll("[data-teacher-view]").forEach((button) => {
+    const active = button.dataset.teacherView === view;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+
+  document.querySelector(".page-scroll")?.scrollTo({ top: 0, behavior: "smooth" });
+
+  if (view === "overview") {
+    requestAnimationFrame(() => {
+      teacherState.charts.progress?.resize();
+      teacherState.charts.score?.resize();
+    });
+  }
+};
+
 const bindControls = () => {
+  document.querySelectorAll("[data-teacher-view]").forEach((button) => {
+    button.addEventListener("click", () => showTeacherView(button.dataset.teacherView));
+  });
+
   const searchEl = document.getElementById("teacher-search");
   if (searchEl) {
     searchEl.addEventListener("input", (event) => {
