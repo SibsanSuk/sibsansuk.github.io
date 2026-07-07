@@ -355,6 +355,10 @@ const state = {
 const maps = { usage: null, compare: null };
 let slideTimer = null;
 
+/* responsive breakpoints: phone < 700 ≤ tablet < 1024 ≤ desktop */
+const BP = () => { const w = window.innerWidth || 1200; return w < 700 ? "phone" : w < 1024 ? "tablet" : "desktop"; };
+let lastBp = BP();
+
 /* ------------------------------ compute per render ------------------------------ */
 const CLASS_COLORS = ["#f43f7e", "#f5b301", "#22c55e", "#0f766e", "#6366f1", "#0ea5e9", "#ef4444", "#8b5cf6"];
 const numOr = (...vals) => { for (const v of vals) if (v != null && v !== "") return v; return null; };
@@ -479,46 +483,75 @@ function viewCourseList() {
   </div>`;
 }
 
+function insightOverlay(compact) {
+  const pos = compact ? "top:14px;left:14px;right:14px;width:auto" : "top:24px;left:24px;width:320px";
+  const pad = compact ? "15px 17px" : "22px 24px";
+  const stageMin = compact ? "116px" : "150px";
+  const bigFs = compact ? "25px" : "30px";
+  return `
+    <div style="position:absolute;${pos};z-index:600;background:rgba(255,255,255,.96);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.6);border-radius:18px;box-shadow:0 14px 36px rgba(16,24,40,.2);padding:${pad};overflow:hidden">
+      <div id="slide-stage" style="position:relative;min-height:${stageMin}">
+        ${DEMO.insightSlides.map((sl, i) => `
+          <div class="slide" data-i="${i}" style="position:absolute;inset:0;transition:opacity .5s ease,transform .5s ease;opacity:${i === state.mapSlide ? 1 : 0};transform:${i === state.mapSlide ? "translateY(0)" : "translateY(8px)"};pointer-events:none">
+            <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
+              <span style="width:6px;height:22px;border-radius:99px;background:${sl.bg};flex:none"></span>
+              <span style="font:700 12.5px 'Noto Sans Thai';color:#475467;letter-spacing:.01em">${esc(sl.label)}</span>
+            </div>
+            <div style="font:800 ${bigFs} Inter;color:#101828;line-height:1.15;word-break:break-word">${esc(sl.big)} <span style="font:700 15px 'Noto Sans Thai';color:#98a2b3">${esc(sl.unit)}</span></div>
+            <div style="font:500 12.5px/1.6 'Noto Sans Thai';color:#98a2b3;margin-top:8px">${esc(sl.desc)}</div>
+          </div>`).join("")}
+      </div>
+      <div style="display:flex;gap:6px;margin-top:14px;position:relative;z-index:1">
+        ${DEMO.insightSlides.map((sl, i) => `<button data-act="goSlide" data-arg="${i}" class="slide-dot" data-i="${i}" style="border:none;cursor:pointer;padding:0;height:6px;border-radius:99px;flex:1;background:${i === state.mapSlide ? "#0d9488" : "#e2e5e9"};transition:background .3s"></button>`).join("")}
+      </div>
+    </div>`;
+}
+
 function viewLanding() {
   const authed = state.authed;
-  return `
-  <div style="flex:1;display:flex;flex-direction:column;min-height:0;background:#fff">
-    <div style="flex:1;display:flex;min-height:0">
-      <div style="flex:1.25;position:relative;background:#dfe7ea;overflow:hidden;isolation:isolate">
-        <div id="th-usage-map" style="position:absolute;inset:0"></div>
-        <div style="position:absolute;top:24px;left:24px;z-index:600;background:rgba(255,255,255,.96);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.6);border-radius:18px;box-shadow:0 14px 36px rgba(16,24,40,.2);padding:22px 24px;width:320px;overflow:hidden">
-          <div id="slide-stage" style="position:relative;min-height:150px">
-            ${DEMO.insightSlides.map((sl, i) => `
-              <div class="slide" data-i="${i}" style="position:absolute;inset:0;transition:opacity .5s ease,transform .5s ease;opacity:${i === state.mapSlide ? 1 : 0};transform:${i === state.mapSlide ? "translateY(0)" : "translateY(8px)"};pointer-events:none">
-                <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
-                  <span style="width:6px;height:22px;border-radius:99px;background:${sl.bg};flex:none"></span>
-                  <span style="font:700 12.5px 'Noto Sans Thai';color:#475467;letter-spacing:.01em">${esc(sl.label)}</span>
-                </div>
-                <div style="font:800 30px Inter;color:#101828;line-height:1.15;word-break:break-word">${esc(sl.big)} <span style="font:700 15px 'Noto Sans Thai';color:#98a2b3">${esc(sl.unit)}</span></div>
-                <div style="font:500 12.5px/1.6 'Noto Sans Thai';color:#98a2b3;margin-top:8px">${esc(sl.desc)}</div>
-              </div>`).join("")}
-          </div>
-          <div style="display:flex;gap:6px;margin-top:14px;position:relative;z-index:1">
-            ${DEMO.insightSlides.map((sl, i) => `<button data-act="goSlide" data-arg="${i}" class="slide-dot" data-i="${i}" style="border:none;cursor:pointer;padding:0;height:6px;border-radius:99px;flex:1;background:${i === state.mapSlide ? "#0d9488" : "#e2e5e9"};transition:background .3s"></button>`).join("")}
-          </div>
-        </div>
-      </div>
-      <div class="scrolly" style="flex:.9;min-width:min(430px,42vw);display:flex;flex-direction:column;padding:40px 46px;background:#eef0f3;min-height:0">
-        ${authed ? viewCourseList() : viewLandingSignIn()}
-      </div>
-    </div>
-    <div style="flex:none;background:#f7f8fa;border-top:1px solid #ececf1;padding:12px 32px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px">
+  const bp = BP();
+  const phone = bp === "phone", tablet = bp === "tablet";
+  const content = authed ? viewCourseList() : viewLandingSignIn();
+  const mapBlock = `
+    <div style="${phone ? "flex:none;height:260px" : "flex:1.25"};position:relative;background:#dfe7ea;overflow:hidden;isolation:isolate">
+      <div id="th-usage-map" style="position:absolute;inset:0"></div>
+      ${insightOverlay(phone)}
+    </div>`;
+  const sidePad = phone ? "22px 18px 34px" : tablet ? "30px 30px" : "40px 46px";
+  const sideBlock = `
+    <div ${phone ? "" : 'class="scrolly"'} style="${phone ? "flex:none" : `flex:.9;min-width:min(${tablet ? "360px,48vw" : "430px,42vw"});min-height:0`};display:flex;flex-direction:column;padding:${sidePad};background:#eef0f3">
+      ${content}
+    </div>`;
+  const footer = `
+    <div style="flex:none;background:#f7f8fa;border-top:1px solid #ececf1;padding:12px ${phone ? "18px" : "32px"};display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px">
       <span style="font:700 12px 'Noto Sans Thai';color:#344054">ศูนย์เทคโนโลยีอิเล็กทรอนิกส์และคอมพิวเตอร์แห่งชาติ</span>
       <span style="font:500 11.5px Inter;color:#98a2b3">National Electronics and Computer Technology Center: NECTEC</span>
       <span style="font:500 11.5px 'Noto Sans Thai';color:#98a2b3">· 112 ถนนพหลโยธิน ต.คลองหนึ่ง อ.คลองหลวง จ.ปทุมธานี 12120, Thailand</span>
       <span style="font:500 11.5px Inter;color:#98a2b3">· Call Center: 662-564-6900</span>
       <span style="font:500 11.5px Inter;color:#0f766e">· info@nectec.or.th</span>
+    </div>`;
+
+  if (phone) {
+    return `
+    <div class="scrolly" style="flex:1;display:flex;flex-direction:column;min-height:0;background:#fff">
+      ${mapBlock}
+      ${sideBlock}
+      ${footer}
+    </div>`;
+  }
+  return `
+  <div style="flex:1;display:flex;flex-direction:column;min-height:0;background:#fff">
+    <div style="flex:1;display:flex;min-height:0">
+      ${mapBlock}
+      ${sideBlock}
     </div>
+    ${footer}
   </div>`;
 }
 
 /* ---------------- top bar ---------------- */
 function viewTopBar() {
+  const phone = BP() === "phone";
   const showLanding = !state.course, inCourse = !!state.course, showProfile = state.authed;
   const initials = (state.teacherName || "").replace(/\s/g, "").slice(0, 2);
   const langFlag = state.lang === "th" ? "🇹🇭" : "🇬🇧";
@@ -526,18 +559,19 @@ function viewTopBar() {
   const leadoShow = state.leadoOpen;
   const sel = selectedCourse();
   return `
-  <div style="position:fixed;top:0;left:0;right:0;height:60px;z-index:1200;background:rgba(255,255,255,.9);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid rgba(0,0,0,.06);box-shadow:0 2px 10px rgba(16,24,40,.08);display:flex;align-items:center;justify-content:space-between;padding:0 22px">
+  <div style="position:fixed;top:0;left:0;right:0;height:60px;z-index:1200;background:rgba(255,255,255,.9);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid rgba(0,0,0,.06);box-shadow:0 2px 10px rgba(16,24,40,.08);display:flex;align-items:center;justify-content:space-between;padding:0 ${phone ? "12px" : "22px"}">
     <div style="display:flex;align-items:center;gap:14px;min-width:0">
       ${showLanding ? `
         <button data-act="switchCourse" class="h-soft2" title="หน้าแรก" style="background:none;border:none;cursor:pointer;padding:4px 6px;display:flex;align-items:center;border-radius:8px">
           <img src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-adap-green-untext.1c98bf032947.png" alt="MECA" style="height:34px;object-fit:contain">
         </button>
+        ${phone ? "" : `
         <div style="width:1px;height:24px;background:#e6e8ec"></div>
         <div style="display:flex;align-items:center;gap:14px">
           <img src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-mhesi.f3e5c05e5ebe.png" alt="MHESI" style="height:38px;object-fit:contain">
           <img src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-nstda.a0c679b2e45e.png" alt="NSTDA" style="height:32px;object-fit:contain">
           <img src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-nectec.4a797e97e6ed.png" alt="NECTEC" style="height:32px;object-fit:contain">
-        </div>` : ""}
+        </div>`}` : ""}
       ${inCourse ? `
         <button data-act="switchCourse" class="h-soft" style="display:flex;align-items:center;gap:8px;background:#f4f5f7;border:none;cursor:pointer;padding:9px 14px;border-radius:10px;font:700 14px 'Noto Sans Thai';color:#0f766e">
           <span style="width:26px;height:26px;color:#0f766e;display:inline-flex">${ICO.home}</span>หน้าแรก
@@ -1263,6 +1297,12 @@ function bindEvents() {
     e.preventDefault();
     const fn = SUB[t.dataset.sub];
     if (fn) fn();
+  });
+  // responsive: full re-render only when crossing a breakpoint; otherwise just resize maps
+  window.addEventListener("resize", () => {
+    const b = BP();
+    if (b !== lastBp) { lastBp = b; render(); }
+    else ["usage", "compare"].forEach((k) => maps[k] && maps[k].invalidateSize());
   });
 }
 
