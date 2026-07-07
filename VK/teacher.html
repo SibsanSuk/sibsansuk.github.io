@@ -45,15 +45,14 @@
 
   <script>
     window.TEACHER_DASHBOARD_CONFIG = {
-      // Default: bundled local JSON (offline demo).
-      // To use the live MECA APIs, set source:"api" (or open with ?source=api).
-      // Then the "เข้าสู่ระบบด้วย MECA ID" button runs the real Keycloak login,
-      // loads the teacher's classrooms (course/teacher/{sub}) and each classroom's
-      // assign progress + grades + SBS /lms course tree.
-      // source: "api",
+      // DEFAULT = live MECA login/API. The "เข้าสู่ระบบด้วย MECA ID" button runs the
+      // real Keycloak (OIDC/PKCE) login, then loads the teacher's classrooms
+      // (course/teacher/{sub}) and each classroom's assign progress + grades + SBS /lms.
+      // For the offline JSON demo (no login) open with ?source=local.
+      //
       // baseUrl: "https://adaptive-profile-bn-dev.ae.app.meca.in.th", // needs Bearer token + CORS from this origin
       // sbsUrl:  "https://sbs-backend.mooc.meca.in.th",               // public
-      // clientId: "dashboard",       // Keycloak client (redirect URI = this page URL must be registered)
+      // clientId: "dashboard",       // Keycloak client (this page's URL must be a registered redirect URI)
       // instituteId: "1010720039",   // fallback if teacher/{sub} omits it
       // assignId: "",                // optional: open one classroom directly
     };

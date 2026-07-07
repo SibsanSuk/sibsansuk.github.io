@@ -15,7 +15,9 @@ const teacherQuery = new URLSearchParams(globalThis.location?.search || "");
 const readTeacherDashboardConfig = () => {
   const runtime = globalThis.TEACHER_DASHBOARD_CONFIG || {};
   return {
-    source: teacherQuery.get("source") || runtime.source || "local",
+    // Default to the real MECA login/API. Use ?source=local for the offline JSON demo.
+    source: teacherQuery.get("source") || runtime.source || "api",
+    oidc: runtime.oidc || {},
     courseId: teacherQuery.get("courseid") || teacherQuery.get("courseId") || runtime.courseId || "",
     teacherId: teacherQuery.get("teacherid") || teacherQuery.get("teacherId") || runtime.teacherId || "",
     instituteId: teacherQuery.get("instituteid") || teacherQuery.get("instituteId") || runtime.instituteId || "",
@@ -45,6 +47,7 @@ const OIDC = {
   clientId: teacherConfig.clientId,
   redirectUri: globalThis.location ? globalThis.location.origin + globalThis.location.pathname : "",
   scope: "openid profile email",
+  ...teacherConfig.oidc,
 };
 const b64url = (buf) => { const b = new Uint8Array(buf); let s = ""; for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
 const sha256 = (plain) => crypto.subtle.digest("SHA-256", new TextEncoder().encode(plain));
@@ -78,10 +81,21 @@ function oidcLogout() {
   globalThis.location.href = `${OIDC.logoutEndpoint}?${params.toString()}`;
 }
 const authHeader = () => { const a = readAuth(); return a?.token?.access_token ? { Authorization: `Bearer ${a.token.access_token}` } : {}; };
+const DEBUG = teacherQuery.get("debug") === "1";
+const API_LOG = [];
 const apiGet = async (url, { auth = true } = {}) => {
-  const res = await fetch(url, { headers: auth ? authHeader() : {} });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  return res.json();
+  const entry = { url, auth, at: new Date().toLocaleTimeString("th-TH") };
+  API_LOG.push(entry);
+  try {
+    const res = await fetch(url, { headers: auth ? authHeader() : {} });
+    entry.status = res.status;
+    if (!res.ok) { entry.ok = false; entry.error = `${res.status} ${res.statusText}`; throw new Error(entry.error); }
+    const json = await res.json();
+    entry.ok = true;
+    entry.count = Array.isArray(json) ? json.length : (Array.isArray(json?.data) ? json.data.length : undefined);
+    if (DEBUG) entry.sample = json;
+    return json;
+  } catch (e) { entry.ok = false; entry.error = entry.error || e.message; throw e; }
 };
 const apiTeacher = (sub) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/teacher/${encodeURIComponent(sub)}`);
 const apiClassrooms = (sub, instituteId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/course/teacher/${encodeURIComponent(sub)}${instituteId ? `?instituteId=${encodeURIComponent(instituteId)}` : ""}`);
@@ -930,6 +944,26 @@ function viewEditModal() {
   </div>`;
 }
 
+function viewDebugPanel() {
+  if (!DEBUG) return "";
+  const auth = readAuth();
+  const sub = authSub(auth);
+  const short = (s) => (s ? String(s).replace(teacherConfig.baseUrl, "").replace(teacherConfig.sbsUrl, "") : "");
+  const calls = API_LOG.map((e) => `<div style="padding:6px 0;border-top:1px solid #223">
+      <div style="display:flex;gap:6px;align-items:center"><span style="color:${e.ok ? "#22c55e" : "#f87171"};font-weight:700">${e.ok ? "✓" : "✗"}${e.status ? " " + e.status : ""}</span><span style="color:#93c5fd;word-break:break-all;flex:1">${esc(short(e.url))}</span>${e.count != null ? `<span style="color:#fbbf24">${e.count} rows</span>` : ""}</div>
+      ${e.error ? `<div style="color:#fca5a5;margin-top:2px">${esc(e.error)}</div>` : ""}
+      ${e.sample ? `<pre style="margin:4px 0 0;white-space:pre-wrap;color:#cbd5e1;max-height:160px;overflow:auto;background:#0b1220;padding:6px;border-radius:6px">${esc(JSON.stringify(e.sample, null, 1).slice(0, 4000))}</pre>` : ""}
+    </div>`).join("");
+  return `<div style="position:fixed;right:12px;bottom:12px;z-index:2000;width:420px;max-width:92vw;max-height:70vh;overflow:auto;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.4);font:500 11.5px ui-monospace,Menlo,monospace;padding:12px 14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><b style="font:700 12px 'Noto Sans Thai'">🐞 Debug (?debug=1)</b><span style="color:#64748b">mode:${state.mode}</span></div>
+    <div>authed: <b style="color:${state.authed ? "#22c55e" : "#f87171"}">${state.authed}</b> · sub: <span style="color:#93c5fd">${esc(sub || "—")}</span></div>
+    <div>token exp: ${auth?.token?.access_token ? esc(new Date((decodeJwt(auth.token.access_token)?.exp || 0) * 1000).toLocaleString("th-TH")) : "—"} · instituteId: ${esc(state.instituteId || "—")}</div>
+    <div>classrooms mapped: <b style="color:#fbbf24">${state.classrooms.length}</b></div>
+    <div style="margin-top:6px;font:700 11px 'Noto Sans Thai'">API calls (${API_LOG.length})</div>
+    ${calls || '<div style="color:#64748b">— ยังไม่มีการเรียก API —</div>'}
+  </div>`;
+}
+
 function viewLoadingOverlay() {
   return `<div style="position:fixed;inset:0;z-index:1300;background:rgba(238,240,243,.72);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center">
     <div style="display:flex;flex-direction:column;align-items:center;gap:14px;background:#fff;border:1px solid #ececf1;border-radius:16px;padding:26px 34px;box-shadow:0 18px 44px rgba(16,24,40,.18)">
@@ -975,6 +1009,7 @@ function render() {
       ${state.student != null ? viewDrawer() : ""}
       ${state.authError ? viewErrorToast() : ""}
       ${state.loadingCourse ? viewLoadingOverlay() : ""}
+      ${viewDebugPanel()}
     </div>`;
 
   requestAnimationFrame(mountMaps);
@@ -1213,6 +1248,7 @@ async function apiInit() {
   try {
     let teacher = null;
     try { teacher = await apiTeacher(sub); } catch (_) {}
+    state.debugTeacher = teacher;
     if (teacher) {
       const nm = teacher.firstName ? `${teacher.firstName} ${teacher.lastName || ""}`.trim() : (teacher.name || teacher.displayName);
       if (nm) state.teacherName = nm;
@@ -1220,7 +1256,9 @@ async function apiInit() {
     } else {
       state.instituteId = teacherConfig.instituteId || "";
     }
-    const raw = normalizeListPayload(await apiClassrooms(sub, state.instituteId));
+    const classroomsResp = await apiClassrooms(sub, state.instituteId);
+    state.debugClassroomsRaw = classroomsResp;
+    const raw = normalizeListPayload(classroomsResp);
     state.classrooms = raw.map(mapClassroom);
     state.ready = true;
     render();
