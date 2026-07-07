@@ -20,11 +20,75 @@ const readTeacherDashboardConfig = () => {
     teacherId: teacherQuery.get("teacherid") || teacherQuery.get("teacherId") || runtime.teacherId || "",
     instituteId: teacherQuery.get("instituteid") || teacherQuery.get("instituteId") || runtime.instituteId || "",
     apiBaseUrl: runtime.apiBaseUrl || "",
+    // live MECA API (see API_ENDPOINT_LINKS.md)
+    baseUrl: runtime.baseUrl || "https://adaptive-profile-bn-dev.ae.app.meca.in.th",
+    sbsUrl: runtime.sbsUrl || "https://sbs-backend.mooc.meca.in.th",
+    clientId: runtime.clientId || "dashboard",
+    assignId: teacherQuery.get("assignid") || teacherQuery.get("assignId") || runtime.assignId || "",
     localPaths: { ...TEACHER_LOCAL_DATA_PATHS, ...(runtime.localPaths || {}) },
     endpoints: { course: null, progress: null, score: null, ...(runtime.endpoints || {}) },
   };
 };
 const teacherConfig = readTeacherDashboardConfig();
+
+/* =====================================================================
+ * Live MECA integration — Keycloak (OIDC/PKCE) login + assign-based data.
+ * Mirrors the flow in index.html. BASEURL calls require a Bearer token;
+ * SBS /lms is public. Enabled with source:"api" (or ?source=api);
+ * otherwise the dashboard runs on the bundled local JSON (offline demo).
+ * ===================================================================== */
+const OIDC = {
+  authorizationEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/auth",
+  tokenEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/token",
+  userinfoEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/userinfo",
+  logoutEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/logout",
+  clientId: teacherConfig.clientId,
+  redirectUri: globalThis.location ? globalThis.location.origin + globalThis.location.pathname : "",
+  scope: "openid profile email",
+};
+const b64url = (buf) => { const b = new Uint8Array(buf); let s = ""; for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
+const sha256 = (plain) => crypto.subtle.digest("SHA-256", new TextEncoder().encode(plain));
+const decodeJwt = (token) => { try { const p = token.split(".")[1]; const pad = p.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(p.length / 4) * 4, "="); return JSON.parse(atob(pad)); } catch (_) { return null; } };
+const storeAuth = (a) => sessionStorage.setItem("oidc_auth", JSON.stringify(a));
+const readAuth = () => { try { return JSON.parse(sessionStorage.getItem("oidc_auth")); } catch (_) { return null; } };
+const clearAuth = () => sessionStorage.removeItem("oidc_auth");
+const authSub = (a) => a?.sub || (a?.token?.access_token ? decodeJwt(a.token.access_token)?.sub : null) || (a?.token?.id_token ? decodeJwt(a.token.id_token)?.sub : null);
+const authExpired = (a) => { const p = a?.token?.access_token ? decodeJwt(a.token.access_token) : null; return p?.exp ? p.exp * 1000 < Date.now() : false; };
+async function startLogin() {
+  const verifier = b64url(crypto.getRandomValues(new Uint8Array(32)));
+  const challenge = b64url(await sha256(verifier));
+  sessionStorage.setItem("pkce_verifier", verifier);
+  const params = new URLSearchParams({ client_id: OIDC.clientId, redirect_uri: OIDC.redirectUri, response_type: "code", scope: OIDC.scope, code_challenge: challenge, code_challenge_method: "S256" });
+  globalThis.location.href = `${OIDC.authorizationEndpoint}?${params.toString()}`;
+}
+async function exchangeCodeForToken(code) {
+  const verifier = sessionStorage.getItem("pkce_verifier");
+  if (!verifier) throw new Error("missing PKCE verifier");
+  const body = new URLSearchParams({ grant_type: "authorization_code", client_id: OIDC.clientId, redirect_uri: OIDC.redirectUri, code, code_verifier: verifier });
+  const res = await fetch(OIDC.tokenEndpoint, { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
+  if (!res.ok) throw new Error((await res.text()) || "token exchange failed");
+  return res.json();
+}
+function oidcLogout() {
+  const a = readAuth();
+  clearAuth();
+  const idToken = a?.token?.id_token;
+  if (!idToken) { globalThis.location.href = OIDC.redirectUri; return; }
+  const params = new URLSearchParams({ id_token_hint: idToken, post_logout_redirect_uri: OIDC.redirectUri, client_id: OIDC.clientId });
+  globalThis.location.href = `${OIDC.logoutEndpoint}?${params.toString()}`;
+}
+const authHeader = () => { const a = readAuth(); return a?.token?.access_token ? { Authorization: `Bearer ${a.token.access_token}` } : {}; };
+const apiGet = async (url, { auth = true } = {}) => {
+  const res = await fetch(url, { headers: auth ? authHeader() : {} });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return res.json();
+};
+const apiTeacher = (sub) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/teacher/${encodeURIComponent(sub)}`);
+const apiClassrooms = (sub, instituteId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/course/teacher/${encodeURIComponent(sub)}${instituteId ? `?instituteId=${encodeURIComponent(instituteId)}` : ""}`);
+const apiAssign = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}`);
+const apiProgress = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}/progress`);
+const apiGrades = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}/grades`);
+const apiCourseTree = (courseId) => apiGet(`${teacherConfig.sbsUrl}/lms/${encodeURIComponent(courseId)}`, { auth: false });
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 const toNumber = (v, f = 0) => { const n = Number(v); return Number.isFinite(n) ? n : f; };
@@ -260,6 +324,7 @@ const toolStyle = (label) => { const m = { Profile: "#12a89b", Video: "#7b83eb",
 /* ------------------------------ state ------------------------------ */
 const state = {
   ready: false, error: null, source: "",
+  mode: "local", sub: "", instituteId: "", classrooms: [], loadingCourse: false, authError: null,
   page: "overview", course: null, student: null,
   search: "", filter: "all", sort: "followup",
   authed: false, userMenuOpen: false, editOpen: false, notifOpen: false,
@@ -275,7 +340,23 @@ const maps = { usage: null, compare: null };
 let slideTimer = null;
 
 /* ------------------------------ compute per render ------------------------------ */
+const CLASS_COLORS = ["#f43f7e", "#f5b301", "#22c55e", "#0f766e", "#6366f1", "#0ea5e9", "#ef4444", "#8b5cf6"];
+const mapClassroom = (item, i) => {
+  const courseId = item.courseId || item.course_id || "";
+  const numOr = (...vals) => { for (const v of vals) if (v != null && v !== "") return v; return null; };
+  return {
+    id: String(item.assignId || item.assign_id || item.id || `cls-${i}`),
+    assignId: item.assignId || item.assign_id || item.id || "",
+    courseId,
+    color: CLASS_COLORS[i % CLASS_COLORS.length],
+    title: item.courseName || item.courseTitle || item.title || item.name || courseId || "ห้องเรียน",
+    classCode: item.classRoom || item.classCode || [item.grade, item.level, item.classRoom].filter(Boolean).join("/") || "—",
+    students: numOr(item.studentCount, item.students, item.enrollCount, item.total, item.memberCount),
+    progress: (() => { const p = numOr(item.progress, item.avgProgress, item.averageProgress); return p == null ? null : Math.round(Number(p)); })(),
+  };
+};
 const courseList = () => {
+  if (state.mode === "api") return state.classrooms;
   const real = state.courseData
     ? [{
         id: "real", color: "#f43f7e", title: state.courseTitle,
@@ -342,7 +423,10 @@ function viewCourseList() {
       </button>
     </div>
     <div style="display:flex;flex-direction:column;gap:14px">
-      ${courses.map((c) => `
+      ${courses.length ? courses.map((c) => {
+        const pnum = typeof c.progress === "number" ? c.progress : null;
+        const stu = c.students == null ? "—" : c.students;
+        return `
         <div data-act="pickCourse" data-arg="${esc(c.id)}" class="h-card" style="display:flex;align-items:stretch;background:#fff;border:1px solid #ececf1;border-radius:16px;box-shadow:0 1px 2px rgba(16,24,40,.04);cursor:pointer;overflow:hidden">
           <div style="width:5px;flex:none;background:${c.color}"></div>
           <div style="flex:1;padding:17px 18px;min-width:0">
@@ -352,13 +436,14 @@ function viewCourseList() {
               <span style="display:flex;align-items:center;gap:5px;font:700 11px 'Inter',monospace;letter-spacing:.04em;color:#475467;background:#f7f8fa;border:1px dashed #d3d8de;border-radius:7px;padding:3px 9px"><span style="width:11px;height:11px;display:inline-flex;color:#98a2b3">${ICO.id}</span>${esc(c.classCode)}</span>
             </div>
             <div style="display:flex;align-items:center;gap:11px;margin-top:14px">
-              <span style="font:500 11.5px 'Noto Sans Thai';color:#98a2b3;display:flex;align-items:center;gap:5px;flex:none"><span style="width:14px;height:14px;display:inline-flex">${ICO.usersSm}</span>${c.students} คน</span>
-              <div style="flex:1;height:7px;background:#eef0f3;border-radius:99px;overflow:hidden"><div style="height:100%;border-radius:99px;background:${c.color};width:${c.progress}%"></div></div>
-              <span style="font:700 13px Inter;color:#0f766e;flex:none;width:38px;text-align:right">${c.progress}%</span>
+              <span style="font:500 11.5px 'Noto Sans Thai';color:#98a2b3;display:flex;align-items:center;gap:5px;flex:none"><span style="width:14px;height:14px;display:inline-flex">${ICO.usersSm}</span>${stu} คน</span>
+              <div style="flex:1;height:7px;background:#eef0f3;border-radius:99px;overflow:hidden"><div style="height:100%;border-radius:99px;background:${c.color};width:${pnum == null ? 0 : pnum}%"></div></div>
+              <span style="font:700 13px Inter;color:#0f766e;flex:none;width:38px;text-align:right">${pnum == null ? "—" : pnum + "%"}</span>
             </div>
           </div>
           <div style="display:flex;align-items:center;padding-right:16px"><span style="width:26px;height:26px;border-radius:50%;background:#f7f8fa;display:flex;align-items:center;justify-content:center;font:700 15px Inter;color:#98a2b3">›</span></div>
-        </div>`).join("")}
+        </div>`;
+      }).join("") : `<div style="background:#fff;border:1px dashed #e4e7ec;border-radius:16px;padding:28px;text-align:center;font:600 14px 'Noto Sans Thai';color:#98a2b3">ยังไม่มีห้องเรียนสำหรับบัญชีนี้</div>`}
     </div>
   </div>`;
 }
@@ -508,7 +593,8 @@ function viewDashboard() {
   const sel = selectedCourse();
   const navTop = (p) => (state.page === p ? "color:#0f766e;border-bottom-color:#0f766e" : "color:#98a2b3;border-bottom-color:transparent");
   let page = "";
-  if (state.page === "overview") page = viewOverview();
+  if (!state.metrics) page = `<div style="padding:40px;text-align:center;font:600 14px 'Noto Sans Thai';color:#98a2b3">กำลังเตรียมข้อมูล...</div>`;
+  else if (state.page === "overview") page = viewOverview();
   else if (state.page === "students") page = viewStudents();
   else if (state.page === "tools") page = viewTools();
   else if (state.page === "map") page = viewMap();
@@ -844,6 +930,22 @@ function viewEditModal() {
   </div>`;
 }
 
+function viewLoadingOverlay() {
+  return `<div style="position:fixed;inset:0;z-index:1300;background:rgba(238,240,243,.72);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:14px;background:#fff;border:1px solid #ececf1;border-radius:16px;padding:26px 34px;box-shadow:0 18px 44px rgba(16,24,40,.18)">
+      <div style="width:38px;height:38px;border:3px solid #d6f5ee;border-top-color:#0d9488;border-radius:50%;animation:tdspin .8s linear infinite"></div>
+      <div style="font:600 13.5px 'Noto Sans Thai';color:#475467">กำลังโหลดข้อมูลห้องเรียน...</div>
+    </div>
+  </div>`;
+}
+function viewErrorToast() {
+  return `<div style="position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:1400;display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #fecaca;border-left:4px solid #ef4444;border-radius:12px;padding:12px 16px;box-shadow:0 14px 34px rgba(16,24,40,.18);max-width:520px">
+    <span style="font-size:17px">⚠️</span>
+    <span style="font:600 13px/1.5 'Noto Sans Thai';color:#b42318;flex:1">${esc(state.authError)}</span>
+    <button data-act="closeError" style="border:none;background:#fef2f2;color:#b42318;width:26px;height:26px;border-radius:7px;cursor:pointer;font:700 13px Inter;flex:none">✕</button>
+  </div>`;
+}
+
 /* ============================== ROOT RENDER ============================== */
 function render() {
   const app = document.getElementById("app");
@@ -871,6 +973,8 @@ function render() {
       ${state.course ? viewDashboard() : ""}
       ${state.editOpen ? viewEditModal() : ""}
       ${state.student != null ? viewDrawer() : ""}
+      ${state.authError ? viewErrorToast() : ""}
+      ${state.loadingCourse ? viewLoadingOverlay() : ""}
     </div>`;
 
   requestAnimationFrame(mountMaps);
@@ -970,8 +1074,25 @@ const H = {
   goStudents: () => setState({ page: "students" }),
   goTools: () => setState({ page: "tools" }),
   goMap: () => setState({ page: "map" }),
-  pickCourse: (id) => setState({ course: id, page: "overview", student: null }),
+  pickCourse: async (id) => {
+    if (state.mode !== "api") { setState({ course: id, page: "overview", student: null }); return; }
+    const cls = state.classrooms.find((c) => String(c.id) === String(id));
+    if (!cls) return;
+    setState({ loadingCourse: true, authError: null, userMenuOpen: false });
+    try {
+      const [course, progress, grades] = await Promise.all([
+        cls.courseId ? apiCourseTree(cls.courseId) : Promise.resolve(state.courseData || {}),
+        apiProgress(cls.assignId),
+        apiGrades(cls.assignId),
+      ]);
+      applyDataset({ course, progress, score: grades, title: cls.title, key: cls.courseId });
+      setState({ course: id, page: "overview", student: null, loadingCourse: false });
+    } catch (err) {
+      setState({ loadingCourse: false, authError: "โหลดข้อมูลห้องเรียนไม่สำเร็จ: " + err.message });
+    }
+  },
   switchCourse: () => setState({ course: null, student: null, userMenuOpen: false }),
+  closeError: () => setState({ authError: null }),
   openStudent: (id) => setState({ student: id }),
   closeStudent: () => setState({ student: null }),
   toggleUserMenu: () => setState({ userMenuOpen: !state.userMenuOpen, notifOpen: false }),
@@ -979,12 +1100,12 @@ const H = {
   openEdit: () => setState({ editOpen: true, userMenuOpen: false }),
   closeEdit: () => setState({ editOpen: false }),
   saveEdit: () => setState({ editOpen: false }),
-  signOut: () => setState({ authed: false, course: null, student: null, userMenuOpen: false }),
+  signOut: () => { if (state.mode === "api") oidcLogout(); else setState({ authed: false, course: null, student: null, userMenuOpen: false }); },
   toggleNotif: () => setState({ notifOpen: !state.notifOpen, userMenuOpen: false }),
   closeNotif: () => setState({ notifOpen: false }),
   toggleLeado: () => setState({ leadoOpen: !state.leadoOpen }),
   closeLeado: () => setState({ leadoOpen: false }),
-  signIn: () => setState({ authed: true }),
+  signIn: () => { if (state.mode === "api") startLogin(); else setState({ authed: true }); },
   setFilter: (key) => setState({ filter: key }),
   pickLang: (code) => setState({ lang: code }),
   pickFont: (size) => setState({ fontSize: size }),
@@ -1028,28 +1149,30 @@ function bindEvents() {
 }
 
 /* ------------------------------ init ------------------------------ */
-async function init() {
-  bindEvents();
-  render();
+function applyDataset({ course, progress, score, title, key }) {
+  const prow = normalizeListPayload(progress);
+  const srow = normalizeListPayload(score);
+  const students = mergeStudents(prow, srow);
+  const activities = collectActivities(course, srow);
+  const { prog, quiz } = bucketize(students);
+  const completed = students.filter((s) => s.progress >= 100).length;
+  const avgProgress = avg(students.map((s) => s.progress)) ?? 0;
+  const avgRate = avg(students.map((s) => s.rate).filter((r) => r != null));
+  Object.assign(state, {
+    students, activities, courseData: course,
+    courseTitle: title || course?.courseTitle || course?.title || "-",
+    courseKey: key || course?.courseKey || "-",
+    prog, quiz, tools: toolSummary(activities, srow, students.length),
+    metrics: { completed, avgProgress, avgRate, records: srow.length },
+  });
+}
+
+async function localInit() {
   try {
     const loaded = await loadTeacherData();
-    const students = mergeStudents(loaded.progress, loaded.score);
-    const activities = collectActivities(loaded.course, loaded.score);
-    const { prog, quiz } = bucketize(students);
-    const completed = students.filter((s) => s.progress >= 100).length;
-    const avgProgress = avg(students.map((s) => s.progress)) ?? 0;
-    const avgRate = avg(students.map((s) => s.rate).filter((r) => r != null));
-    Object.assign(state, {
-      ready: true, source: loaded.source,
-      students, activities,
-      courseData: loaded.course,
-      courseTitle: loaded.course.courseTitle || loaded.course.title || "-",
-      courseKey: loaded.course.courseKey || "-",
-      prog, quiz,
-      tools: toolSummary(activities, loaded.score, students.length),
-      metrics: { completed, avgProgress, avgRate, records: loaded.score.length },
-    });
-    // optional deep-link: ?course=real&tab=students (also auto-authenticates)
+    applyDataset({ course: loaded.course, progress: loaded.progress, score: loaded.score });
+    state.ready = true; state.source = loaded.source;
+    // optional deep-link (demo): ?course=real&tab=students (also auto-authenticates)
     const dlCourse = teacherQuery.get("course");
     const dlTab = teacherQuery.get("tab");
     if (dlCourse) { state.authed = true; state.course = dlCourse; }
@@ -1062,4 +1185,62 @@ async function init() {
   }
 }
 
+function cleanAuthParams() {
+  try {
+    const url = new URL(globalThis.location.href);
+    ["code", "state", "session_state", "iss"].forEach((k) => url.searchParams.delete(k));
+    globalThis.history.replaceState({}, document.title, url.toString());
+  } catch (_) {}
+}
+
+async function apiInit() {
+  state.source = "api";
+  // handle Keycloak redirect callback
+  try {
+    const params = new URLSearchParams(globalThis.location.search || "");
+    if (params.get("code")) {
+      const token = await exchangeCodeForToken(params.get("code"));
+      storeAuth({ token, sub: decodeJwt(token.access_token)?.sub || decodeJwt(token.id_token)?.sub || null });
+      cleanAuthParams();
+    }
+  } catch (err) { state.authError = "เข้าสู่ระบบไม่สำเร็จ: " + err.message; }
+
+  const auth = readAuth();
+  const sub = authSub(auth);
+  if (!auth || !sub || authExpired(auth)) { state.ready = true; state.authed = false; render(); return; }
+  state.authed = true; state.sub = sub;
+
+  try {
+    let teacher = null;
+    try { teacher = await apiTeacher(sub); } catch (_) {}
+    if (teacher) {
+      const nm = teacher.firstName ? `${teacher.firstName} ${teacher.lastName || ""}`.trim() : (teacher.name || teacher.displayName);
+      if (nm) state.teacherName = nm;
+      state.instituteId = teacher.instituteId || teacher.institute_id || teacherConfig.instituteId || "";
+    } else {
+      state.instituteId = teacherConfig.instituteId || "";
+    }
+    const raw = normalizeListPayload(await apiClassrooms(sub, state.instituteId));
+    state.classrooms = raw.map(mapClassroom);
+    state.ready = true;
+    render();
+    // optional direct deep-link ?assignid=... opens a classroom immediately
+    if (teacherConfig.assignId) {
+      const match = state.classrooms.find((c) => String(c.assignId) === String(teacherConfig.assignId));
+      if (match) H.pickCourse(match.id);
+    }
+  } catch (err) {
+    state.ready = true;
+    state.authError = "โหลดรายชื่อห้องเรียนไม่สำเร็จ: " + err.message;
+    render();
+  }
+}
+
+async function init() {
+  bindEvents();
+  state.mode = teacherConfig.source === "api" ? "api" : "local";
+  render();
+  if (state.mode === "api") return apiInit();
+  return localInit();
+}
 init();

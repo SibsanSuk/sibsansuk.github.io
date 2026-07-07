@@ -21,6 +21,7 @@
     ::-webkit-scrollbar-thumb:hover{background:#b6bdc7;background-clip:content-box}
     @keyframes fadeIn{from{opacity:0}to{opacity:1}}
     @keyframes riseIn{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+    @keyframes tdspin{to{transform:rotate(360deg)}}
     button{font-family:inherit}
     input,select{font-family:inherit}
     /* hover helpers (design used a style-hover DSL attribute) */
@@ -44,9 +45,17 @@
 
   <script>
     window.TEACHER_DASHBOARD_CONFIG = {
+      // Default: bundled local JSON (offline demo).
+      // To use the live MECA APIs, set source:"api" (or open with ?source=api).
+      // Then the "เข้าสู่ระบบด้วย MECA ID" button runs the real Keycloak login,
+      // loads the teacher's classrooms (course/teacher/{sub}) and each classroom's
+      // assign progress + grades + SBS /lms course tree.
       // source: "api",
-      // apiBaseUrl: "https://example.com",
-      // endpoints: { course: "/teacher/course", progress: "/teacher/progress", score: "/teacher/score" },
+      // baseUrl: "https://adaptive-profile-bn-dev.ae.app.meca.in.th", // needs Bearer token + CORS from this origin
+      // sbsUrl:  "https://sbs-backend.mooc.meca.in.th",               // public
+      // clientId: "dashboard",       // Keycloak client (redirect URI = this page URL must be registered)
+      // instituteId: "1010720039",   // fallback if teacher/{sub} omits it
+      // assignId: "",                // optional: open one classroom directly
     };
     const teacherScript = document.createElement("script");
     teacherScript.src = `./teacher.js?v=${Date.now()}`;
