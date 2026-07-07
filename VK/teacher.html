@@ -5,175 +5,48 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Teacher Dashboard</title>
 
-  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700;800&family=Noto+Sans+Thai:wght@300;400;600;700&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="./dashboard.css?v=20260615-3" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Noto Sans Thai','Inter',system-ui,sans-serif;background:#eef0f3;color:#101828;-webkit-font-smoothing:antialiased}
+    ::-webkit-scrollbar{width:10px;height:10px}
+    ::-webkit-scrollbar-thumb{background:#d0d5dd;border-radius:8px;border:2px solid transparent;background-clip:content-box}
+    ::-webkit-scrollbar-thumb:hover{background:#b6bdc7;background-clip:content-box}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes riseIn{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+    button{font-family:inherit}
+    input,select{font-family:inherit}
+    /* hover helpers (design used a style-hover DSL attribute) */
+    .h-soft:hover{background:#e9ebef !important}
+    .h-soft2:hover{background:#f4f5f7 !important}
+    .h-row:hover{background:#f9fafb !important}
+    .h-card:hover{box-shadow:0 10px 24px rgba(16,24,40,.1) !important;border-color:#dfe3e8 !important}
+    .h-teal:hover{background:#0f766e !important}
+    .h-teal2:hover{background:#f0fdfa !important}
+    .h-bright:hover{filter:brightness(1.06)}
+    .h-red:hover{background:#fef2f2 !important}
+    .h-light:hover{background:#f9fafb !important}
+    .fld:focus{border-color:#0d9488 !important;box-shadow:0 0 0 3px rgba(13,148,136,.12) !important}
+    #compare-map,#th-usage-map{background:#dfe7ea}
+    .leaflet-container{font-family:inherit}
+  </style>
 </head>
 
-<body class="min-h-screen dots">
-  <div class="app-frame">
-    <div class="app-body">
-      <div class="app-content">
-        <div class="app-shell">
-          <main class="app-main">
-            <div class="page-screen">
-              <nav class="teacher-menu page-head" aria-label="เมนูแดชบอร์ดผู้สอน">
-                <div class="teacher-menu-list" role="tablist" aria-orientation="horizontal">
-                  <button class="teacher-menu-button active" type="button" role="tab" aria-selected="true" aria-controls="teacher-view-overview" data-teacher-view="overview">
-                    <span class="teacher-menu-number">1</span>
-                    <span>ภาพรวมของทั้งหลักสูตร</span>
-                  </button>
-                  <button class="teacher-menu-button" type="button" role="tab" aria-selected="false" aria-controls="teacher-view-students" data-teacher-view="students">
-                    <span class="teacher-menu-number">2</span>
-                    <span>รายชื่อนักเรียน</span>
-                  </button>
-                  <button class="teacher-menu-button" type="button" role="tab" aria-selected="false" aria-controls="teacher-view-tools" data-teacher-view="tools">
-                    <span class="teacher-menu-number">3</span>
-                    <span>ภาพรวมการใช้งานเครื่องมือ</span>
-                  </button>
-                </div>
-              </nav>
-
-              <div class="page-scroll">
-                <div class="teacher-dashboard-layout">
-                  <div class="clay p-5 sm:p-6">
-                    <div class="teacher-view-container">
-                      <section id="teacher-view-overview" class="teacher-view" role="tabpanel" data-teacher-panel="overview">
-                        <div class="teacher-course-hero">
-                          <div class="teacher-course-kicker">แดชบอร์ดผู้สอน</div>
-                          <h1 id="teacher-course-name" class="teacher-course-title">-</h1>
-                          <div class="teacher-course-meta">
-                            <span>Course ID</span>
-                            <strong id="teacher-course-id" class="mono">-</strong>
-                          </div>
-                          <div id="teacher-status" class="teacher-course-status">กำลังโหลดข้อมูล...</div>
-                        </div>
-
-                        <div class="mt-5">
-                          <h2 class="text-xl font-extrabold">ภาพรวมของทั้งหลักสูตร</h2>
-                          <p class="mt-1 text-sm text-slate-600">สรุปจำนวนผู้เรียน ความคืบหน้า และคะแนน Quiz</p>
-                        </div>
-
-                        <div class="mt-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                          <div class="clay-soft p-4 cat-card cat-1">
-                            <div class="text-sm text-slate-500">ผู้เรียนทั้งหมด</div>
-                            <div id="metric-students" class="mt-2 text-3xl font-black mono text-brand-soft">0</div>
-                          </div>
-                          <div class="clay-soft p-4 cat-card cat-3">
-                            <div class="text-sm text-slate-500">ความคืบหน้าเฉลี่ย</div>
-                            <div id="metric-progress" class="mt-2 text-3xl font-black mono text-brand-soft">0%</div>
-                          </div>
-                          <div class="clay-soft p-4 cat-card cat-2">
-                            <div class="text-sm text-slate-500">เรียนครบแล้ว</div>
-                            <div id="metric-completed" class="mt-2 text-3xl font-black mono text-brand-soft">0</div>
-                          </div>
-                          <div class="clay-soft p-4 cat-card cat-4">
-                            <div class="text-sm text-slate-500">คะแนน Quiz เฉลี่ย</div>
-                            <div id="metric-score" class="mt-2 text-3xl font-black mono text-brand-soft">-</div>
-                          </div>
-                        </div>
-
-                        <div class="mt-5 grid grid-cols-1 xl:grid-cols-2 gap-4">
-                          <div class="clay-soft p-4 cat-card cat-3">
-                            <div class="flex items-start justify-between gap-3">
-                              <div>
-                                <div class="font-bold">การกระจายความคืบหน้า</div>
-                                <div class="mt-1 text-sm text-slate-600">จำนวนผู้เรียนตามช่วงเปอร์เซ็นต์</div>
-                              </div>
-                              <div id="progress-bucket-summary" class="text-xs text-slate-500 mono">-</div>
-                            </div>
-                            <div class="mt-4 h-[250px]">
-                              <canvas class="chart-canvas" id="teacherProgressChart"></canvas>
-                            </div>
-                          </div>
-
-                          <div class="clay-soft p-4 cat-card cat-4">
-                            <div class="flex items-start justify-between gap-3">
-                              <div>
-                                <div class="font-bold">ภาพรวมคะแนน Quiz</div>
-                                <div class="mt-1 text-sm text-slate-600">คะแนนรวมจากข้อมูล score.json</div>
-                              </div>
-                              <div id="score-summary" class="text-xs text-slate-500 mono">-</div>
-                            </div>
-                            <div class="mt-4 h-[250px]">
-                              <canvas class="chart-canvas" id="teacherScoreChart"></canvas>
-                            </div>
-                          </div>
-                        </div>
-                      </section>
-
-                      <section id="teacher-view-students" class="teacher-view" role="tabpanel" data-teacher-panel="students" hidden>
-                        <div class="flex flex-col xl:flex-row xl:items-start justify-between gap-4">
-                          <div>
-                            <h2 class="text-xl font-extrabold">รายชื่อนักเรียน</h2>
-                            <div id="teacher-table-summary" class="mt-1 text-sm text-slate-600">-</div>
-                          </div>
-                          <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
-                            <input id="teacher-search" class="field rounded-full px-4 py-3 text-sm min-w-[260px]" type="search" placeholder="ค้นหาชื่อหรืออีเมล" />
-                            <select id="teacher-filter" class="field rounded-full px-4 py-3 text-sm">
-                              <option value="all">ผู้เรียนทั้งหมด</option>
-                              <option value="done">เรียนครบ 100%</option>
-                              <option value="active">กำลังเรียน</option>
-                              <option value="risk">ต้องติดตาม</option>
-                              <option value="noscore">ยังไม่มีคะแนน</option>
-                            </select>
-                            <button id="teacher-sort-toggle" type="button" class="ghost px-4 py-3 text-sm font-semibold whitespace-nowrap">เรียง: ต้องติดตามก่อน</button>
-                          </div>
-                        </div>
-                        <div class="mt-4 teacher-table-wrap">
-                          <table class="teacher-table">
-                            <thead>
-                              <tr>
-                                <th>ผู้เรียน</th>
-                                <th>ความคืบหน้า</th>
-                                <th>คะแนน</th>
-                                <th>อัปเดตล่าสุด</th>
-                                <th>สถานะ</th>
-                              </tr>
-                            </thead>
-                            <tbody id="teacher-student-rows">
-                              <tr><td colspan="5" class="text-center text-slate-500">กำลังโหลดข้อมูล...</td></tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </section>
-
-                      <section id="teacher-view-tools" class="teacher-view" role="tabpanel" data-teacher-panel="tools" hidden>
-                        <div class="clay-soft p-4 cat-card cat-2">
-                          <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                            <div>
-                              <h2 class="text-xl font-extrabold">ภาพรวมการใช้งานเครื่องมือต่าง ๆ</h2>
-                              <div class="mt-1 text-sm text-slate-600">รายการเครื่องมือที่พบในแต่ละกิจกรรมของรายวิชา</div>
-                            </div>
-                            <div id="teacher-activity-summary" class="text-xs text-slate-500 mono">-</div>
-                          </div>
-                          <div id="teacher-activity-list" class="mt-4 grid gap-3"></div>
-                        </div>
-                      </section>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </main>
-        </div>
-      </div>
-    </div>
-  </div>
+<body>
+  <div id="app"></div>
 
   <script>
     window.TEACHER_DASHBOARD_CONFIG = {
       // source: "api",
       // apiBaseUrl: "https://example.com",
-      // endpoints: {
-      //   course: "/teacher/course",
-      //   progress: "/teacher/progress",
-      //   score: "/teacher/score",
-      // },
+      // endpoints: { course: "/teacher/course", progress: "/teacher/progress", score: "/teacher/score" },
     };
     const teacherScript = document.createElement("script");
     teacherScript.src = `./teacher.js?v=${Date.now()}`;
