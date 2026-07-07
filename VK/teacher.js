@@ -944,8 +944,12 @@ function viewEditModal() {
   </div>`;
 }
 
-function viewDebugPanel() {
-  if (!DEBUG) return "";
+/* ---------- draggable / collapsible debug panel (lives outside #app) ---------- */
+let dbgEl = null, dbgBody = null;
+const dbgUi = (() => { try { return JSON.parse(localStorage.getItem("td_debug_ui")) || {}; } catch (_) { return {}; } })();
+const saveDbgUi = () => { try { localStorage.setItem("td_debug_ui", JSON.stringify(dbgUi)); } catch (_) {} };
+
+function debugBodyHtml() {
   const auth = readAuth();
   const sub = authSub(auth);
   const short = (s) => (s ? String(s).replace(teacherConfig.baseUrl, "").replace(teacherConfig.sbsUrl, "") : "");
@@ -954,14 +958,62 @@ function viewDebugPanel() {
       ${e.error ? `<div style="color:#fca5a5;margin-top:2px">${esc(e.error)}</div>` : ""}
       ${e.sample ? `<pre style="margin:4px 0 0;white-space:pre-wrap;color:#cbd5e1;max-height:160px;overflow:auto;background:#0b1220;padding:6px;border-radius:6px">${esc(JSON.stringify(e.sample, null, 1).slice(0, 4000))}</pre>` : ""}
     </div>`).join("");
-  return `<div style="position:fixed;right:12px;bottom:12px;z-index:2000;width:420px;max-width:92vw;max-height:70vh;overflow:auto;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.4);font:500 11.5px ui-monospace,Menlo,monospace;padding:12px 14px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><b style="font:700 12px 'Noto Sans Thai'">🐞 Debug (?debug=1)</b><span style="color:#64748b">mode:${state.mode}</span></div>
-    <div>authed: <b style="color:${state.authed ? "#22c55e" : "#f87171"}">${state.authed}</b> · sub: <span style="color:#93c5fd">${esc(sub || "—")}</span></div>
+  return `
+    <div>authed: <b style="color:${state.authed ? "#22c55e" : "#f87171"}">${state.authed}</b> · mode: ${esc(state.mode)} · sub: <span style="color:#93c5fd">${esc(sub || "—")}</span></div>
     <div>token exp: ${auth?.token?.access_token ? esc(new Date((decodeJwt(auth.token.access_token)?.exp || 0) * 1000).toLocaleString("th-TH")) : "—"} · instituteId: ${esc(state.instituteId || "—")}</div>
     <div>classrooms mapped: <b style="color:#fbbf24">${state.classrooms.length}</b></div>
     <div style="margin-top:6px;font:700 11px 'Noto Sans Thai'">API calls (${API_LOG.length})</div>
-    ${calls || '<div style="color:#64748b">— ยังไม่มีการเรียก API —</div>'}
-  </div>`;
+    ${calls || '<div style="color:#64748b">— ยังไม่มีการเรียก API —</div>'}`;
+}
+
+function ensureDebugPanel() {
+  if (!DEBUG || dbgEl) return;
+  const el = document.createElement("div");
+  el.id = "td-debug";
+  const w = window.innerWidth || 1200, h = window.innerHeight || 800;
+  const left = dbgUi.left != null ? dbgUi.left : Math.max(8, w - 440);
+  const top = dbgUi.top != null ? dbgUi.top : Math.max(8, h - 380);
+  el.style.cssText = `position:fixed;left:${left}px;top:${top}px;z-index:2147483000;width:420px;max-width:92vw;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:12px;box-shadow:0 18px 44px rgba(0,0,0,.45);font:500 11.5px ui-monospace,Menlo,monospace;overflow:hidden`;
+  el.innerHTML = `
+    <div id="td-debug-head" style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#111c31;cursor:move;user-select:none;border-bottom:1px solid #223;touch-action:none">
+      <b style="font:700 12px 'Noto Sans Thai';flex:1">🐞 Debug</b>
+      <button id="td-debug-min" title="ย่อ/ขยาย" style="border:none;background:#233047;color:#e2e8f0;width:26px;height:22px;border-radius:6px;cursor:pointer;font:700 14px Menlo;line-height:1">–</button>
+    </div>
+    <div id="td-debug-body" style="padding:10px 12px;max-height:60vh;overflow:auto"></div>`;
+  document.body.appendChild(el);
+  dbgEl = el;
+  dbgBody = el.querySelector("#td-debug-body");
+  const minBtn = el.querySelector("#td-debug-min");
+  const applyCollapsed = () => { dbgBody.style.display = dbgUi.collapsed ? "none" : "block"; minBtn.textContent = dbgUi.collapsed ? "+" : "–"; };
+  minBtn.addEventListener("click", (e) => { e.stopPropagation(); dbgUi.collapsed = !dbgUi.collapsed; applyCollapsed(); saveDbgUi(); });
+  applyCollapsed();
+
+  // drag via pointer events
+  const head = el.querySelector("#td-debug-head");
+  let dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
+  head.addEventListener("pointerdown", (e) => {
+    if (e.target === minBtn) return;
+    dragging = true; sx = e.clientX; sy = e.clientY;
+    const r = el.getBoundingClientRect(); ox = r.left; oy = r.top;
+    try { head.setPointerCapture(e.pointerId); } catch (_) {}
+    e.preventDefault();
+  });
+  head.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    const vw = window.innerWidth, vh = window.innerHeight, bw = el.offsetWidth, bh = el.offsetHeight;
+    const nl = Math.max(0, Math.min(vw - Math.min(bw, 80), ox + (e.clientX - sx)));
+    const nt = Math.max(0, Math.min(vh - 24, oy + (e.clientY - sy)));
+    el.style.left = nl + "px"; el.style.top = nt + "px";
+  });
+  const endDrag = () => { if (!dragging) return; dragging = false; const r = el.getBoundingClientRect(); dbgUi.left = Math.round(r.left); dbgUi.top = Math.round(r.top); saveDbgUi(); };
+  head.addEventListener("pointerup", endDrag);
+  head.addEventListener("pointercancel", endDrag);
+}
+
+function updateDebugPanel() {
+  if (!DEBUG) return;
+  ensureDebugPanel();
+  if (dbgBody) dbgBody.innerHTML = debugBodyHtml();
 }
 
 function viewLoadingOverlay() {
@@ -991,6 +1043,7 @@ function render() {
       <div style="width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font:800 26px Inter">TD</div>
       <div style="font:700 15px 'Noto Sans Thai'">${state.error ? esc(state.error) : "กำลังโหลดข้อมูล..."}</div>
     </div>`;
+    if (DEBUG) updateDebugPanel();
     return;
   }
 
@@ -1009,9 +1062,9 @@ function render() {
       ${state.student != null ? viewDrawer() : ""}
       ${state.authError ? viewErrorToast() : ""}
       ${state.loadingCourse ? viewLoadingOverlay() : ""}
-      ${viewDebugPanel()}
     </div>`;
 
+  if (DEBUG) updateDebugPanel();
   requestAnimationFrame(mountMaps);
 }
 
