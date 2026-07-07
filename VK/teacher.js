@@ -1052,6 +1052,23 @@ function viewErrorToast() {
 }
 
 /* ============================== ROOT RENDER ============================== */
+function overlaysHtml() {
+  return (state.userMenuOpen ? `<div data-act="closeUserMenu" style="position:fixed;inset:0;z-index:95"></div>` : "") +
+    (state.notifOpen ? `<div data-act="closeNotif" style="position:fixed;inset:0;z-index:95"></div>` : "") +
+    (state.leadoOpen ? `<div data-act="closeLeado" style="position:fixed;inset:0;z-index:94"></div>` : "");
+}
+
+/* Lightweight update for header panels (Leado/notif/user menu) — rebuilds only the
+   topbar layer so the landing map is never destroyed/recreated (no flicker). */
+function renderTopbar(patch) {
+  if (patch) Object.assign(state, patch);
+  const layer = document.getElementById("tb-layer");
+  if (!layer) { render(); return; }
+  layer.innerHTML = overlaysHtml() + viewTopBar();
+  const inp = document.getElementById("leadoMsg");
+  if (inp && state.leadoOpen) inp.focus();
+}
+
 function render() {
   const app = document.getElementById("app");
   if (!app) return;
@@ -1066,16 +1083,10 @@ function render() {
     return;
   }
 
-  const overlays =
-    (state.userMenuOpen ? `<div data-act="closeUserMenu" style="position:fixed;inset:0;z-index:95"></div>` : "") +
-    (state.notifOpen ? `<div data-act="closeNotif" style="position:fixed;inset:0;z-index:95"></div>` : "") +
-    (state.leadoOpen ? `<div data-act="closeLeado" style="position:fixed;inset:0;z-index:94"></div>` : "");
-
   app.innerHTML = `
     <div style="height:calc(100dvh / ${zoom});width:calc(100% / ${zoom});display:flex;flex-direction:column;padding-top:60px;overflow:hidden;zoom:${zoom}">
       ${!state.course ? viewLanding() : ""}
-      ${overlays}
-      ${viewTopBar()}
+      <div id="tb-layer" style="display:contents">${overlaysHtml()}${viewTopBar()}</div>
       ${state.course ? viewDashboard() : ""}
       ${state.editOpen ? viewEditModal() : ""}
       ${state.student != null ? viewDrawer() : ""}
@@ -1202,16 +1213,16 @@ const H = {
   closeError: () => setState({ authError: null }),
   openStudent: (id) => setState({ student: id }),
   closeStudent: () => setState({ student: null }),
-  toggleUserMenu: () => setState({ userMenuOpen: !state.userMenuOpen, notifOpen: false }),
-  closeUserMenu: () => setState({ userMenuOpen: false }),
+  toggleUserMenu: () => renderTopbar({ userMenuOpen: !state.userMenuOpen, notifOpen: false, leadoOpen: false }),
+  closeUserMenu: () => renderTopbar({ userMenuOpen: false }),
   openEdit: () => setState({ editOpen: true, userMenuOpen: false }),
   closeEdit: () => setState({ editOpen: false }),
   saveEdit: () => setState({ editOpen: false }),
   signOut: () => { if (state.mode === "api") oidcLogout(); else setState({ authed: false, course: null, student: null, userMenuOpen: false }); },
-  toggleNotif: () => setState({ notifOpen: !state.notifOpen, userMenuOpen: false }),
-  closeNotif: () => setState({ notifOpen: false }),
-  toggleLeado: () => setState({ leadoOpen: !state.leadoOpen }),
-  closeLeado: () => setState({ leadoOpen: false }),
+  toggleNotif: () => renderTopbar({ notifOpen: !state.notifOpen, userMenuOpen: false, leadoOpen: false }),
+  closeNotif: () => renderTopbar({ notifOpen: false }),
+  toggleLeado: () => renderTopbar({ leadoOpen: !state.leadoOpen, notifOpen: false, userMenuOpen: false }),
+  closeLeado: () => renderTopbar({ leadoOpen: false }),
   signIn: () => { if (state.mode === "api") startLogin(); else setState({ authed: true }); },
   setFilter: (key) => setState({ filter: key }),
   pickLang: (code) => setState({ lang: code }),
