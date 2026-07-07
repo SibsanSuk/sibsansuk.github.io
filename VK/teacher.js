@@ -322,18 +322,18 @@ const DEMO = {
 };
 
 /* ------------------------------ icons ------------------------------ */
-const svg = (paths, sw) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw || 1.9}" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%">${paths.map((d) => `<path d="${d}"></path>`).join("")}</svg>`;
+const svg = (paths, sw) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw || 2.1}" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%">${paths.map((d) => `<path d="${d}"></path>`).join("")}</svg>`;
 const ICO = {
-  usersSm: svg(["M16 20v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1", "M9.5 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7"], 2),
-  home: svg(["M3.5 11.5 12 4.5l8.5 7", "M5.5 10v9.5h13V10", "M10 19.5v-5.5h4v5.5"], 1.8),
-  bell: svg(["M6 9.5a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6.5H4c.5-1 2-2.5 2-6.5z", "M9.7 19a2.3 2.3 0 0 0 4.6 0"], 1.7),
-  send: svg(["M4 12l16-7-6 16-2.5-6.5L4 12z"], 1.7),
-  plus: svg(["M12 5v14", "M5 12h14"], 2),
-  edit: svg(["M4 20.5h4L18.6 9.9a1.9 1.9 0 0 0-2.7-2.7L5.3 17.8 4 20.5z", "M14.3 7.2l2.7 2.7"], 1.8),
-  logout: svg(["M15 4.5h2.5a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H15", "M10.5 16.5l4.5-4.5-4.5-4.5", "M15 12H4"], 1.8),
-  chevron: svg(["M6 9l6 6 6-6"], 2),
-  id: svg(["M3.5 6h17v12h-17z", "M8 11a1.7 1.7 0 1 0 0-3.4A1.7 1.7 0 0 0 8 11", "M5.6 15.2c.4-1.3 1.4-2 2.4-2s2 .7 2.4 2", "M13.5 9h4", "M13.5 12h4", "M13.5 15h2.5"], 1.7),
-  lock: svg(["M6 10.5h12v9.5H6z", "M8.2 10.5V7.2a3.8 3.8 0 0 1 7.6 0v3.3"], 1.8),
+  usersSm: svg(["M16 20v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1", "M9.5 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7"], 2.1),
+  home: svg(["M3.5 11.5 12 4.5l8.5 7", "M5.5 10v9.5h13V10", "M10 19.5v-5.5h4v5.5"], 2),
+  bell: svg(["M6 9.5a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6.5H4c.5-1 2-2.5 2-6.5z", "M9.7 19a2.3 2.3 0 0 0 4.6 0"], 2.1),
+  send: svg(["M4 12l16-7-6 16-2.5-6.5L4 12z"], 2),
+  plus: svg(["M12 5v14", "M5 12h14"], 2.2),
+  edit: svg(["M4 20.5h4L18.6 9.9a1.9 1.9 0 0 0-2.7-2.7L5.3 17.8 4 20.5z", "M14.3 7.2l2.7 2.7"], 2),
+  logout: svg(["M15 4.5h2.5a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H15", "M10.5 16.5l4.5-4.5-4.5-4.5", "M15 12H4"], 2),
+  chevron: svg(["M6 9l6 6 6-6"], 2.2),
+  id: svg(["M3.5 6h17v12h-17z", "M8 11a1.7 1.7 0 1 0 0-3.4A1.7 1.7 0 0 0 8 11", "M5.6 15.2c.4-1.3 1.4-2 2.4-2s2 .7 2.4 2", "M13.5 9h4", "M13.5 12h4", "M13.5 15h2.5"], 1.9),
+  lock: svg(["M6 10.5h12v9.5H6z", "M8.2 10.5V7.2a3.8 3.8 0 0 1 7.6 0v3.3"], 2),
 };
 const toolStyle = (label) => { const m = { Profile: "#12a89b", Video: "#7b83eb", BookRoll: "#5ab877", Quiz: "#f59e0b" }; return `background:${m[label] || "#94a3b8"};color:#fff`; };
 
@@ -453,7 +453,7 @@ function viewCourseList() {
             </div>
             <div style="display:flex;align-items:center;gap:11px;margin-top:14px">
               <span style="font:500 11.5px 'Noto Sans Thai';color:#98a2b3;display:flex;align-items:center;gap:5px;flex:none"><span style="width:14px;height:14px;display:inline-flex">${ICO.usersSm}</span>${stu} คน</span>
-              <div style="flex:1;height:7px;background:#eef0f3;border-radius:99px;overflow:hidden"><div style="height:100%;border-radius:99px;background:${c.color};width:${pnum == null ? 0 : pnum}%"></div></div>
+              <div style="flex:1;height:9px;background:#eef0f3;border-radius:99px;overflow:hidden"><div style="height:100%;border-radius:99px;background:${c.color};width:${pnum == null ? 0 : pnum}%"></div></div>
               <span style="font:700 13px Inter;color:#0f766e;flex:none;width:38px;text-align:right">${pnum == null ? "—" : pnum + "%"}</span>
             </div>
           </div>
@@ -511,7 +511,7 @@ function viewTopBar() {
   const leadoShow = state.leadoOpen;
   const sel = selectedCourse();
   return `
-  <div style="position:fixed;top:0;left:0;right:0;height:60px;z-index:1200;background:rgba(255,255,255,.9);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid rgba(0,0,0,.06);box-shadow:0 2px 10px rgba(16,24,40,.08);display:flex;align-items:center;justify-content:space-between;padding:0 22px">
+  <div style="position:fixed;top:0;left:0;right:0;height:64px;z-index:1200;background:rgba(255,255,255,.9);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid rgba(0,0,0,.06);box-shadow:0 2px 10px rgba(16,24,40,.08);display:flex;align-items:center;justify-content:space-between;padding:0 22px">
     <div style="display:flex;align-items:center;gap:14px;min-width:0">
       ${showLanding ? `
         <button data-act="switchCourse" class="h-soft2" title="หน้าแรก" style="background:none;border:none;cursor:pointer;padding:4px 6px;display:flex;align-items:center;border-radius:8px">
@@ -525,7 +525,7 @@ function viewTopBar() {
         </div>` : ""}
       ${inCourse ? `
         <button data-act="switchCourse" class="h-soft" style="display:flex;align-items:center;gap:8px;background:#f4f5f7;border:none;cursor:pointer;padding:9px 14px;border-radius:10px;font:700 14px 'Noto Sans Thai';color:#0f766e">
-          <span style="width:24px;height:24px;color:#0f766e;display:inline-flex">${ICO.home}</span>หน้าแรก
+          <span style="width:26px;height:26px;color:#0f766e;display:inline-flex">${ICO.home}</span>หน้าแรก
         </button>
         <div style="width:1px;height:26px;background:#e6e8ec"></div>
         <span style="font:600 13px 'Noto Sans Thai';color:#98a2b3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px">${esc(sel?.title || state.courseTitle)}</span>` : ""}
@@ -533,8 +533,8 @@ function viewTopBar() {
     <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;flex:none">
       ${showProfile ? `
         <div style="position:relative">
-          <button data-act="toggleLeado" class="h-soft" style="position:relative;width:44px;height:44px;border-radius:50%;background:#f4f5f7;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center">
-            <img src="https://lms.mooc.meca.in.th/static/sbs-themes/images/Leado_icon.png" alt="Leado" style="width:28px;height:28px;object-fit:contain"></button>
+          <button data-act="toggleLeado" class="h-soft" style="position:relative;width:46px;height:46px;border-radius:50%;background:#f4f5f7;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center">
+            <img src="https://lms.mooc.meca.in.th/static/sbs-themes/images/Leado_icon.png" alt="Leado" style="width:30px;height:30px;object-fit:contain"></button>
           <div style="position:absolute;top:calc(100% + 10px);right:0;z-index:98;width:308px;transform-origin:top right;transition:opacity .32s cubic-bezier(.2,.8,.2,1),transform .32s cubic-bezier(.2,.8,.2,1);opacity:${leadoShow ? 1 : 0};transform:${leadoShow ? "scale(1) translateY(0)" : "scale(.4) translateY(-14px)"};pointer-events:${leadoShow ? "auto" : "none"}">
             <div style="background:#fff;border:1px solid #ececf1;border-radius:16px;box-shadow:0 18px 44px rgba(16,24,40,.22);overflow:hidden">
               <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;background:linear-gradient(100deg,#0f766e,#12a594);color:#fff">
@@ -551,8 +551,8 @@ function viewTopBar() {
           </div>
         </div>
         <div style="position:relative">
-          <button data-act="toggleNotif" class="h-soft" style="position:relative;width:44px;height:44px;border-radius:50%;background:#f4f5f7;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#475467">
-            <span style="width:23px;height:23px;display:inline-flex">${ICO.bell}</span>
+          <button data-act="toggleNotif" class="h-soft" style="position:relative;width:46px;height:46px;border-radius:50%;background:#f4f5f7;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#344054">
+            <span style="width:25px;height:25px;display:inline-flex">${ICO.bell}</span>
             ${unread ? `<span style="position:absolute;top:9px;right:9px;width:9px;height:9px;border-radius:50%;background:#ef4444;border:1.5px solid #fff"></span>` : ""}
           </button>
           ${state.notifOpen ? `
@@ -563,8 +563,8 @@ function viewTopBar() {
         </div>
         <div style="position:relative">
           <button data-act="toggleUserMenu" class="h-soft" style="display:flex;align-items:center;gap:9px;background:#f4f5f7;border:1px solid #e9ebef;border-radius:999px;padding:5px 10px 5px 6px;cursor:pointer">
-            <div style="position:relative;width:34px;height:34px">
-              <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#19b3a6,#0d9488);display:flex;align-items:center;justify-content:center;font:700 13px 'Noto Sans Thai';color:#fff">${esc(initials)}</div>
+            <div style="position:relative;width:36px;height:36px">
+              <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#19b3a6,#0d9488);display:flex;align-items:center;justify-content:center;font:700 14px 'Noto Sans Thai';color:#fff">${esc(initials)}</div>
               <span style="position:absolute;bottom:-3px;right:-3px;width:16px;height:16px;border-radius:50%;background:#fff;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-size:11px;box-shadow:0 1px 3px rgba(16,24,40,.25)">${langFlag}</span>
             </div>
             <span style="width:17px;height:17px;color:#98a2b3;display:inline-flex">${ICO.chevron}</span>
@@ -629,10 +629,10 @@ function viewDashboard() {
       </header>
       <div style="flex:none;background:#fff;border-bottom:1px solid #ececf1;box-shadow:0 1px 2px rgba(16,24,40,.03);z-index:10">
         <div style="max-width:1180px;margin:0 auto;padding:0 40px;display:flex;gap:6px;overflow-x:auto">
-          <button data-act="goOverview" style="border:none;cursor:pointer;background:none;padding:15px 6px;margin-right:22px;font:700 14px 'Noto Sans Thai';border-bottom:3px solid transparent;${navTop("overview")}">ภาพรวมทั้งห้อง</button>
-          <button data-act="goStudents" style="border:none;cursor:pointer;background:none;padding:15px 6px;margin-right:22px;font:700 14px 'Noto Sans Thai';border-bottom:3px solid transparent;${navTop("students")}">รายชื่อนักเรียน</button>
-          <button data-act="goTools" style="border:none;cursor:pointer;background:none;padding:15px 6px;margin-right:22px;font:700 14px 'Noto Sans Thai';border-bottom:3px solid transparent;${navTop("tools")}">การใช้งานเครื่องมือ</button>
-          <button data-act="goMap" style="border:none;cursor:pointer;background:none;padding:15px 6px;font:700 14px 'Noto Sans Thai';border-bottom:3px solid transparent;${navTop("map")}">แผนที่เปรียบเทียบ</button>
+          <button data-act="goOverview" style="border:none;cursor:pointer;background:none;padding:15px 6px;margin-right:22px;font:700 15px 'Noto Sans Thai';border-bottom:3px solid transparent;${navTop("overview")}">ภาพรวมทั้งห้อง</button>
+          <button data-act="goStudents" style="border:none;cursor:pointer;background:none;padding:15px 6px;margin-right:22px;font:700 15px 'Noto Sans Thai';border-bottom:3px solid transparent;${navTop("students")}">รายชื่อนักเรียน</button>
+          <button data-act="goTools" style="border:none;cursor:pointer;background:none;padding:15px 6px;margin-right:22px;font:700 15px 'Noto Sans Thai';border-bottom:3px solid transparent;${navTop("tools")}">การใช้งานเครื่องมือ</button>
+          <button data-act="goMap" style="border:none;cursor:pointer;background:none;padding:15px 6px;font:700 15px 'Noto Sans Thai';border-bottom:3px solid transparent;${navTop("map")}">แผนที่เปรียบเทียบ</button>
         </div>
       </div>
       <main class="scrolly" style="flex:1;min-height:0;padding:26px 30px 60px">
@@ -713,7 +713,7 @@ function viewOverview() {
           <div data-act="openStudent" data-arg="${esc(a.id)}" class="h-light" style="display:flex;align-items:center;gap:14px;padding:11px 8px;border-top:1px solid #f2f4f7;cursor:pointer;border-radius:8px">
             <div style="width:34px;height:34px;border-radius:50%;background:#fff3ea;color:#c2410c;display:flex;align-items:center;justify-content:center;font:700 14px 'Noto Sans Thai';flex:none">${esc(a.initials)}</div>
             <div style="flex:1;min-width:0"><div style="font:600 13.5px 'Noto Sans Thai';color:#101828;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.name)}</div><div style="font:500 11.5px Inter;color:#98a2b3">${esc(a.email)}</div></div>
-            <div style="width:120px;height:7px;background:#f2f4f7;border-radius:99px;overflow:hidden;flex:none"><div style="height:100%;border-radius:99px;background:${a.progColor};width:${a.progW}"></div></div>
+            <div style="width:130px;height:9px;background:#f2f4f7;border-radius:99px;overflow:hidden;flex:none"><div style="height:100%;border-radius:99px;background:${a.progColor};width:${a.progW}"></div></div>
             <div style="font:700 13px Inter;color:#475467;width:42px;text-align:right">${a.progW}</div>
             <span style="font:600 11px 'Noto Sans Thai';color:#c2410c;background:#ffedd5;border-radius:999px;padding:4px 11px;flex:none">ต้องติดตาม</span>
           </div>`).join("") : `<div style="padding:16px 8px;font:600 13px 'Noto Sans Thai';color:#98a2b3;border-top:1px solid #f2f4f7">ไม่มีนักเรียนที่ต้องติดตาม</div>`}
@@ -762,7 +762,7 @@ function viewStudents() {
             <div style="width:38px;height:38px;border-radius:50%;background:#f0fdfa;color:#0f766e;display:flex;align-items:center;justify-content:center;font:700 14px 'Noto Sans Thai';flex:none;border:1px solid #d6f5ee">${esc(st.initials)}</div>
             <div style="min-width:0"><div style="font:600 14px 'Noto Sans Thai';color:#101828;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(st.name)}</div><div style="font:500 11.5px Inter;color:#98a2b3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(st.email)} · ${esc(st.room)}</div></div>
           </div>
-          <div style="display:flex;align-items:center;gap:10px"><div style="flex:1;height:8px;background:#f2f4f7;border-radius:99px;overflow:hidden"><div style="height:100%;border-radius:99px;background:${st.progColor};width:${st.progW}"></div></div><span style="font:700 13px Inter;color:#475467;width:38px;text-align:right">${st.progW}</span></div>
+          <div style="display:flex;align-items:center;gap:10px"><div style="flex:1;height:10px;background:#f2f4f7;border-radius:99px;overflow:hidden"><div style="height:100%;border-radius:99px;background:${st.progColor};width:${st.progW}"></div></div><span style="font:700 13px Inter;color:#475467;width:38px;text-align:right">${st.progW}</span></div>
           <div><div style="font:700 14px Inter;color:#101828">${esc(st.quizText)}</div><div style="font:600 11px Inter;color:#98a2b3">${esc(st.quizPct)}</div></div>
           <div style="font:500 12.5px 'Noto Sans Thai';color:#667085">${esc(st.updated)}</div>
           <div><span style="font:600 11px 'Noto Sans Thai';border-radius:999px;padding:5px 11px;white-space:nowrap;color:${st.status.color};background:${st.status.bg}">${esc(st.status.label)}</span></div>
@@ -798,7 +798,7 @@ function viewTools() {
       ${state.activities.map((a) => {
         const reachCell = a.reach == null
           ? `<span style="font:500 12px 'Noto Sans Thai';color:#b2b8c2">ไม่มีข้อมูลการเข้าถึง</span>`
-          : `<div style="flex:1;height:8px;background:#f2f4f7;border-radius:99px;overflow:hidden"><div style="height:100%;border-radius:99px;background:linear-gradient(90deg,#14b8a6,#0d9488);width:${total ? Math.round((a.reach / total) * 100) : 0}%"></div></div><span style="font:600 12px 'Noto Sans Thai';color:#667085;width:64px;white-space:nowrap;text-align:right">${a.reach}/${total}</span>`;
+          : `<div style="flex:1;height:10px;background:#f2f4f7;border-radius:99px;overflow:hidden"><div style="height:100%;border-radius:99px;background:linear-gradient(90deg,#14b8a6,#0d9488);width:${total ? Math.round((a.reach / total) * 100) : 0}%"></div></div><span style="font:600 12px 'Noto Sans Thai';color:#667085;width:64px;white-space:nowrap;text-align:right">${a.reach}/${total}</span>`;
         return `
         <div style="display:grid;grid-template-columns:2.6fr 1.8fr 1.4fr 1fr;gap:14px;align-items:center;padding:16px 22px;border-bottom:1px solid #f4f5f7">
           <div><div style="font:600 14.5px 'Noto Sans Thai';color:#101828">${esc(a.name)}</div><div style="font:600 11.5px Inter;color:#b2b8c2;margin-top:1px">${esc(a.code)}</div></div>
@@ -1056,7 +1056,7 @@ function render() {
     (state.leadoOpen ? `<div data-act="closeLeado" style="position:fixed;inset:0;z-index:94"></div>` : "");
 
   app.innerHTML = `
-    <div style="height:calc(100dvh / ${zoom});width:calc(100% / ${zoom});display:flex;flex-direction:column;padding-top:60px;overflow:hidden;zoom:${zoom}">
+    <div style="height:calc(100dvh / ${zoom});width:calc(100% / ${zoom});display:flex;flex-direction:column;padding-top:64px;overflow:hidden;zoom:${zoom}">
       ${!state.course ? viewLanding() : ""}
       ${overlays}
       ${viewTopBar()}
