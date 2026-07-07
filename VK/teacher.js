@@ -357,19 +357,34 @@ let slideTimer = null;
 
 /* ------------------------------ compute per render ------------------------------ */
 const CLASS_COLORS = ["#f43f7e", "#f5b301", "#22c55e", "#0f766e", "#6366f1", "#0ea5e9", "#ef4444", "#8b5cf6"];
-const mapClassroom = (item, i) => {
-  const courseId = item.courseId || item.course_id || "";
-  const numOr = (...vals) => { for (const v of vals) if (v != null && v !== "") return v; return null; };
+const numOr = (...vals) => { for (const v of vals) if (v != null && v !== "") return v; return null; };
+// One course from /course/teacher/{sub} holds an `assigns[]` array; each assign is
+// a classroom (holds assignId + institute/grade/level/classRoom). Flatten to one card each.
+const mapClassroom = (course, assign, i) => {
+  const courseId = course.courseId || course.course_id || "";
+  const inst = assign.institute || {};
   return {
-    id: String(item.assignId || item.assign_id || item.id || `cls-${i}`),
-    assignId: item.assignId || item.assign_id || item.id || "",
+    id: String(assign.assignId || assign.assign_id || assign.id || `cls-${i}`),
+    assignId: assign.assignId || assign.assign_id || assign.id || "",
     courseId,
     color: CLASS_COLORS[i % CLASS_COLORS.length],
-    title: item.courseName || item.courseTitle || item.title || item.name || courseId || "ห้องเรียน",
-    classCode: item.classRoom || item.classCode || [item.grade, item.level, item.classRoom].filter(Boolean).join("/") || "—",
-    students: numOr(item.studentCount, item.students, item.enrollCount, item.total, item.memberCount),
-    progress: (() => { const p = numOr(item.progress, item.avgProgress, item.averageProgress); return p == null ? null : Math.round(Number(p)); })(),
+    title: course.courseName || course.courseTitle || course.title || courseId || "ห้องเรียน",
+    classCode: [assign.grade, assign.level, assign.classRoom].filter(Boolean).join("/") || inst.instituteName || "—",
+    school: inst.instituteName || "",
+    province: inst.province || "",
+    students: numOr(assign.studentCount, assign.students, assign.enrollCount, assign.total, assign.memberCount),
+    progress: (() => { const p = numOr(assign.progress, assign.avgProgress, assign.averageProgress); return p == null ? null : Math.round(Number(p)); })(),
   };
+};
+const flattenClassrooms = (courses) => {
+  const out = [];
+  (courses || []).forEach((course) => {
+    const assigns = Array.isArray(course.assigns) && course.assigns.length ? course.assigns
+      : Array.isArray(course.assign) && course.assign.length ? course.assign
+      : [course]; // back-compat: flat item that already carries assignId at top level
+    assigns.forEach((assign) => out.push(mapClassroom(course, assign, out.length)));
+  });
+  return out;
 };
 const courseList = () => {
   if (state.mode === "api") return state.classrooms;
@@ -511,7 +526,7 @@ function viewTopBar() {
   const leadoShow = state.leadoOpen;
   const sel = selectedCourse();
   return `
-  <div style="position:fixed;top:0;left:0;right:0;height:64px;z-index:1200;background:rgba(255,255,255,.9);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid rgba(0,0,0,.06);box-shadow:0 2px 10px rgba(16,24,40,.08);display:flex;align-items:center;justify-content:space-between;padding:0 22px">
+  <div style="position:fixed;top:0;left:0;right:0;height:60px;z-index:1200;background:rgba(255,255,255,.9);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid rgba(0,0,0,.06);box-shadow:0 2px 10px rgba(16,24,40,.08);display:flex;align-items:center;justify-content:space-between;padding:0 22px">
     <div style="display:flex;align-items:center;gap:14px;min-width:0">
       ${showLanding ? `
         <button data-act="switchCourse" class="h-soft2" title="หน้าแรก" style="background:none;border:none;cursor:pointer;padding:4px 6px;display:flex;align-items:center;border-radius:8px">
@@ -519,9 +534,9 @@ function viewTopBar() {
         </button>
         <div style="width:1px;height:24px;background:#e6e8ec"></div>
         <div style="display:flex;align-items:center;gap:14px">
-          <img src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-mhesi.f3e5c05e5ebe.png" alt="MHESI" style="height:26px;object-fit:contain">
-          <img src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-nstda.a0c679b2e45e.png" alt="NSTDA" style="height:26px;object-fit:contain">
-          <img src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-nectec.4a797e97e6ed.png" alt="NECTEC" style="height:26px;object-fit:contain">
+          <img src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-mhesi.f3e5c05e5ebe.png" alt="MHESI" style="height:38px;object-fit:contain">
+          <img src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-nstda.a0c679b2e45e.png" alt="NSTDA" style="height:32px;object-fit:contain">
+          <img src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-nectec.4a797e97e6ed.png" alt="NECTEC" style="height:32px;object-fit:contain">
         </div>` : ""}
       ${inCourse ? `
         <button data-act="switchCourse" class="h-soft" style="display:flex;align-items:center;gap:8px;background:#f4f5f7;border:none;cursor:pointer;padding:9px 14px;border-radius:10px;font:700 14px 'Noto Sans Thai';color:#0f766e">
@@ -1056,7 +1071,7 @@ function render() {
     (state.leadoOpen ? `<div data-act="closeLeado" style="position:fixed;inset:0;z-index:94"></div>` : "");
 
   app.innerHTML = `
-    <div style="height:calc(100dvh / ${zoom});width:calc(100% / ${zoom});display:flex;flex-direction:column;padding-top:64px;overflow:hidden;zoom:${zoom}">
+    <div style="height:calc(100dvh / ${zoom});width:calc(100% / ${zoom});display:flex;flex-direction:column;padding-top:60px;overflow:hidden;zoom:${zoom}">
       ${!state.course ? viewLanding() : ""}
       ${overlays}
       ${viewTopBar()}
@@ -1332,7 +1347,7 @@ async function apiInit() {
     const classroomsResp = await apiClassrooms(sub, state.instituteId);
     state.debugClassroomsRaw = classroomsResp;
     const raw = normalizeListPayload(classroomsResp);
-    state.classrooms = raw.map(mapClassroom);
+    state.classrooms = flattenClassrooms(raw);
     state.ready = true;
     render();
     // optional direct deep-link ?assignid=... opens a classroom immediately
