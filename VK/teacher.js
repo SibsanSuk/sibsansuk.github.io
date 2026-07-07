@@ -294,10 +294,10 @@ const DEMO = {
     { icon: "📈", text: "ความคืบหน้าเฉลี่ยของห้องเพิ่มขึ้น 4.2%", time: "เมื่อวาน", unread: false },
   ],
   insightSlides: [
-    { icon: "🌏", bg: "#e9fbf4", label: "ผู้ใช้งานทั่วประเทศ", big: "22,497", unit: "คน", desc: "ครู นักเรียน และบุคลากรทางการศึกษาใช้งานระบบใน 62 จังหวัดทั่วประเทศ", view: { lat: 13.6, lng: 101.2, zoom: 5.3 } },
-    { icon: "📚", bg: "#eef2ff", label: "วิชาที่เปิดสอนทั้งหมด", big: "48", unit: "วิชา", desc: "ครอบคลุมปัญญาประดิษฐ์ สะเต็มศึกษา และทักษะดิจิทัลสำหรับทุกช่วงชั้น", view: { lat: 15.6, lng: 101.6, zoom: 5.6 } },
-    { icon: "🔥", bg: "#fff1e6", label: "วิชาที่กำลังนิยม", big: "AI เบื้องต้น", unit: "", desc: "มีผู้เรียนมากที่สุด 6,820 คนในเดือนนี้ นำโดยภาคตะวันออกเฉียงเหนือ", view: { lat: 15.0, lng: 102.6, zoom: 6.4 } },
-    { icon: "📈", bg: "#eafaf3", label: "ผู้ใช้ใหม่ใน 30 วัน", big: "+3,150", unit: "คน", desc: "เพิ่มขึ้น 16% จากเดือนก่อนหน้า นำโดยกรุงเทพฯ และปริมณฑล", view: { lat: 13.8, lng: 100.7, zoom: 6.9 } },
+    { bg: "#e9fbf4", label: "ผู้ใช้งานทั่วประเทศ", big: "22,497", unit: "คน", desc: "ครู นักเรียน และบุคลากรทางการศึกษาใช้งานระบบใน 62 จังหวัดทั่วประเทศ", view: { lat: 13.6, lng: 101.2, zoom: 5.3 } },
+    { bg: "#eef2ff", label: "วิชาที่เปิดสอนทั้งหมด", big: "48", unit: "วิชา", desc: "ครอบคลุมปัญญาประดิษฐ์ สะเต็มศึกษา และทักษะดิจิทัลสำหรับทุกช่วงชั้น", view: { lat: 15.6, lng: 101.6, zoom: 5.6 } },
+    { bg: "#fff1e6", label: "วิชาที่กำลังนิยม", big: "AI เบื้องต้น", unit: "", desc: "มีผู้เรียนมากที่สุด 6,820 คนในเดือนนี้ นำโดยภาคตะวันออกเฉียงเหนือ", view: { lat: 15.0, lng: 102.6, zoom: 6.4 } },
+    { bg: "#eafaf3", label: "ผู้ใช้ใหม่ใน 30 วัน", big: "+3,150", unit: "คน", desc: "เพิ่มขึ้น 16% จากเดือนก่อนหน้า นำโดยกรุงเทพฯ และปริมณฑล", view: { lat: 13.8, lng: 100.7, zoom: 6.9 } },
   ],
   mapPoints: [
     { lat: 18.79, lng: 98.98, n: 18, size: 38 }, { lat: 18.29, lng: 99.49, n: 22, size: 40 },
@@ -334,6 +334,14 @@ const ICO = {
   lock: svg(["M6 10.5h12v9.5H6z", "M8.2 10.5V7.2a3.8 3.8 0 0 1 7.6 0v3.3"], 1.8),
 };
 const toolStyle = (label) => { const m = { Profile: "#12a89b", Video: "#7b83eb", BookRoll: "#5ab877", Quiz: "#f59e0b" }; return `background:${m[label] || "#94a3b8"};color:#fff`; };
+
+/* line-icons for the landing insight slides (replaces emoji) */
+const SLIDE_ICONS = [
+  { c: "#0f766e", s: svg(["M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18", "M3.5 12h17", "M12 3c2.6 2.4 3.9 5.5 3.9 9s-1.3 6.6-3.9 9c-2.6-2.4-3.9-5.5-3.9-9s1.3-6.6 3.9-9z"], 1.7) },
+  { c: "#4f46e5", s: svg(["M12 6.5C10.6 5.3 8.6 4.5 6 4.5H4v13h2c2.6 0 4.6.8 6 2", "M12 6.5c1.4-1.2 3.4-2 6-2h2v13h-2c-2.6 0-4.6.8-6 2", "M12 6.5v12"], 1.7) },
+  { c: "#c2410c", s: svg(["M12 4.5l2.3 4.7 5.2.8-3.75 3.65.9 5.15L12 16.9l-4.65 2.45.9-5.15L4.5 10l5.2-.8z"], 1.7) },
+  { c: "#0f766e", s: svg(["M4 20h16", "M7 20v-6", "M12 20V8", "M17 20v-9"], 1.8) },
+];
 
 /* ------------------------------ state ------------------------------ */
 const state = {
@@ -474,7 +482,7 @@ function viewLanding() {
             ${DEMO.insightSlides.map((sl, i) => `
               <div class="slide" data-i="${i}" style="position:absolute;inset:0;transition:opacity .5s ease,transform .5s ease;opacity:${i === state.mapSlide ? 1 : 0};transform:${i === state.mapSlide ? "translateY(0)" : "translateY(8px)"};pointer-events:none">
                 <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
-                  <span style="width:34px;height:34px;border-radius:10px;background:${sl.bg};display:flex;align-items:center;justify-content:center;font-size:17px">${sl.icon}</span>
+                  <span style="width:34px;height:34px;border-radius:10px;background:${sl.bg};display:flex;align-items:center;justify-content:center;color:${(SLIDE_ICONS[i] || SLIDE_ICONS[0]).c}"><span style="width:18px;height:18px;display:inline-flex">${(SLIDE_ICONS[i] || SLIDE_ICONS[0]).s}</span></span>
                   <span style="font:700 12.5px 'Noto Sans Thai';color:#475467;letter-spacing:.01em">${esc(sl.label)}</span>
                 </div>
                 <div style="font:800 30px Inter;color:#101828;line-height:1.15;word-break:break-word">${esc(sl.big)} <span style="font:700 15px 'Noto Sans Thai';color:#98a2b3">${esc(sl.unit)}</span></div>
