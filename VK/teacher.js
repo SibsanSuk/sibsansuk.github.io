@@ -289,9 +289,9 @@ const DEMO = {
     { id: "c4", color: "#0f766e", title: "เรียนปัญญาประดิษฐ์ กับ KidBright AI", classCode: "DX4M9K", students: 41, progress: 23 },
   ],
   notifications: [
-    { icon: "⏰", text: "มีนักเรียน 3 คนยังไม่ส่งแบบทดสอบท้าย Module", time: "10 นาทีที่แล้ว", unread: true },
-    { icon: "✓", text: "คะแนน Quiz อัปเดตใหม่ 12 รายการ", time: "2 ชั่วโมงที่แล้ว", unread: true },
-    { icon: "📈", text: "ความคืบหน้าเฉลี่ยของห้องเพิ่มขึ้น 4.2%", time: "เมื่อวาน", unread: false },
+    { text: "มีนักเรียน 3 คนยังไม่ส่งแบบทดสอบท้าย Module", time: "10 นาทีที่แล้ว", unread: true },
+    { text: "คะแนน Quiz อัปเดตใหม่ 12 รายการ", time: "2 ชั่วโมงที่แล้ว", unread: true },
+    { text: "ความคืบหน้าเฉลี่ยของห้องเพิ่มขึ้น 4.2%", time: "เมื่อวาน", unread: false },
   ],
   insightSlides: [
     { bg: "#e9fbf4", label: "ผู้ใช้งานทั่วประเทศ", big: "22,497", unit: "คน", desc: "ครู นักเรียน และบุคลากรทางการศึกษาใช้งานระบบใน 62 จังหวัดทั่วประเทศ", view: { lat: 13.6, lng: 101.2, zoom: 5.3 } },
@@ -334,14 +334,6 @@ const ICO = {
   lock: svg(["M6 10.5h12v9.5H6z", "M8.2 10.5V7.2a3.8 3.8 0 0 1 7.6 0v3.3"], 1.8),
 };
 const toolStyle = (label) => { const m = { Profile: "#12a89b", Video: "#7b83eb", BookRoll: "#5ab877", Quiz: "#f59e0b" }; return `background:${m[label] || "#94a3b8"};color:#fff`; };
-
-/* line-icons for the landing insight slides (replaces emoji) */
-const SLIDE_ICONS = [
-  { c: "#0f766e", s: svg(["M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18", "M3.5 12h17", "M12 3c2.6 2.4 3.9 5.5 3.9 9s-1.3 6.6-3.9 9c-2.6-2.4-3.9-5.5-3.9-9s1.3-6.6 3.9-9z"], 1.7) },
-  { c: "#4f46e5", s: svg(["M12 6.5C10.6 5.3 8.6 4.5 6 4.5H4v13h2c2.6 0 4.6.8 6 2", "M12 6.5c1.4-1.2 3.4-2 6-2h2v13h-2c-2.6 0-4.6.8-6 2", "M12 6.5v12"], 1.7) },
-  { c: "#c2410c", s: svg(["M12 4.5l2.3 4.7 5.2.8-3.75 3.65.9 5.15L12 16.9l-4.65 2.45.9-5.15L4.5 10l5.2-.8z"], 1.7) },
-  { c: "#0f766e", s: svg(["M4 20h16", "M7 20v-6", "M12 20V8", "M17 20v-9"], 1.8) },
-];
 
 /* ------------------------------ state ------------------------------ */
 const state = {
@@ -482,7 +474,7 @@ function viewLanding() {
             ${DEMO.insightSlides.map((sl, i) => `
               <div class="slide" data-i="${i}" style="position:absolute;inset:0;transition:opacity .5s ease,transform .5s ease;opacity:${i === state.mapSlide ? 1 : 0};transform:${i === state.mapSlide ? "translateY(0)" : "translateY(8px)"};pointer-events:none">
                 <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
-                  <span style="width:34px;height:34px;border-radius:10px;background:${sl.bg};display:flex;align-items:center;justify-content:center;color:${(SLIDE_ICONS[i] || SLIDE_ICONS[0]).c}"><span style="width:18px;height:18px;display:inline-flex">${(SLIDE_ICONS[i] || SLIDE_ICONS[0]).s}</span></span>
+                  <span style="width:6px;height:22px;border-radius:99px;background:${sl.bg};flex:none"></span>
                   <span style="font:700 12.5px 'Noto Sans Thai';color:#475467;letter-spacing:.01em">${esc(sl.label)}</span>
                 </div>
                 <div style="font:800 30px Inter;color:#101828;line-height:1.15;word-break:break-word">${esc(sl.big)} <span style="font:700 15px 'Noto Sans Thai';color:#98a2b3">${esc(sl.unit)}</span></div>
@@ -564,7 +556,7 @@ function viewTopBar() {
           ${state.notifOpen ? `
             <div style="position:absolute;top:calc(100% + 10px);right:0;z-index:98;width:320px;background:#fff;border:1px solid #eceef1;border-radius:14px;box-shadow:0 14px 34px rgba(16,24,40,.18);overflow:hidden">
               <div style="padding:14px 16px;border-bottom:1px solid #f2f4f7;font:700 14px 'Noto Sans Thai';color:#101828">การแจ้งเตือน</div>
-              ${DEMO.notifications.map((n) => `<div style="display:flex;gap:11px;padding:13px 16px;border-bottom:1px solid #f6f7f8;background:${n.unread ? "#f7fdfb" : "#fff"}"><span style="font:16px 'Noto Sans Thai';flex:none">${n.icon}</span><div style="min-width:0"><div style="font:600 12.5px/1.5 'Noto Sans Thai';color:#344054">${esc(n.text)}</div><div style="font:500 11px 'Noto Sans Thai';color:#98a2b3;margin-top:3px">${esc(n.time)}</div></div></div>`).join("")}
+              ${DEMO.notifications.map((n) => `<div style="display:flex;gap:11px;padding:13px 16px;border-bottom:1px solid #f6f7f8;background:${n.unread ? "#f7fdfb" : "#fff"}"><span style="width:7px;height:7px;border-radius:50%;flex:none;margin-top:6px;background:${n.unread ? "#0d9488" : "#d0d5dd"}"></span><div style="min-width:0"><div style="font:600 12.5px/1.5 'Noto Sans Thai';color:#344054">${esc(n.text)}</div><div style="font:500 11px 'Noto Sans Thai';color:#98a2b3;margin-top:3px">${esc(n.time)}</div></div></div>`).join("")}
             </div>` : ""}
         </div>
         <div style="position:relative">
@@ -722,7 +714,7 @@ function viewOverview() {
             <div style="width:120px;height:7px;background:#f2f4f7;border-radius:99px;overflow:hidden;flex:none"><div style="height:100%;border-radius:99px;background:${a.progColor};width:${a.progW}"></div></div>
             <div style="font:700 13px Inter;color:#475467;width:42px;text-align:right">${a.progW}</div>
             <span style="font:600 11px 'Noto Sans Thai';color:#c2410c;background:#ffedd5;border-radius:999px;padding:4px 11px;flex:none">ต้องติดตาม</span>
-          </div>`).join("") : `<div style="padding:16px 8px;font:600 13px 'Noto Sans Thai';color:#98a2b3;border-top:1px solid #f2f4f7">ไม่มีนักเรียนที่ต้องติดตาม 🎉</div>`}
+          </div>`).join("") : `<div style="padding:16px 8px;font:600 13px 'Noto Sans Thai';color:#98a2b3;border-top:1px solid #f2f4f7">ไม่มีนักเรียนที่ต้องติดตาม</div>`}
       </div>
     </div>
   </div>`;
