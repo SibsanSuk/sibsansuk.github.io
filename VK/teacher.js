@@ -194,7 +194,7 @@ const mergeStudents = (progressRows, scoreRows) => {
       id: row.id ?? email,
       email,
       name: fullName(row),
-      room: row.province || row.levelOfEducation || "-",
+      room: (/\d/.test(row.levelOfEducation || "") ? String(row.levelOfEducation).trim() : "") || row.province || "-",
       province: row.province || "-",
       progress,
       lastUpdate: row.lastUpdate || null,
@@ -621,7 +621,6 @@ function viewUserMenu(initials) {
 
 /* ---------------- dashboard shell ---------------- */
 function viewDashboard() {
-  const sel = selectedCourse();
   const navTop = (p) => (state.page === p ? "color:#0f766e;border-bottom-color:#0f766e" : "color:#98a2b3;border-bottom-color:transparent");
   let page = "";
   if (!state.metrics) page = `<div style="padding:40px;text-align:center;font:600 14px 'Noto Sans Thai';color:#98a2b3">กำลังเตรียมข้อมูล...</div>`;
@@ -632,16 +631,6 @@ function viewDashboard() {
   return `
   <div style="display:flex;flex:1;min-height:0">
     <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0">
-      <header style="flex:none;background:linear-gradient(120deg,#0f766e 0%,#12a594 55%,#15b8a5 100%);padding:26px 40px 18px">
-        <div style="max-width:1180px;margin:0 auto">
-          <div style="font:800 30px/1.25 'Noto Sans Thai';color:#fff;margin:0 0 12px;max-width:820px;letter-spacing:-.01em">${esc(sel?.title || state.courseTitle)}</div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px">
-            <span style="font:600 11.5px 'Noto Sans Thai';color:#fff;background:rgba(255,255,255,.16);border-radius:8px;padding:5px 11px">โรงเรียน: แคนดงพิทยาคม (บุรีรัมย์)</span>
-            <span style="font:600 11.5px 'Noto Sans Thai';color:#fff;background:rgba(255,255,255,.16);border-radius:8px;padding:5px 11px">ระดับชั้น: ทั้งหมด</span>
-            <span style="font:600 11.5px 'Noto Sans Thai';color:#fff;background:rgba(255,255,255,.16);border-radius:8px;padding:5px 11px">ห้อง: ทั้งหมด</span>
-          </div>
-        </div>
-      </header>
       <div style="flex:none;background:#fff;border-bottom:1px solid #ececf1;box-shadow:0 1px 2px rgba(16,24,40,.03);z-index:10">
         <div style="max-width:1180px;margin:0 auto;padding:0 40px;display:flex;gap:6px;overflow-x:auto">
           <button data-act="goOverview" style="border:none;cursor:pointer;background:none;padding:15px 6px;margin-right:22px;font:700 15px 'Noto Sans Thai';border-bottom:3px solid transparent;${navTop("overview")}">ภาพรวมทั้งห้อง</button>
@@ -658,6 +647,17 @@ function viewDashboard() {
 }
 
 /* ---------------- overview ---------------- */
+function viewCourseHero() {
+  const sel = selectedCourse();
+  const school = sel?.school ? `${sel.school}${sel.province ? ` (${sel.province})` : ""}` : "แคนดงพิทยาคม (บุรีรัมย์)";
+  const chip = (t) => `<span style="font:600 11.5px 'Noto Sans Thai';color:#fff;background:rgba(255,255,255,.16);border-radius:8px;padding:5px 11px">${esc(t)}</span>`;
+  return `
+    <div style="background:linear-gradient(120deg,#0f766e 0%,#12a594 55%,#15b8a5 100%);border-radius:18px;padding:22px 26px;margin-bottom:18px;box-shadow:0 4px 16px rgba(15,118,110,.18)">
+      <div style="font:800 26px/1.25 'Noto Sans Thai';color:#fff;margin:0 0 12px;max-width:820px;letter-spacing:-.01em">${esc(selectedCourse()?.title || state.courseTitle)}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">${chip("โรงเรียน: " + school)}${chip("ระดับชั้น: ทั้งหมด")}${chip("ห้อง: ทั้งหมด")}</div>
+    </div>`;
+}
+
 function viewOverview() {
   const m = state.metrics;
   const total = state.students.length;
@@ -678,6 +678,7 @@ function viewOverview() {
     </div>`;
   return `
   <div>
+    ${viewCourseHero()}
     <div style="margin-bottom:18px"><div style="font:800 19px 'Noto Sans Thai';color:#101828">ภาพรวมของทั้งห้องเรียน</div></div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px">
       ${metricCard("#12a594", "ผู้เรียนทั้งหมด", iconBox(ICO.usersSm, "#0f766e", "#e9fbf4"), `${total} <span style="font:600 13px 'Noto Sans Thai';color:#98a2b3">คน</span>`)}
