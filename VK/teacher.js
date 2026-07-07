@@ -97,7 +97,9 @@ const apiGet = async (url, { auth = true } = {}) => {
     return json;
   } catch (e) { entry.ok = false; entry.error = entry.error || e.message; throw e; }
 };
+const apiUser = (sub) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/user/${encodeURIComponent(sub)}`);
 const apiTeacher = (sub) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/teacher/${encodeURIComponent(sub)}`);
+const apiUserInfo = () => apiGet(OIDC.userinfoEndpoint);
 const apiClassrooms = (sub, instituteId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/course/teacher/${encodeURIComponent(sub)}${instituteId ? `?instituteId=${encodeURIComponent(instituteId)}` : ""}`);
 const apiAssign = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}`);
 const apiProgress = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}/progress`);
@@ -342,7 +344,7 @@ const state = {
   page: "overview", course: null, student: null,
   search: "", filter: "all", sort: "followup",
   authed: false, userMenuOpen: false, editOpen: false, notifOpen: false,
-  leadoOpen: false, leadoMsg: "", teacherName: "ครูสมชาย ใจดี",
+  leadoOpen: false, leadoMsg: "", teacherName: "ครูสมชาย ใจดี", teacherEmail: "somchai.t@candong.ac.th",
   lang: "th", fontSize: "md", mapSlide: 0,
   // derived (filled after load)
   students: [], activities: [], courseData: null, courseTitle: "-", courseKey: "-",
@@ -588,7 +590,7 @@ function viewUserMenu(initials) {
   <div style="position:absolute;top:calc(100% + 10px);right:0;z-index:97;width:236px;background:#fff;border:1px solid #eceef1;border-radius:13px;box-shadow:0 14px 34px rgba(16,24,40,.18);overflow:hidden">
     <div style="padding:14px 16px;border-bottom:1px solid #f2f4f7;display:flex;align-items:center;gap:11px">
       <div style="width:38px;height:38px;border-radius:50%;background:#f0fdfa;color:#0f766e;display:flex;align-items:center;justify-content:center;font:700 14px 'Noto Sans Thai';flex:none;border:1px solid #d6f5ee">${esc(initials)}</div>
-      <div style="min-width:0"><div style="font:700 13.5px 'Noto Sans Thai';color:#101828;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(state.teacherName)}</div><div style="font:500 11px Inter;color:#98a2b3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">somchai.t@candong.ac.th</div></div>
+      <div style="min-width:0"><div style="font:700 13.5px 'Noto Sans Thai';color:#101828;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(state.teacherName)}</div><div style="font:500 11px Inter;color:#98a2b3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(state.teacherEmail || "—")}</div></div>
     </div>
     <div style="padding:11px 16px 4px;font:700 11px 'Noto Sans Thai';color:#98a2b3">ภาษา</div>
     <div style="display:flex;gap:6px;padding:0 16px 11px">${langBtn("th", "🇹🇭", "ไทย")}${langBtn("en", "🇬🇧", "English")}</div>
@@ -937,7 +939,7 @@ function viewEditModal() {
         <label style="display:block;font:600 13px 'Noto Sans Thai';color:#344054;margin-bottom:7px">ชื่อที่แสดง</label>
         <input id="editName" data-inp="setTeacherName" value="${esc(state.teacherName)}" class="fld" style="width:100%;border:1px solid #e4e7ec;border-radius:11px;padding:12px 14px;font:500 14px 'Noto Sans Thai';outline:none;margin-bottom:16px">
         <label style="display:block;font:600 13px 'Noto Sans Thai';color:#344054;margin-bottom:7px">อีเมล</label>
-        <input value="somchai.t@candong.ac.th" readonly style="width:100%;border:1px solid #eceef1;border-radius:11px;padding:12px 14px;font:500 14px 'Noto Sans Thai';outline:none;background:#f7f8fa;color:#98a2b3">
+        <input value="${esc(state.teacherEmail || "")}" readonly style="width:100%;border:1px solid #eceef1;border-radius:11px;padding:12px 14px;font:500 14px 'Noto Sans Thai';outline:none;background:#f7f8fa;color:#98a2b3">
       </div>
       <div style="padding:16px 24px;border-top:1px solid #f2f4f7;display:flex;gap:10px;justify-content:flex-end"><button type="button" data-act="closeEdit" class="h-light" style="border:1px solid #e4e7ec;background:#fff;color:#475467;border-radius:999px;padding:11px 18px;font:700 13.5px 'Noto Sans Thai';cursor:pointer">ยกเลิก</button><button type="submit" class="h-teal" style="border:none;background:#0d9488;color:#fff;border-radius:999px;padding:11px 22px;font:700 13.5px 'Noto Sans Thai';cursor:pointer">บันทึก</button></div>
     </form>
@@ -960,6 +962,7 @@ function debugBodyHtml() {
     </div>`).join("");
   return `
     <div>authed: <b style="color:${state.authed ? "#22c55e" : "#f87171"}">${state.authed}</b> · mode: ${esc(state.mode)} · sub: <span style="color:#93c5fd">${esc(sub || "—")}</span></div>
+    <div>profile: <span style="color:#a7f3d0">${esc(state.teacherName || "—")}</span> · ${esc(state.teacherEmail || "—")}</div>
     <div>token exp: ${auth?.token?.access_token ? esc(new Date((decodeJwt(auth.token.access_token)?.exp || 0) * 1000).toLocaleString("th-TH")) : "—"} · instituteId: ${esc(state.instituteId || "—")}</div>
     <div>classrooms mapped: <b style="color:#fbbf24">${state.classrooms.length}</b></div>
     <div style="margin-top:6px;font:700 11px 'Noto Sans Thai'">API calls (${API_LOG.length})</div>
@@ -1298,13 +1301,30 @@ async function apiInit() {
   if (!auth || !sub || authExpired(auth)) { state.ready = true; state.authed = false; render(); return; }
   state.authed = true; state.sub = sub;
 
+  // ---- real profile: token claims -> user/{sub} -> teacher/{sub} ----
+  const claims = decodeJwt(auth?.token?.id_token || auth?.token?.access_token || "") || {};
+  const claimName = claims.name || `${claims.given_name || ""} ${claims.family_name || ""}`.trim();
+  if (claimName) state.teacherName = claimName;
+  if (claims.email || claims.preferred_username) state.teacherEmail = claims.email || claims.preferred_username;
+
   try {
+    let user = null;
+    try { user = await apiUser(sub); } catch (_) {}
+    state.debugUser = user;
+    if (user) {
+      const un = user.firstName ? `${user.firstName} ${user.lastName || ""}`.trim() : (user.name || user.displayName);
+      if (un) state.teacherName = un;
+      if (user.email) state.teacherEmail = user.email;
+    }
+
     let teacher = null;
     try { teacher = await apiTeacher(sub); } catch (_) {}
     state.debugTeacher = teacher;
     if (teacher) {
-      const nm = teacher.firstName ? `${teacher.firstName} ${teacher.lastName || ""}`.trim() : (teacher.name || teacher.displayName);
-      if (nm) state.teacherName = nm;
+      if (!user) {
+        const nm = teacher.firstName ? `${teacher.firstName} ${teacher.lastName || ""}`.trim() : (teacher.name || teacher.displayName);
+        if (nm) state.teacherName = nm;
+      }
       state.instituteId = teacher.instituteId || teacher.institute_id || teacherConfig.instituteId || "";
     } else {
       state.instituteId = teacherConfig.instituteId || "";
