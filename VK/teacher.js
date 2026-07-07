@@ -488,7 +488,7 @@ function viewLanding() {
           </div>
         </div>
       </div>
-      <div style="flex:.9;min-width:430px;display:flex;flex-direction:column;padding:40px 46px;background:#eef0f3;overflow-y:auto">
+      <div class="scrolly" style="flex:.9;min-width:min(430px,42vw);display:flex;flex-direction:column;padding:40px 46px;background:#eef0f3;min-height:0">
         ${authed ? viewCourseList() : viewLandingSignIn()}
       </div>
     </div>
@@ -616,8 +616,8 @@ function viewDashboard() {
   else if (state.page === "map") page = viewMap();
   return `
   <div style="display:flex;flex:1;min-height:0">
-    <div style="flex:1;display:flex;flex-direction:column;min-width:0">
-      <header style="background:linear-gradient(120deg,#0f766e 0%,#12a594 55%,#15b8a5 100%);padding:26px 40px 18px">
+    <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0">
+      <header style="flex:none;background:linear-gradient(120deg,#0f766e 0%,#12a594 55%,#15b8a5 100%);padding:26px 40px 18px">
         <div style="max-width:1180px;margin:0 auto">
           <div style="font:800 30px/1.25 'Noto Sans Thai';color:#fff;margin:0 0 12px;max-width:820px;letter-spacing:-.01em">${esc(sel?.title || state.courseTitle)}</div>
           <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px">
@@ -627,15 +627,15 @@ function viewDashboard() {
           </div>
         </div>
       </header>
-      <div style="background:#fff;border-bottom:1px solid #ececf1;box-shadow:0 1px 2px rgba(16,24,40,.03);position:sticky;top:0;z-index:10">
-        <div style="max-width:1180px;margin:0 auto;padding:0 40px;display:flex;gap:6px">
+      <div style="flex:none;background:#fff;border-bottom:1px solid #ececf1;box-shadow:0 1px 2px rgba(16,24,40,.03);z-index:10">
+        <div style="max-width:1180px;margin:0 auto;padding:0 40px;display:flex;gap:6px;overflow-x:auto">
           <button data-act="goOverview" style="border:none;cursor:pointer;background:none;padding:15px 6px;margin-right:22px;font:700 14px 'Noto Sans Thai';border-bottom:3px solid transparent;${navTop("overview")}">ภาพรวมทั้งห้อง</button>
           <button data-act="goStudents" style="border:none;cursor:pointer;background:none;padding:15px 6px;margin-right:22px;font:700 14px 'Noto Sans Thai';border-bottom:3px solid transparent;${navTop("students")}">รายชื่อนักเรียน</button>
           <button data-act="goTools" style="border:none;cursor:pointer;background:none;padding:15px 6px;margin-right:22px;font:700 14px 'Noto Sans Thai';border-bottom:3px solid transparent;${navTop("tools")}">การใช้งานเครื่องมือ</button>
           <button data-act="goMap" style="border:none;cursor:pointer;background:none;padding:15px 6px;font:700 14px 'Noto Sans Thai';border-bottom:3px solid transparent;${navTop("map")}">แผนที่เปรียบเทียบ</button>
         </div>
       </div>
-      <main style="flex:1;overflow:auto;padding:26px 30px 60px">
+      <main class="scrolly" style="flex:1;min-height:0;padding:26px 30px 60px">
         <div style="max-width:1180px;margin:0 auto">${page}</div>
       </main>
     </div>
@@ -881,7 +881,7 @@ function viewDrawer() {
   return `
   <div style="position:fixed;inset:0;z-index:100;display:flex;justify-content:flex-end">
     <div data-act="closeStudent" style="position:absolute;inset:0;background:rgba(16,24,40,.45)"></div>
-    <div style="position:relative;width:560px;max-width:94vw;height:100%;background:#f7f8fa;box-shadow:-14px 0 40px rgba(16,24,40,.18);overflow-y:auto">
+    <div class="scrolly" style="position:relative;width:560px;max-width:94vw;height:100%;background:#f7f8fa;box-shadow:-14px 0 40px rgba(16,24,40,.18)">
       <div style="background:linear-gradient(125deg,#0f766e,#12a594);color:#fff;padding:22px 26px 24px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px"><span style="font:600 12px 'Noto Sans Thai';color:#c7f0e8">รายละเอียดผู้เรียน</span><button data-act="closeStudent" style="border:none;background:rgba(255,255,255,.16);color:#fff;width:30px;height:30px;border-radius:8px;cursor:pointer;font:700 15px Inter">✕</button></div>
         <div style="display:flex;align-items:center;gap:16px">
@@ -1042,7 +1042,7 @@ function render() {
   const zoom = state.fontSize === "sm" ? 0.9 : state.fontSize === "lg" ? 1.15 : 1;
 
   if (!state.ready) {
-    app.innerHTML = `<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;background:#0f766e;color:#fff">
+    app.innerHTML = `<div style="height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;background:#0f766e;color:#fff">
       <div style="width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font:800 26px Inter">TD</div>
       <div style="font:700 15px 'Noto Sans Thai'">${state.error ? esc(state.error) : "กำลังโหลดข้อมูล..."}</div>
     </div>`;
@@ -1056,7 +1056,7 @@ function render() {
     (state.leadoOpen ? `<div data-act="closeLeado" style="position:fixed;inset:0;z-index:94"></div>` : "");
 
   app.innerHTML = `
-    <div style="min-height:100vh;display:flex;flex-direction:column;padding-top:60px;zoom:${zoom}">
+    <div style="height:calc(100dvh / ${zoom});width:calc(100% / ${zoom});display:flex;flex-direction:column;padding-top:60px;overflow:hidden;zoom:${zoom}">
       ${!state.course ? viewLanding() : ""}
       ${overlays}
       ${viewTopBar()}

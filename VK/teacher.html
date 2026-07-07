@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Teacher Dashboard</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -14,8 +14,13 @@
 
   <style>
     *{box-sizing:border-box}
-    html,body{margin:0}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Noto Sans Thai','Inter',system-ui,sans-serif;background:#eef0f3;color:#101828;-webkit-font-smoothing:antialiased}
+    /* app shell: lock the page to the viewport; only inner regions scroll */
+    html,body{margin:0;height:100%;overflow:hidden}
+    html{height:100dvh}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Noto Sans Thai','Inter',system-ui,sans-serif;background:#eef0f3;color:#101828;-webkit-font-smoothing:antialiased;overscroll-behavior:none;position:relative}
+    #app{height:100%;overflow:hidden}
+    /* internal scroll regions: momentum + no scroll-chaining/rubber-band */
+    .scrolly{overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
     ::-webkit-scrollbar{width:10px;height:10px}
     ::-webkit-scrollbar-thumb{background:#d0d5dd;border-radius:8px;border:2px solid transparent;background-clip:content-box}
     ::-webkit-scrollbar-thumb:hover{background:#b6bdc7;background-clip:content-box}
