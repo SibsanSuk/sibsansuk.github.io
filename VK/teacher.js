@@ -357,7 +357,10 @@ let slideTimer = null;
 
 /* responsive breakpoints: phone < 700 ≤ tablet < 1024 ≤ desktop */
 const BP = () => { const w = window.innerWidth || 1200; return w < 700 ? "phone" : w < 1024 ? "tablet" : "desktop"; };
-let lastBp = BP();
+// wide landscape: show the dashboard tabs as a left sidebar for more vertical room
+const isWide = () => (window.innerWidth || 1200) >= 1280;
+const layoutKey = () => BP() + (isWide() ? "|w" : "");
+let lastLayout = layoutKey();
 
 /* ------------------------------ compute per render ------------------------------ */
 const CLASS_COLORS = ["#f43f7e", "#f5b301", "#22c55e", "#0f766e", "#6366f1", "#0ea5e9", "#ef4444", "#8b5cf6"];
@@ -660,23 +663,42 @@ function viewUserMenu(initials) {
 
 /* ---------------- dashboard shell ---------------- */
 function viewDashboard() {
-  const phone = BP() === "phone";
-  const navTop = (p) => (state.page === p ? "color:#0f766e;border-bottom-color:#0f766e" : "color:#98a2b3;border-bottom-color:transparent");
+  const phone = BP() === "phone", wide = isWide();
   let page = "";
   if (!state.metrics) page = `<div style="padding:40px;text-align:center;font:600 14px 'Noto Sans Thai';color:#98a2b3">กำลังเตรียมข้อมูล...</div>`;
   else if (state.page === "overview") page = viewOverview();
   else if (state.page === "students") page = viewStudents();
   else if (state.page === "tools") page = viewTools();
   else if (state.page === "map") page = viewMap();
+  const tabs = [["overview", "goOverview", "ภาพรวมทั้งห้อง"], ["students", "goStudents", "รายชื่อนักเรียน"], ["tools", "goTools", "การใช้งานเครื่องมือ"], ["map", "goMap", "แผนที่เปรียบเทียบ"]];
+
+  // wide landscape: vertical tab rail on the left, content fills the rest (more vertical room)
+  if (wide) {
+    const navV = ([p, act, label]) => {
+      const on = state.page === p;
+      const stl = on ? "background:#f0fdfa;color:#0f766e;font-weight:700" : "background:none;color:#475467;font-weight:600";
+      return `<button data-act="${act}" class="${on ? "" : "h-light"}" style="display:flex;align-items:center;gap:11px;width:100%;border:none;cursor:pointer;text-align:left;border-radius:10px;padding:12px 13px;font:15px 'Noto Sans Thai';${stl}"><span style="width:4px;height:18px;border-radius:99px;flex:none;background:${on ? "#0d9488" : "transparent"}"></span>${label}</button>`;
+    };
+    return `
+    <div style="display:flex;flex:1;min-height:0">
+      <div style="flex:none;width:236px;background:#fff;border-right:1px solid #ececf1;box-shadow:1px 0 2px rgba(16,24,40,.03);padding:18px 14px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;z-index:10">
+        <div style="font:700 11px 'Noto Sans Thai';color:#98a2b3;padding:2px 13px 10px">เมนูห้องเรียน</div>
+        ${tabs.map(navV).join("")}
+      </div>
+      <main class="scrolly" style="flex:1;min-height:0;padding:26px 34px 60px">
+        <div style="max-width:1180px;margin:0 auto">${page}</div>
+      </main>
+    </div>`;
+  }
+
+  const navTop = (p) => (state.page === p ? "color:#0f766e;border-bottom-color:#0f766e" : "color:#98a2b3;border-bottom-color:transparent");
+  const navT = ([p, act, label], last) => `<button data-act="${act}" style="border:none;cursor:pointer;background:none;padding:15px 6px;${last ? "" : `margin-right:${phone ? 16 : 22}px;`}font:700 15px 'Noto Sans Thai';border-bottom:3px solid transparent;white-space:nowrap;${navTop(p)}">${label}</button>`;
   return `
   <div style="display:flex;flex:1;min-height:0">
     <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0">
       <div style="flex:none;background:#fff;border-bottom:1px solid #ececf1;box-shadow:0 1px 2px rgba(16,24,40,.03);z-index:10">
         <div style="max-width:1180px;margin:0 auto;padding:0 ${phone ? 14 : 40}px;display:flex;gap:6px;overflow-x:auto">
-          <button data-act="goOverview" style="border:none;cursor:pointer;background:none;padding:15px 6px;margin-right:${phone ? 16 : 22}px;font:700 15px 'Noto Sans Thai';border-bottom:3px solid transparent;white-space:nowrap;${navTop("overview")}">ภาพรวมทั้งห้อง</button>
-          <button data-act="goStudents" style="border:none;cursor:pointer;background:none;padding:15px 6px;margin-right:${phone ? 16 : 22}px;font:700 15px 'Noto Sans Thai';border-bottom:3px solid transparent;white-space:nowrap;${navTop("students")}">รายชื่อนักเรียน</button>
-          <button data-act="goTools" style="border:none;cursor:pointer;background:none;padding:15px 6px;margin-right:${phone ? 16 : 22}px;font:700 15px 'Noto Sans Thai';border-bottom:3px solid transparent;white-space:nowrap;${navTop("tools")}">การใช้งานเครื่องมือ</button>
-          <button data-act="goMap" style="border:none;cursor:pointer;background:none;padding:15px 6px;font:700 15px 'Noto Sans Thai';border-bottom:3px solid transparent;white-space:nowrap;${navTop("map")}">แผนที่เปรียบเทียบ</button>
+          ${tabs.map((t, i) => navT(t, i === tabs.length - 1)).join("")}
         </div>
       </div>
       <main class="scrolly" style="flex:1;min-height:0;padding:${phone ? "16px 14px 48px" : "26px 30px 60px"}">
@@ -1369,8 +1391,8 @@ function bindEvents() {
   });
   // responsive: full re-render only when crossing a breakpoint; otherwise just resize maps
   window.addEventListener("resize", () => {
-    const b = BP();
-    if (b !== lastBp) { lastBp = b; render(); }
+    const k = layoutKey();
+    if (k !== lastLayout) { lastLayout = k; render(); }
     else ["usage", "compare"].forEach((k) => maps[k] && maps[k].invalidateSize());
   });
 }
