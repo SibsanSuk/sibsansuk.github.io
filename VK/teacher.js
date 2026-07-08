@@ -1110,7 +1110,7 @@ function render() {
 
   if (!state.ready) {
     app.innerHTML = `<div style="height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;background:#0f766e;color:#fff">
-      <div style="width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font:800 26px Inter">TD</div>
+      <div style="width:72px;height:72px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.18)"><img src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-adap-green-untext.1c98bf032947.png" alt="MECA" style="width:44px;height:44px;object-fit:contain"></div>
       <div style="font:700 15px 'Noto Sans Thai'">${state.error ? esc(state.error) : "กำลังโหลดข้อมูล..."}</div>
     </div>`;
     if (DEBUG) updateDebugPanel();
