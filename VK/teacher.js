@@ -395,15 +395,26 @@ function buildLandingFromAggregate(data) {
   ];
   return { slides, points };
 }
-// Fetch the public aggregate once; rebuild the landing map with real bubbles on success.
+// Precomputed landing summary (10 overview slides + province bubbles), regenerated from the
+// enroll aggregate offline. Reading this small file avoids pulling the full 1.7k-row aggregate.
+const LANDING_OVERVIEW_PATH = "./overview.json";
+function applyLandingSummary(s) {
+  if (!s || !Array.isArray(s.slides) || !s.slides.length) return false;
+  state.landingStats = s.slides;
+  if (Array.isArray(s.points) && s.points.length) state.landingPoints = s.points;
+  if (maps.usage) { maps.usage.remove(); maps.usage = null; } // force rebuild with real markers
+  render();
+  return true;
+}
+// Landing overview: read the small precomputed file first; only fall back to the live
+// aggregate (heavier) if the file is missing/invalid; demo data stands in if both fail.
 async function loadLandingStats() {
   try {
+    if (applyLandingSummary(await fetchJson(LANDING_OVERVIEW_PATH))) return;
+  } catch (_) { /* fall through to live aggregate */ }
+  try {
     const built = buildLandingFromAggregate(await apiEnrollAggregate());
-    if (!built) return;
-    state.landingStats = built.slides;
-    state.landingPoints = built.points;
-    if (maps.usage) { maps.usage.remove(); maps.usage = null; } // force rebuild with real markers
-    render();
+    if (built) applyLandingSummary(built);
   } catch (_) { /* keep demo fallback */ }
 }
 
