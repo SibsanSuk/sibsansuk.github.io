@@ -105,6 +105,30 @@ const apiAssign = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/a
 const apiProgress = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}/progress`);
 const apiGrades = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}/grades`);
 const apiCourseTree = (courseId) => apiGet(`${teacherConfig.sbsUrl}/lms/${encodeURIComponent(courseId)}`, { auth: false });
+const apiPost = async (url, body) => {
+  const entry = { url, method: "POST", at: new Date().toLocaleTimeString("th-TH") };
+  API_LOG.push(entry);
+  try {
+    const res = await fetch(url, { method: "POST", headers: { ...authHeader(), "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    entry.status = res.status;
+    if (!res.ok) { entry.ok = false; entry.error = `${res.status} ${res.statusText}`; throw new Error(entry.error); }
+    const json = await res.json().catch(() => ({}));
+    entry.ok = true;
+    if (DEBUG) entry.sample = json;
+    return json;
+  } catch (e) { entry.ok = false; entry.error = entry.error || e.message; throw e; }
+};
+// Catalog of courses a teacher can turn into a classroom (GET /course?grade&level&classRoom&instituteId)
+const apiCourseSearch = ({ grade, level, classRoom, instituteId } = {}) => {
+  const qs = new URLSearchParams();
+  if (grade) qs.set("grade", grade);
+  if (level) qs.set("level", level);
+  if (classRoom) qs.set("classRoom", classRoom);
+  if (instituteId) qs.set("instituteId", instituteId);
+  const q = qs.toString();
+  return apiGet(`${teacherConfig.baseUrl}/api/kidbright/course${q ? `?${q}` : ""}`);
+};
+const apiCreateAssign = (body) => apiPost(`${teacherConfig.baseUrl}/api/kidbright/assign`, body);
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 const toNumber = (v, f = 0) => { const n = Number(v); return Number.isFinite(n) ? n : f; };
@@ -284,17 +308,10 @@ const toolSummary = (activities, scoreRows, studentCount) => {
 };
 
 /* ------------------------------ design demo data ------------------------------ */
+/* Landing insight overlay, usage-map bubbles and the school-compare map still use
+   this design demo data (no live endpoint yet). Course list, add-catalog and
+   notifications no longer pull from here — they use real data / empty state. */
 const DEMO = {
-  demoCourses: [
-    { id: "c2", color: "#f5b301", title: "ปัญญาประดิษฐ์สำหรับนักเรียนระดับชั้นมัธยมศึกษาตอนต้น : Module 4 Generative AI", classCode: "K9QX3P", students: 63, progress: 41 },
-    { id: "c3", color: "#22c55e", title: "ปัญญาประดิษฐ์สำหรับนักเรียนระดับชั้นมัธยมศึกษาตอนต้น : Module 5 จริยธรรม AI", classCode: "A7YB2H", students: 58, progress: 66 },
-    { id: "c4", color: "#0f766e", title: "เรียนปัญญาประดิษฐ์ กับ KidBright AI", classCode: "DX4M9K", students: 41, progress: 23 },
-  ],
-  notifications: [
-    { text: "มีนักเรียน 3 คนยังไม่ส่งแบบทดสอบท้าย Module", time: "10 นาทีที่แล้ว", unread: true },
-    { text: "คะแนน Quiz อัปเดตใหม่ 12 รายการ", time: "2 ชั่วโมงที่แล้ว", unread: true },
-    { text: "ความคืบหน้าเฉลี่ยของห้องเพิ่มขึ้น 4.2%", time: "เมื่อวาน", unread: false },
-  ],
   insightSlides: [
     { bg: "#e9fbf4", label: "ผู้ใช้งานทั่วประเทศ", big: "22,497", unit: "คน", desc: "ครู นักเรียน และบุคลากรทางการศึกษาใช้งานระบบใน 62 จังหวัดทั่วประเทศ", view: { lat: 13.6, lng: 101.2, zoom: 5.3 } },
     { bg: "#eef2ff", label: "วิชาที่เปิดสอนทั้งหมด", big: "48", unit: "วิชา", desc: "ครอบคลุมปัญญาประดิษฐ์ สะเต็มศึกษา และทักษะดิจิทัลสำหรับทุกช่วงชั้น", view: { lat: 15.6, lng: 101.6, zoom: 5.6 } },
@@ -318,6 +335,18 @@ const DEMO = {
     { name: "พุทไธสง", prov: "บุรีรัมย์", lat: 15.55, lng: 103.00, students: 45, progress: 48 },
     { name: "ราชสีมาวิทยาลัย", prov: "นครราชสีมา", lat: 14.97, lng: 102.10, students: 130, progress: 88 },
     { name: "ศรีสะเกษวิทยาลัย", prov: "ศรีสะเกษ", lat: 15.11, lng: 104.32, students: 96, progress: 70 },
+  ],
+  // Fallback course catalog for the "เพิ่มห้องเรียน" modal when not in api mode.
+  courseCatalog: [
+    { courseId: "course-v1:NECTEC+AILOWERSECONDARY01+M1", title: "ปัญญาประดิษฐ์สำหรับนักเรียนระดับชั้นมัธยมศึกษาตอนต้น : Module 1 ความรู้เบื้องต้นเกี่ยวกับ AI", band: "lower" },
+    { courseId: "course-v1:NECTEC+AILOWERSECONDARY01+M2", title: "ปัญญาประดิษฐ์สำหรับนักเรียนระดับชั้นมัธยมศึกษาตอนต้น : Module 2 Machine Learning : ML การเรียนรู้ของเครื่อง", band: "lower" },
+    { courseId: "course-v1:NECTEC+AILOWERSECONDARY01+M3", title: "ปัญญาประดิษฐ์สำหรับนักเรียนระดับชั้นมัธยมศึกษาตอนต้น : Module 3 Natural Language Processing : NLP ใน Chatbot", band: "lower" },
+    { courseId: "course-v1:NECTEC+AILOWERSECONDARY01+M4", title: "ปัญญาประดิษฐ์สำหรับนักเรียนระดับชั้นมัธยมศึกษาตอนต้น : Module 4 Generative AI", band: "lower" },
+    { courseId: "course-v1:NECTEC+AILOWERSECONDARY01+M5", title: "ปัญญาประดิษฐ์สำหรับนักเรียนระดับชั้นมัธยมศึกษาตอนต้น : Module 5 จริยธรรม AI", band: "lower" },
+    { courseId: "course-v1:NECTEC+AIUPPERSECONDARY01+M1", title: "ปัญญาประดิษฐ์สำหรับนักเรียนระดับชั้นมัธยมศึกษาตอนปลาย : Module 1 วิวัฒนาการ Gen AI และจริยธรรม", band: "upper" },
+    { courseId: "course-v1:NECTEC+AIUPPERSECONDARY01+M2", title: "ปัญญาประดิษฐ์สำหรับนักเรียนระดับชั้นมัธยมศึกษาตอนปลาย : Module 2 ปัญหา AI", band: "upper" },
+    { courseId: "course-v1:NECTEC+AIUPPERSECONDARY01+M3", title: "ปัญญาประดิษฐ์สำหรับนักเรียนระดับชั้นมัธยมศึกษาตอนปลาย : Module 3 การเรียนรู้แบบมีผู้สอน", band: "upper" },
+    { courseId: "course-v1:NECTEC+AIUPPERSECONDARY01+M4", title: "ปัญญาประดิษฐ์สำหรับนักเรียนระดับชั้นมัธยมศึกษาตอนปลาย : Module 4 การประมวลผลภาษาธรรมชาติ (Natural Language Processing : NLP)", band: "upper" },
   ],
 };
 
@@ -344,7 +373,12 @@ const state = {
   page: "overview", course: null, student: null,
   search: "", filter: "all", sort: "followup",
   authed: false, userMenuOpen: false, editOpen: false, notifOpen: false,
-  leadoOpen: false, leadoDemo: false, leadoDemoed: false, leadoMsg: "", teacherName: "ครูสมชาย ใจดี", teacherEmail: "somchai.t@candong.ac.th",
+  // "เพิ่มห้องเรียน" modal (localClassrooms holds classrooms added during an offline demo session)
+  addOpen: false, addLoading: false, addSaving: false, addError: "", addCourses: [], addSel: null, localClassrooms: [],
+  addFilters: { from: "", to: "", band: "", year: "", room: "" },
+  // Identity/school are filled from real profile (apiInit) or demo identity (localInit); no hardcoded default.
+  teacherSchool: "",
+  leadoOpen: false, leadoDemo: false, leadoDemoed: false, leadoMsg: "", teacherName: "", teacherEmail: "",
   lang: "th", fontSize: "md", mapSlide: 0,
   // derived (filled after load)
   students: [], activities: [], courseData: null, courseTitle: "-", courseKey: "-",
@@ -381,6 +415,7 @@ const mapClassroom = (course, assign, i) => {
     color: CLASS_COLORS[i % CLASS_COLORS.length],
     title: course.courseName || course.courseTitle || course.title || courseId || "ห้องเรียน",
     classCode: [assign.grade, assign.level, assign.classRoom].filter(Boolean).join("/") || inst.instituteName || "—",
+    grade: assign.grade || "", level: assign.level ?? "", classRoom: assign.classRoom ?? "",
     school: inst.instituteName || "",
     province: inst.province || "",
     students: numOr(assign.studentCount, assign.students, assign.enrollCount, assign.total, assign.memberCount),
@@ -406,9 +441,30 @@ const courseList = () => {
         students: state.students.length, progress: Math.round(state.metrics?.avgProgress ?? 0),
       }]
     : [];
-  return [...real, ...DEMO.demoCourses];
+  return [...real, ...state.localClassrooms];
 };
 const selectedCourse = () => courseList().find((c) => c.id === state.course) || null;
+// Readable ระดับชั้น / ห้อง for a classroom card; "ทั้งหมด" when the assign has no value.
+const GRADE_TH = { primary: "ประถมศึกษา", secondary: "มัธยมศึกษา", lower: "ม.ต้น", upper: "ม.ปลาย" };
+const gradeText = (c) => {
+  const g = GRADE_TH[c?.grade] || c?.grade || "";
+  const s = [g, c?.level].filter((x) => x !== "" && x != null).join(" ").trim();
+  return s || "ทั้งหมด";
+};
+const roomText = (c) => { const r = c?.classRoom; return (r === "" || r == null) ? "ทั้งหมด" : String(r); };
+
+// ---- "เพิ่มห้องเรียน" helpers ----
+const normalizeCatalog = (rows) => (rows || []).map((c) => {
+  const title = c.courseName || c.courseTitle || c.title || c.courseId || "";
+  const band = /UPPER|ปลาย/i.test(`${title} ${c.courseId || ""}`) ? "upper" : "lower";
+  return { courseId: c.courseId || c.course_id || title, title, band };
+});
+// Catalog narrowed by the modal's ระดับชั้น filter (band); other filters are assign attributes.
+const addCourseList = () => {
+  const b = state.addFilters.band;
+  return (state.addCourses || []).filter((c) => !b || c.band === b);
+};
+const genClassCode = () => Array.from({ length: 6 }, () => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 32)]).join("");
 
 const decoratedStudents = () => {
   let list = state.students.slice();
@@ -460,7 +516,7 @@ function viewCourseList() {
         <div style="font:800 23px 'Noto Sans Thai';color:#101828">ห้องเรียน</div>
         <span style="font:600 13px 'Noto Sans Thai';color:#0f766e;background:#e9fbf4;border-radius:999px;padding:3px 11px">${courses.length} ห้องเรียน</span>
       </div>
-      <button class="h-teal" style="display:flex;align-items:center;gap:6px;border:none;background:#0d9488;color:#fff;border-radius:999px;padding:9px 16px;font:700 12.5px 'Noto Sans Thai';cursor:pointer;box-shadow:0 4px 12px rgba(13,148,136,.25)">
+      <button data-act="openAdd" class="h-teal" style="display:flex;align-items:center;gap:6px;border:none;background:#0d9488;color:#fff;border-radius:999px;padding:9px 16px;font:700 12.5px 'Noto Sans Thai';cursor:pointer;box-shadow:0 4px 12px rgba(13,148,136,.25)">
         <span style="width:15px;height:15px;display:inline-flex">${ICO.plus}</span>เพิ่มห้องเรียน
       </button>
     </div>
@@ -474,7 +530,7 @@ function viewCourseList() {
           <div style="flex:1;padding:17px 18px;min-width:0">
             <div style="font:700 15.5px/1.4 'Noto Sans Thai';color:#101828">${esc(c.title)}</div>
             <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">
-              <span style="font:600 11px 'Noto Sans Thai';color:#0f766e;background:#e9fbf4;border:1px solid #c3f0e2;border-radius:7px;padding:3px 9px">ระดับชั้น: ทั้งหมด</span>
+              <span style="font:600 11px 'Noto Sans Thai';color:#0f766e;background:#e9fbf4;border:1px solid #c3f0e2;border-radius:7px;padding:3px 9px">ระดับชั้น: ${esc(gradeText(c))}</span>
               <span style="display:flex;align-items:center;gap:5px;font:700 11px 'Inter',monospace;letter-spacing:.04em;color:#475467;background:#f7f8fa;border:1px dashed #d3d8de;border-radius:7px;padding:3px 9px"><span style="width:11px;height:11px;display:inline-flex;color:#98a2b3">${ICO.id}</span>${esc(c.classCode)}</span>
             </div>
             <div style="display:flex;align-items:center;gap:11px;margin-top:14px">
@@ -562,7 +618,9 @@ function viewTopBar() {
   const showLanding = !state.course, inCourse = !!state.course, showProfile = state.authed;
   const initials = (state.teacherName || "").replace(/\s/g, "").slice(0, 2);
   const langFlag = state.lang === "th" ? "🇹🇭" : "🇬🇧";
-  const unread = DEMO.notifications.filter((n) => n.unread).length;
+  // Notifications: no live endpoint yet — show the empty-state concept (no demo data pulled).
+  const notifs = [];
+  const unread = notifs.filter((n) => n.unread).length;
   const leadoOpen = state.leadoOpen, leadoDemo = state.leadoDemo;
   const leadoStyle = leadoDemo
     ? "opacity:0;animation:leadoDemo 2.6s ease forwards;pointer-events:none"
@@ -589,7 +647,7 @@ function viewTopBar() {
           <span style="width:26px;height:26px;color:#0f766e;display:inline-flex">${ICO.home}</span>หน้าแรก
         </button>
         <div style="width:1px;height:26px;background:#e6e8ec"></div>
-        <span style="font:600 13px 'Noto Sans Thai';color:#98a2b3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px">${esc(sel?.title || state.courseTitle)}</span>` : ""}
+        <span style="font:700 14px 'Noto Sans Thai';color:#1d2939;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:420px">${esc(sel?.title || state.courseTitle)}</span>` : ""}
     </div>
     <div style="display:flex;align-items:center;gap:8px;justify-content:flex-end;flex:none">
       ${showProfile ? `
@@ -619,7 +677,8 @@ function viewTopBar() {
           ${state.notifOpen ? `
             <div data-act="noop" style="position:absolute;top:calc(100% + 10px);right:0;z-index:98;width:320px;background:#fff;border:1px solid #eceef1;border-radius:14px;box-shadow:0 14px 34px rgba(16,24,40,.18);overflow:hidden">
               <div style="padding:14px 16px;border-bottom:1px solid #f2f4f7;font:700 14px 'Noto Sans Thai';color:#101828">การแจ้งเตือน</div>
-              ${DEMO.notifications.map((n) => `<div style="display:flex;gap:11px;padding:13px 16px;border-bottom:1px solid #f6f7f8;background:${n.unread ? "#f7fdfb" : "#fff"}"><span style="width:7px;height:7px;border-radius:50%;flex:none;margin-top:6px;background:${n.unread ? "#0d9488" : "#d0d5dd"}"></span><div style="min-width:0"><div style="font:600 12.5px/1.5 'Noto Sans Thai';color:#344054">${esc(n.text)}</div><div style="font:500 11px 'Noto Sans Thai';color:#98a2b3;margin-top:3px">${esc(n.time)}</div></div></div>`).join("")}
+              ${notifs.length ? notifs.map((n) => `<div style="display:flex;gap:11px;padding:13px 16px;border-bottom:1px solid #f6f7f8;background:${n.unread ? "#f7fdfb" : "#fff"}"><span style="width:7px;height:7px;border-radius:50%;flex:none;margin-top:6px;background:${n.unread ? "#0d9488" : "#d0d5dd"}"></span><div style="min-width:0"><div style="font:600 12.5px/1.5 'Noto Sans Thai';color:#344054">${esc(n.text)}</div><div style="font:500 11px 'Noto Sans Thai';color:#98a2b3;margin-top:3px">${esc(n.time)}</div></div></div>`).join("")
+                : `<div style="padding:34px 20px;text-align:center"><div style="width:44px;height:44px;border-radius:50%;background:#f4f5f7;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;color:#cdd2da"><span style="width:22px;height:22px;display:inline-flex">${ICO.bell}</span></div><div style="font:700 13px 'Noto Sans Thai';color:#475467">ยังไม่มีการแจ้งเตือน</div><div style="font:500 11.5px 'Noto Sans Thai';color:#98a2b3;margin-top:4px">เราจะแจ้งเตือนคุณเมื่อมีความเคลื่อนไหว</div></div>`}
             </div>` : ""}
         </div>
         <div style="position:relative">
@@ -717,12 +776,12 @@ function viewDashboard() {
 function viewCourseHero() {
   const phone = BP() === "phone";
   const sel = selectedCourse();
-  const school = sel?.school ? `${sel.school}${sel.province ? ` (${sel.province})` : ""}` : "แคนดงพิทยาคม (บุรีรัมย์)";
+  const school = sel?.school ? `${sel.school}${sel.province ? ` (${sel.province})` : ""}` : (state.teacherSchool || "—");
   const chip = (t) => `<span style="font:600 11.5px 'Noto Sans Thai';color:#fff;background:rgba(255,255,255,.16);border-radius:8px;padding:5px 11px">${esc(t)}</span>`;
   return `
     <div style="background:linear-gradient(120deg,#0f766e 0%,#12a594 55%,#15b8a5 100%);border-radius:${phone ? 14 : 18}px;padding:${phone ? "17px 18px" : "22px 26px"};margin-bottom:${phone ? 14 : 18}px;box-shadow:0 4px 16px rgba(15,118,110,.18)">
-      <div style="font:800 ${phone ? "20px" : "26px"}/1.25 'Noto Sans Thai';color:#fff;margin:0 0 12px;max-width:820px;letter-spacing:-.01em">${esc(selectedCourse()?.title || state.courseTitle)}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">${chip("โรงเรียน: " + school)}${chip("ระดับชั้น: ทั้งหมด")}${chip("ห้อง: ทั้งหมด")}</div>
+      <div style="font:800 ${phone ? "20px" : "26px"}/1.25 'Noto Sans Thai';color:#fff;margin:0 0 12px;max-width:820px;letter-spacing:-.01em">${esc(sel?.title || state.courseTitle)}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">${chip("โรงเรียน: " + school)}${chip("ระดับชั้น: " + gradeText(sel))}${chip("ห้อง: " + roomText(sel))}</div>
     </div>`;
 }
 
@@ -1055,6 +1114,66 @@ function viewEditModal() {
   </div>`;
 }
 
+function viewAddModal() {
+  const phone = BP() === "phone";
+  const f = state.addFilters;
+  const list = addCourseList();
+  const fldStl = "border:1px solid #e4e7ec;border-radius:10px;padding:10px 12px;font:500 13px 'Noto Sans Thai';color:#344054;outline:none;background:#fff";
+  const opt = (v, cur, label) => `<option value="${esc(v)}"${String(cur) === String(v) ? " selected" : ""}>${esc(label)}</option>`;
+  const sel = (chg, cur, ph, opts) => `<select data-chg="${chg}" style="${fldStl};flex:1;min-width:0;cursor:pointer;color:${cur ? "#344054" : "#98a2b3"}"><option value=""${cur ? "" : " selected"}>${esc(ph)}</option>${opts}</select>`;
+  const years = [1, 2, 3, 4, 5, 6].map((n) => opt(n, f.year, `ชั้นปี ${n}`)).join("");
+  const rooms = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => opt(n, f.room, `ห้อง ${n}`)).join("");
+  const bands = opt("lower", f.band, "มัธยมศึกษาตอนต้น") + opt("upper", f.band, "มัธยมศึกษาตอนปลาย");
+  const check = (on) => `<span style="width:24px;height:24px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;background:${on ? "#0d9488" : "#f4f5f7"};color:${on ? "#fff" : "#cdd2da"};border:1px solid ${on ? "#0d9488" : "#e4e7ec"};transition:all .15s"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></span>`;
+
+  let rows;
+  if (state.addLoading) rows = `<div style="padding:40px;text-align:center;font:600 13.5px 'Noto Sans Thai';color:#98a2b3">กำลังโหลดรายวิชา...</div>`;
+  else if (state.addError) rows = `<div style="padding:40px;text-align:center;font:600 13.5px 'Noto Sans Thai';color:#dc2626">${esc(state.addError)}</div>`;
+  else if (!list.length) rows = `<div style="padding:40px;text-align:center;font:600 13.5px 'Noto Sans Thai';color:#98a2b3">ไม่พบรายวิชาตามเงื่อนไข</div>`;
+  else rows = list.map((c) => {
+    const on = state.addSel === c.courseId;
+    return `<div data-act="selectAddCourse" data-arg="${esc(c.courseId)}" class="h-card" style="display:flex;align-items:center;gap:14px;padding:15px 17px;border:1px solid ${on ? "#0d9488" : "#ececf1"};border-radius:13px;cursor:pointer;background:${on ? "#f0fdfa" : "#fff"};box-shadow:0 1px 2px rgba(16,24,40,.04);transition:all .15s">
+      <div style="flex:1;min-width:0;font:600 14px/1.45 'Noto Sans Thai';color:#1d2939">${esc(c.title)}</div>
+      ${check(on)}
+    </div>`;
+  }).join("");
+
+  const addDisabled = !state.addSel || state.addSaving;
+  return `
+  <div style="position:fixed;inset:0;z-index:1300;display:flex;align-items:center;justify-content:center;padding:${phone ? "0" : "24px"}">
+    <div data-act="closeAdd" style="position:absolute;inset:0;background:rgba(16,24,40,.5)"></div>
+    <div style="position:relative;width:100%;max-width:820px;height:${phone ? "100%" : "min(88vh,760px)"};background:#fff;border-radius:${phone ? "0" : "18px"};box-shadow:0 24px 60px rgba(16,24,40,.28);display:flex;flex-direction:column;overflow:hidden">
+      <div style="padding:20px 24px;border-bottom:1px solid #f2f4f7;display:flex;align-items:center;justify-content:space-between;gap:12px;flex:none">
+        <div style="font:800 19px 'Noto Sans Thai';color:#101828">เพิ่มห้องเรียน</div>
+        <button type="button" data-act="closeAdd" style="border:none;background:#f2f4f7;color:#667085;width:30px;height:30px;border-radius:8px;cursor:pointer;font:700 15px Inter;flex:none">✕</button>
+      </div>
+      <div style="padding:18px 24px 8px;flex:none;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <label style="font:700 13.5px 'Noto Sans Thai';color:#344054;flex:none;white-space:nowrap"><span style="color:#ef4444">*</span> โรงเรียน:</label>
+          <input value="${esc(state.teacherSchool)}" placeholder="—" readonly style="${fldStl};flex:1;background:#f7f8fa;color:#667085;cursor:not-allowed">
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <label style="font:700 13.5px 'Noto Sans Thai';color:#344054;flex:none;white-space:nowrap">วันที่ลงทะเบียน:</label>
+          <input type="date" data-inp="setAddFrom" value="${esc(f.from)}" style="${fldStl};flex:1;min-width:130px;cursor:pointer">
+          <span style="color:#98a2b3;font:600 13px 'Noto Sans Thai'">→</span>
+          <input type="date" data-inp="setAddTo" value="${esc(f.to)}" style="${fldStl};flex:1;min-width:130px;cursor:pointer">
+          ${sel("setAddBand", f.band, "กรุณาเลือก ระดับชั้น", bands)}
+          ${sel("setAddYear", f.year, "ชั้นปี", years)}
+          ${sel("setAddRoom", f.room, "ห้องเรียน", rooms)}
+        </div>
+      </div>
+      <div class="scrolly" style="flex:1;min-height:0;overflow-y:auto;padding:8px 24px 18px;display:flex;flex-direction:column;gap:11px">
+        ${rows}
+      </div>
+      <div style="padding:15px 24px;border-top:1px solid #f2f4f7;display:flex;gap:10px;justify-content:flex-end;align-items:center;flex:none">
+        ${state.addSel ? `<span style="font:600 12.5px 'Noto Sans Thai';color:#0f766e;margin-right:auto">เลือกแล้ว 1 รายวิชา</span>` : ""}
+        <button type="button" data-act="closeAdd" class="h-light" style="border:1px solid #e4e7ec;background:#fff;color:#475467;border-radius:999px;padding:11px 18px;font:700 13.5px 'Noto Sans Thai';cursor:pointer">ยกเลิก</button>
+        <button type="button" data-act="confirmAdd" style="border:none;background:${addDisabled ? "#c5e9e4" : "#0d9488"};color:#fff;border-radius:999px;padding:11px 24px;font:700 13.5px 'Noto Sans Thai';cursor:${addDisabled ? "not-allowed" : "pointer"}">${state.addSaving ? "กำลังบันทึก..." : "เพิ่มห้องเรียน"}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 /* ---------- draggable / collapsible debug panel (lives outside #app) ---------- */
 let dbgEl = null, dbgBody = null;
 const dbgUi = (() => { try { return JSON.parse(localStorage.getItem("td_debug_ui")) || {}; } catch (_) { return {}; } })();
@@ -1215,6 +1334,7 @@ function render() {
       <div id="tb-layer" style="display:contents">${overlaysHtml()}${viewTopBar()}</div>
       ${state.course ? viewDashboard() : ""}
       ${state.editOpen ? viewEditModal() : ""}
+      ${state.addOpen ? viewAddModal() : ""}
       ${state.student != null ? viewDrawer() : ""}
       ${state.authError ? viewErrorToast() : ""}
       ${state.loadingCourse ? viewLoadingOverlay() : ""}
@@ -1346,6 +1466,53 @@ const H = {
   openEdit: () => setState({ editOpen: true, userMenuOpen: false }),
   closeEdit: () => setState({ editOpen: false }),
   saveEdit: () => setState({ editOpen: false }),
+  openAdd: () => { setState({ addOpen: true, addSel: null }); H.loadAddCourses(); },
+  closeAdd: () => setState({ addOpen: false }),
+  loadAddCourses: async () => {
+    if (state.addCourses.length) return; // cache within session
+    setState({ addLoading: true, addError: "" });
+    try {
+      // api: real catalog only (no demo fallback). local demo: bundled catalog.
+      const list = state.mode === "api"
+        ? normalizeCatalog(normalizeListPayload(await apiCourseSearch({ instituteId: state.instituteId })))
+        : DEMO.courseCatalog;
+      setState({ addCourses: list, addLoading: false });
+    } catch (err) {
+      setState({ addCourses: [], addLoading: false, addError: "โหลดรายวิชาไม่สำเร็จ: " + err.message });
+    }
+  },
+  selectAddCourse: (id) => setState({ addSel: state.addSel === id ? null : id }),
+  confirmAdd: async () => {
+    const c = (state.addCourses || []).find((x) => x.courseId === state.addSel);
+    if (!c || state.addSaving) return;
+    const f = state.addFilters;
+    if (state.mode === "api") {
+      // Create the assign, then refetch the real classroom list — no optimistic demo card.
+      setState({ addSaving: true, addError: "" });
+      try {
+        await apiCreateAssign({
+          userId: state.sub, teacherId: state.sub, courseId: c.courseId, instituteId: state.instituteId,
+          grade: "secondary", level: Number(f.year) || undefined, classRoom: f.room || undefined,
+          startDate: f.from || undefined, endDate: f.to || undefined,
+        });
+        const resp = await apiClassrooms(state.sub, state.instituteId);
+        state.classrooms = flattenClassrooms(normalizeListPayload(resp));
+        setState({ addOpen: false, addSel: null, addSaving: false });
+      } catch (err) {
+        setState({ addSaving: false, addError: "เพิ่มห้องเรียนไม่สำเร็จ: " + err.message });
+      }
+      return;
+    }
+    // local demo: keep the added classroom in a session array (no pre-seeded demo data).
+    state.localClassrooms.unshift({
+      id: "new-" + Date.now(),
+      color: CLASS_COLORS[Math.floor(Math.random() * CLASS_COLORS.length)],
+      title: c.title, courseId: c.courseId, assignId: "",
+      grade: "secondary", level: f.year || "", classRoom: f.room || "",
+      classCode: genClassCode(), students: 0, progress: 0,
+    });
+    setState({ addOpen: false, addSel: null });
+  },
   signOut: () => { if (state.mode === "api") oidcLogout(); else setState({ authed: false, course: null, student: null, userMenuOpen: false }); },
   toggleNotif: () => renderTopbar({ notifOpen: !state.notifOpen, userMenuOpen: false, leadoOpen: false }),
   closeNotif: () => renderTopbar({ notifOpen: false }),
@@ -1364,8 +1531,15 @@ const INP = {
   setSearch: (v) => setState({ search: v }),
   setLeadoMsg: (v) => { state.leadoMsg = v; },
   setTeacherName: (v) => { state.teacherName = v; },
+  setAddFrom: (v) => { state.addFilters.from = v; },
+  setAddTo: (v) => { state.addFilters.to = v; },
 };
-const CHG = { setSort: (v) => setState({ sort: v }) };
+const CHG = {
+  setSort: (v) => setState({ sort: v }),
+  setAddBand: (v) => { state.addFilters.band = v; setState({ addSel: null }); },
+  setAddYear: (v) => { state.addFilters.year = v; },
+  setAddRoom: (v) => { state.addFilters.room = v; },
+};
 const SUB = { saveEdit: () => setState({ editOpen: false }), signIn: () => setState({ authed: true }) };
 
 function bindEvents() {
@@ -1422,6 +1596,10 @@ function applyDataset({ course, progress, score, title, key }) {
 }
 
 async function localInit() {
+  // Offline demo identity (api mode fills these from the real profile instead).
+  state.teacherName = "ครูสมชาย ใจดี";
+  state.teacherEmail = "somchai.t@candong.ac.th";
+  state.teacherSchool = "แคนดงพิทยาคม (แคนดง, บุรีรัมย์)";
   try {
     const loaded = await loadTeacherData();
     applyDataset({ course: loaded.course, progress: loaded.progress, score: loaded.score });
@@ -1496,6 +1674,12 @@ async function apiInit() {
     state.debugClassroomsRaw = classroomsResp;
     const raw = normalizeListPayload(classroomsResp);
     state.classrooms = flattenClassrooms(raw);
+    // Real school label for the add-classroom modal: from teacher's institute, else first classroom.
+    const instName = teacher?.institute?.instituteName || teacher?.instituteName || "";
+    const instProv = teacher?.institute?.province || teacher?.province || "";
+    const withSchool = state.classrooms.find((c) => c.school);
+    if (instName) state.teacherSchool = instName + (instProv ? ` (${instProv})` : "");
+    else if (withSchool) state.teacherSchool = withSchool.school + (withSchool.province ? ` (${withSchool.province})` : "");
     state.ready = true;
     render();
     // optional direct deep-link ?assignid=... opens a classroom immediately
