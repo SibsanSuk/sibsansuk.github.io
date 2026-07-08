@@ -344,7 +344,7 @@ const state = {
   page: "overview", course: null, student: null,
   search: "", filter: "all", sort: "followup",
   authed: false, userMenuOpen: false, editOpen: false, notifOpen: false,
-  leadoOpen: false, leadoMsg: "", teacherName: "ครูสมชาย ใจดี", teacherEmail: "somchai.t@candong.ac.th",
+  leadoOpen: false, leadoDemo: false, leadoDemoed: false, leadoMsg: "", teacherName: "ครูสมชาย ใจดี", teacherEmail: "somchai.t@candong.ac.th",
   lang: "th", fontSize: "md", mapSlide: 0,
   // derived (filled after load)
   students: [], activities: [], courseData: null, courseTitle: "-", courseKey: "-",
@@ -556,10 +556,15 @@ function viewTopBar() {
   const initials = (state.teacherName || "").replace(/\s/g, "").slice(0, 2);
   const langFlag = state.lang === "th" ? "🇹🇭" : "🇬🇧";
   const unread = DEMO.notifications.filter((n) => n.unread).length;
-  const leadoShow = state.leadoOpen;
+  const leadoOpen = state.leadoOpen, leadoDemo = state.leadoDemo;
+  const leadoStyle = leadoDemo
+    ? "opacity:0;animation:leadoDemo 2.6s ease forwards;pointer-events:none"
+    : leadoOpen
+      ? "opacity:1;transform:scale(1) translateY(0);animation:leadoIn .3s cubic-bezier(.2,.8,.2,1);pointer-events:auto"
+      : "opacity:0;transform:scale(.4) translateY(-14px);pointer-events:none";
   const sel = selectedCourse();
   return `
-  <div style="position:fixed;top:0;left:0;right:0;height:60px;z-index:1200;background:rgba(255,255,255,.9);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid rgba(0,0,0,.06);box-shadow:0 2px 10px rgba(16,24,40,.08);display:flex;align-items:center;justify-content:space-between;padding:0 ${phone ? "12px" : "22px"}">
+  <div data-act="closeAllPanels" style="position:fixed;top:0;left:0;right:0;height:60px;z-index:1200;background:rgba(255,255,255,.9);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid rgba(0,0,0,.06);box-shadow:0 2px 10px rgba(16,24,40,.08);display:flex;align-items:center;justify-content:space-between;padding:0 ${phone ? "12px" : "22px"}">
     <div style="display:flex;align-items:center;gap:14px;min-width:0">
       ${showLanding ? `
         <button data-act="switchCourse" class="h-soft2" title="หน้าแรก" style="background:none;border:none;cursor:pointer;padding:4px 6px;display:flex;align-items:center;border-radius:8px">
@@ -584,14 +589,14 @@ function viewTopBar() {
         <div style="position:relative">
           <button data-act="toggleLeado" class="h-soft" style="position:relative;width:46px;height:46px;border-radius:50%;background:#f4f5f7;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center">
             <img src="https://lms.mooc.meca.in.th/static/sbs-themes/images/Leado_icon.png" alt="Leado" style="width:30px;height:30px;object-fit:contain"></button>
-          <div style="position:absolute;top:calc(100% + 10px);right:0;z-index:98;width:308px;transform-origin:top right;transition:opacity .32s cubic-bezier(.2,.8,.2,1),transform .32s cubic-bezier(.2,.8,.2,1);opacity:${leadoShow ? 1 : 0};transform:${leadoShow ? "scale(1) translateY(0)" : "scale(.4) translateY(-14px)"};pointer-events:${leadoShow ? "auto" : "none"}">
+          <div data-act="noop" style="position:absolute;top:calc(100% + 10px);right:0;z-index:98;width:308px;transform-origin:top right;${leadoStyle}">
             <div style="background:#fff;border:1px solid #ececf1;border-radius:16px;box-shadow:0 18px 44px rgba(16,24,40,.22);overflow:hidden">
               <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;background:linear-gradient(100deg,#0f766e,#12a594);color:#fff">
                 <img src="https://lms.mooc.meca.in.th/static/sbs-themes/images/Leado_icon.png" alt="Leado" style="width:26px;height:26px;border-radius:50%;background:#fff">
                 <div style="flex:1"><div style="font:800 13.5px 'Noto Sans Thai'">Leado</div><div style="font:500 10.5px 'Noto Sans Thai';color:#d5f2ec">ผู้ช่วย AI</div></div>
                 <button data-act="closeLeado" style="border:none;background:rgba(255,255,255,.18);color:#fff;width:24px;height:24px;border-radius:7px;cursor:pointer;font:700 12px Inter">✕</button>
               </div>
-              <div style="padding:14px 16px;background:#f7fdfb"><div style="background:#fff;border:1px solid #e3f3ee;border-radius:14px;border-top-left-radius:4px;padding:11px 14px;font:500 13px/1.6 'Noto Sans Thai';color:#344054;box-shadow:0 1px 2px rgba(16,24,40,.04)">Leado พร้อมให้บริการ ถามข้อมูลได้ที่นี่นะครับ</div></div>
+              <div style="padding:14px 16px;background:#f7fdfb"><div id="leado-greet" data-full="Leado พร้อมให้บริการ ถามข้อมูลได้ที่นี่นะครับ" style="background:#fff;border:1px solid #e3f3ee;border-radius:14px;border-top-left-radius:4px;padding:11px 14px;font:500 13px/1.6 'Noto Sans Thai';color:#344054;box-shadow:0 1px 2px rgba(16,24,40,.04);min-height:22px"></div></div>
               <div style="display:flex;gap:8px;padding:12px 14px;border-top:1px solid #f2f4f7">
                 <input id="leadoMsg" data-inp="setLeadoMsg" value="${esc(state.leadoMsg)}" placeholder="พิมพ์คำถามของคุณ..." class="fld" style="flex:1;border:1px solid #e4e7ec;border-radius:10px;padding:9px 12px;font:500 13px 'Noto Sans Thai';outline:none">
                 <button class="h-teal" style="border:none;background:#0d9488;color:#fff;width:38px;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center"><span style="width:17px;height:17px;display:inline-flex">${ICO.send}</span></button>
@@ -605,7 +610,7 @@ function viewTopBar() {
             ${unread ? `<span style="position:absolute;top:9px;right:9px;width:9px;height:9px;border-radius:50%;background:#ef4444;border:1.5px solid #fff"></span>` : ""}
           </button>
           ${state.notifOpen ? `
-            <div style="position:absolute;top:calc(100% + 10px);right:0;z-index:98;width:320px;background:#fff;border:1px solid #eceef1;border-radius:14px;box-shadow:0 14px 34px rgba(16,24,40,.18);overflow:hidden">
+            <div data-act="noop" style="position:absolute;top:calc(100% + 10px);right:0;z-index:98;width:320px;background:#fff;border:1px solid #eceef1;border-radius:14px;box-shadow:0 14px 34px rgba(16,24,40,.18);overflow:hidden">
               <div style="padding:14px 16px;border-bottom:1px solid #f2f4f7;font:700 14px 'Noto Sans Thai';color:#101828">การแจ้งเตือน</div>
               ${DEMO.notifications.map((n) => `<div style="display:flex;gap:11px;padding:13px 16px;border-bottom:1px solid #f6f7f8;background:${n.unread ? "#f7fdfb" : "#fff"}"><span style="width:7px;height:7px;border-radius:50%;flex:none;margin-top:6px;background:${n.unread ? "#0d9488" : "#d0d5dd"}"></span><div style="min-width:0"><div style="font:600 12.5px/1.5 'Noto Sans Thai';color:#344054">${esc(n.text)}</div><div style="font:500 11px 'Noto Sans Thai';color:#98a2b3;margin-top:3px">${esc(n.time)}</div></div></div>`).join("")}
             </div>` : ""}
@@ -636,7 +641,7 @@ function viewUserMenu(initials) {
     return `<button data-act="pickFont" data-arg="${size}" style="flex:1;border:1px solid;border-radius:9px;padding:8px 4px;font:700 ${sample} 'Noto Sans Thai';cursor:pointer;${stl}">A</button>`;
   };
   return `
-  <div style="position:absolute;top:calc(100% + 10px);right:0;z-index:97;width:236px;background:#fff;border:1px solid #eceef1;border-radius:13px;box-shadow:0 14px 34px rgba(16,24,40,.18);overflow:hidden">
+  <div data-act="noop" style="position:absolute;top:calc(100% + 10px);right:0;z-index:97;width:236px;background:#fff;border:1px solid #eceef1;border-radius:13px;box-shadow:0 14px 34px rgba(16,24,40,.18);overflow:hidden">
     <div style="padding:14px 16px;border-bottom:1px solid #f2f4f7;display:flex;align-items:center;gap:11px">
       <div style="width:38px;height:38px;border-radius:50%;background:#f0fdfa;color:#0f766e;display:flex;align-items:center;justify-content:center;font:700 14px 'Noto Sans Thai';flex:none;border:1px solid #d6f5ee">${esc(initials)}</div>
       <div style="min-width:0"><div style="font:700 13.5px 'Noto Sans Thai';color:#101828;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(state.teacherName)}</div><div style="font:500 11px Inter;color:#98a2b3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(state.teacherEmail || "—")}</div></div>
@@ -777,6 +782,7 @@ function viewOverview() {
 
 /* ---------------- students ---------------- */
 function viewStudents() {
+  const phone = BP() === "phone";
   const list = decoratedStudents();
   const all = state.students;
   const c = (k) => all.filter((x) => x.status.key === k).length;
@@ -791,12 +797,12 @@ function viewStudents() {
   <div>
     <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px">
       <div><div style="font:800 19px 'Noto Sans Thai';color:#101828">รายชื่อนักเรียน</div><div style="font:500 13px 'Noto Sans Thai';color:#98a2b3;margin-top:2px">แสดง ${list.length} จาก ${all.length} คน</div></div>
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <div style="position:relative">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;${phone ? "width:100%" : ""}">
+        <div style="position:relative;${phone ? "flex:1 1 100%" : ""}">
           <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:#98a2b3">${ICO.usersSm}</span>
-          <input id="search" data-inp="setSearch" value="${esc(state.search)}" placeholder="ค้นหาชื่อหรืออีเมล" class="fld" style="width:250px;border:1px solid #e4e7ec;border-radius:10px;padding:10px 12px 10px 36px;font:500 13.5px 'Noto Sans Thai';outline:none;background:#fff">
+          <input id="search" data-inp="setSearch" value="${esc(state.search)}" placeholder="ค้นหาชื่อหรืออีเมล" class="fld" style="width:${phone ? "100%" : "250px"};border:1px solid #e4e7ec;border-radius:10px;padding:10px 12px 10px 36px;font:500 13.5px 'Noto Sans Thai';outline:none;background:#fff">
         </div>
-        <select data-chg="setSort" class="fld" style="border:1px solid #e4e7ec;border-radius:10px;padding:10px 12px;font:600 13px 'Noto Sans Thai';color:#475467;background:#fff;cursor:pointer;outline:none">
+        <select data-chg="setSort" class="fld" style="${phone ? "flex:1;min-width:0;" : ""}border:1px solid #e4e7ec;border-radius:10px;padding:10px 12px;font:600 13px 'Noto Sans Thai';color:#475467;background:#fff;cursor:pointer;outline:none">
           ${opt("followup", "เรียง: ต้องติดตามก่อน")}${opt("progress", "เรียง: ความคืบหน้ามาก→น้อย")}${opt("quiz", "เรียง: คะแนนมาก→น้อย")}${opt("name", "เรียง: ชื่อ ก→ฮ")}
         </select>
         <button data-act="downloadCsv" class="h-teal2" style="border:1px solid #e4e7ec;border-radius:10px;padding:10px 14px;font:600 13px 'Noto Sans Thai';color:#0f766e;background:#fff;cursor:pointer;display:flex;align-items:center;gap:7px">↓ ดาวน์โหลด CSV</button>
@@ -806,10 +812,25 @@ function viewStudents() {
       ${pills.map((p) => { const on = state.filter === p.key; const stl = on ? "background:#0d9488;color:#fff;border-color:#0d9488" : "background:#fff;color:#475467;border-color:#e4e7ec"; return `<button data-act="setFilter" data-arg="${p.key}" style="border:1px solid;cursor:pointer;border-radius:999px;padding:7px 15px;font:600 13px 'Noto Sans Thai';display:flex;align-items:center;gap:7px;${stl}">${p.label}<span style="font:700 12px Inter;opacity:.75">${p.count}</span></button>`; }).join("")}
     </div>
     <div style="background:#fff;border:1px solid #ececf1;border-radius:16px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden">
-      <div style="display:grid;grid-template-columns:2.4fr 1.5fr 1fr 1.3fr 1fr 30px;gap:12px;padding:13px 22px;background:#f9fafb;border-bottom:1px solid #eef0f3;font:700 12px 'Noto Sans Thai';color:#667085">
+      ${phone ? "" : `<div style="display:grid;grid-template-columns:2.4fr 1.5fr 1fr 1.3fr 1fr 30px;gap:12px;padding:13px 22px;background:#f9fafb;border-bottom:1px solid #eef0f3;font:700 12px 'Noto Sans Thai';color:#667085">
         <div>ผู้เรียน</div><div>ความคืบหน้า</div><div>คะแนน Quiz</div><div>อัปเดตล่าสุด</div><div>สถานะ</div><div></div>
-      </div>
-      ${list.length ? list.map((st) => `
+      </div>`}
+      ${list.length ? list.map((st) => phone ? `
+        <div data-act="openStudent" data-arg="${esc(st.id)}" class="h-row" style="padding:13px 14px;border-bottom:1px solid #f4f5f7;cursor:pointer">
+          <div style="display:flex;align-items:center;gap:11px">
+            <div style="width:38px;height:38px;border-radius:50%;background:#f0fdfa;color:#0f766e;display:flex;align-items:center;justify-content:center;font:700 14px 'Noto Sans Thai';flex:none;border:1px solid #d6f5ee">${esc(st.initials)}</div>
+            <div style="flex:1;min-width:0"><div style="font:600 14px 'Noto Sans Thai';color:#101828;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(st.name)}</div><div style="font:500 11.5px Inter;color:#98a2b3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(st.email)} · ${esc(st.room)}</div></div>
+            <span style="font:600 11px 'Noto Sans Thai';border-radius:999px;padding:5px 10px;white-space:nowrap;flex:none;color:${st.status.color};background:${st.status.bg}">${esc(st.status.label)}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:11px">
+            <div style="flex:1;height:8px;background:#f2f4f7;border-radius:99px;overflow:hidden"><div style="height:100%;border-radius:99px;background:${st.progColor};width:${st.progW}"></div></div>
+            <span style="font:700 12.5px Inter;color:#475467;width:36px;text-align:right;flex:none">${st.progW}</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px;font:500 11.5px 'Noto Sans Thai';color:#98a2b3">
+            <span>Quiz: <b style="font:700 12px Inter;color:#475467">${esc(st.quizText)}</b>${st.quizPct ? ` · ${esc(st.quizPct)}` : ""}</span>
+            <span>${esc(st.updated)}</span>
+          </div>
+        </div>` : `
         <div data-act="openStudent" data-arg="${esc(st.id)}" class="h-row" style="display:grid;grid-template-columns:2.4fr 1.5fr 1fr 1.3fr 1fr 30px;gap:12px;align-items:center;padding:14px 22px;border-bottom:1px solid #f4f5f7;cursor:pointer">
           <div style="display:flex;align-items:center;gap:12px;min-width:0">
             <div style="width:38px;height:38px;border-radius:50%;background:#f0fdfa;color:#0f766e;display:flex;align-items:center;justify-content:center;font:700 14px 'Noto Sans Thai';flex:none;border:1px solid #d6f5ee">${esc(st.initials)}</div>
@@ -827,6 +848,7 @@ function viewStudents() {
 
 /* ---------------- tools ---------------- */
 function viewTools() {
+  const phone = BP() === "phone";
   const t = state.tools;
   const records = state.metrics.records, total = state.students.length, avgRate = state.metrics.avgRate;
   const card = (color, glyph, name, big, unit, sub) => `
@@ -838,21 +860,27 @@ function viewTools() {
   return `
   <div>
     <div style="margin-bottom:18px"><div style="font:800 19px 'Noto Sans Thai';color:#101828">ภาพรวมการใช้งานเครื่องมือต่าง ๆ</div><div style="font:500 13px 'Noto Sans Thai';color:#98a2b3;margin-top:2px">รายการเครื่องมือที่พบในแต่ละกิจกรรมของรายวิชา</div></div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px">
+    <div style="display:grid;grid-template-columns:repeat(${phone ? 2 : 4},1fr);gap:${phone ? 10 : 16}px;margin-bottom:${phone ? 14 : 20}px">
       ${card("#7b83eb", "▶", "Video", t.video, "บทเรียน", "กิจกรรมที่มีวิดีโอประกอบ")}
       ${card("#5ab877", "▤", "BookRoll", t.bookroll, "บทเรียน", "กิจกรรมที่มีเอกสารอ่าน")}
       ${card("#f59e0b", "✓", "Quiz", records, "ครั้งทำ", `คะแนนเฉลี่ย ${avgRate == null ? "-" : avgRate.toFixed(1) + "%"}`)}
       ${card("#12a89b", "◔", "Profile", total, "ลงทะเบียน", "ผู้เรียนในห้องเรียน")}
     </div>
     <div style="background:#fff;border:1px solid #ececf1;border-radius:16px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden">
-      <div style="display:grid;grid-template-columns:2.6fr 1.8fr 1.4fr 1fr;gap:14px;padding:13px 22px;background:#f9fafb;border-bottom:1px solid #eef0f3;font:700 12px 'Noto Sans Thai';color:#667085">
+      ${phone ? "" : `<div style="display:grid;grid-template-columns:2.6fr 1.8fr 1.4fr 1fr;gap:14px;padding:13px 22px;background:#f9fafb;border-bottom:1px solid #eef0f3;font:700 12px 'Noto Sans Thai';color:#667085">
         <div>กิจกรรม / บทเรียน</div><div>เครื่องมือ</div><div>ผู้เรียนที่ทำแล้ว</div><div style="text-align:right">ลำดับ</div>
-      </div>
+      </div>`}
       ${state.activities.map((a) => {
         const reachCell = a.reach == null
           ? `<span style="font:500 12px 'Noto Sans Thai';color:#b2b8c2">ไม่มีข้อมูลการเข้าถึง</span>`
           : `<div style="flex:1;height:10px;background:#f2f4f7;border-radius:99px;overflow:hidden"><div style="height:100%;border-radius:99px;background:linear-gradient(90deg,#14b8a6,#0d9488);width:${total ? Math.round((a.reach / total) * 100) : 0}%"></div></div><span style="font:600 12px 'Noto Sans Thai';color:#667085;width:64px;white-space:nowrap;text-align:right">${a.reach}/${total}</span>`;
-        return `
+        return phone ? `
+        <div style="padding:14px 14px;border-bottom:1px solid #f4f5f7">
+          <div style="font:600 14px 'Noto Sans Thai';color:#101828">${esc(a.name)}</div>
+          <div style="font:600 11px Inter;color:#b2b8c2;margin-top:1px">${esc(a.code)}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:9px">${a.tools.map((tt) => `<span style="font:600 11.5px 'Noto Sans Thai';border-radius:7px;padding:4px 10px;${toolStyle(tt.label)}">${esc(tt.label)}</span>`).join("")}</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:10px">${reachCell}</div>
+        </div>` : `
         <div style="display:grid;grid-template-columns:2.6fr 1.8fr 1.4fr 1fr;gap:14px;align-items:center;padding:16px 22px;border-bottom:1px solid #f4f5f7">
           <div><div style="font:600 14.5px 'Noto Sans Thai';color:#101828">${esc(a.name)}</div><div style="font:600 11.5px Inter;color:#b2b8c2;margin-top:1px">${esc(a.code)}</div></div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">${a.tools.map((tt) => `<span style="font:600 11.5px 'Noto Sans Thai';border-radius:7px;padding:4px 10px;${toolStyle(tt.label)}">${esc(tt.label)}</span>`).join("")}</div>
@@ -866,6 +894,7 @@ function viewTools() {
 
 /* ---------------- compare map ---------------- */
 function viewMap() {
+  const phone = BP() === "phone";
   const schools = DEMO.schoolsGeo;
   const sorted = [...schools].sort((a, b) => b.progress - a.progress);
   const you = schools.find((x) => x.you) || schools[0];
@@ -877,13 +906,13 @@ function viewMap() {
   return `
   <div>
     <div style="margin-bottom:16px"><div style="font:800 19px 'Noto Sans Thai';color:#101828">แผนที่เปรียบเทียบโรงเรียน</div></div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px">
+    <div style="display:grid;grid-template-columns:repeat(${phone ? 1 : 3},1fr);gap:${phone ? 10 : 16}px;margin-bottom:16px">
       ${card("#ef4444", `<div style="font:600 13px 'Noto Sans Thai';color:#667085">อันดับของโรงเรียนคุณ</div><div style="font:800 32px Inter;color:#101828;margin-top:8px">${rankOf} <span style="font:600 14px 'Noto Sans Thai';color:#98a2b3">/ ${schools.length} โรงเรียน</span></div>`)}
       ${card("#12a594", `<div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 13px 'Noto Sans Thai';color:#667085">ความคืบหน้าของคุณ</span><span style="font:700 11px Inter;border-radius:6px;padding:3px 7px;color:${diffColor};background:${diffBg}">${diff >= 0 ? "+" : ""}${diff}% vs เฉลี่ย</span></div><div style="font:800 32px Inter;color:#101828;margin-top:8px">${you.progress}<span style="font:700 18px Inter;color:#667085">%</span> <span style="font:600 13px 'Noto Sans Thai';color:#98a2b3">· เฉลี่ย ${avgP}%</span></div>`)}
       ${card("#6366f1", `<div style="font:600 13px 'Noto Sans Thai';color:#667085">โรงเรียนในเครือข่าย</div><div style="font:800 32px Inter;color:#101828;margin-top:8px">${schools.length} <span style="font:600 13px 'Noto Sans Thai';color:#98a2b3">แห่ง</span></div>`)}
     </div>
-    <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:16px">
-      <div style="background:#fff;border:1px solid #ececf1;border-radius:16px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden;height:600px;position:relative;isolation:isolate">
+    <div style="display:grid;grid-template-columns:${phone ? "1fr" : "1.55fr 1fr"};gap:16px">
+      <div style="background:#fff;border:1px solid #ececf1;border-radius:16px;box-shadow:0 1px 2px rgba(16,24,40,.04);overflow:hidden;height:${phone ? 320 : 600}px;position:relative;isolation:isolate">
         <div id="compare-map" style="position:absolute;inset:0"></div>
         <div style="position:absolute;top:16px;left:16px;z-index:600;background:rgba(255,255,255,.94);backdrop-filter:blur(4px);border-radius:11px;box-shadow:0 6px 18px rgba(16,24,40,.14);padding:11px 14px;display:flex;flex-direction:column;gap:7px">
           <div style="display:flex;align-items:center;gap:8px;font:600 11.5px 'Noto Sans Thai';color:#475467"><span style="width:12px;height:12px;border-radius:50%;background:#ef4444"></span>โรงเรียนของคุณ</div>
@@ -892,9 +921,9 @@ function viewMap() {
           <div style="display:flex;align-items:center;gap:8px;font:600 11.5px 'Noto Sans Thai';color:#475467"><span style="width:12px;height:12px;border-radius:50%;background:#fb923c"></span>ต่ำกว่า 60%</div>
         </div>
       </div>
-      <div style="background:#fff;border:1px solid #ececf1;border-radius:16px;box-shadow:0 1px 2px rgba(16,24,40,.04);padding:18px 20px;display:flex;flex-direction:column;height:600px">
+      <div style="background:#fff;border:1px solid #ececf1;border-radius:16px;box-shadow:0 1px 2px rgba(16,24,40,.04);padding:18px 20px;display:flex;flex-direction:column;height:${phone ? "auto" : "600px"}">
         <div style="font:700 15px 'Noto Sans Thai';color:#101828;margin-bottom:14px">จัดอันดับความคืบหน้า</div>
-        <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin:0 -4px;padding:0 4px">
+        <div style="flex:1;${phone ? "" : "overflow-y:auto;"}display:flex;flex-direction:column;gap:8px;margin:0 -4px;padding:0 4px">
           ${sorted.map((x, i) => {
             const barColor = x.progress >= 80 ? "#14b8a6" : x.progress >= 60 ? "#f59e0b" : "#fb923c";
             const rowStyle = x.you ? "background:#f0fdfa;border:1px solid #cbeee6" : "background:#fff;border:1px solid #f2f4f7";
@@ -1095,6 +1124,38 @@ function overlaysHtml() {
     (state.leadoOpen ? `<div data-act="closeLeado" style="position:fixed;inset:0;z-index:94"></div>` : "");
 }
 
+/* ---- Leado attention demo + typewriter greeting ---- */
+let leadoDemoT1 = null, leadoDemoT2 = null, leadoTyper = null;
+function cancelLeadoDemo() {
+  clearTimeout(leadoDemoT1); clearTimeout(leadoDemoT2);
+  leadoDemoT1 = leadoDemoT2 = null;
+  state.leadoDemo = false;
+}
+// Once per session, auto-expand the Leado panel from its icon, hold ~2s, then shrink back —
+// a one-time hint that the AI assistant lives here.
+function maybePlayLeadoDemo() {
+  if (state.leadoDemoed || !state.ready || !state.authed) return;
+  state.leadoDemoed = true;
+  leadoDemoT1 = setTimeout(() => {
+    if (!state.authed || state.leadoOpen) return;
+    state.leadoDemo = true; renderTopbar();
+    leadoDemoT2 = setTimeout(() => { state.leadoDemo = false; renderTopbar(); }, 2600);
+  }, 1000);
+}
+// Type the greeting bubble out character-by-character on each Leado open.
+function runLeadoTyper() {
+  const el = document.getElementById("leado-greet");
+  if (!el || el.dataset.done) return;
+  const full = el.dataset.full || "";
+  if (el.textContent.length >= full.length) { el.dataset.done = "1"; return; }
+  clearInterval(leadoTyper);
+  let i = el.textContent.length;
+  leadoTyper = setInterval(() => {
+    i++; el.textContent = full.slice(0, i);
+    if (i >= full.length) { clearInterval(leadoTyper); el.dataset.done = "1"; }
+  }, 34);
+}
+
 /* Lightweight update for header panels (Leado/notif/user menu) — rebuilds only the
    topbar layer so the landing map is never destroyed/recreated (no flicker). */
 function renderTopbar(patch) {
@@ -1104,6 +1165,7 @@ function renderTopbar(patch) {
   layer.innerHTML = overlaysHtml() + viewTopBar();
   const inp = document.getElementById("leadoMsg");
   if (inp && state.leadoOpen) inp.focus();
+  if (state.leadoOpen || state.leadoDemo) runLeadoTyper();
 }
 
 function render() {
@@ -1133,6 +1195,8 @@ function render() {
 
   if (DEBUG) updateDebugPanel();
   requestAnimationFrame(mountMaps);
+  if (state.leadoOpen || state.leadoDemo) runLeadoTyper();
+  maybePlayLeadoDemo();
 }
 
 /* focus retention across full re-render */
@@ -1258,8 +1322,10 @@ const H = {
   signOut: () => { if (state.mode === "api") oidcLogout(); else setState({ authed: false, course: null, student: null, userMenuOpen: false }); },
   toggleNotif: () => renderTopbar({ notifOpen: !state.notifOpen, userMenuOpen: false, leadoOpen: false }),
   closeNotif: () => renderTopbar({ notifOpen: false }),
-  toggleLeado: () => renderTopbar({ leadoOpen: !state.leadoOpen, notifOpen: false, userMenuOpen: false }),
-  closeLeado: () => renderTopbar({ leadoOpen: false }),
+  toggleLeado: () => { cancelLeadoDemo(); renderTopbar({ leadoOpen: !state.leadoOpen, notifOpen: false, userMenuOpen: false }); },
+  closeLeado: () => { cancelLeadoDemo(); renderTopbar({ leadoOpen: false }); },
+  closeAllPanels: () => { cancelLeadoDemo(); renderTopbar({ leadoOpen: false, notifOpen: false, userMenuOpen: false }); },
+  noop: () => {},
   signIn: () => { if (state.mode === "api") startLogin(); else setState({ authed: true }); },
   setFilter: (key) => setState({ filter: key }),
   pickLang: (code) => setState({ lang: code }),
@@ -1280,7 +1346,7 @@ function bindEvents() {
     const t = e.target.closest("[data-act]");
     if (!t) return;
     const fn = H[t.dataset.act];
-    if (fn) { e.preventDefault(); fn(t.dataset.arg); }
+    if (fn) { if (t.dataset.act !== "noop") e.preventDefault(); fn(t.dataset.arg); }
   });
   document.addEventListener("input", (e) => {
     const t = e.target.closest("[data-inp]");
