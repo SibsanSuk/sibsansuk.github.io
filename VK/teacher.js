@@ -129,6 +129,9 @@ const apiCourseSearch = ({ grade, level, classRoom, instituteId } = {}) => {
   return apiGet(`${teacherConfig.baseUrl}/api/kidbright/course${q ? `?${q}` : ""}`);
 };
 const apiCreateAssign = (body) => apiPost(`${teacherConfig.baseUrl}/api/kidbright/assign`, body);
+// Public nationwide enrollment aggregate (per-institute counts + coordinates), no auth.
+const ENROLL_RANGE = "2020-01-01," + new Date().toISOString().slice(0, 10);
+const apiEnrollAggregate = (range = ENROLL_RANGE) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/enroll/query?createAt=${range}`, { auth: false });
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 const toNumber = (v, f = 0) => { const n = Number(v); return Number.isFinite(n) ? n : f; };
@@ -308,9 +311,10 @@ const toolSummary = (activities, scoreRows, studentCount) => {
 };
 
 /* ------------------------------ design demo data ------------------------------ */
-/* Landing insight overlay, usage-map bubbles and the school-compare map still use
-   this design demo data (no live endpoint yet). Course list, add-catalog and
-   notifications no longer pull from here — they use real data / empty state. */
+/* The school-compare map still uses this design demo data (no live endpoint gives
+   per-school progress + coords). Landing insight/bubbles use it only as a fallback —
+   real numbers come from the enroll aggregate (buildLandingFromAggregate). Course
+   list, add-catalog and notifications no longer pull from here. */
 const DEMO = {
   insightSlides: [
     { bg: "#e9fbf4", label: "ผู้ใช้งานทั่วประเทศ", big: "22,497", unit: "คน", desc: "ครู นักเรียน และบุคลากรทางการศึกษาใช้งานระบบใน 62 จังหวัดทั่วประเทศ", view: { lat: 13.6, lng: 101.2, zoom: 5.3 } },
@@ -350,6 +354,59 @@ const DEMO = {
   ],
 };
 
+// Landing insight slides + map bubbles: real enroll aggregate if loaded, else demo.
+const insightSlides = () => state.landingStats || DEMO.insightSlides;
+const mapPoints = () => state.landingPoints || DEMO.mapPoints;
+// Turn the per-institute enroll aggregate into 4 insight slides + province-level bubbles.
+function buildLandingFromAggregate(data) {
+  if (!Array.isArray(data) || !data.length) return null;
+  let totalUsers = 0;
+  const courses = new Map();          // courseId -> { name, users }
+  const prov = new Map();             // province -> { users, lat, lng, n }
+  for (const it of data) {
+    const uc = it.instituteUserCount || 0;
+    totalUsers += uc;
+    for (const co of it.courses || []) {
+      const k = co.courseId || co.courseName;
+      const e = courses.get(k) || { name: co.courseName, users: 0 };
+      e.users += co.courseUserCount || 0;
+      courses.set(k, e);
+    }
+    const c = it.coordinates || {};
+    if (c.lat && c.long) {            // skip the coord-less "ระบุเอง" bucket on the map
+      const key = it.instituteProvince || "-";
+      const e = prov.get(key) || { users: 0, lat: 0, lng: 0, n: 0 };
+      e.users += uc; e.lat += c.lat; e.lng += c.long; e.n += 1;
+      prov.set(key, e);
+    }
+  }
+  const provinces = [...prov.values()].map((e) => ({ users: e.users, lat: e.lat / e.n, lng: e.lng / e.n })).filter((p) => p.users > 0);
+  if (!provinces.length) return null;
+  const maxU = Math.max(...provinces.map((p) => p.users), 1);
+  const points = provinces.map((p) => ({ lat: p.lat, lng: p.lng, n: p.users, size: Math.round(30 + 34 * Math.sqrt(p.users / maxU)), big: p.users === maxU }));
+  const top = [...courses.values()].sort((a, b) => b.users - a.users)[0] || { name: "-", users: 0 };
+  const fmt = (n) => Number(n || 0).toLocaleString("en-US");
+  const short = (s, n = 44) => { s = String(s || ""); return s.length > n ? s.slice(0, n) + "…" : s; };
+  const slides = [
+    { bg: "#e9fbf4", label: "ผู้ใช้งานทั่วประเทศ", big: fmt(totalUsers), unit: "คน", desc: `ครู นักเรียน และบุคลากรทางการศึกษาใช้งานระบบใน ${prov.size} จังหวัดทั่วประเทศ`, view: { lat: 13.6, lng: 101.2, zoom: 5.3 } },
+    { bg: "#eef2ff", label: "วิชาที่เปิดสอนทั้งหมด", big: fmt(courses.size), unit: "วิชา", desc: "ครอบคลุมปัญญาประดิษฐ์ สะเต็มศึกษา และทักษะดิจิทัลสำหรับทุกช่วงชั้น", view: { lat: 15.6, lng: 101.6, zoom: 5.6 } },
+    { bg: "#fff1e6", label: "วิชายอดนิยม", big: fmt(top.users), unit: "คน", desc: `“${short(top.name)}” มีผู้เรียนมากที่สุด`, view: { lat: 15.0, lng: 102.6, zoom: 6.4 } },
+    { bg: "#eafaf3", label: "สถาบันที่ร่วมโครงการ", big: fmt(data.length), unit: "แห่ง", desc: "โรงเรียนและสถาบันการศึกษาที่มีผู้เรียนใช้งานระบบ", view: { lat: 13.8, lng: 100.7, zoom: 6.9 } },
+  ];
+  return { slides, points };
+}
+// Fetch the public aggregate once; rebuild the landing map with real bubbles on success.
+async function loadLandingStats() {
+  try {
+    const built = buildLandingFromAggregate(await apiEnrollAggregate());
+    if (!built) return;
+    state.landingStats = built.slides;
+    state.landingPoints = built.points;
+    if (maps.usage) { maps.usage.remove(); maps.usage = null; } // force rebuild with real markers
+    render();
+  } catch (_) { /* keep demo fallback */ }
+}
+
 /* ------------------------------ icons ------------------------------ */
 const svg = (paths, sw) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw || 2.1}" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%">${paths.map((d) => `<path d="${d}"></path>`).join("")}</svg>`;
 const ICO = {
@@ -383,6 +440,8 @@ const state = {
   // derived (filled after load)
   students: [], activities: [], courseData: null, courseTitle: "-", courseKey: "-",
   metrics: null, prog: [], quiz: [], tools: null,
+  // landing insight slides + map bubbles from the real enroll aggregate (null → demo fallback)
+  landingStats: null, landingPoints: null,
 };
 
 /* runtime helpers not part of state */
@@ -551,10 +610,11 @@ function insightOverlay(compact) {
   const pad = compact ? "15px 17px" : "22px 24px";
   const stageMin = compact ? "116px" : "150px";
   const bigFs = compact ? "25px" : "30px";
+  const slides = insightSlides();
   return `
     <div style="position:absolute;${pos};z-index:600;background:rgba(255,255,255,.96);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.6);border-radius:18px;box-shadow:0 14px 36px rgba(16,24,40,.2);padding:${pad};overflow:hidden">
       <div id="slide-stage" style="position:relative;min-height:${stageMin}">
-        ${DEMO.insightSlides.map((sl, i) => `
+        ${slides.map((sl, i) => `
           <div class="slide" data-i="${i}" style="position:absolute;inset:0;transition:opacity .5s ease,transform .5s ease;opacity:${i === state.mapSlide ? 1 : 0};transform:${i === state.mapSlide ? "translateY(0)" : "translateY(8px)"};pointer-events:none">
             <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
               <span style="width:6px;height:22px;border-radius:99px;background:${sl.bg};flex:none"></span>
@@ -565,7 +625,7 @@ function insightOverlay(compact) {
           </div>`).join("")}
       </div>
       <div style="display:flex;gap:6px;margin-top:14px;position:relative;z-index:1">
-        ${DEMO.insightSlides.map((sl, i) => `<button data-act="goSlide" data-arg="${i}" class="slide-dot" data-i="${i}" style="border:none;cursor:pointer;padding:0;height:6px;border-radius:99px;flex:1;background:${i === state.mapSlide ? "#0d9488" : "#e2e5e9"};transition:background .3s"></button>`).join("")}
+        ${slides.map((sl, i) => `<button data-act="goSlide" data-arg="${i}" class="slide-dot" data-i="${i}" style="border:none;cursor:pointer;padding:0;height:6px;border-radius:99px;flex:1;background:${i === state.mapSlide ? "#0d9488" : "#e2e5e9"};transition:background .3s"></button>`).join("")}
       </div>
     </div>`;
 }
@@ -1372,15 +1432,17 @@ function mountMaps() {
 
   const usageEl = document.getElementById("th-usage-map");
   if (usageEl && !maps.usage) {
-    const v = DEMO.insightSlides[state.mapSlide].view;
+    const v = insightSlides()[state.mapSlide].view;
     const map = L.map(usageEl, { zoomControl: false, scrollWheelZoom: false, attributionControl: false }).setView([v.lat, v.lng], v.zoom);
     maps.usage = map;
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 12, minZoom: 4 }).addTo(map);
     L.control.zoom({ position: "bottomright" }).addTo(map);
-    DEMO.mapPoints.forEach((p) => {
+    const kFmt = (n) => (n >= 1000 ? (n / 1000).toFixed(n < 10000 ? 1 : 0).replace(/\.0$/, "") + "k" : String(n));
+    mapPoints().forEach((p) => {
+      const label = kFmt(p.n);
       let html;
-      if (p.pin) html = `<div style="position:relative;transform:translate(-50%,-100%)"><div style="width:34px;height:34px;border-radius:50%;background:#ef4444;border:3px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font:800 13px Inter;color:#fff">${p.n}</div><div style="position:absolute;left:50%;top:30px;transform:translateX(-50%);width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:11px solid #ef4444"></div></div>`;
-      else { const fs = p.big ? 16 : 13, halo = p.big ? 12 : 8; html = `<div style="width:${p.size}px;height:${p.size}px;border-radius:50%;background:radial-gradient(circle at 40% 35%,rgba(251,146,60,.98),rgba(249,115,22,.62));display:flex;align-items:center;justify-content:center;font:700 ${fs}px Inter;color:#7c2d12;box-shadow:0 0 0 ${halo}px rgba(249,146,60,.2)">${p.n}</div>`; }
+      if (p.pin) html = `<div style="position:relative;transform:translate(-50%,-100%)"><div style="width:34px;height:34px;border-radius:50%;background:#ef4444;border:3px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font:800 13px Inter;color:#fff">${label}</div><div style="position:absolute;left:50%;top:30px;transform:translateX(-50%);width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:11px solid #ef4444"></div></div>`;
+      else { const fs = p.big ? 15 : 12, halo = p.big ? 12 : 8; html = `<div style="width:${p.size}px;height:${p.size}px;border-radius:50%;background:radial-gradient(circle at 40% 35%,rgba(251,146,60,.98),rgba(249,115,22,.62));display:flex;align-items:center;justify-content:center;font:700 ${fs}px Inter;color:#7c2d12;box-shadow:0 0 0 ${halo}px rgba(249,146,60,.2)">${label}</div>`; }
       L.marker([p.lat, p.lng], { icon: L.divIcon({ html, className: "", iconSize: [0, 0], iconAnchor: [0, 0] }), interactive: false }).addTo(map);
     });
     setTimeout(() => maps.usage && maps.usage.invalidateSize(), 250);
@@ -1407,7 +1469,7 @@ function mountMaps() {
 function startSlideTimer() {
   stopSlideTimer();
   slideTimer = setInterval(() => {
-    state.mapSlide = (state.mapSlide + 1) % DEMO.insightSlides.length;
+    state.mapSlide = (state.mapSlide + 1) % insightSlides().length;
     applySlide();
   }, 5000);
 }
@@ -1419,7 +1481,7 @@ function applySlide() {
     el.style.transform = on ? "translateY(0)" : "translateY(8px)";
   });
   document.querySelectorAll(".slide-dot").forEach((el) => { el.style.background = Number(el.dataset.i) === state.mapSlide ? "#0d9488" : "#e2e5e9"; });
-  if (maps.usage) { const v = DEMO.insightSlides[state.mapSlide].view; maps.usage.flyTo([v.lat, v.lng], v.zoom, { duration: 1.1 }); }
+  if (maps.usage) { const v = insightSlides()[state.mapSlide].view; maps.usage.flyTo([v.lat, v.lng], v.zoom, { duration: 1.1 }); }
 }
 
 /* ------------------------------ CSV export ------------------------------ */
@@ -1470,9 +1532,14 @@ const H = {
   closeAdd: () => setState({ addOpen: false }),
   loadAddCourses: async () => {
     if (state.addCourses.length) return; // cache within session
+    // Guard: never fire an unfiltered GET /course (heavy, could stall the backend).
+    if (state.mode === "api" && !state.instituteId) {
+      setState({ addCourses: [], addLoading: false, addError: "ไม่พบสถานศึกษาของบัญชีนี้ จึงยังเลือกรายวิชาไม่ได้" });
+      return;
+    }
     setState({ addLoading: true, addError: "" });
     try {
-      // api: real catalog only (no demo fallback). local demo: bundled catalog.
+      // api: real catalog scoped by institute (no demo fallback). local demo: bundled catalog.
       const list = state.mode === "api"
         ? normalizeCatalog(normalizeListPayload(await apiCourseSearch({ instituteId: state.instituteId })))
         : DEMO.courseCatalog;
@@ -1698,6 +1765,7 @@ async function init() {
   bindEvents();
   state.mode = teacherConfig.source === "api" ? "api" : "local";
   render();
+  loadLandingStats(); // real landing stats/bubbles from the public enroll aggregate (non-blocking)
   if (state.mode === "api") return apiInit();
   return localInit();
 }
