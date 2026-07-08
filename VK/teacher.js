@@ -655,6 +655,7 @@ function viewUserMenu(initials) {
 
 /* ---------------- dashboard shell ---------------- */
 function viewDashboard() {
+  const phone = BP() === "phone";
   const navTop = (p) => (state.page === p ? "color:#0f766e;border-bottom-color:#0f766e" : "color:#98a2b3;border-bottom-color:transparent");
   let page = "";
   if (!state.metrics) page = `<div style="padding:40px;text-align:center;font:600 14px 'Noto Sans Thai';color:#98a2b3">กำลังเตรียมข้อมูล...</div>`;
@@ -666,14 +667,14 @@ function viewDashboard() {
   <div style="display:flex;flex:1;min-height:0">
     <div style="flex:1;display:flex;flex-direction:column;min-width:0;min-height:0">
       <div style="flex:none;background:#fff;border-bottom:1px solid #ececf1;box-shadow:0 1px 2px rgba(16,24,40,.03);z-index:10">
-        <div style="max-width:1180px;margin:0 auto;padding:0 40px;display:flex;gap:6px;overflow-x:auto">
-          <button data-act="goOverview" style="border:none;cursor:pointer;background:none;padding:15px 6px;margin-right:22px;font:700 15px 'Noto Sans Thai';border-bottom:3px solid transparent;${navTop("overview")}">ภาพรวมทั้งห้อง</button>
-          <button data-act="goStudents" style="border:none;cursor:pointer;background:none;padding:15px 6px;margin-right:22px;font:700 15px 'Noto Sans Thai';border-bottom:3px solid transparent;${navTop("students")}">รายชื่อนักเรียน</button>
-          <button data-act="goTools" style="border:none;cursor:pointer;background:none;padding:15px 6px;margin-right:22px;font:700 15px 'Noto Sans Thai';border-bottom:3px solid transparent;${navTop("tools")}">การใช้งานเครื่องมือ</button>
-          <button data-act="goMap" style="border:none;cursor:pointer;background:none;padding:15px 6px;font:700 15px 'Noto Sans Thai';border-bottom:3px solid transparent;${navTop("map")}">แผนที่เปรียบเทียบ</button>
+        <div style="max-width:1180px;margin:0 auto;padding:0 ${phone ? 14 : 40}px;display:flex;gap:6px;overflow-x:auto">
+          <button data-act="goOverview" style="border:none;cursor:pointer;background:none;padding:15px 6px;margin-right:${phone ? 16 : 22}px;font:700 15px 'Noto Sans Thai';border-bottom:3px solid transparent;white-space:nowrap;${navTop("overview")}">ภาพรวมทั้งห้อง</button>
+          <button data-act="goStudents" style="border:none;cursor:pointer;background:none;padding:15px 6px;margin-right:${phone ? 16 : 22}px;font:700 15px 'Noto Sans Thai';border-bottom:3px solid transparent;white-space:nowrap;${navTop("students")}">รายชื่อนักเรียน</button>
+          <button data-act="goTools" style="border:none;cursor:pointer;background:none;padding:15px 6px;margin-right:${phone ? 16 : 22}px;font:700 15px 'Noto Sans Thai';border-bottom:3px solid transparent;white-space:nowrap;${navTop("tools")}">การใช้งานเครื่องมือ</button>
+          <button data-act="goMap" style="border:none;cursor:pointer;background:none;padding:15px 6px;font:700 15px 'Noto Sans Thai';border-bottom:3px solid transparent;white-space:nowrap;${navTop("map")}">แผนที่เปรียบเทียบ</button>
         </div>
       </div>
-      <main class="scrolly" style="flex:1;min-height:0;padding:26px 30px 60px">
+      <main class="scrolly" style="flex:1;min-height:0;padding:${phone ? "16px 14px 48px" : "26px 30px 60px"}">
         <div style="max-width:1180px;margin:0 auto">${page}</div>
       </main>
     </div>
@@ -682,17 +683,19 @@ function viewDashboard() {
 
 /* ---------------- overview ---------------- */
 function viewCourseHero() {
+  const phone = BP() === "phone";
   const sel = selectedCourse();
   const school = sel?.school ? `${sel.school}${sel.province ? ` (${sel.province})` : ""}` : "แคนดงพิทยาคม (บุรีรัมย์)";
   const chip = (t) => `<span style="font:600 11.5px 'Noto Sans Thai';color:#fff;background:rgba(255,255,255,.16);border-radius:8px;padding:5px 11px">${esc(t)}</span>`;
   return `
-    <div style="background:linear-gradient(120deg,#0f766e 0%,#12a594 55%,#15b8a5 100%);border-radius:18px;padding:22px 26px;margin-bottom:18px;box-shadow:0 4px 16px rgba(15,118,110,.18)">
-      <div style="font:800 26px/1.25 'Noto Sans Thai';color:#fff;margin:0 0 12px;max-width:820px;letter-spacing:-.01em">${esc(selectedCourse()?.title || state.courseTitle)}</div>
+    <div style="background:linear-gradient(120deg,#0f766e 0%,#12a594 55%,#15b8a5 100%);border-radius:${phone ? 14 : 18}px;padding:${phone ? "17px 18px" : "22px 26px"};margin-bottom:${phone ? 14 : 18}px;box-shadow:0 4px 16px rgba(15,118,110,.18)">
+      <div style="font:800 ${phone ? "20px" : "26px"}/1.25 'Noto Sans Thai';color:#fff;margin:0 0 12px;max-width:820px;letter-spacing:-.01em">${esc(selectedCourse()?.title || state.courseTitle)}</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px">${chip("โรงเรียน: " + school)}${chip("ระดับชั้น: ทั้งหมด")}${chip("ห้อง: ทั้งหมด")}</div>
     </div>`;
 }
 
 function viewOverview() {
+  const phone = BP() === "phone";
   const m = state.metrics;
   const total = state.students.length;
   const records = state.metrics.records;
@@ -707,21 +710,21 @@ function viewOverview() {
   const metricCard = (accent, label, badge, value) => `
     <div style="background:#fff;border:1px solid #ececf1;border-radius:16px;padding:18px 20px;box-shadow:0 1px 2px rgba(16,24,40,.04);position:relative;overflow:hidden">
       <div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:${accent}"></div>
-      <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:600 13px 'Noto Sans Thai';color:#667085">${label}</span>${badge}</div>
-      <div style="font:800 32px Inter;color:#101828;margin-top:8px">${value}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px"><span style="font:600 13px 'Noto Sans Thai';color:#667085">${label}</span>${badge}</div>
+      <div style="font:800 ${phone ? "26px" : "32px"} Inter;color:#101828;margin-top:8px">${value}</div>
     </div>`;
   return `
   <div>
     ${viewCourseHero()}
     <div style="margin-bottom:18px"><div style="font:800 19px 'Noto Sans Thai';color:#101828">ภาพรวมของทั้งห้องเรียน</div></div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px">
+    <div style="display:grid;grid-template-columns:repeat(${phone ? 2 : 4},1fr);gap:${phone ? 10 : 16}px;margin-bottom:${phone ? 14 : 18}px">
       ${metricCard("#12a594", "ผู้เรียนทั้งหมด", iconBox(ICO.usersSm, "#0f766e", "#e9fbf4"), `${total} <span style="font:600 13px 'Noto Sans Thai';color:#98a2b3">คน</span>`)}
       ${metricCard("#22c55e", "ความคืบหน้าเฉลี่ย", `<span style="font:600 11px 'Noto Sans Thai';color:#16a34a;background:#dcfce7;border-radius:6px;padding:3px 7px">เฉลี่ยทั้งห้อง</span>`, `${m.avgProgress.toFixed(1)}<span style="font:700 18px Inter;color:#667085">%</span>`)}
       ${metricCard("#6366f1", "เรียนครบแล้ว", `<span style="font:600 11px 'Noto Sans Thai';color:#4f46e5;background:#eef2ff;border-radius:6px;padding:3px 7px">${total ? Math.round((m.completed / total) * 100) : 0}%</span>`, `${m.completed} <span style="font:600 13px 'Noto Sans Thai';color:#98a2b3">/ ${total}</span>`)}
       ${metricCard("#f97316", "คะแนน Quiz เฉลี่ย", `<span style="font:600 11px 'Noto Sans Thai';color:#c2410c;background:#ffedd5;border-radius:6px;padding:3px 7px">${records} records</span>`, m.avgRate == null ? `-` : `${m.avgRate.toFixed(1)}<span style="font:700 18px Inter;color:#667085">%</span>`)}
     </div>
 
-    <div style="display:grid;grid-template-columns:1.15fr 1fr;gap:16px;margin-bottom:16px">
+    <div style="display:grid;grid-template-columns:${phone ? "1fr" : "1.15fr 1fr"};gap:16px;margin-bottom:16px">
       <div style="background:#fff;border:1px solid #ececf1;border-radius:16px;padding:20px 22px;box-shadow:0 1px 2px rgba(16,24,40,.04)">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px"><div style="font:700 15px 'Noto Sans Thai';color:#101828">การกระจายความคืบหน้า</div><div style="font:600 12px 'Noto Sans Thai';color:#98a2b3">${total} คน</div></div>
         <div style="display:flex;gap:14px;height:210px">
@@ -760,12 +763,12 @@ function viewOverview() {
       </div>
       <div style="display:flex;flex-direction:column">
         ${attention.length ? attention.map((a) => `
-          <div data-act="openStudent" data-arg="${esc(a.id)}" class="h-light" style="display:flex;align-items:center;gap:14px;padding:11px 8px;border-top:1px solid #f2f4f7;cursor:pointer;border-radius:8px">
+          <div data-act="openStudent" data-arg="${esc(a.id)}" class="h-light" style="display:flex;align-items:center;gap:${phone ? 10 : 14}px;padding:11px 8px;border-top:1px solid #f2f4f7;cursor:pointer;border-radius:8px">
             <div style="width:34px;height:34px;border-radius:50%;background:#fff3ea;color:#c2410c;display:flex;align-items:center;justify-content:center;font:700 14px 'Noto Sans Thai';flex:none">${esc(a.initials)}</div>
-            <div style="flex:1;min-width:0"><div style="font:600 13.5px 'Noto Sans Thai';color:#101828;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.name)}</div><div style="font:500 11.5px Inter;color:#98a2b3">${esc(a.email)}</div></div>
-            <div style="width:130px;height:9px;background:#f2f4f7;border-radius:99px;overflow:hidden;flex:none"><div style="height:100%;border-radius:99px;background:${a.progColor};width:${a.progW}"></div></div>
-            <div style="font:700 13px Inter;color:#475467;width:42px;text-align:right">${a.progW}</div>
-            <span style="font:600 11px 'Noto Sans Thai';color:#c2410c;background:#ffedd5;border-radius:999px;padding:4px 11px;flex:none">ต้องติดตาม</span>
+            <div style="flex:1;min-width:0"><div style="font:600 13.5px 'Noto Sans Thai';color:#101828;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.name)}</div><div style="font:500 11.5px Inter;color:#98a2b3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(a.email)}</div></div>
+            ${phone ? "" : `<div style="width:130px;height:9px;background:#f2f4f7;border-radius:99px;overflow:hidden;flex:none"><div style="height:100%;border-radius:99px;background:${a.progColor};width:${a.progW}"></div></div>`}
+            <div style="font:700 13px Inter;color:#475467;width:42px;text-align:right;flex:none">${a.progW}</div>
+            <span style="font:600 11px 'Noto Sans Thai';color:#c2410c;background:#ffedd5;border-radius:999px;padding:4px 11px;flex:none">${phone ? "ติดตาม" : "ต้องติดตาม"}</span>
           </div>`).join("") : `<div style="padding:16px 8px;font:600 13px 'Noto Sans Thai';color:#98a2b3;border-top:1px solid #f2f4f7">ไม่มีนักเรียนที่ต้องติดตาม</div>`}
       </div>
     </div>
@@ -1110,7 +1113,7 @@ function render() {
 
   if (!state.ready) {
     app.innerHTML = `<div style="height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;background:#0f766e;color:#fff">
-      <div style="width:72px;height:72px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.18)"><img src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-adap-green-untext.1c98bf032947.png" alt="MECA" style="width:44px;height:44px;object-fit:contain"></div>
+      <div style="width:96px;height:96px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.18)"><img src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-adap-green-untext.1c98bf032947.png" alt="MECA" style="width:64px;height:44px;object-fit:contain"></div>
       <div style="font:700 15px 'Noto Sans Thai'">${state.error ? esc(state.error) : "กำลังโหลดข้อมูล..."}</div>
     </div>`;
     if (DEBUG) updateDebugPanel();
