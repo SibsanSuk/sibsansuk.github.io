@@ -357,9 +357,13 @@ let slideTimer = null;
 
 /* responsive breakpoints: phone < 700 ≤ tablet < 1024 ≤ desktop */
 const BP = () => { const w = window.innerWidth || 1200; return w < 700 ? "phone" : w < 1024 ? "tablet" : "desktop"; };
-// wide landscape: show the dashboard tabs as a left sidebar for more vertical room
-const isWide = () => (window.innerWidth || 1200) >= 1280;
-const layoutKey = () => BP() + (isWide() ? "|w" : "");
+// Left tab rail when width outweighs height: wide desktop (≥1280) OR any landscape
+// phone/tablet (short viewport). Frees vertical room for content where it's scarce.
+const useSideNav = () => {
+  const w = window.innerWidth || 1200, h = window.innerHeight || 800;
+  return w >= 1280 || (w > h && w >= 640);
+};
+const layoutKey = () => BP() + (useSideNav() ? "|s" : "");
 let lastLayout = layoutKey();
 
 /* ------------------------------ compute per render ------------------------------ */
@@ -663,7 +667,7 @@ function viewUserMenu(initials) {
 
 /* ---------------- dashboard shell ---------------- */
 function viewDashboard() {
-  const phone = BP() === "phone", wide = isWide();
+  const phone = BP() === "phone", side = useSideNav(), compact = (window.innerWidth || 1200) < 1024;
   let page = "";
   if (!state.metrics) page = `<div style="padding:40px;text-align:center;font:600 14px 'Noto Sans Thai';color:#98a2b3">กำลังเตรียมข้อมูล...</div>`;
   else if (state.page === "overview") page = viewOverview();
@@ -672,20 +676,21 @@ function viewDashboard() {
   else if (state.page === "map") page = viewMap();
   const tabs = [["overview", "goOverview", "ภาพรวมทั้งห้อง"], ["students", "goStudents", "รายชื่อนักเรียน"], ["tools", "goTools", "การใช้งานเครื่องมือ"], ["map", "goMap", "แผนที่เปรียบเทียบ"]];
 
-  // wide landscape: vertical tab rail on the left, content fills the rest (more vertical room)
-  if (wide) {
+  // left vertical tab rail, content fills the rest (more vertical room on landscape / wide)
+  if (side) {
+    const railW = compact ? 190 : 236;
     const navV = ([p, act, label]) => {
       const on = state.page === p;
       const stl = on ? "background:#f0fdfa;color:#0f766e;font-weight:700" : "background:none;color:#475467;font-weight:600";
-      return `<button data-act="${act}" class="${on ? "" : "h-light"}" style="display:flex;align-items:center;gap:11px;width:100%;border:none;cursor:pointer;text-align:left;border-radius:10px;padding:12px 13px;font:15px 'Noto Sans Thai';${stl}"><span style="width:4px;height:18px;border-radius:99px;flex:none;background:${on ? "#0d9488" : "transparent"}"></span>${label}</button>`;
+      return `<button data-act="${act}" class="${on ? "" : "h-light"}" style="display:flex;align-items:center;gap:11px;width:100%;border:none;cursor:pointer;text-align:left;border-radius:10px;padding:${compact ? "10px 11px" : "12px 13px"};font:${compact ? 13.5 : 15}px 'Noto Sans Thai';${stl}"><span style="width:4px;height:18px;border-radius:99px;flex:none;background:${on ? "#0d9488" : "transparent"}"></span>${label}</button>`;
     };
     return `
     <div style="display:flex;flex:1;min-height:0">
-      <div style="flex:none;width:236px;background:#fff;border-right:1px solid #ececf1;box-shadow:1px 0 2px rgba(16,24,40,.03);padding:18px 14px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;z-index:10">
+      <div style="flex:none;width:${railW}px;background:#fff;border-right:1px solid #ececf1;box-shadow:1px 0 2px rgba(16,24,40,.03);padding:${compact ? "12px 10px" : "18px 14px"};display:flex;flex-direction:column;gap:4px;overflow-y:auto;z-index:10">
         <div style="font:700 11px 'Noto Sans Thai';color:#98a2b3;padding:2px 13px 10px">เมนูห้องเรียน</div>
         ${tabs.map(navV).join("")}
       </div>
-      <main class="scrolly" style="flex:1;min-height:0;padding:26px 34px 60px">
+      <main class="scrolly" style="flex:1;min-height:0;padding:${compact ? "18px 18px 44px" : "26px 34px 60px"}">
         <div style="max-width:1180px;margin:0 auto">${page}</div>
       </main>
     </div>`;
