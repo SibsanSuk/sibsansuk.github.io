@@ -409,6 +409,8 @@ function applyLandingSummary(s) {
   if (!s || !Array.isArray(s.slides) || !s.slides.length) return false;
   state.landingStats = s.slides;
   if (Array.isArray(s.points) && s.points.length) state.landingPoints = s.points;
+  if (s.totals) state.landingTotals = s.totals;
+  if (Array.isArray(s.trend) && s.trend.length) state.landingTrend = s.trend;
   if (maps.usage) { maps.usage.remove(); maps.usage = null; } // force rebuild with real markers
   render();
   return true;
@@ -438,6 +440,7 @@ const ICO = {
   chevron: svg(["M6 9l6 6 6-6"], 2.2),
   id: svg(["M3.5 6h17v12h-17z", "M8 11a1.7 1.7 0 1 0 0-3.4A1.7 1.7 0 0 0 8 11", "M5.6 15.2c.4-1.3 1.4-2 2.4-2s2 .7 2.4 2", "M13.5 9h4", "M13.5 12h4", "M13.5 15h2.5"], 1.9),
   lock: svg(["M6 10.5h12v9.5H6z", "M8.2 10.5V7.2a3.8 3.8 0 0 1 7.6 0v3.3"], 2),
+  calendar: svg(["M4.5 6.5h15v13h-15z", "M4.5 10h15", "M8 4v4", "M16 4v4"], 2),
 };
 const toolStyle = (label) => { const m = { Profile: "#12a89b", Video: "#7b83eb", BookRoll: "#5ab877", Quiz: "#f59e0b" }; return `background:${m[label] || "#94a3b8"};color:#fff`; };
 
@@ -462,7 +465,8 @@ const state = {
   students: [], activities: [], courseData: null, courseTitle: "-", courseKey: "-",
   metrics: null, prog: [], quiz: [], tools: null,
   // landing insight slides + map bubbles from the real enroll aggregate (null → demo fallback)
-  landingStats: null, landingPoints: null,
+  landingStats: null, landingPoints: null, landingTotals: null, landingTrend: null,
+  courseTab: "all", // ห้องเรียนของฉัน status filter
 };
 
 /* runtime helpers not part of state */
@@ -500,6 +504,8 @@ const mapClassroom = (course, assign, i) => {
     province: inst.province || "",
     students: numOr(assign.studentCount, assign.students, assign.enrollCount, assign.total, assign.memberCount),
     progress: (() => { const p = numOr(assign.progress, assign.avgProgress, assign.averageProgress); return p == null ? null : Math.round(Number(p)); })(),
+    startDate: assign.startDate || assign.createAt || assign.createdAt || null,
+    endDate: assign.endDate || null,
   };
 };
 const flattenClassrooms = (courses) => {
@@ -532,6 +538,59 @@ const gradeText = (c) => {
   return s || "ทั้งหมด";
 };
 const roomText = (c) => { const r = c?.classRoom; return (r === "" || r == null) ? "ทั้งหมด" : String(r); };
+
+// ---- landing map + classroom-card helpers ----
+// Bubble colour tier by user count (matches the map legend).
+const USER_TIERS = [
+  { min: 2000, color: "#ef4444", label: "มากกว่า 2,000" },
+  { min: 1000, color: "#f97316", label: "1,000 - 2,000" },
+  { min: 500, color: "#f59e0b", label: "500 - 1,000" },
+  { min: 0, color: "#14b8a6", label: "ต่ำกว่า 500" },
+];
+const tierColor = (n) => (USER_TIERS.find((t) => n >= t.min) || USER_TIERS[USER_TIERS.length - 1]).color;
+const kFmt = (n) => (n >= 1000 ? (n / 1000).toFixed(n < 10000 ? 1 : 0).replace(/\.0$/, "") + "k" : String(n));
+const relativeTime = (d) => {
+  if (!d) return "";
+  const t = new Date(d).getTime();
+  if (!Number.isFinite(t)) return "";
+  const s = Math.max(0, (Date.now() - t) / 1000);
+  if (s < 3600) return `${Math.max(1, Math.round(s / 60))} นาทีที่แล้ว`;
+  if (s < 86400) return `${Math.round(s / 3600)} ชั่วโมงที่แล้ว`;
+  if (s < 2592000) return `${Math.round(s / 86400)} วันที่แล้ว`;
+  return new Date(d).toLocaleDateString("th-TH", { day: "numeric", month: "short" });
+};
+// Module number from the course title ("... Module 4 ...") else sequential.
+const moduleNo = (c, i) => { const m = /module\s*(\d+)/i.exec(c?.title || ""); return String(m ? m[1] : i + 1).padStart(2, "0"); };
+// Short subject line: title with the "... : Module N ..." tail stripped, or the ระดับชั้น.
+const classroomStatus = (c) => (c?.progress == null || c.progress === 0 ? "pending" : c.progress >= 100 ? "done" : "active");
+const STATUS_TABS = [["all", "ทั้งหมด"], ["active", "กำลังสอน"], ["pending", "รอเริ่ม"], ["done", "สิ้นสุดแล้ว"]];
+// Inline SVG sparkline from a numeric series.
+const sparkline = (vals, color, w = 132, h = 34) => {
+  const v = (vals || []).map(Number).filter(Number.isFinite);
+  if (v.length < 2) return "";
+  const min = Math.min(...v), max = Math.max(...v), span = max - min || 1;
+  const pts = v.map((y, i) => [(i / (v.length - 1)) * (w - 4) + 2, h - 3 - ((y - min) / span) * (h - 8)]);
+  const line = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(" ");
+  const area = `${line} L${pts[pts.length - 1][0].toFixed(1)} ${h} L${pts[0][0].toFixed(1)} ${h} Z`;
+  const last = pts[pts.length - 1];
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:${w}px;height:${h}px;display:block"><path d="${area}" fill="${color}" opacity="0.12"></path><path d="${line}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.6" fill="${color}"></circle></svg>`;
+};
+// Darken a hex colour for the module block's gradient.
+const shade = (hex, amt = 0.8) => {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  const r = Math.round(((n >> 16) & 255) * amt), g = Math.round(((n >> 8) & 255) * amt), b = Math.round((n & 255) * amt);
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+};
+// The module's topic (text after "Module N") and its education level, for the card's title/subtitle.
+const moduleTopic = (title) => { const m = /module\s*\d+\s*[:：]?\s*(.+)$/i.exec(title || ""); return ((m ? m[1] : title) || "").trim() || (title || ""); };
+const moduleLevel = (c) => {
+  const m = /(มัธยมศึกษาตอน(?:ต้น|ปลาย)|ประถมศึกษา|ปวช\.?|ปวส\.?|ปริญญา\S*)/.exec(c?.title || "");
+  if (m) return "ระดับ" + m[1];
+  const g = gradeText(c);
+  return g === "ทั้งหมด" ? "ทุกระดับชั้น" : g;
+};
 
 // ---- "เพิ่มห้องเรียน" helpers ----
 // GET /course returns Course[] each with courseName + enrolls[]; keep the fields the modal needs.
@@ -597,109 +656,140 @@ function viewLandingSignIn() {
   </div>`;
 }
 
-function viewCourseList() {
-  const courses = courseList();
+function moduleCard(c, i) {
+  const color = c.color || CLASS_COLORS[i % CLASS_COLORS.length];
+  const pnum = typeof c.progress === "number" ? c.progress : null;
+  const stu = c.students == null ? "—" : c.students;
+  const started = relativeTime(c.startDate);
+  const status = classroomStatus(c);
+  const actLabel = status === "pending" ? "เริ่มใช้งาน" : "เปิดห้องเรียน";
+  const actStyle = status === "pending" ? "background:#eef2ff;color:#4f46e5" : `background:${color};color:#fff`;
   return `
-  <div style="width:100%;max-width:560px;margin:24px auto 0">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:20px">
-      <div style="display:flex;align-items:baseline;gap:10px">
-        <div style="font:800 23px 'Noto Sans Thai';color:#101828">ห้องเรียน</div>
-        <span style="font:600 13px 'Noto Sans Thai';color:#0f766e;background:#e9fbf4;border-radius:999px;padding:3px 11px">${courses.length} ห้องเรียน</span>
-      </div>
-      <button data-act="openAdd" class="h-teal" style="display:flex;align-items:center;gap:6px;border:none;background:#0d9488;color:#fff;border-radius:999px;padding:9px 16px;font:700 12.5px 'Noto Sans Thai';cursor:pointer;box-shadow:0 4px 12px rgba(13,148,136,.25)">
-        <span style="width:15px;height:15px;display:inline-flex">${ICO.plus}</span>เพิ่มห้องเรียน
-      </button>
+  <div class="h-card" style="display:flex;align-items:stretch;background:#fff;border:1px solid #ececf1;border-radius:15px;box-shadow:0 1px 2px rgba(16,24,40,.05);overflow:hidden">
+    <div data-act="pickCourse" data-arg="${esc(c.id)}" style="flex:none;width:92px;background:linear-gradient(150deg,${color},${shade(color)});display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;cursor:pointer">
+      <div style="font:700 9.5px 'Noto Sans Thai';letter-spacing:.14em;opacity:.85">MODULE</div>
+      <div style="font:800 30px Inter;line-height:1;margin-top:2px">${moduleNo(c, i)}</div>
     </div>
-    <div style="display:flex;flex-direction:column;gap:14px">
-      ${courses.length ? courses.map((c) => {
-        const pnum = typeof c.progress === "number" ? c.progress : null;
-        const stu = c.students == null ? "—" : c.students;
-        return `
-        <div data-act="pickCourse" data-arg="${esc(c.id)}" class="h-card" style="display:flex;align-items:stretch;background:#fff;border:1px solid #ececf1;border-radius:16px;box-shadow:0 1px 2px rgba(16,24,40,.04);cursor:pointer;overflow:hidden">
-          <div style="width:5px;flex:none;background:${c.color}"></div>
-          <div style="flex:1;padding:17px 18px;min-width:0">
-            <div style="font:700 15.5px/1.4 'Noto Sans Thai';color:#101828">${esc(c.title)}</div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">
-              <span style="font:600 11px 'Noto Sans Thai';color:#0f766e;background:#e9fbf4;border:1px solid #c3f0e2;border-radius:7px;padding:3px 9px">ระดับชั้น: ${esc(gradeText(c))}</span>
-              <span style="display:flex;align-items:center;gap:5px;font:700 11px 'Inter',monospace;letter-spacing:.04em;color:#475467;background:#f7f8fa;border:1px dashed #d3d8de;border-radius:7px;padding:3px 9px"><span style="width:11px;height:11px;display:inline-flex;color:#98a2b3">${ICO.id}</span>${esc(c.classCode)}</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:11px;margin-top:14px">
-              <span style="font:500 11.5px 'Noto Sans Thai';color:#98a2b3;display:flex;align-items:center;gap:5px;flex:none"><span style="width:14px;height:14px;display:inline-flex">${ICO.usersSm}</span>${stu} คน</span>
-              <div style="flex:1;height:9px;background:#eef0f3;border-radius:99px;overflow:hidden"><div style="height:100%;border-radius:99px;background:${c.color};width:${pnum == null ? 0 : pnum}%"></div></div>
-              <span style="font:700 13px Inter;color:#0f766e;flex:none;width:38px;text-align:right">${pnum == null ? "—" : pnum + "%"}</span>
-            </div>
-          </div>
-          <div style="display:flex;align-items:center;padding-right:16px"><span style="width:26px;height:26px;border-radius:50%;background:#f7f8fa;display:flex;align-items:center;justify-content:center;font:700 15px Inter;color:#98a2b3">›</span></div>
-        </div>`;
-      }).join("") : `<div style="background:#fff;border:1px dashed #e4e7ec;border-radius:16px;padding:28px;text-align:center;font:600 14px 'Noto Sans Thai';color:#98a2b3">ยังไม่มีห้องเรียนสำหรับบัญชีนี้</div>`}
+    <div style="flex:1;min-width:0;padding:13px 15px;display:flex;flex-direction:column;gap:8px">
+      <div data-act="pickCourse" data-arg="${esc(c.id)}" style="cursor:pointer;min-width:0">
+        <div style="font:700 14.5px/1.35 'Noto Sans Thai';color:#101828;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(moduleTopic(c.title))}</div>
+        <div style="font:500 11.5px 'Noto Sans Thai';color:#98a2b3;margin-top:2px">${esc(moduleLevel(c))}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;font:500 11px 'Noto Sans Thai';color:#98a2b3;flex-wrap:wrap">
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:14px;height:14px;display:inline-flex">${ICO.usersSm}</span>${stu} คน</span>
+        ${started ? `<span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;display:inline-flex;color:#b2b8c2">${ICO.calendar}</span>เริ่มสอนเมื่อ ${esc(started)}</span>` : ""}
+      </div>
+      <div style="display:flex;align-items:center;gap:11px">
+        <div style="flex:1;height:8px;background:#eef0f3;border-radius:99px;overflow:hidden"><div style="height:100%;border-radius:99px;background:${color};width:${pnum == null ? 0 : pnum}%"></div></div>
+        <span style="font:700 12px Inter;color:#475467;flex:none;width:36px;text-align:right">${pnum == null ? "—" : pnum + "%"}</span>
+      </div>
+    </div>
+    <div style="flex:none;display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;padding:13px 13px 13px 0;gap:6px">
+      <button data-act="pickCourse" data-arg="${esc(c.id)}" style="border:none;border-radius:9px;padding:8px 13px;font:700 11.5px 'Noto Sans Thai';cursor:pointer;white-space:nowrap;${actStyle}">${actLabel}</button>
+      <button data-act="noop" title="ตัวเลือก" style="border:none;background:none;color:#c0c6cf;cursor:pointer;font:700 17px Inter;line-height:1;padding:2px 5px">⋮</button>
     </div>
   </div>`;
 }
 
-function insightOverlay(compact) {
-  const pos = compact ? "top:14px;left:14px;right:14px;width:auto" : "top:24px;left:24px;width:320px";
-  const pad = compact ? "15px 17px" : "22px 24px";
-  const stageMin = compact ? "116px" : "150px";
-  const bigFs = compact ? "25px" : "30px";
-  const slides = insightSlides();
+function viewCourseList() {
+  const phone = BP() === "phone";
+  const all = courseList();
+  const counts = { all: all.length, active: 0, pending: 0, done: 0 };
+  all.forEach((c) => { counts[classroomStatus(c)]++; });
+  const courses = state.courseTab === "all" ? all : all.filter((c) => classroomStatus(c) === state.courseTab);
+  const empty = `<div style="background:#fff;border:1px dashed #e4e7ec;border-radius:14px;padding:34px;text-align:center;font:600 13.5px 'Noto Sans Thai';color:#98a2b3">ยังไม่มีห้องเรียนในสถานะนี้</div>`;
   return `
-    <div style="position:absolute;${pos};z-index:600;background:rgba(255,255,255,.96);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.6);border-radius:18px;box-shadow:0 14px 36px rgba(16,24,40,.2);padding:${pad};overflow:hidden">
-      <div id="slide-stage" style="position:relative;min-height:${stageMin}">
-        ${slides.map((sl, i) => `
-          <div class="slide" data-i="${i}" style="position:absolute;inset:0;transition:opacity .5s ease,transform .5s ease;opacity:${i === state.mapSlide ? 1 : 0};transform:${i === state.mapSlide ? "translateY(0)" : "translateY(8px)"};pointer-events:none">
-            <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
-              <span style="width:6px;height:22px;border-radius:99px;background:${sl.bg};flex:none"></span>
-              <span style="font:700 12.5px 'Noto Sans Thai';color:#475467;letter-spacing:.01em">${esc(sl.label)}</span>
-            </div>
-            <div style="font:800 ${bigFs} Inter;color:#101828;line-height:1.15;word-break:break-word">${esc(sl.big)} <span style="font:700 15px 'Noto Sans Thai';color:#98a2b3">${esc(sl.unit)}</span></div>
-            <div style="font:500 12.5px/1.6 'Noto Sans Thai';color:#98a2b3;margin-top:8px">${esc(sl.desc)}</div>
-          </div>`).join("")}
+  <div style="${phone ? "flex:none" : "flex:1;max-width:640px"};display:flex;flex-direction:column;background:#fff;border:1px solid #ececf1;border-radius:${phone ? 14 : 18}px;box-shadow:0 1px 3px rgba(16,24,40,.06);overflow:hidden;min-height:0">
+    <div style="flex:none;padding:${phone ? "16px 16px 0" : "18px 22px 0"}">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px">
+        <div style="font:800 ${phone ? 17 : 19}px 'Noto Sans Thai';color:#101828">ห้องเรียนของฉัน</div>
+        <button data-act="openAdd" class="h-teal" style="display:flex;align-items:center;gap:6px;border:none;background:#0d9488;color:#fff;border-radius:999px;padding:8px 15px;font:700 12.5px 'Noto Sans Thai';cursor:pointer;box-shadow:0 4px 12px rgba(13,148,136,.25)"><span style="width:14px;height:14px;display:inline-flex">${ICO.plus}</span>เพิ่มห้องเรียน</button>
       </div>
-      <div style="display:flex;gap:6px;margin-top:14px;position:relative;z-index:1">
-        ${slides.map((sl, i) => `<button data-act="goSlide" data-arg="${i}" class="slide-dot" data-i="${i}" style="border:none;cursor:pointer;padding:0;height:6px;border-radius:99px;flex:1;background:${i === state.mapSlide ? "#0d9488" : "#e2e5e9"};transition:background .3s"></button>`).join("")}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid #f2f4f7;padding-bottom:12px">
+        ${STATUS_TABS.map(([k, label]) => {
+          const on = state.courseTab === k;
+          return `<button data-act="setCourseTab" data-arg="${k}" style="display:flex;align-items:center;gap:6px;border:1px solid ${on ? "#0d9488" : "#e9ebef"};background:${on ? "#e9fbf4" : "#fff"};color:${on ? "#0f766e" : "#667085"};border-radius:999px;padding:6px 12px;font:700 12px 'Noto Sans Thai';cursor:pointer">${label}<span style="font:700 10.5px Inter;color:${on ? "#0f766e" : "#98a2b3"};background:${on ? "#c3f0e2" : "#f2f4f7"};border-radius:99px;padding:1px 7px">${counts[k]}</span></button>`;
+        }).join("")}
+      </div>
+    </div>
+    <div ${phone ? "" : 'class="scrolly"'} style="flex:1;min-height:0;${phone ? "" : "overflow-y:auto;"}padding:${phone ? "14px 16px" : "16px 22px"};display:flex;flex-direction:column;gap:12px">
+      ${courses.length ? courses.map((c, i) => moduleCard(c, i)).join("") : empty}
+    </div>
+  </div>`;
+}
+
+function viewMapCard(compact) {
+  const t = state.landingTotals || {};
+  const avg = t.avgPerInstitute != null ? Number(t.avgPerInstitute).toLocaleString("en-US") : "—";
+  const institutes = t.institutes != null ? Number(t.institutes).toLocaleString("en-US") : "—";
+  const vals = (state.landingTrend || []).map((x) => x.users);
+  const pct = vals.length >= 2 && vals[vals.length - 2] ? Math.round((vals[vals.length - 1] - vals[vals.length - 2]) / vals[vals.length - 2] * 100) : null;
+  const up = pct == null || pct >= 0;
+  const infoDot = `<span style="width:14px;height:14px;border-radius:50%;border:1.3px solid #cbd0d8;color:#aeb4bd;display:inline-flex;align-items:center;justify-content:center;font:700 9px Georgia,serif">i</span>`;
+  const statCard = `
+    <div style="position:absolute;top:${compact ? 14 : 20}px;left:${compact ? 14 : 20}px;${compact ? "right:14px;" : "width:238px;"}z-index:600;background:rgba(255,255,255,.97);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.7);border-radius:16px;box-shadow:0 12px 30px rgba(16,24,40,.16);padding:16px 18px">
+      <div style="display:flex;align-items:center;gap:6px;font:600 12px 'Noto Sans Thai';color:#667085">ผู้ใช้เฉลี่ยต่อสถาบัน ${infoDot}</div>
+      <div style="display:flex;align-items:baseline;gap:6px;margin-top:6px"><span style="font:800 34px Inter;color:#101828;line-height:1">${esc(avg)}</span><span style="font:600 12.5px 'Noto Sans Thai';color:#98a2b3">คน/แห่ง</span></div>
+      <div style="font:500 11.5px 'Noto Sans Thai';color:#98a2b3;margin-top:3px">จาก ${esc(institutes)} สถาบัน</div>
+      ${vals.length >= 2 ? `<div style="height:1px;background:#eef0f3;margin:13px 0 10px"></div>
+        <div style="font:600 11px 'Noto Sans Thai';color:#667085;margin-bottom:6px">แนวโน้ม 6 เดือนล่าสุด</div>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px">
+          ${sparkline(vals, "#0d9488", compact ? 104 : 118, 34)}
+          ${pct != null ? `<span style="font:700 12px Inter;color:${up ? "#16a34a" : "#dc2626"};display:flex;align-items:center;gap:2px;white-space:nowrap">${up ? "▲" : "▼"} ${Math.abs(pct)}%</span>` : ""}
+        </div>` : ""}
+    </div>`;
+  const legend = `
+    <div style="position:absolute;bottom:${compact ? 14 : 20}px;left:${compact ? 14 : 20}px;z-index:600;background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.7);border-radius:13px;box-shadow:0 10px 24px rgba(16,24,40,.14);padding:11px 14px">
+      <div style="font:700 11px 'Noto Sans Thai';color:#475467;margin-bottom:7px">จำนวนผู้ใช้ (คน)</div>
+      ${USER_TIERS.map((tt) => `<div style="display:flex;align-items:center;gap:8px;font:500 11px 'Noto Sans Thai';color:#667085;margin-top:5px"><span style="width:10px;height:10px;border-radius:50%;background:${tt.color};flex:none"></span>${tt.label}</div>`).join("")}
+    </div>`;
+  const fullBtn = `<button data-act="noop" style="position:absolute;bottom:${compact ? 14 : 20}px;right:${compact ? 14 : 20}px;z-index:600;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e6e8ec;border-radius:11px;padding:10px 14px;font:700 12.5px 'Noto Sans Thai';color:#0f766e;cursor:pointer;box-shadow:0 6px 16px rgba(16,24,40,.12)">ดูรายละเอียดแผนที่เต็ม<span style="font:700 13px Inter">↗</span></button>`;
+  return `
+    <div style="${compact ? "flex:none" : "flex:1.35"};display:flex;flex-direction:column;background:#fff;border:1px solid #ececf1;border-radius:${compact ? 14 : 18}px;box-shadow:0 1px 3px rgba(16,24,40,.06);overflow:hidden;min-height:0">
+      <div style="flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:${compact ? "14px 16px" : "18px 22px"};border-bottom:1px solid #f2f4f7">
+        <div style="font:800 ${compact ? 15 : 17}px 'Noto Sans Thai';color:#101828">การกระจายตัวของผู้ใช้งานสถาบัน</div>
+        <div style="display:flex;align-items:center;gap:7px;background:#f4f5f7;border:1px solid #e9ebef;border-radius:10px;padding:8px 12px;font:600 12.5px 'Noto Sans Thai';color:#475467;white-space:nowrap">ผู้ใช้งานสถาบัน<span style="width:14px;height:14px;color:#98a2b3;display:inline-flex">${ICO.chevron}</span></div>
+      </div>
+      <div style="position:relative;flex:1;min-height:${compact ? "320px" : "0"};background:#dfe7ea;isolation:isolate">
+        <div id="th-usage-map" style="position:absolute;inset:0"></div>
+        ${statCard}${legend}${fullBtn}
+      </div>
+    </div>`;
+}
+
+function viewSignInCard(phone) {
+  return `
+    <div style="${phone ? "flex:none" : "flex:1;max-width:520px"};display:flex;background:#fff;border:1px solid #ececf1;border-radius:${phone ? 14 : 18}px;box-shadow:0 1px 3px rgba(16,24,40,.06);overflow:hidden;min-height:0">
+      <div style="flex:1;display:flex;padding:${phone ? "34px 24px" : "48px 44px"}">
+        ${viewLandingSignIn()}
       </div>
     </div>`;
 }
 
 function viewLanding() {
   const authed = state.authed;
-  const bp = BP();
-  const phone = bp === "phone", tablet = bp === "tablet";
-  const content = authed ? viewCourseList() : viewLandingSignIn();
-  const mapBlock = `
-    <div style="${phone ? "flex:none;height:260px" : "flex:1.25"};position:relative;background:#dfe7ea;overflow:hidden;isolation:isolate">
-      <div id="th-usage-map" style="position:absolute;inset:0"></div>
-      ${insightOverlay(phone)}
-    </div>`;
-  const sidePad = phone ? "22px 18px 34px" : tablet ? "30px 30px" : "40px 46px";
-  const sideBlock = `
-    <div ${phone ? "" : 'class="scrolly"'} style="${phone ? "flex:none" : `flex:.9;min-width:min(${tablet ? "360px,48vw" : "430px,42vw"});min-height:0`};display:flex;flex-direction:column;padding:${sidePad};background:#eef0f3">
-      ${content}
-    </div>`;
+  const phone = BP() === "phone";
+  const rightPanel = authed ? viewCourseList() : viewSignInCard(phone);
   const footer = `
     <div style="flex:none;background:#f7f8fa;border-top:1px solid #ececf1;padding:12px ${phone ? "18px" : "32px"};display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px">
       <span style="font:700 12px 'Noto Sans Thai';color:#344054">ศูนย์เทคโนโลยีอิเล็กทรอนิกส์และคอมพิวเตอร์แห่งชาติ</span>
       <span style="font:500 11.5px Inter;color:#98a2b3">National Electronics and Computer Technology Center: NECTEC</span>
       <span style="font:500 11.5px 'Noto Sans Thai';color:#98a2b3">· 112 ถนนพหลโยธิน ต.คลองหนึ่ง อ.คลองหลวง จ.ปทุมธานี 12120, Thailand</span>
-      <span style="font:500 11.5px Inter;color:#98a2b3">· Call Center: 662-564-6900</span>
       <span style="font:500 11.5px Inter;color:#0f766e">· info@nectec.or.th</span>
     </div>`;
-
+  const cards = `<div style="flex:1;display:flex;${phone ? "flex-direction:column;" : ""}gap:${phone ? 14 : 18}px;padding:${phone ? "14px" : "22px"};min-height:0">
+      ${viewMapCard(phone)}
+      ${rightPanel}
+    </div>`;
   if (phone) {
     return `
-    <div class="scrolly" style="flex:1;display:flex;flex-direction:column;min-height:0;background:#fff">
-      ${mapBlock}
-      ${sideBlock}
-      ${footer}
+    <div class="scrolly" style="flex:1;display:flex;flex-direction:column;min-height:0;background:#eef1f4">
+      ${cards}${footer}
     </div>`;
   }
   return `
-  <div style="flex:1;display:flex;flex-direction:column;min-height:0;background:#fff">
-    <div style="flex:1;display:flex;min-height:0">
-      ${mapBlock}
-      ${sideBlock}
-    </div>
-    ${footer}
+  <div style="flex:1;display:flex;flex-direction:column;min-height:0;background:#eef1f4">
+    ${cards}${footer}
   </div>`;
 }
 
@@ -1475,23 +1565,20 @@ function mountMaps() {
 
   const usageEl = document.getElementById("th-usage-map");
   if (usageEl && !maps.usage) {
-    const v = insightSlides()[state.mapSlide].view;
-    const map = L.map(usageEl, { zoomControl: false, scrollWheelZoom: false, attributionControl: false }).setView([v.lat, v.lng], v.zoom);
+    const map = L.map(usageEl, { zoomControl: false, scrollWheelZoom: false, attributionControl: false }).setView([14.4, 101.2], 5.5);
     maps.usage = map;
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 12, minZoom: 4 }).addTo(map);
     L.control.zoom({ position: "bottomright" }).addTo(map);
-    const kFmt = (n) => (n >= 1000 ? (n / 1000).toFixed(n < 10000 ? 1 : 0).replace(/\.0$/, "") + "k" : String(n));
     mapPoints().forEach((p) => {
       const label = kFmt(p.n);
+      const col = p.pin ? "#ef4444" : tierColor(p.n); // colour by user-count tier (map legend)
       let html;
-      if (p.pin) html = `<div style="position:relative;transform:translate(-50%,-100%)"><div style="width:34px;height:34px;border-radius:50%;background:#ef4444;border:3px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font:800 13px Inter;color:#fff">${label}</div><div style="position:absolute;left:50%;top:30px;transform:translateX(-50%);width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:11px solid #ef4444"></div></div>`;
-      else { const fs = p.big ? 15 : 12, halo = p.big ? 12 : 8; html = `<div style="width:${p.size}px;height:${p.size}px;border-radius:50%;background:radial-gradient(circle at 40% 35%,rgba(251,146,60,.98),rgba(249,115,22,.62));display:flex;align-items:center;justify-content:center;font:700 ${fs}px Inter;color:#7c2d12;box-shadow:0 0 0 ${halo}px rgba(249,146,60,.2)">${label}</div>`; }
+      if (p.pin) html = `<div style="position:relative;transform:translate(-50%,-100%)"><div style="width:34px;height:34px;border-radius:50%;background:${col};border:3px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font:800 13px Inter;color:#fff">${label}</div><div style="position:absolute;left:50%;top:30px;transform:translateX(-50%);width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:11px solid ${col}"></div></div>`;
+      else { const fs = p.big ? 15 : 12, halo = p.big ? 11 : 7; html = `<div style="width:${p.size}px;height:${p.size}px;border-radius:50%;background:${col};opacity:.9;border:2px solid rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;font:700 ${fs}px Inter;color:#fff;box-shadow:0 0 0 ${halo}px ${col}22,0 2px 6px rgba(0,0,0,.18)">${label}</div>`; }
       L.marker([p.lat, p.lng], { icon: L.divIcon({ html, className: "", iconSize: [0, 0], iconAnchor: [0, 0] }), interactive: false }).addTo(map);
     });
     setTimeout(() => maps.usage && maps.usage.invalidateSize(), 250);
-    startSlideTimer();
   }
-  if (!usageEl) stopSlideTimer();
 
   const cmpEl = document.getElementById("compare-map");
   if (cmpEl && !maps.compare) {
@@ -1657,6 +1744,7 @@ const H = {
   noop: () => {},
   signIn: () => { if (state.mode === "api") startLogin(); else setState({ authed: true }); },
   setFilter: (key) => setState({ filter: key }),
+  setCourseTab: (key) => setState({ courseTab: key }),
   pickLang: (code) => setState({ lang: code }),
   pickFont: (size) => setState({ fontSize: size }),
   goSlide: (i) => { state.mapSlide = Number(i); stopSlideTimer(); applySlide(); startSlideTimer(); },

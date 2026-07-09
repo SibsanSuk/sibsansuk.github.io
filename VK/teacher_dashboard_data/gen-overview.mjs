@@ -64,11 +64,26 @@ const slides = [
   { bg: "#fff7ed", label: "จังหวัดที่ใช้งานเข้มข้น", big: fmt(provGe500), unit: "จังหวัด", desc: `มีผู้ใช้ตั้งแต่ 500 คนขึ้นไป จากทั้งหมด ${prov.size} จังหวัด`, view: { lat: 14.0, lng: 100.6, zoom: 6.2 } },
 ];
 
+// 6-month enrollment trend (last 6 COMPLETE months) for the landing stat sparkline.
+const TH_MONTHS = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+const now = new Date();
+const trend = [];
+for (let i = 6; i >= 1; i--) {
+  const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+  const start = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  const end = `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, "0")}-${String(last.getDate()).padStart(2, "0")}`;
+  const md = await (await fetch(`${process.env.BASEURL || "https://adaptive-profile-bn-dev.ae.app.meca.in.th"}/api/kidbright/enroll/query?createAt=${start},${end}`)).json();
+  const users = Array.isArray(md) ? md.reduce((a, b) => a + (b.instituteUserCount || 0), 0) : 0;
+  trend.push({ label: TH_MONTHS[d.getMonth()], users });
+}
+
 const out = {
   generatedAt: new Date().toISOString().slice(0, 10),
   range: RANGE,
   source: "GET /api/kidbright/enroll/query",
-  totals: { users: totalUsers, provinces: prov.size, courses: courses.size, institutes: data.length },
+  totals: { users: totalUsers, provinces: prov.size, courses: courses.size, institutes: data.length, avgPerInstitute: avgPerInst },
+  trend,
   slides,
   points,
 };
