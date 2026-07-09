@@ -786,7 +786,9 @@ function viewLanding() {
       <span style="font:500 11.5px 'Noto Sans Thai';color:#98a2b3">· 112 ถนนพหลโยธิน ต.คลองหนึ่ง อ.คลองหลวง จ.ปทุมธานี 12120, Thailand</span>
       <span style="font:500 11.5px Inter;color:#0f766e">· info@nectec.or.th</span>
     </div>`;
-  const cards = `<div style="flex:1;display:flex;${phone ? "flex-direction:column;" : ""}gap:${phone ? 14 : 18}px;padding:${phone ? "14px" : "22px"};min-height:0">
+  // phone: flex:none so the page scrolls the full content + footer (flex:1 would compress the
+  // cards and let their fixed-height children spill over the footer). desktop: flex:1 fills the viewport.
+  const cards = `<div style="${phone ? "flex:none" : "flex:1;min-height:0"};display:flex;${phone ? "flex-direction:column;" : ""}gap:${phone ? 14 : 18}px;padding:${phone ? "14px" : "22px"}">
       ${viewMapCard(phone)}
       ${rightPanel}
     </div>`;
