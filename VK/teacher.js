@@ -118,13 +118,17 @@ const apiPost = async (url, body) => {
     return json;
   } catch (e) { entry.ok = false; entry.error = entry.error || e.message; throw e; }
 };
-// Catalog of courses a teacher can turn into a classroom (GET /course?grade&level&classRoom&instituteId)
-const apiCourseSearch = ({ grade, level, classRoom, instituteId } = {}) => {
+// Catalog of courses a teacher can turn into a classroom.
+// GET /course?instituteId&grade&level&classRoom&createDate — note course uses `createDate`
+// (start,end), NOT the enroll aggregate's `createAt`. The backend returns nothing for an
+// empty query, so callers must pass at least one param.
+const apiCourseSearch = ({ grade, level, classRoom, instituteId, createDate } = {}) => {
   const qs = new URLSearchParams();
   if (grade) qs.set("grade", grade);
   if (level) qs.set("level", level);
   if (classRoom) qs.set("classRoom", classRoom);
   if (instituteId) qs.set("instituteId", instituteId);
+  if (createDate) qs.set("createDate", createDate);
   const q = qs.toString();
   return apiGet(`${teacherConfig.baseUrl}/api/kidbright/course${q ? `?${q}` : ""}`);
 };
@@ -357,7 +361,9 @@ const DEMO = {
 // Landing insight slides + map bubbles: real enroll aggregate if loaded, else demo.
 const insightSlides = () => state.landingStats || DEMO.insightSlides;
 const mapPoints = () => state.landingPoints || DEMO.mapPoints;
-// Turn the per-institute enroll aggregate into 4 insight slides + province-level bubbles.
+// Coords outside Thailand mean bad/swapped lat-long or a junk province — exclude from the map.
+const inThailand = (lat, lng) => lat >= 5 && lat <= 21 && lng >= 97 && lng <= 106;
+// Turn the per-institute enroll aggregate into insight slides + province-level bubbles.
 function buildLandingFromAggregate(data) {
   if (!Array.isArray(data) || !data.length) return null;
   let totalUsers = 0;
@@ -373,7 +379,7 @@ function buildLandingFromAggregate(data) {
       courses.set(k, e);
     }
     const c = it.coordinates || {};
-    if (c.lat && c.long) {            // skip the coord-less "ระบุเอง" bucket on the map
+    if (inThailand(c.lat, c.long)) {  // valid Thai coords only (skips "ระบุเอง" + bad records)
       const key = it.instituteProvince || "-";
       const e = prov.get(key) || { users: 0, lat: 0, lng: 0, n: 0 };
       e.users += uc; e.lat += c.lat; e.lng += c.long; e.n += 1;
@@ -1225,9 +1231,9 @@ function viewAddModal() {
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <label style="font:700 13.5px 'Noto Sans Thai';color:#344054;flex:none;white-space:nowrap">วันที่ลงทะเบียน:</label>
-          <input type="date" data-inp="setAddFrom" value="${esc(f.from)}" style="${fldStl};flex:1;min-width:130px;cursor:pointer">
+          <input type="date" data-chg="setAddFrom" value="${esc(f.from)}" style="${fldStl};flex:1;min-width:130px;cursor:pointer">
           <span style="color:#98a2b3;font:600 13px 'Noto Sans Thai'">→</span>
-          <input type="date" data-inp="setAddTo" value="${esc(f.to)}" style="${fldStl};flex:1;min-width:130px;cursor:pointer">
+          <input type="date" data-chg="setAddTo" value="${esc(f.to)}" style="${fldStl};flex:1;min-width:130px;cursor:pointer">
           ${sel("setAddBand", f.band, "กรุณาเลือก ระดับชั้น", bands)}
           ${sel("setAddYear", f.year, "ชั้นปี", years)}
           ${sel("setAddRoom", f.room, "ห้องเรียน", rooms)}
@@ -1541,19 +1547,24 @@ const H = {
   saveEdit: () => setState({ editOpen: false }),
   openAdd: () => { setState({ addOpen: true, addSel: null }); H.loadAddCourses(); },
   closeAdd: () => setState({ addOpen: false }),
+  // Re-query the catalog when a filter (ชั้นปี/ห้อง/วันที่) changes — matches the original flow.
+  reloadAddCourses: () => { if (state.mode === "api") { state.addCourses = []; H.loadAddCourses(); } else setState({ addSel: null }); },
   loadAddCourses: async () => {
-    if (state.addCourses.length) return; // cache within session
-    // Guard: never fire an unfiltered GET /course (heavy, could stall the backend).
-    if (state.mode === "api" && !state.instituteId) {
-      setState({ addCourses: [], addLoading: false, addError: "ไม่พบสถานศึกษาของบัญชีนี้ จึงยังเลือกรายวิชาไม่ได้" });
-      return;
-    }
+    if (state.addCourses.length) return; // cached until a filter change clears it
+    if (state.mode !== "api") { setState({ addCourses: DEMO.courseCatalog, addLoading: false, addError: "" }); return; }
+    // Build a non-empty GET /course query from the modal filters (empty query returns nothing).
+    const f = state.addFilters;
+    const q = {};
+    if (state.instituteId) q.instituteId = state.instituteId;
+    if (f.year) q.level = f.year;
+    if (f.room) q.classRoom = f.room;
+    if (f.from && f.to) q.createDate = `${f.from},${f.to}`;
+    if (!Object.keys(q).length) q.createDate = ENROLL_RANGE; // no institute/filters → whole catalog by date
     setState({ addLoading: true, addError: "" });
     try {
-      // api: real catalog scoped by institute (no demo fallback). local demo: bundled catalog.
-      const list = state.mode === "api"
-        ? normalizeCatalog(normalizeListPayload(await apiCourseSearch({ instituteId: state.instituteId })))
-        : DEMO.courseCatalog;
+      let list = normalizeCatalog(normalizeListPayload(await apiCourseSearch(q)));
+      // Institute has no matching courses → fall back to the full catalog so there's still something to pick.
+      if (!list.length && !q.createDate) list = normalizeCatalog(normalizeListPayload(await apiCourseSearch({ createDate: ENROLL_RANGE })));
       setState({ addCourses: list, addLoading: false });
     } catch (err) {
       setState({ addCourses: [], addLoading: false, addError: "โหลดรายวิชาไม่สำเร็จ: " + err.message });
@@ -1609,14 +1620,15 @@ const INP = {
   setSearch: (v) => setState({ search: v }),
   setLeadoMsg: (v) => { state.leadoMsg = v; },
   setTeacherName: (v) => { state.teacherName = v; },
-  setAddFrom: (v) => { state.addFilters.from = v; },
-  setAddTo: (v) => { state.addFilters.to = v; },
 };
 const CHG = {
   setSort: (v) => setState({ sort: v }),
+  // band (ระดับชั้น ต้น/ปลาย) narrows the list client-side; the rest re-query the API.
   setAddBand: (v) => { state.addFilters.band = v; setState({ addSel: null }); },
-  setAddYear: (v) => { state.addFilters.year = v; },
-  setAddRoom: (v) => { state.addFilters.room = v; },
+  setAddYear: (v) => { state.addFilters.year = v; H.reloadAddCourses(); },
+  setAddRoom: (v) => { state.addFilters.room = v; H.reloadAddCourses(); },
+  setAddFrom: (v) => { state.addFilters.from = v; H.reloadAddCourses(); },
+  setAddTo: (v) => { state.addFilters.to = v; H.reloadAddCourses(); },
 };
 const SUB = { saveEdit: () => setState({ editOpen: false }), signIn: () => setState({ authed: true }) };
 

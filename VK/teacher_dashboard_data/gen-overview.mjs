@@ -11,6 +11,10 @@ const API = "https://adaptive-profile-bn-dev.ae.app.meca.in.th/api/kidbright/enr
 
 const data = await (await fetch(API)).json();
 
+// Drop records whose coords fall outside Thailand (bad/swapped lat-long or junk provinces
+// like "df") so they don't inflate the province count or drop a marker off the map.
+const inTH = (lat, lng) => lat >= 5 && lat <= 21 && lng >= 97 && lng <= 106;
+
 let totalUsers = 0;
 const courses = new Map();   // courseId -> { name, users }
 const prov = new Map();      // province  -> { name, users, lat, lng, n }
@@ -24,7 +28,7 @@ for (const it of data) {
     e.users += co.courseUserCount || 0; courses.set(k, e);
   }
   const c = it.coordinates || {};
-  if (c.lat && c.long) { // skip the coord-less "ระบุเอง" bucket on the map
+  if (inTH(c.lat, c.long)) { // valid Thai coords only (skips "ระบุเอง" bucket + bad records)
     const key = it.instituteProvince || "-";
     const e = prov.get(key) || { name: key, users: 0, lat: 0, lng: 0, n: 0 };
     e.users += uc; e.lat += c.lat; e.lng += c.long; e.n += 1; prov.set(key, e);

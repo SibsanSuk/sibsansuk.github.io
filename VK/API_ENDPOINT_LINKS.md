@@ -77,6 +77,51 @@
 | `POST` | `{BASEURL}/api/kidbright/assign` | `https://adaptive-profile-bn-dev.ae.app.meca.in.th/api/kidbright/assign` | `{"userId":"{sub}","courseId":"course-v1:NECTEC+AIUPPERSECONDARY01+NECTEC_000006","teacherId":"{sub}","instituteId":"1010720039","grade":"secondary","level":2,"classRoom":"1","startDate":"2025-02-01","endDate":"2025-04-30"}` |
 | `DELETE` | `{BASEURL}/api/kidbright/assign/{assignId}` | `https://adaptive-profile-bn-dev.ae.app.meca.in.th/api/kidbright/assign/{assignId}` | - |
 
+## Flow: เพิ่มห้องเรียนผู้สอน
+
+Flow นี้อยู่ใน `src/pages/Course.tsx` ปุ่ม `เพิ่มห้องเรียน` แค่เปิด modal ยังไม่ได้ยิง API ตอนกดปุ่มทันที แต่รายการใน modal จะมาจาก state ที่โหลดด้วย endpoint ด้านล่างตาม filter ที่เลือก
+
+| Step | ใช้ทำอะไร | Method / Endpoint | Body / Query สำคัญ |
+| --- | --- | --- | --- |
+| 1 | ตรวจข้อมูลครูและ institute เริ่มต้น | `GET {BASEURL}/api/kidbright/teacher/{sub}` | ใช้ `sub` จาก Keycloak token |
+| 2 | ดึงห้องเรียน/assign ที่ครูคนนี้เพิ่มไว้แล้ว เพื่อแสดงในหน้า `/course` | `GET {BASEURL}/api/kidbright/course/teacher/{sub}?instituteId={instituteId}` | ถ้า role เป็น `user` จะส่ง `instituteId` ของครู ถ้า `staff/admin` อาจไม่ส่งเพื่อเห็นหลายโรงเรียน |
+| 3 | ดึง "รายการวิชาที่เปิดอยู่/มี enrollment ตรง filter" สำหรับให้เลือกใน modal เพิ่มห้องเรียน | `GET {BASEURL}/api/kidbright/course?{query}` | query ที่ใช้ได้: `instituteId`, `grade`, `level`, `classRoom`, `createDate={startDate},{endDate}` |
+| 4 | เลือกวิชาใน modal | ไม่ยิง API | toggle `course.isActive` ฝั่ง frontend |
+| 5 | กด `ตกลง` เพื่อเพิ่มห้องเรียน | `POST {BASEURL}/api/kidbright/assign` | ยิง 1 request ต่อ 1 วิชาที่เลือก |
+| 6 | หลังเพิ่มเสร็จ refresh รายการห้องเรียน | `GET {BASEURL}/api/kidbright/course/teacher/{sub}?instituteId={instituteId}` | reload จาก `assign` ที่สร้างแล้ว |
+
+ตัวอย่าง endpoint สำหรับดึงรายการวิชาใน modal:
+
+```text
+GET {BASEURL}/api/kidbright/course?instituteId=1010720039
+GET {BASEURL}/api/kidbright/course?instituteId=1010720039&grade=secondary&level=2&classRoom=1
+GET {BASEURL}/api/kidbright/course?instituteId=1010720039&createDate=2025-02-01,2025-04-30
+GET {BASEURL}/api/kidbright/course?grade=secondary&level=2&classRoom=1&createDate=2025-02-01,2025-04-30
+```
+
+ตัวอย่าง body ตอนกด `ตกลง` เพื่อสร้างห้องเรียน:
+
+```json
+{
+  "userId": "{sub}",
+  "courseId": "course-v1:NECTEC+AIUPPERSECONDARY01+NECTEC_000006",
+  "teacherId": "{sub}",
+  "instituteId": "1010720039",
+  "grade": "secondary",
+  "level": 2,
+  "classRoom": "1",
+  "startDate": "2025-02-01",
+  "endDate": "2025-04-30"
+}
+```
+
+ข้อควรระวังสำหรับโปรเจกต์อื่น:
+
+- รายการวิชาใน modal ใช้ `GET /api/kidbright/course?{query}` ไม่ใช่ `GET /api/kidbright/enroll/query`.
+- filter วันที่ของ course ใช้ชื่อ `createDate` เช่น `createDate=2025-02-01,2025-04-30`; ส่วนหน้า Home/enroll aggregate ใช้ `createAt` ซึ่งเป็นคนละ endpoint.
+- โค้ดหน้า `Course.tsx` จะไม่ยิง `GET /api/kidbright/course?{query}` ถ้าไม่มี query เลย ดังนั้นอย่างน้อยควรส่ง `instituteId` หรือช่วงวันที่/ชั้น/ห้อง.
+- ทุก request ผ่าน `fetchAPI` จะส่ง `Authorization: Bearer <keycloak token>` และ `Content-Type: application/json`.
+
 ## Enroll
 
 | Method | Endpoint | Sample link / URL | Body ตัวอย่าง |
