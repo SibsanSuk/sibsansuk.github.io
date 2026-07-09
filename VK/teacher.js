@@ -672,8 +672,7 @@ function moduleCard(c, i) {
     <div style="flex:1;min-width:0;padding:14px 16px;display:flex;align-items:center;gap:14px">
       <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
         <div data-act="pickCourse" data-arg="${esc(c.id)}" style="cursor:pointer;min-width:0">
-          <div style="font:700 14.5px/1.35 'Noto Sans Thai';color:#101828;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(moduleTopic(c.title))}</div>
-          <div style="font:500 11.5px 'Noto Sans Thai';color:#98a2b3;margin-top:2px">${esc(moduleLevel(c))}</div>
+          <div style="font:700 14px/1.4 'Noto Sans Thai';color:#101828">${esc(c.title)}</div>
         </div>
         <div style="display:flex;align-items:center;gap:14px;font:500 11px 'Noto Sans Thai';color:#98a2b3;flex-wrap:wrap">
           <span style="display:flex;align-items:center;gap:5px"><span style="width:14px;height:14px;display:inline-flex">${ICO.usersSm}</span>${stu} คน</span>
@@ -1238,7 +1237,7 @@ function viewDrawer() {
   const timeSpent = Math.round(15 + st.progress * 0.55);
   const readRow = (color, label, val) => `<div style="display:flex;align-items:center;gap:8px;font:600 12px 'Noto Sans Thai';color:#475467"><span style="width:9px;height:9px;border-radius:50%;background:${color}"></span>${label}<span style="margin-left:auto;font:700 13px Inter;color:#101828">${val}</span></div>`;
   return `
-  <div style="position:fixed;inset:0;z-index:100;display:flex;justify-content:flex-end">
+  <div style="position:fixed;inset:0;z-index:1300;display:flex;justify-content:flex-end">
     <div data-act="closeStudent" style="position:absolute;inset:0;background:rgba(16,24,40,.45)"></div>
     <div class="scrolly" style="position:relative;width:560px;max-width:94vw;height:100%;background:#f7f8fa;box-shadow:-14px 0 40px rgba(16,24,40,.18)">
       <div style="background:linear-gradient(125deg,#0f766e,#12a594);color:#fff;padding:22px 26px 24px">
