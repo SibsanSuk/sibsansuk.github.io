@@ -122,6 +122,31 @@ GET {BASEURL}/api/kidbright/course?grade=secondary&level=2&classRoom=1&createDat
 - โค้ดหน้า `Course.tsx` จะไม่ยิง `GET /api/kidbright/course?{query}` ถ้าไม่มี query เลย ดังนั้นอย่างน้อยควรส่ง `instituteId` หรือช่วงวันที่/ชั้น/ห้อง.
 - ทุก request ผ่าน `fetchAPI` จะส่ง `Authorization: Bearer <keycloak token>` และ `Content-Type: application/json`.
 
+### สรุปวิธีที่ `VK/teacher.js` ทำให้รายการวิชาแสดง (พอร์ตจาก `Course.tsx`)
+
+บันทึกไว้ให้ reuse: ปุ่ม "เพิ่มห้องเรียน" เปิด modal แล้วดึงรายวิชาจาก `GET /api/kidbright/course?{query}` เส้นเดียว (ฟังก์ชัน `apiCourseSearch` / handler `loadAddCourses`).
+
+1. **หา instituteId ก่อน** (ตัวจุดชนวนให้ list ขึ้น) — จาก `GET /teacher/{sub}` → `teacher.institute.instituteId`
+   - role `user` → ผูก instituteId ของตัวเอง (auto), ช่องโรงเรียน readonly
+   - role `staff`/`admin` → ครูค้นหาโรงเรียนเองผ่าน `GET /institute?instituteName={คำค้น}` (debounce ~450ms) แล้วเลือก → ได้ instituteId
+   - อ่าน role จาก `user.role` หรือ `teacher.user.role`
+2. **สร้าง query แบบไม่ว่าง** (backend คืน `[]` ถ้า query ว่าง) จากค่าใน modal — param ที่ใช้: `instituteId`, `grade`, `level`, `classRoom`, `createDate={from},{to}`. ถ้าไม่มี filter/instituteId เลย → ไม่ยิง (โชว์ "เลือกโรงเรียนเพื่อดูรายวิชา")
+3. **ยิง** `GET /api/kidbright/course?instituteId=...&grade=...&level=...&classRoom=...&createDate=...` (แนบ Bearer token). ตัวอย่างจริงที่ใช้ได้:
+
+   ```text
+   GET {BASEURL}/api/kidbright/course?instituteId=1010720039
+   GET {BASEURL}/api/kidbright/course?instituteId=1010720039&grade=secondary&level=2&classRoom=1
+   GET {BASEURL}/api/kidbright/course?createDate=2025-02-01,2025-04-30
+   ```
+
+4. **Response = `Course[]`** โดยแต่ละ `Course` มี:
+   - `courseId`, `courseName` → เอา `courseName` ไปแสดงเป็นรายการให้กดเลือก
+   - `enrolls[]` (แต่ละตัวมี `grade`, `level`, `classRoom`) → เอา distinct มาสร้างตัวเลือก dropdown **ระดับชั้น/ชั้นปี/ห้อง** (ไม่ hardcode)
+5. **เปลี่ยน filter → re-query ใหม่ทุกครั้ง** (cascading เหมือน `Course.tsx`) — ตัวเลือก dropdown อัปเดตตาม response ล่าสุด
+6. **กดเลือก + ยืนยัน** → `POST /api/kidbright/assign` (body ด้านล่าง) แล้ว refetch `GET /course/teacher/{sub}` เพื่อรีเฟรชรายการห้องเรียน
+
+ประเด็นที่ทำให้ "list ไม่ขึ้น" บ่อยสุด: `instituteId` ว่าง (บัญชี staff/admin ต้องเลือกโรงเรียนก่อน) หรือ query ว่าง — ทั้งคู่ทำให้ backend ไม่คืนวิชา. Field mapping (`courseName`/`enrolls`) อิงจาก type `Course` ใน `Course.tsx`; ถ้า response จริงต่างให้ปรับที่ `mapCourseRow`.
+
 ## Enroll
 
 | Method | Endpoint | Sample link / URL | Body ตัวอย่าง |

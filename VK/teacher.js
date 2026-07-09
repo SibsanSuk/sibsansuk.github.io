@@ -664,29 +664,30 @@ function moduleCard(c, i) {
   const status = classroomStatus(c);
   const actLabel = status === "pending" ? "เริ่มใช้งาน" : "เปิดห้องเรียน";
   const actStyle = status === "pending" ? "background:#eef2ff;color:#4f46e5" : `background:${color};color:#fff`;
+  // flex:none keeps the card at its natural height — a flex column would otherwise shrink cards
+  // instead of scrolling. Colour bar identifies the classroom (no module number — they aren't ordered).
   return `
-  <div class="h-card" style="display:flex;align-items:stretch;background:#fff;border:1px solid #ececf1;border-radius:15px;box-shadow:0 1px 2px rgba(16,24,40,.05);overflow:hidden">
-    <div data-act="pickCourse" data-arg="${esc(c.id)}" style="flex:none;width:92px;background:linear-gradient(150deg,${color},${shade(color)});display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;cursor:pointer">
-      <div style="font:700 9.5px 'Noto Sans Thai';letter-spacing:.14em;opacity:.85">MODULE</div>
-      <div style="font:800 30px Inter;line-height:1;margin-top:2px">${moduleNo(c, i)}</div>
-    </div>
-    <div style="flex:1;min-width:0;padding:13px 15px;display:flex;flex-direction:column;gap:8px">
-      <div data-act="pickCourse" data-arg="${esc(c.id)}" style="cursor:pointer;min-width:0">
-        <div style="font:700 14.5px/1.35 'Noto Sans Thai';color:#101828;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(moduleTopic(c.title))}</div>
-        <div style="font:500 11.5px 'Noto Sans Thai';color:#98a2b3;margin-top:2px">${esc(moduleLevel(c))}</div>
+  <div class="h-card" style="flex:none;display:flex;align-items:stretch;background:#fff;border:1px solid #ececf1;border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.05);overflow:hidden">
+    <div data-act="pickCourse" data-arg="${esc(c.id)}" style="flex:none;width:8px;background:linear-gradient(180deg,${color},${shade(color)});cursor:pointer"></div>
+    <div style="flex:1;min-width:0;padding:14px 16px;display:flex;align-items:center;gap:14px">
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
+        <div data-act="pickCourse" data-arg="${esc(c.id)}" style="cursor:pointer;min-width:0">
+          <div style="font:700 14.5px/1.35 'Noto Sans Thai';color:#101828;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(moduleTopic(c.title))}</div>
+          <div style="font:500 11.5px 'Noto Sans Thai';color:#98a2b3;margin-top:2px">${esc(moduleLevel(c))}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;font:500 11px 'Noto Sans Thai';color:#98a2b3;flex-wrap:wrap">
+          <span style="display:flex;align-items:center;gap:5px"><span style="width:14px;height:14px;display:inline-flex">${ICO.usersSm}</span>${stu} คน</span>
+          ${started ? `<span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;display:inline-flex;color:#b2b8c2">${ICO.calendar}</span>เริ่มสอนเมื่อ ${esc(started)}</span>` : ""}
+        </div>
+        <div style="display:flex;align-items:center;gap:11px">
+          <div style="flex:1;height:8px;background:#eef0f3;border-radius:99px;overflow:hidden"><div style="height:100%;border-radius:99px;background:${color};width:${pnum == null ? 0 : pnum}%"></div></div>
+          <span style="font:700 12px Inter;color:#475467;flex:none;width:36px;text-align:right">${pnum == null ? "—" : pnum + "%"}</span>
+        </div>
       </div>
-      <div style="display:flex;align-items:center;gap:14px;font:500 11px 'Noto Sans Thai';color:#98a2b3;flex-wrap:wrap">
-        <span style="display:flex;align-items:center;gap:5px"><span style="width:14px;height:14px;display:inline-flex">${ICO.usersSm}</span>${stu} คน</span>
-        ${started ? `<span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;display:inline-flex;color:#b2b8c2">${ICO.calendar}</span>เริ่มสอนเมื่อ ${esc(started)}</span>` : ""}
+      <div style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+        <button data-act="pickCourse" data-arg="${esc(c.id)}" style="border:none;border-radius:9px;padding:8px 13px;font:700 11.5px 'Noto Sans Thai';cursor:pointer;white-space:nowrap;${actStyle}">${actLabel}</button>
+        <button data-act="noop" title="ตัวเลือก" style="border:none;background:none;color:#c0c6cf;cursor:pointer;font:700 17px Inter;line-height:1;padding:2px 5px">⋮</button>
       </div>
-      <div style="display:flex;align-items:center;gap:11px">
-        <div style="flex:1;height:8px;background:#eef0f3;border-radius:99px;overflow:hidden"><div style="height:100%;border-radius:99px;background:${color};width:${pnum == null ? 0 : pnum}%"></div></div>
-        <span style="font:700 12px Inter;color:#475467;flex:none;width:36px;text-align:right">${pnum == null ? "—" : pnum + "%"}</span>
-      </div>
-    </div>
-    <div style="flex:none;display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;padding:13px 13px 13px 0;gap:6px">
-      <button data-act="pickCourse" data-arg="${esc(c.id)}" style="border:none;border-radius:9px;padding:8px 13px;font:700 11.5px 'Noto Sans Thai';cursor:pointer;white-space:nowrap;${actStyle}">${actLabel}</button>
-      <button data-act="noop" title="ตัวเลือก" style="border:none;background:none;color:#c0c6cf;cursor:pointer;font:700 17px Inter;line-height:1;padding:2px 5px">⋮</button>
     </div>
   </div>`;
 }
