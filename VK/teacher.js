@@ -133,6 +133,7 @@ const apiCourseSearch = ({ grade, level, classRoom, instituteId, createDate } = 
   return apiGet(`${teacherConfig.baseUrl}/api/kidbright/course${q ? `?${q}` : ""}`);
 };
 const apiCreateAssign = (body) => apiPost(`${teacherConfig.baseUrl}/api/kidbright/assign`, body);
+const apiInstituteSearch = (name) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/institute?instituteName=${encodeURIComponent(name)}`);
 // Public nationwide enrollment aggregate (per-institute counts + coordinates), no auth.
 const ENROLL_RANGE = "2020-01-01," + new Date().toISOString().slice(0, 10);
 const apiEnrollAggregate = (range = ENROLL_RANGE) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/enroll/query?createAt=${range}`, { auth: false });
@@ -449,7 +450,10 @@ const state = {
   authed: false, userMenuOpen: false, editOpen: false, notifOpen: false,
   // "เพิ่มห้องเรียน" modal (localClassrooms holds classrooms added during an offline demo session)
   addOpen: false, addLoading: false, addSaving: false, addError: "", addCourses: [], addSel: null, localClassrooms: [],
-  addFilters: { from: "", to: "", band: "", year: "", room: "" },
+  addFilters: { from: "", to: "", grade: "", level: "", classRoom: "", instituteId: "" },
+  addOptions: { grades: [], levels: [], classRooms: [] }, // filter choices derived from course enrolls[]
+  addInstQuery: "", addInstOptions: [], // institute autocomplete (staff/admin)
+  teacherRole: "",
   // Identity/school are filled from real profile (apiInit) or demo identity (localInit); no hardcoded default.
   teacherSchool: "",
   leadoOpen: false, leadoDemo: false, leadoDemoed: false, leadoMsg: "", teacherName: "", teacherEmail: "",
@@ -521,7 +525,7 @@ const courseList = () => {
 };
 const selectedCourse = () => courseList().find((c) => c.id === state.course) || null;
 // Readable ระดับชั้น / ห้อง for a classroom card; "ทั้งหมด" when the assign has no value.
-const GRADE_TH = { primary: "ประถมศึกษา", secondary: "มัธยมศึกษา", lower: "ม.ต้น", upper: "ม.ปลาย" };
+const GRADE_TH = { primary: "ประถมศึกษา", secondary: "มัธยมศึกษา", vocational: "ปวช.", associate: "ปวส.", bachelor: "ปริญญาตรี", master: "ปริญญาโท", doctoral: "ปริญญาเอก" };
 const gradeText = (c) => {
   const g = GRADE_TH[c?.grade] || c?.grade || "";
   const s = [g, c?.level].filter((x) => x !== "" && x != null).join(" ").trim();
@@ -530,15 +534,25 @@ const gradeText = (c) => {
 const roomText = (c) => { const r = c?.classRoom; return (r === "" || r == null) ? "ทั้งหมด" : String(r); };
 
 // ---- "เพิ่มห้องเรียน" helpers ----
-const normalizeCatalog = (rows) => (rows || []).map((c) => {
-  const title = c.courseName || c.courseTitle || c.title || c.courseId || "";
-  const band = /UPPER|ปลาย/i.test(`${title} ${c.courseId || ""}`) ? "upper" : "lower";
-  return { courseId: c.courseId || c.course_id || title, title, band };
-});
-// Catalog narrowed by the modal's ระดับชั้น filter (band); other filters are assign attributes.
-const addCourseList = () => {
-  const b = state.addFilters.band;
-  return (state.addCourses || []).filter((c) => !b || c.band === b);
+// GET /course returns Course[] each with courseName + enrolls[]; keep the fields the modal needs.
+const mapCourseRow = (rows) => (rows || []).map((c) => ({
+  courseId: c.courseId || c.course_id || "",
+  courseName: c.courseName || c.courseTitle || c.title || c.courseId || "",
+  enrolls: Array.isArray(c.enrolls) ? c.enrolls : [],
+}));
+// Filter choices are the distinct grade/level/classRoom actually present in the courses' enrolls[].
+const deriveAddOptions = (courses) => {
+  const grades = new Set(), levels = new Set(), classRooms = new Set();
+  for (const c of courses || []) for (const e of c.enrolls || []) {
+    if (e.grade) grades.add(e.grade);
+    if (e.level != null && e.level !== "") levels.add(e.level);
+    if (e.classRoom != null && e.classRoom !== "") classRooms.add(e.classRoom);
+  }
+  return {
+    grades: [...grades],
+    levels: [...levels].sort((a, b) => Number(a) - Number(b)),
+    classRooms: [...classRooms].sort((a, b) => String(a).localeCompare(String(b), "th", { numeric: true })),
+  };
 };
 const genClassCode = () => Array.from({ length: 6 }, () => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 32)]).join("");
 
@@ -1194,23 +1208,35 @@ function viewEditModal() {
 function viewAddModal() {
   const phone = BP() === "phone";
   const f = state.addFilters;
-  const list = addCourseList();
+  const list = state.addCourses || [];
+  const isStaff = ["staff", "admin"].includes(state.teacherRole);
   const fldStl = "border:1px solid #e4e7ec;border-radius:10px;padding:10px 12px;font:500 13px 'Noto Sans Thai';color:#344054;outline:none;background:#fff";
   const opt = (v, cur, label) => `<option value="${esc(v)}"${String(cur) === String(v) ? " selected" : ""}>${esc(label)}</option>`;
   const sel = (chg, cur, ph, opts) => `<select data-chg="${chg}" style="${fldStl};flex:1;min-width:0;cursor:pointer;color:${cur ? "#344054" : "#98a2b3"}"><option value=""${cur ? "" : " selected"}>${esc(ph)}</option>${opts}</select>`;
-  const years = [1, 2, 3, 4, 5, 6].map((n) => opt(n, f.year, `ชั้นปี ${n}`)).join("");
-  const rooms = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => opt(n, f.room, `ห้อง ${n}`)).join("");
-  const bands = opt("lower", f.band, "มัธยมศึกษาตอนต้น") + opt("upper", f.band, "มัธยมศึกษาตอนปลาย");
+  // Filter options are derived from the fetched courses' enrolls[] (like the original).
+  const gradeOpts = state.addOptions.grades.map((g) => opt(g, f.grade, GRADE_TH[g] || g)).join("");
+  const levelOpts = state.addOptions.levels.map((l) => opt(l, f.level, `ชั้นปี ${l}`)).join("");
+  const roomOpts = state.addOptions.classRooms.map((r) => opt(r, f.classRoom, `ห้อง ${r}`)).join("");
   const check = (on) => `<span style="width:24px;height:24px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;background:${on ? "#0d9488" : "#f4f5f7"};color:${on ? "#fff" : "#cdd2da"};border:1px solid ${on ? "#0d9488" : "#e4e7ec"};transition:all .15s"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></span>`;
+
+  // school field: readonly for role=user, searchable AutoComplete for staff/admin
+  const schoolField = isStaff
+    ? `<div style="position:relative;flex:1;min-width:0">
+        <input id="addInst" data-inp="setAddInst" value="${esc(state.addInstQuery)}" placeholder="ค้นหาชื่อโรงเรียน..." autocomplete="off" style="${fldStl};width:100%">
+        ${state.addInstOptions.length ? `<div style="position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:20;background:#fff;border:1px solid #e4e7ec;border-radius:10px;box-shadow:0 12px 28px rgba(16,24,40,.16);max-height:220px;overflow-y:auto">
+          ${state.addInstOptions.map((o) => `<div data-act="selectAddInst" data-arg="${esc(o.value)}" class="h-light" style="padding:10px 13px;font:500 13px 'Noto Sans Thai';color:#344054;cursor:pointer;border-bottom:1px solid #f5f6f7">${esc(o.label)}</div>`).join("")}
+        </div>` : ""}
+      </div>`
+    : `<input value="${esc(state.teacherSchool)}" placeholder="—" readonly style="${fldStl};flex:1;background:#f7f8fa;color:#667085;cursor:not-allowed">`;
 
   let rows;
   if (state.addLoading) rows = `<div style="padding:40px;text-align:center;font:600 13.5px 'Noto Sans Thai';color:#98a2b3">กำลังโหลดรายวิชา...</div>`;
   else if (state.addError) rows = `<div style="padding:40px;text-align:center;font:600 13.5px 'Noto Sans Thai';color:#dc2626">${esc(state.addError)}</div>`;
-  else if (!list.length) rows = `<div style="padding:40px;text-align:center;font:600 13.5px 'Noto Sans Thai';color:#98a2b3">ไม่พบรายวิชาตามเงื่อนไข</div>`;
+  else if (!list.length) rows = `<div style="padding:40px;text-align:center;font:600 13.5px 'Noto Sans Thai';color:#98a2b3">${isStaff && !f.instituteId ? "เลือกโรงเรียนเพื่อดูรายวิชา" : "ไม่พบรายวิชาตามเงื่อนไข"}</div>`;
   else rows = list.map((c) => {
     const on = state.addSel === c.courseId;
     return `<div data-act="selectAddCourse" data-arg="${esc(c.courseId)}" class="h-card" style="display:flex;align-items:center;gap:14px;padding:15px 17px;border:1px solid ${on ? "#0d9488" : "#ececf1"};border-radius:13px;cursor:pointer;background:${on ? "#f0fdfa" : "#fff"};box-shadow:0 1px 2px rgba(16,24,40,.04);transition:all .15s">
-      <div style="flex:1;min-width:0;font:600 14px/1.45 'Noto Sans Thai';color:#1d2939">${esc(c.title)}</div>
+      <div style="flex:1;min-width:0;font:600 14px/1.45 'Noto Sans Thai';color:#1d2939">${esc(c.courseName)}</div>
       ${check(on)}
     </div>`;
   }).join("");
@@ -1227,16 +1253,16 @@ function viewAddModal() {
       <div style="padding:18px 24px 8px;flex:none;display:flex;flex-direction:column;gap:12px">
         <div style="display:flex;align-items:center;gap:12px">
           <label style="font:700 13.5px 'Noto Sans Thai';color:#344054;flex:none;white-space:nowrap"><span style="color:#ef4444">*</span> โรงเรียน:</label>
-          <input value="${esc(state.teacherSchool)}" placeholder="—" readonly style="${fldStl};flex:1;background:#f7f8fa;color:#667085;cursor:not-allowed">
+          ${schoolField}
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <label style="font:700 13.5px 'Noto Sans Thai';color:#344054;flex:none;white-space:nowrap">วันที่ลงทะเบียน:</label>
           <input type="date" data-chg="setAddFrom" value="${esc(f.from)}" style="${fldStl};flex:1;min-width:130px;cursor:pointer">
           <span style="color:#98a2b3;font:600 13px 'Noto Sans Thai'">→</span>
           <input type="date" data-chg="setAddTo" value="${esc(f.to)}" style="${fldStl};flex:1;min-width:130px;cursor:pointer">
-          ${sel("setAddBand", f.band, "กรุณาเลือก ระดับชั้น", bands)}
-          ${sel("setAddYear", f.year, "ชั้นปี", years)}
-          ${sel("setAddRoom", f.room, "ห้องเรียน", rooms)}
+          ${sel("setAddGrade", f.grade, "ระดับชั้น", gradeOpts)}
+          ${sel("setAddLevel", f.level, "ชั้นปี", levelOpts)}
+          ${sel("setAddRoom", f.classRoom, "ห้องเรียน", roomOpts)}
         </div>
       </div>
       <div class="scrolly" style="flex:1;min-height:0;overflow-y:auto;padding:8px 24px 18px;display:flex;flex-direction:column;gap:11px">
@@ -1545,30 +1571,50 @@ const H = {
   openEdit: () => setState({ editOpen: true, userMenuOpen: false }),
   closeEdit: () => setState({ editOpen: false }),
   saveEdit: () => setState({ editOpen: false }),
-  openAdd: () => { setState({ addOpen: true, addSel: null }); H.loadAddCourses(); },
+  openAdd: () => {
+    // Fresh filter state each open; role=user is pinned to their institute, staff/admin can search.
+    state.addFilters = { from: "", to: "", grade: "", level: "", classRoom: "", instituteId: state.instituteId || "" };
+    state.addOptions = { grades: [], levels: [], classRooms: [] };
+    state.addInstQuery = state.teacherSchool || "";
+    state.addInstOptions = [];
+    state.addCourses = [];
+    setState({ addOpen: true, addSel: null, addError: "" });
+    H.loadAddCourses();
+  },
   closeAdd: () => setState({ addOpen: false }),
-  // Re-query the catalog when a filter (ชั้นปี/ห้อง/วันที่) changes — matches the original flow.
+  // Re-query the catalog when any filter changes (grade/level/classRoom/date/institute) — matches the original.
   reloadAddCourses: () => { if (state.mode === "api") { state.addCourses = []; H.loadAddCourses(); } else setState({ addSel: null }); },
   loadAddCourses: async () => {
     if (state.addCourses.length) return; // cached until a filter change clears it
-    if (state.mode !== "api") { setState({ addCourses: DEMO.courseCatalog, addLoading: false, addError: "" }); return; }
-    // Build a non-empty GET /course query from the modal filters (empty query returns nothing).
+    if (state.mode !== "api") { // local demo: bundled catalog (no enrolls → no derived filter options)
+      setState({ addCourses: mapCourseRow(DEMO.courseCatalog.map((c) => ({ courseId: c.courseId, courseName: c.title }))), addOptions: { grades: [], levels: [], classRooms: [] }, addLoading: false, addError: "" });
+      return;
+    }
+    // Build the GET /course query from the modal filters. Like the original, no query → no fetch.
     const f = state.addFilters;
     const q = {};
-    if (state.instituteId) q.instituteId = state.instituteId;
-    if (f.year) q.level = f.year;
-    if (f.room) q.classRoom = f.room;
+    if (f.instituteId) q.instituteId = f.instituteId;
+    if (f.grade) q.grade = f.grade;
+    if (f.level) q.level = f.level;
+    if (f.classRoom) q.classRoom = f.classRoom;
     if (f.from && f.to) q.createDate = `${f.from},${f.to}`;
-    if (!Object.keys(q).length) q.createDate = ENROLL_RANGE; // no institute/filters → whole catalog by date
+    if (!Object.keys(q).length) { setState({ addCourses: [], addOptions: { grades: [], levels: [], classRooms: [] }, addLoading: false, addError: "" }); return; }
     setState({ addLoading: true, addError: "" });
     try {
-      let list = normalizeCatalog(normalizeListPayload(await apiCourseSearch(q)));
-      // Institute has no matching courses → fall back to the full catalog so there's still something to pick.
-      if (!list.length && !q.createDate) list = normalizeCatalog(normalizeListPayload(await apiCourseSearch({ createDate: ENROLL_RANGE })));
-      setState({ addCourses: list, addLoading: false });
+      const courses = mapCourseRow(normalizeListPayload(await apiCourseSearch(q)));
+      setState({ addCourses: courses, addOptions: deriveAddOptions(courses), addLoading: false });
     } catch (err) {
       setState({ addCourses: [], addLoading: false, addError: "โหลดรายวิชาไม่สำเร็จ: " + err.message });
     }
+  },
+  // institute autocomplete (staff/admin): pick a result → set instituteId → reload the catalog
+  selectAddInst: (id) => {
+    const opt = (state.addInstOptions || []).find((o) => o.value === id);
+    state.addFilters.instituteId = id;
+    state.addInstQuery = opt ? opt.label : "";
+    state.addInstOptions = [];
+    state.addCourses = [];
+    H.loadAddCourses();
   },
   selectAddCourse: (id) => setState({ addSel: state.addSel === id ? null : id }),
   confirmAdd: async () => {
@@ -1580,8 +1626,8 @@ const H = {
       setState({ addSaving: true, addError: "" });
       try {
         await apiCreateAssign({
-          userId: state.sub, teacherId: state.sub, courseId: c.courseId, instituteId: state.instituteId,
-          grade: "secondary", level: Number(f.year) || undefined, classRoom: f.room || undefined,
+          userId: state.sub, teacherId: state.sub, courseId: c.courseId, instituteId: f.instituteId || state.instituteId,
+          grade: f.grade || undefined, level: Number(f.level) || undefined, classRoom: f.classRoom || undefined,
           startDate: f.from || undefined, endDate: f.to || undefined,
         });
         const resp = await apiClassrooms(state.sub, state.instituteId);
@@ -1596,8 +1642,8 @@ const H = {
     state.localClassrooms.unshift({
       id: "new-" + Date.now(),
       color: CLASS_COLORS[Math.floor(Math.random() * CLASS_COLORS.length)],
-      title: c.title, courseId: c.courseId, assignId: "",
-      grade: "secondary", level: f.year || "", classRoom: f.room || "",
+      title: c.courseName, courseId: c.courseId, assignId: "",
+      grade: f.grade || "", level: f.level || "", classRoom: f.classRoom || "",
       classCode: genClassCode(), students: 0, progress: 0,
     });
     setState({ addOpen: false, addSel: null });
@@ -1616,17 +1662,33 @@ const H = {
   goSlide: (i) => { state.mapSlide = Number(i); stopSlideTimer(); applySlide(); startSlideTimer(); },
   downloadCsv: () => exportCsv(),
 };
+// debounced institute search for the add-classroom modal (staff/admin)
+let instSearchTimer = null;
+function scheduleInstSearch(text) {
+  clearTimeout(instSearchTimer);
+  const q = (text || "").trim();
+  if (!q) { state.addInstOptions = []; setState({}); return; }
+  instSearchTimer = setTimeout(async () => {
+    try {
+      const rows = normalizeListPayload(await apiInstituteSearch(q));
+      state.addInstOptions = rows.map((i) => ({ value: i.instituteId || i.institute_id || "", label: `${i.instituteName || i.name || ""}${i.district ? ` (${i.district}${i.province ? ", " + i.province : ""})` : ""}` }));
+    } catch (_) { state.addInstOptions = []; }
+    setState({});
+  }, 450);
+}
 const INP = {
   setSearch: (v) => setState({ search: v }),
   setLeadoMsg: (v) => { state.leadoMsg = v; },
   setTeacherName: (v) => { state.teacherName = v; },
+  // type in the institute box (staff/admin): store text + debounce a search, no full re-render per keystroke
+  setAddInst: (v) => { state.addFilters.instituteId = ""; state.addInstQuery = v; scheduleInstSearch(v); },
 };
 const CHG = {
   setSort: (v) => setState({ sort: v }),
-  // band (ระดับชั้น ต้น/ปลาย) narrows the list client-side; the rest re-query the API.
-  setAddBand: (v) => { state.addFilters.band = v; setState({ addSel: null }); },
-  setAddYear: (v) => { state.addFilters.year = v; H.reloadAddCourses(); },
-  setAddRoom: (v) => { state.addFilters.room = v; H.reloadAddCourses(); },
+  // every add-classroom filter re-queries GET /course (options are derived from the response)
+  setAddGrade: (v) => { state.addFilters.grade = v; H.reloadAddCourses(); },
+  setAddLevel: (v) => { state.addFilters.level = v; H.reloadAddCourses(); },
+  setAddRoom: (v) => { state.addFilters.classRoom = v; H.reloadAddCourses(); },
   setAddFrom: (v) => { state.addFilters.from = v; H.reloadAddCourses(); },
   setAddTo: (v) => { state.addFilters.to = v; H.reloadAddCourses(); },
 };
@@ -1751,12 +1813,14 @@ async function apiInit() {
     let teacher = null;
     try { teacher = await apiTeacher(sub); } catch (_) {}
     state.debugTeacher = teacher;
+    // Role decides the add-classroom flow: user = pinned institute, staff/admin = search institute.
+    state.teacherRole = (user && user.role) || (teacher && teacher.user && teacher.user.role) || "";
     if (teacher) {
       if (!user) {
         const nm = teacher.firstName ? `${teacher.firstName} ${teacher.lastName || ""}`.trim() : (teacher.name || teacher.displayName);
         if (nm) state.teacherName = nm;
       }
-      state.instituteId = teacher.instituteId || teacher.institute_id || teacherConfig.instituteId || "";
+      state.instituteId = teacher.institute?.instituteId || teacher.instituteId || teacher.institute_id || teacherConfig.instituteId || "";
     } else {
       state.instituteId = teacherConfig.instituteId || "";
     }
