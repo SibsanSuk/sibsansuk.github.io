@@ -719,26 +719,39 @@ function viewCourseList() {
   </div>`;
 }
 
-function viewMapCard(compact) {
-  const t = state.landingTotals || {};
-  const avg = t.avgPerInstitute != null ? Number(t.avgPerInstitute).toLocaleString("en-US") : "—";
-  const institutes = t.institutes != null ? Number(t.institutes).toLocaleString("en-US") : "—";
+// Rotating overview topics (from overview.json slides) + a 6-month trend, shown over the map.
+function viewMapInsight(compact) {
+  const slides = insightSlides();
+  const stageMin = compact ? "110px" : "128px";
+  const bigFs = compact ? "24px" : "29px";
   const vals = (state.landingTrend || []).map((x) => x.users);
   const pct = vals.length >= 2 && vals[vals.length - 2] ? Math.round((vals[vals.length - 1] - vals[vals.length - 2]) / vals[vals.length - 2] * 100) : null;
   const up = pct == null || pct >= 0;
-  const infoDot = `<span style="width:14px;height:14px;border-radius:50%;border:1.3px solid #cbd0d8;color:#aeb4bd;display:inline-flex;align-items:center;justify-content:center;font:700 9px Georgia,serif">i</span>`;
-  const statCard = `
-    <div style="position:absolute;top:${compact ? 14 : 20}px;left:${compact ? 14 : 20}px;${compact ? "right:14px;" : "width:238px;"}z-index:600;background:rgba(255,255,255,.97);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.7);border-radius:16px;box-shadow:0 12px 30px rgba(16,24,40,.16);padding:16px 18px">
-      <div style="display:flex;align-items:center;gap:6px;font:600 12px 'Noto Sans Thai';color:#667085">ผู้ใช้เฉลี่ยต่อสถาบัน ${infoDot}</div>
-      <div style="display:flex;align-items:baseline;gap:6px;margin-top:6px"><span style="font:800 34px Inter;color:#101828;line-height:1">${esc(avg)}</span><span style="font:600 12.5px 'Noto Sans Thai';color:#98a2b3">คน/แห่ง</span></div>
-      <div style="font:500 11.5px 'Noto Sans Thai';color:#98a2b3;margin-top:3px">จาก ${esc(institutes)} สถาบัน</div>
-      ${vals.length >= 2 ? `<div style="height:1px;background:#eef0f3;margin:13px 0 10px"></div>
-        <div style="font:600 11px 'Noto Sans Thai';color:#667085;margin-bottom:6px">แนวโน้ม 6 เดือนล่าสุด</div>
+  return `
+    <div style="position:absolute;top:${compact ? 14 : 20}px;left:${compact ? 14 : 20}px;${compact ? "right:14px;" : "width:290px;"}z-index:600;background:rgba(255,255,255,.97);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.7);border-radius:16px;box-shadow:0 12px 30px rgba(16,24,40,.18);padding:${compact ? "15px 17px" : "18px 20px"};overflow:hidden">
+      <div id="slide-stage" style="position:relative;min-height:${stageMin}">
+        ${slides.map((sl, i) => `
+          <div class="slide" data-i="${i}" style="position:absolute;inset:0;transition:opacity .5s ease,transform .5s ease;opacity:${i === state.mapSlide ? 1 : 0};transform:${i === state.mapSlide ? "translateY(0)" : "translateY(8px)"};pointer-events:none">
+            <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
+              <span style="width:6px;height:20px;border-radius:99px;background:${sl.bg};flex:none"></span>
+              <span style="font:700 12px 'Noto Sans Thai';color:#475467">${esc(sl.label)}</span>
+            </div>
+            <div style="font:800 ${bigFs} Inter;color:#101828;line-height:1.15;word-break:break-word">${esc(sl.big)} <span style="font:700 14px 'Noto Sans Thai';color:#98a2b3">${esc(sl.unit)}</span></div>
+            <div style="font:500 12px/1.55 'Noto Sans Thai';color:#98a2b3;margin-top:7px">${esc(sl.desc)}</div>
+          </div>`).join("")}
+      </div>
+      <div style="display:flex;gap:5px;margin-top:12px">
+        ${slides.map((sl, i) => `<button data-act="goSlide" data-arg="${i}" class="slide-dot" data-i="${i}" style="border:none;cursor:pointer;padding:0;height:5px;border-radius:99px;flex:1;background:${i === state.mapSlide ? "#0d9488" : "#e2e5e9"};transition:background .3s"></button>`).join("")}
+      </div>
+      ${vals.length >= 2 ? `<div style="height:1px;background:#eef0f3;margin:12px 0 8px"></div>
         <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px">
-          ${sparkline(vals, "#0d9488", compact ? 104 : 118, 34)}
+          <div style="min-width:0"><div style="font:600 10.5px 'Noto Sans Thai';color:#98a2b3;margin-bottom:2px">แนวโน้ม 6 เดือน</div>${sparkline(vals, "#0d9488", compact ? 110 : 150, 26)}</div>
           ${pct != null ? `<span style="font:700 12px Inter;color:${up ? "#16a34a" : "#dc2626"};display:flex;align-items:center;gap:2px;white-space:nowrap">${up ? "▲" : "▼"} ${Math.abs(pct)}%</span>` : ""}
         </div>` : ""}
     </div>`;
+}
+
+function viewMapCard(compact) {
   const legend = `
     <div style="position:absolute;bottom:${compact ? 14 : 20}px;left:${compact ? 14 : 20}px;z-index:600;background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.7);border-radius:13px;box-shadow:0 10px 24px rgba(16,24,40,.14);padding:11px 14px">
       <div style="font:700 11px 'Noto Sans Thai';color:#475467;margin-bottom:7px">จำนวนผู้ใช้ (คน)</div>
@@ -747,13 +760,9 @@ function viewMapCard(compact) {
   const fullBtn = `<button data-act="noop" style="position:absolute;bottom:${compact ? 14 : 20}px;right:${compact ? 14 : 20}px;z-index:600;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e6e8ec;border-radius:11px;padding:10px 14px;font:700 12.5px 'Noto Sans Thai';color:#0f766e;cursor:pointer;box-shadow:0 6px 16px rgba(16,24,40,.12)">ดูรายละเอียดแผนที่เต็ม<span style="font:700 13px Inter">↗</span></button>`;
   return `
     <div style="${compact ? "flex:none" : "flex:1.35"};display:flex;flex-direction:column;background:#fff;border:1px solid #ececf1;border-radius:${compact ? 14 : 18}px;box-shadow:0 1px 3px rgba(16,24,40,.06);overflow:hidden;min-height:0">
-      <div style="flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:${compact ? "14px 16px" : "18px 22px"};border-bottom:1px solid #f2f4f7">
-        <div style="font:800 ${compact ? 15 : 17}px 'Noto Sans Thai';color:#101828">การกระจายตัวของผู้ใช้งานสถาบัน</div>
-        <div style="display:flex;align-items:center;gap:7px;background:#f4f5f7;border:1px solid #e9ebef;border-radius:10px;padding:8px 12px;font:600 12.5px 'Noto Sans Thai';color:#475467;white-space:nowrap">ผู้ใช้งานสถาบัน<span style="width:14px;height:14px;color:#98a2b3;display:inline-flex">${ICO.chevron}</span></div>
-      </div>
-      <div style="position:relative;flex:1;min-height:${compact ? "320px" : "0"};background:#dfe7ea;isolation:isolate">
+      <div style="position:relative;flex:1;min-height:${compact ? "360px" : "0"};background:#dfe7ea;isolation:isolate">
         <div id="th-usage-map" style="position:absolute;inset:0"></div>
-        ${statCard}${legend}${fullBtn}
+        ${viewMapInsight(compact)}${legend}${fullBtn}
       </div>
     </div>`;
 }
@@ -1579,7 +1588,9 @@ function mountMaps() {
       L.marker([p.lat, p.lng], { icon: L.divIcon({ html, className: "", iconSize: [0, 0], iconAnchor: [0, 0] }), interactive: false }).addTo(map);
     });
     setTimeout(() => maps.usage && maps.usage.invalidateSize(), 250);
+    startSlideTimer(); // auto-rotate the overview topics
   }
+  if (!usageEl) stopSlideTimer();
 
   const cmpEl = document.getElementById("compare-map");
   if (cmpEl && !maps.compare) {
@@ -1612,7 +1623,7 @@ function applySlide() {
     el.style.transform = on ? "translateY(0)" : "translateY(8px)";
   });
   document.querySelectorAll(".slide-dot").forEach((el) => { el.style.background = Number(el.dataset.i) === state.mapSlide ? "#0d9488" : "#e2e5e9"; });
-  if (maps.usage) { const v = insightSlides()[state.mapSlide].view; maps.usage.flyTo([v.lat, v.lng], v.zoom, { duration: 1.1 }); }
+  // map stays fixed on Thailand (no per-slide flyTo) so all province bubbles remain visible
 }
 
 /* ------------------------------ CSV export ------------------------------ */
