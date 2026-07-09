@@ -829,11 +829,7 @@ function viewTopBar() {
         </button>
         ${phone ? "" : `
         <div style="width:1px;height:24px;background:#e6e8ec"></div>
-        <div style="display:flex;align-items:center;gap:14px">
-          <img src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-mhesi.f3e5c05e5ebe.png" alt="MHESI" style="height:38px;object-fit:contain">
-          <img src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-nstda.a0c679b2e45e.png" alt="NSTDA" style="height:32px;object-fit:contain">
-          <img src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-nectec.4a797e97e6ed.png" alt="NECTEC" style="height:32px;object-fit:contain">
-        </div>`}` : ""}
+        <img src="https://www.nectec.or.th/wp-content/uploads/2021/08/cropped-logo.png" alt="NECTEC" style="height:34px;object-fit:contain">`}` : ""}
       ${inCourse ? `
         <button data-act="switchCourse" class="h-soft" style="display:flex;align-items:center;gap:8px;background:#f4f5f7;border:none;cursor:pointer;padding:9px 14px;border-radius:10px;font:700 14px 'Noto Sans Thai';color:#0f766e">
           <span style="width:26px;height:26px;color:#0f766e;display:inline-flex">${ICO.home}</span>หน้าแรก
