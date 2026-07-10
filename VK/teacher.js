@@ -475,13 +475,16 @@ let slideTimer = null;
 
 /* responsive breakpoints: phone < 700 ≤ tablet < 1024 ≤ desktop */
 const BP = () => { const w = window.innerWidth || 1200; return w < 700 ? "phone" : w < 1024 ? "tablet" : "desktop"; };
+// Viewport too short to split a full-height row of cards (landscape phone ≈ 390-430px tall).
+// Side-by-side cards would crush their fixed-height contents and clip them behind overflow:hidden.
+const shortView = () => (window.innerHeight || 800) < 620;
 // Left tab rail when width outweighs height: wide desktop (≥1280) OR any landscape
 // phone/tablet (short viewport). Frees vertical room for content where it's scarce.
 const useSideNav = () => {
   const w = window.innerWidth || 1200, h = window.innerHeight || 800;
   return w >= 1280 || (w > h && w >= 640);
 };
-const layoutKey = () => BP() + (useSideNav() ? "|s" : "");
+const layoutKey = () => BP() + (useSideNav() ? "|s" : "") + (shortView() ? "|h" : "");
 let lastLayout = layoutKey();
 
 /* ------------------------------ compute per render ------------------------------ */
@@ -540,7 +543,8 @@ const gradeText = (c) => {
 const roomText = (c) => { const r = c?.classRoom; return (r === "" || r == null) ? "ทั้งหมด" : String(r); };
 
 // ---- landing map + classroom-card helpers ----
-// Bubble colour tier by user count (matches the map legend).
+// Bubble colour tier by user count. `label` is unused since the map legend was removed,
+// but kept as the readable definition of each tier's range.
 const USER_TIERS = [
   { min: 2000, color: "#ef4444", label: "มากกว่า 2,000" },
   { min: 1000, color: "#f97316", label: "1,000 - 2,000" },
@@ -691,8 +695,7 @@ function moduleCard(c, i) {
   </div>`;
 }
 
-function viewCourseList() {
-  const phone = BP() === "phone";
+function viewCourseList(phone) {
   const all = courseList();
   const counts = { all: all.length, active: 0, pending: 0, done: 0 };
   all.forEach((c) => { counts[classroomStatus(c)]++; });
@@ -751,24 +754,22 @@ function viewMapInsight(compact) {
 }
 
 function viewMapCard(compact) {
-  const legend = `
-    <div style="position:absolute;bottom:${compact ? 14 : 20}px;left:${compact ? 14 : 20}px;z-index:600;background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.7);border-radius:13px;box-shadow:0 10px 24px rgba(16,24,40,.14);padding:11px 14px">
-      <div style="font:700 11px 'Noto Sans Thai';color:#475467;margin-bottom:7px">จำนวนผู้ใช้ (คน)</div>
-      ${USER_TIERS.map((tt) => `<div style="display:flex;align-items:center;gap:8px;font:500 11px 'Noto Sans Thai';color:#667085;margin-top:5px"><span style="width:10px;height:10px;border-radius:50%;background:${tt.color};flex:none"></span>${tt.label}</div>`).join("")}
-    </div>`;
   const fullBtn = `<button data-act="noop" style="position:absolute;bottom:${compact ? 14 : 20}px;right:${compact ? 14 : 20}px;z-index:600;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e6e8ec;border-radius:11px;padding:10px 14px;font:700 12.5px 'Noto Sans Thai';color:#0f766e;cursor:pointer;box-shadow:0 6px 16px rgba(16,24,40,.12)">ดูรายละเอียดแผนที่เต็ม<span style="font:700 13px Inter">↗</span></button>`;
   return `
     <div style="${compact ? "flex:none" : "flex:1.35"};display:flex;flex-direction:column;background:#fff;border:1px solid #ececf1;border-radius:${compact ? 14 : 18}px;box-shadow:0 1px 3px rgba(16,24,40,.06);overflow:hidden;min-height:0">
       <div style="position:relative;flex:1;min-height:${compact ? "360px" : "0"};background:#dfe7ea;isolation:isolate">
         <div id="th-usage-map" style="position:absolute;inset:0"></div>
-        ${viewMapInsight(compact)}${legend}${fullBtn}
+        ${viewMapInsight(compact)}${fullBtn}
       </div>
     </div>`;
 }
 
 function viewSignInCard(phone) {
+  // Side-by-side: scroll inside the card rather than clip. The card is height-constrained by the
+  // row, and overflow:hidden would swallow the sign-in button on any viewport too short to fit it.
+  const overflow = phone ? "overflow:hidden" : "overflow-x:hidden;overflow-y:auto";
   return `
-    <div style="${phone ? "flex:none" : "flex:1;max-width:520px"};display:flex;background:#fff;border:1px solid #ececf1;border-radius:${phone ? 14 : 18}px;box-shadow:0 1px 3px rgba(16,24,40,.06);overflow:hidden;min-height:0">
+    <div ${phone ? "" : 'class="scrolly"'} style="${phone ? "flex:none" : "flex:1;max-width:520px"};display:flex;background:#fff;border:1px solid #ececf1;border-radius:${phone ? 14 : 18}px;box-shadow:0 1px 3px rgba(16,24,40,.06);${overflow};min-height:0">
       <div style="flex:1;display:flex;padding:${phone ? "34px 24px" : "48px 44px"}">
         ${viewLandingSignIn()}
       </div>
@@ -777,8 +778,10 @@ function viewSignInCard(phone) {
 
 function viewLanding() {
   const authed = state.authed;
-  const phone = BP() === "phone";
-  const rightPanel = authed ? viewCourseList() : viewSignInCard(phone);
+  // Stack + page-scroll on a narrow viewport OR a short one (landscape phone): both lack the
+  // room to hold two full-height cards side by side without clipping their contents.
+  const phone = BP() === "phone" || shortView();
+  const rightPanel = authed ? viewCourseList(phone) : viewSignInCard(phone);
   const footer = `
     <div style="flex:none;background:#f7f8fa;border-top:1px solid #ececf1;padding:12px ${phone ? "18px" : "32px"};display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px">
       <span style="font:700 12px 'Noto Sans Thai';color:#344054">ศูนย์เทคโนโลยีอิเล็กทรอนิกส์และคอมพิวเตอร์แห่งชาติ</span>
@@ -1578,7 +1581,7 @@ function mountMaps() {
     L.control.zoom({ position: "bottomright" }).addTo(map);
     mapPoints().forEach((p) => {
       const label = kFmt(p.n);
-      const col = p.pin ? "#ef4444" : tierColor(p.n); // colour by user-count tier (map legend)
+      const col = p.pin ? "#ef4444" : tierColor(p.n); // colour by user-count tier
       let html;
       if (p.pin) html = `<div style="position:relative;transform:translate(-50%,-100%)"><div style="width:34px;height:34px;border-radius:50%;background:${col};border:3px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font:800 13px Inter;color:#fff">${label}</div><div style="position:absolute;left:50%;top:30px;transform:translateX(-50%);width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:11px solid ${col}"></div></div>`;
       else { const fs = p.big ? 15 : 12, halo = p.big ? 11 : 7; html = `<div style="width:${p.size}px;height:${p.size}px;border-radius:50%;background:${col};opacity:.9;border:2px solid rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;font:700 ${fs}px Inter;color:#fff;box-shadow:0 0 0 ${halo}px ${col}22,0 2px 6px rgba(0,0,0,.18)">${label}</div>`; }
