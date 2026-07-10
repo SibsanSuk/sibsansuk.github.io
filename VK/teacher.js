@@ -563,6 +563,11 @@ const relativeTime = (d) => {
   if (s < 2592000) return `${Math.round(s / 86400)} วันที่แล้ว`;
   return new Date(d).toLocaleDateString("th-TH", { day: "numeric", month: "short" });
 };
+// Time-of-day greeting. Boundaries: เช้า 05-11, บ่าย 12-15, เย็น 16-18, ค่ำ 19-04.
+const greetingWord = (h = new Date().getHours()) =>
+  h >= 19 || h < 5 ? "สวัสดีตอนค่ำ" : h >= 16 ? "สวัสดีตอนเย็น" : h >= 12 ? "สวัสดีตอนบ่าย" : "สวัสดีตอนเช้า";
+// "10 กรกฎาคม 2569" — th-TH renders the Buddhist era by default.
+const todayThai = () => new Date().toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" });
 // Module number from the course title ("... Module 4 ...") else sequential.
 const moduleNo = (c, i) => { const m = /module\s*(\d+)/i.exec(c?.title || ""); return String(m ? m[1] : i + 1).padStart(2, "0"); };
 // Short subject line: title with the "... : Module N ..." tail stripped, or the ระดับชั้น.
@@ -776,6 +781,18 @@ function viewSignInCard(phone) {
     </div>`;
 }
 
+// Greeting + today's date above the landing cards. Signed-in only — it needs a name.
+function viewGreeting(phone) {
+  const name = (state.teacherName || "").trim();
+  return `
+    <div style="flex:none;padding:${phone ? "16px 16px 0" : "22px 22px 0"}">
+      <div style="font:800 ${phone ? 20 : 24}px 'Noto Sans Thai';color:#101828">${esc(greetingWord())}${name ? `, ${esc(name)}` : ""}</div>
+      <div style="display:flex;align-items:center;gap:7px;margin-top:6px;font:500 12.5px 'Noto Sans Thai';color:#98a2b3">
+        <span style="width:14px;height:14px;display:inline-flex;flex:none;color:#b2b8c2">${ICO.calendar}</span>วันนี้ ${esc(todayThai())}
+      </div>
+    </div>`;
+}
+
 function viewLanding() {
   const authed = state.authed;
   // Stack + page-scroll on a narrow viewport OR a short one (landscape phone): both lack the
@@ -789,21 +806,24 @@ function viewLanding() {
       <span style="font:500 11.5px 'Noto Sans Thai';color:#98a2b3">· 112 ถนนพหลโยธิน ต.คลองหนึ่ง อ.คลองหลวง จ.ปทุมธานี 12120, Thailand</span>
       <span style="font:500 11.5px Inter;color:#0f766e">· info@nectec.or.th</span>
     </div>`;
+  // The greeting supplies the top padding when present, so the cards drop theirs to avoid a double gap.
+  const pad = phone ? (authed ? "12px 14px 14px" : "14px") : (authed ? "16px 22px 22px" : "22px");
   // phone: flex:none so the page scrolls the full content + footer (flex:1 would compress the
   // cards and let their fixed-height children spill over the footer). desktop: flex:1 fills the viewport.
-  const cards = `<div style="${phone ? "flex:none" : "flex:1;min-height:0"};display:flex;${phone ? "flex-direction:column;" : ""}gap:${phone ? 14 : 18}px;padding:${phone ? "14px" : "22px"}">
+  const cards = `<div style="${phone ? "flex:none" : "flex:1;min-height:0"};display:flex;${phone ? "flex-direction:column;" : ""}gap:${phone ? 14 : 18}px;padding:${pad}">
       ${viewMapCard(phone)}
       ${rightPanel}
     </div>`;
+  const head = authed ? viewGreeting(phone) : "";
   if (phone) {
     return `
     <div class="scrolly" style="flex:1;display:flex;flex-direction:column;min-height:0;background:#eef1f4">
-      ${cards}${footer}
+      ${head}${cards}${footer}
     </div>`;
   }
   return `
   <div style="flex:1;display:flex;flex-direction:column;min-height:0;background:#eef1f4">
-    ${cards}${footer}
+    ${head}${cards}${footer}
   </div>`;
 }
 
