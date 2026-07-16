@@ -233,6 +233,9 @@ const chatbotSpeedUrl = (cid, uid) =>
 const chatbotPerformanceUrl = (cid, uid) =>
   `https://sbs-backend.mooc.meca.in.th/stats/echart/chatbotPerformance/${encodeURIComponent(cid)}/${encodeURIComponent(uid)}`;
 
+const chatbotScoreV2Url = (cid) =>
+  `https://sbs-backend.mooc.meca.in.th/me/data/chatbot/${encodeURIComponent(cid)}`;
+
 const adaptiveQuizSharedDashboardUrl = (learnerEmail, leadLabel, refCode) =>
   `https://edubot.abdul.in.th/adaptive-quiz/api/v1/shared-dashboard/learner/${encodeURIComponent(learnerEmail)}/by-lead-label/${encodeURIComponent(leadLabel)}?ref_code=${encodeURIComponent(refCode)}`;
 
@@ -943,6 +946,7 @@ const renderDebugApiCard = () => {
     "video-progress",
     "chatbot-speed",
     "chatbot-performance",
+    "chatbot-score-v2",
     "adaptive-quiz-shared-dashboard"
   ];
   const items = order
@@ -3004,6 +3008,76 @@ const fetchChatbotPerformance = async () => {
   }
 };
 
+const fetchChatbotScoreV2Debug = async () => {
+  const srcUrl = chatbotScoreV2Url(courseId);
+  const accessToken = auth?.token?.access_token;
+  if (!courseId || !isLikelyCourseId(courseId)) {
+    setDebugApiEntry("chatbot-score-v2", {
+      label: "คะแนน Quiz (endpoint ใหม่)",
+      state: "skipped",
+      badge: "ไม่มีข้อมูล",
+      message: "ยังไม่พร้อมเรียก endpoint ใหม่ เพราะไม่มี courseid",
+      requests: []
+    });
+    return { state: "skipped", message: "ยังไม่พร้อมเรียก endpoint ใหม่ เพราะไม่มี courseid" };
+  }
+  if (!accessToken) {
+    setDebugApiEntry("chatbot-score-v2", {
+      label: "คะแนน Quiz (endpoint ใหม่)",
+      state: "skipped",
+      badge: "ต้องเข้าสู่ระบบ",
+      message: "ไม่พบ access token สำหรับเรียก endpoint ใหม่",
+      requests: [
+        { label: "GET /me/data/chatbot/{courseId}", url: srcUrl, state: "skipped", message: "ไม่พบ access token", payload: "-" }
+      ]
+    });
+    return { state: "skipped", message: "ไม่พบ access token สำหรับเรียก endpoint ใหม่" };
+  }
+
+  try {
+    const res = await fetch(srcUrl, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    const raw = await res.text();
+    let payload = raw;
+    try { payload = raw ? JSON.parse(raw) : null; } catch (_) {}
+    if (!res.ok) {
+      const message = `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
+      setDebugApiEntry("chatbot-score-v2", {
+        label: "คะแนน Quiz (endpoint ใหม่)",
+        state: "error",
+        badge: "มีปัญหา",
+        message,
+        requests: [
+          { label: "GET /me/data/chatbot/{courseId}", url: srcUrl, state: "error", message, payload }
+        ]
+      });
+      return { state: "error", message };
+    }
+    setDebugApiEntry("chatbot-score-v2", {
+      label: "คะแนน Quiz (endpoint ใหม่)",
+      state: "success",
+      badge: "พร้อมตรวจสอบ",
+      message: `โหลดข้อมูลสำเร็จ • HTTP ${res.status}`,
+      requests: [
+        { label: "GET /me/data/chatbot/{courseId}", url: srcUrl, state: "success", message: `HTTP ${res.status}`, payload }
+      ]
+    });
+    return { state: "success", message: `โหลดข้อมูล endpoint ใหม่สำเร็จ • HTTP ${res.status}` };
+  } catch (err) {
+    setDebugApiEntry("chatbot-score-v2", {
+      label: "คะแนน Quiz (endpoint ใหม่)",
+      state: "error",
+      badge: "มีปัญหา",
+      message: "ไม่สามารถเรียก endpoint ใหม่ได้",
+      requests: [
+        { label: "GET /me/data/chatbot/{courseId}", url: srcUrl, state: "error", message: "มีปัญหา", payload: err?.message || "เกิดข้อผิดพลาด" }
+      ]
+    });
+    return { state: "error", message: "ไม่สามารถเรียก endpoint ใหม่ได้" };
+  }
+};
+
 const fetchAdaptiveQuizSharedDashboard = async () => {
   window.adaptiveQuizSharedDashboardRaw = null;
   const apiKey = getAdaptiveQuizApiKey();
@@ -3161,6 +3235,14 @@ const getDashboardTaskDefs = () => {
     { id: "chatbot-performance", label: "ผลการทำแบบฝึกหัด", run: fetchChatbotPerformance, requiresTool: "chatbot" },
     { id: "adaptive-quiz-shared-dashboard", label: "Adaptive Quiz shared dashboard", run: fetchAdaptiveQuizSharedDashboard }
   ];
+  if (SHOW_DEBUG_CARD) {
+    tasks.splice(tasks.length - 1, 0, {
+      id: "chatbot-score-v2",
+      label: "คะแนน Quiz (endpoint ใหม่)",
+      run: fetchChatbotScoreV2Debug,
+      requiresTool: "chatbot"
+    });
+  }
   return tasks;
 };
 
