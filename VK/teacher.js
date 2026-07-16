@@ -92,6 +92,22 @@ const apiAssign = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/a
 const apiProgress = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}/progress`);
 const apiGrades = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}/grades`);
 const apiCourseTree = (courseId) => apiGet(`${teacherConfig.sbsUrl}/lms/${encodeURIComponent(courseId)}`, { auth: false });
+const bookrollReadingUrl = (userId, usageId) => `https://bookroll.thaidlt.com/meca/student/readingData?userID=${encodeURIComponent(userId)}&usageId=${encodeURIComponent(usageId)}&view=student&ts=${Date.now()}`;
+const videoProgressUrl = (userName, courseId) => `https://viola.thaidlt.com/meca/chart/bar/?userName=${encodeURIComponent(userName)}&usageId=${encodeURIComponent(courseId)}`;
+const chatbotSpeedUrl = (courseId, userId) => `${teacherConfig.sbsUrl}/stats/echart/chatbotSpeed/${encodeURIComponent(courseId)}/${encodeURIComponent(userId)}`;
+const externalJson = async (url) => {
+  const entry = { url, auth: false, at: new Date().toLocaleTimeString("th-TH") };
+  API_LOG.push(entry);
+  try {
+    const res = await fetch(url);
+    entry.status = res.status;
+    if (!res.ok) { entry.ok = false; entry.error = `${res.status} ${res.statusText}`; throw new Error(entry.error); }
+    const json = await res.json();
+    entry.ok = true;
+    if (DEBUG) entry.sample = json;
+    return json;
+  } catch (e) { entry.ok = false; entry.error = entry.error || e.message; throw e; }
+};
 const apiPost = async (url, body) => {
   const entry = { url, method: "POST", at: new Date().toLocaleTimeString("th-TH") };
   API_LOG.push(entry);
@@ -129,6 +145,78 @@ const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 const toNumber = (v, f = 0) => { const n = Number(v); return Number.isFinite(n) ? n : f; };
 const avg = (values) => { const n = values.map(Number).filter(Number.isFinite); return n.length ? n.reduce((a, b) => a + b, 0) / n.length : null; };
 const esc = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+
+const chartOption = (payload) => payload?.Option || payload?.option || payload?.chart || payload || {};
+const chartCategoryData = (axis) => {
+  const list = Array.isArray(axis) ? axis : [axis];
+  return (list.find((item) => item?.type === "category") || list[0])?.data || [];
+};
+const chartNumber = (value) => {
+  const raw = value && typeof value === "object" ? (Array.isArray(value.value) ? value.value.at(-1) : value.value) : value;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+};
+const summarizeProgress = (values, expectedCount = 0) => {
+  const progress = values.map(Number).filter(Number.isFinite).map((v) => clamp(v, 0, 100));
+  const missing = Math.max(0, Number(expectedCount || 0) - progress.length);
+  return {
+    done: progress.filter((v) => v >= 100).length,
+    doing: progress.filter((v) => v > 0 && v < 100).length,
+    todo: progress.filter((v) => v <= 0).length + missing,
+    count: progress.length,
+  };
+};
+const readingProgressValues = (payload) => {
+  const out = [];
+  const seen = new Set();
+  const visit = (value, key = "") => {
+    if (typeof value === "string") {
+      const m = value.trim().match(/^(\d+)\s*:\s*(\d+)$/);
+      if (m) {
+        const total = Number(m[2]);
+        const pct = total > 0 ? Math.round((Number(m[1]) / total) * 100) : 0;
+        const sig = `${key}|${pct}`;
+        if (!seen.has(sig)) { seen.add(sig); out.push(pct); }
+      }
+      return;
+    }
+    if (!value || typeof value !== "object") return;
+    const read = toNumber(value.read ?? value.readPage ?? value.read_page ?? value.current ?? value.done, NaN);
+    const total = toNumber(value.total ?? value.totalPage ?? value.total_page ?? value.max ?? value.all, NaN);
+    const direct = toNumber(value.progress ?? value.progressRate ?? value.rate ?? value.percent ?? value.percentage, NaN);
+    const pct = Number.isFinite(read) && Number.isFinite(total) ? (total > 0 ? Math.round((read / total) * 100) : 0) : direct;
+    if (Number.isFinite(pct)) {
+      const title = value.title || value.topic || value.label || value.name || value.display_name || value.bookTitle || key;
+      const sig = `${title}|${pct}`;
+      if (!seen.has(sig)) { seen.add(sig); out.push(pct); }
+      return;
+    }
+    if (Array.isArray(value)) value.forEach((item, i) => visit(item, `${key}.${i}`));
+    else Object.entries(value).forEach(([k, item]) => visit(item, k));
+  };
+  visit(payload);
+  return out;
+};
+const videoProgressValues = (payload) => {
+  const option = chartOption(payload);
+  const labels = chartCategoryData(option.yAxis);
+  const series = Array.isArray(option.series) ? option.series : [];
+  const data = Array.isArray(series[0]?.data) ? series[0].data : [];
+  return data.slice(0, Math.max(labels.length, data.length)).map(chartNumber).filter(Number.isFinite);
+};
+const chatbotTimeSeconds = (payload) => {
+  const option = chartOption(payload);
+  const series = Array.isArray(option.series) ? option.series : [];
+  const own = series.find((item) => /your|คุณ/i.test(String(item?.name || ""))) || series[0];
+  const values = Array.isArray(own?.data) ? own.data.map(chartNumber).filter(Number.isFinite) : [];
+  return values.length ? values.reduce((sum, value) => sum + Math.max(0, value), 0) : null;
+};
+const formatDuration = (seconds) => {
+  const value = Number(seconds);
+  if (!Number.isFinite(value)) return "-";
+  const mins = Math.floor(value / 60), secs = Math.round(value % 60);
+  return mins > 0 ? `${mins}:${String(secs).padStart(2, "0")} นาที` : `${secs} วินาที`;
+};
 
 const normalizeListPayload = (p) => {
   if (Array.isArray(p)) return p;
@@ -388,7 +476,7 @@ const toolStyle = (label) => { const m = { Profile: "#12a89b", Video: "#7b83eb",
 /* ------------------------------ state ------------------------------ */
 const state = {
   ready: false, sub: "", instituteId: "", classrooms: [], loadingCourse: false, authError: null,
-  page: "overview", course: null, student: null,
+  page: "overview", course: null, student: null, studentDetail: null,
   search: "", filter: "all", sort: "followup",
   authed: false, userMenuOpen: false, editOpen: false, notifOpen: false,
   // "เพิ่มห้องเรียน" modal
@@ -1136,9 +1224,63 @@ function viewMap() {
 }
 
 /* ---------------- student drawer ---------------- */
+async function loadStudentDetailApis(st) {
+  const selected = selectedCourse();
+  const cid = selected?.courseId || state.courseKey;
+  const userId = String(st?.id || "").trim();
+  const email = String(st?.email || "").trim();
+  const result = { studentId: st?.id, loading: false, reading: null, video: null, chatbotSeconds: null, errors: [] };
+  if (!cid || !userId) {
+    result.errors.push("ไม่พบ courseId หรือ student id");
+    return result;
+  }
+
+  const loadReading = async () => {
+    let values = [];
+    const bookrollTools = state.activities.flatMap((activity) => activity.tools)
+      .filter((tool) => String(tool.label).toLowerCase() === "bookroll");
+    try { values = readingProgressValues(await externalJson(bookrollReadingUrl(userId, cid))); }
+    catch (err) { result.errors.push(`BookRoll: ${err.message}`); }
+    if (!values.length) {
+      const usageIds = [...new Set(bookrollTools.map((tool) => tool.id).filter(Boolean))];
+      const responses = await Promise.allSettled(usageIds.map((usageId) => externalJson(bookrollReadingUrl(userId, usageId))));
+      responses.forEach((response) => {
+        if (response.status === "fulfilled") values.push(...readingProgressValues(response.value));
+      });
+    }
+    result.reading = values.length ? summarizeProgress(values, bookrollTools.length) : null;
+  };
+
+  const loadVideo = async () => {
+    const videoCount = state.activities.flatMap((activity) => activity.tools)
+      .filter((tool) => String(tool.label).toLowerCase() === "video").length;
+    const candidates = [...new Set([email, userId].filter(Boolean))];
+    for (const candidate of candidates) {
+      try {
+        const values = videoProgressValues(await externalJson(videoProgressUrl(candidate, cid)));
+        if (values.length) { result.video = summarizeProgress(values, videoCount); return; }
+      } catch (err) {
+        result.errors.push(`Video (${candidate}): ${err.message}`);
+      }
+    }
+  };
+
+  const loadChatbot = async () => {
+    try { result.chatbotSeconds = chatbotTimeSeconds(await externalJson(chatbotSpeedUrl(cid, userId))); }
+    catch (err) { result.errors.push(`Chatbot: ${err.message}`); }
+  };
+
+  await Promise.allSettled([loadReading(), loadVideo(), loadChatbot()]);
+  return result;
+}
+
 function viewDrawer() {
   const st = state.students.find((x) => String(x.id) === String(state.student));
   if (!st) return "";
+  const detail = String(state.studentDetail?.studentId) === String(st.id) ? state.studentDetail : null;
+  const reading = detail?.reading;
+  const video = detail?.video;
+  const detailLoading = !!detail?.loading;
   const chapters = state.activities.map((c) => ({ name: c.name, code: c.code, tools: c.tools, lbl: "-", col: "#667085", bg: "#f2f4f7", dot: "#d0d5dd" }));
   const ring = `conic-gradient(#0d9488 ${st.progress * 3.6}deg,#eaecf0 ${st.progress * 3.6}deg)`;
   const readRow = (color, label, val) => `<div style="display:flex;align-items:center;gap:8px;font:600 12px 'Noto Sans Thai';color:#475467"><span style="width:9px;height:9px;border-radius:50%;background:${color}"></span>${label}<span style="margin-left:auto;font:700 13px Inter;color:#101828">${val}</span></div>`;
@@ -1161,16 +1303,16 @@ function viewDrawer() {
         <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:12px;align-items:center;background:#fff;border:1px solid #ececf1;border-radius:14px;padding:16px 18px;margin-bottom:16px">
           <div style="position:relative;width:78px;height:78px"><div style="width:78px;height:78px;border-radius:50%;background:${ring}"></div><div style="position:absolute;inset:11px;background:#fff;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center"><div style="font:800 18px Inter;color:#0f766e">${st.progW}</div></div></div>
           <div style="text-align:center;border-right:1px solid #eef0f3"><div style="font:800 22px Inter;color:#101828">${esc(st.quizText)}</div><div style="font:600 11.5px 'Noto Sans Thai';color:#98a2b3">คะแนน Quiz</div></div>
-          <div style="text-align:center"><div style="font:800 22px Inter;color:#101828">-</div><div style="font:600 11.5px 'Noto Sans Thai';color:#98a2b3">เวลาที่ใช้เรียน</div></div>
+          <div style="text-align:center"><div style="font:800 22px Inter;color:#101828">${detailLoading ? "…" : esc(formatDuration(detail?.chatbotSeconds))}</div><div style="font:600 11.5px 'Noto Sans Thai';color:#98a2b3">เวลาทำแบบฝึกหัด</div></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
           <div style="background:#fff;border:1px solid #ececf1;border-radius:14px;padding:15px 17px">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="width:24px;height:24px;border-radius:7px;background:#5ab877;color:#fff;display:inline-flex;align-items:center;justify-content:center;font:700 11px Inter">▤</span><span style="font:700 13px 'Noto Sans Thai';color:#101828">ความคืบหน้าการอ่าน</span></div>
-            <div style="display:flex;flex-direction:column;gap:7px">${readRow("#22c55e", "อ่านจบ", "-")}${readRow("#f97316", "กำลังอ่าน", "-")}${readRow("#d0d5dd", "ยังไม่ได้อ่าน", "-")}</div>
+            <div style="display:flex;flex-direction:column;gap:7px">${readRow("#22c55e", "อ่านจบ", detailLoading ? "…" : (reading?.done ?? "-"))}${readRow("#f97316", "กำลังอ่าน", detailLoading ? "…" : (reading?.doing ?? "-"))}${readRow("#d0d5dd", "ยังไม่ได้อ่าน", detailLoading ? "…" : (reading?.todo ?? "-"))}</div>
           </div>
           <div style="background:#fff;border:1px solid #ececf1;border-radius:14px;padding:15px 17px">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="width:24px;height:24px;border-radius:7px;background:#7b83eb;color:#fff;display:inline-flex;align-items:center;justify-content:center;font:700 10px Inter">▶</span><span style="font:700 13px 'Noto Sans Thai';color:#101828">ความคืบหน้าวิดีโอ</span></div>
-            <div style="display:flex;flex-direction:column;gap:7px">${readRow("#22c55e", "ดูจบ", "-")}${readRow("#f97316", "กำลังดู", "-")}${readRow("#d0d5dd", "ยังไม่ได้ดู", "-")}</div>
+            <div style="display:flex;flex-direction:column;gap:7px">${readRow("#22c55e", "ดูจบ", detailLoading ? "…" : (video?.done ?? "-"))}${readRow("#f97316", "กำลังดู", detailLoading ? "…" : (video?.doing ?? "-"))}${readRow("#d0d5dd", "ยังไม่ได้ดู", detailLoading ? "…" : (video?.todo ?? "-"))}</div>
           </div>
         </div>
         <div style="background:#fff;border:1px solid #ececf1;border-radius:14px;padding:16px 18px">
@@ -1553,7 +1695,13 @@ const H = {
   },
   switchCourse: () => setState({ course: null, student: null, userMenuOpen: false }),
   closeError: () => setState({ authError: null }),
-  openStudent: (id) => setState({ student: id }),
+  openStudent: async (id) => {
+    const st = state.students.find((item) => String(item.id) === String(id));
+    if (!st) return;
+    setState({ student: id, studentDetail: { studentId: id, loading: true, reading: null, video: null, chatbotSeconds: null, errors: [] } });
+    const detail = await loadStudentDetailApis(st);
+    if (String(state.student) === String(id)) setState({ studentDetail: detail });
+  },
   closeStudent: () => setState({ student: null }),
   toggleUserMenu: () => renderTopbar({ userMenuOpen: !state.userMenuOpen, notifOpen: false, leadoOpen: false }),
   closeUserMenu: () => renderTopbar({ userMenuOpen: false }),
