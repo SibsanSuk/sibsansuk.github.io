@@ -171,43 +171,100 @@ const summarizeProgress = (values, expectedCount = 0) => {
     count: progress.length,
   };
 };
-const readingProgressValues = (payload) => {
+const normalizeProgressTitle = (value) => String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
+const progressTitleCore = (value) => normalizeProgressTitle(value).replace(/^\d+(?:[-.]\d+)*(?:\s+|$)/, "").trim();
+const normalizeUsageId = (value) => String(value || "").trim().toLowerCase();
+const readingProgressEntries = (payload, opts = {}) => {
   const out = [];
   const seen = new Set();
-  const visit = (value, key = "") => {
+  const usageHint = normalizeUsageId(opts.usageId);
+  const titleHint = String(opts.titleHint || "").trim();
+  const parseProgress = (value) => {
+    if (typeof value === "string") {
+      const match = value.trim().match(/^(\d+)\s*:\s*(\d+)$/);
+      if (!match) return null;
+      const total = Number(match[2]);
+      return total > 0 ? Math.round((Number(match[1]) / total) * 100) : 0;
+    }
+    if (!value || typeof value !== "object") return null;
+    const read = toNumber(value.read ?? value.readPage ?? value.read_page ?? value.current ?? value.done, NaN);
+    const total = toNumber(value.total ?? value.totalPage ?? value.total_page ?? value.max ?? value.all, NaN);
+    if (Number.isFinite(read) && Number.isFinite(total)) return total > 0 ? Math.round((read / total) * 100) : 0;
+    const direct = toNumber(value.progress ?? value.progressRate ?? value.rate ?? value.percent ?? value.percentage, NaN);
+    return Number.isFinite(direct) ? direct : null;
+  };
+  const push = (titleRaw, progress, usageIdRaw = "") => {
+    if (!Number.isFinite(progress)) return;
+    const title = String(titleRaw || titleHint || "").trim();
+    const key = normalizeProgressTitle(title);
+    const usageId = normalizeUsageId(usageIdRaw || usageHint);
+    const pct = clamp(Math.round(progress), 0, 100);
+    const sig = `${usageId}|${key}|${pct}`;
+    if (seen.has(sig)) return;
+    seen.add(sig);
+    out.push({ title, key, usageId, progress: pct });
+  };
+  const visit = (value, key = "", inheritedUsageId = "") => {
     if (typeof value === "string") {
       const m = value.trim().match(/^(\d+)\s*:\s*(\d+)$/);
       if (m) {
         const total = Number(m[2]);
         const pct = total > 0 ? Math.round((Number(m[1]) / total) * 100) : 0;
-        const sig = `${key}|${pct}`;
-        if (!seen.has(sig)) { seen.add(sig); out.push(pct); }
+        push(key, pct, inheritedUsageId);
       }
       return;
     }
     if (!value || typeof value !== "object") return;
-    const read = toNumber(value.read ?? value.readPage ?? value.read_page ?? value.current ?? value.done, NaN);
-    const total = toNumber(value.total ?? value.totalPage ?? value.total_page ?? value.max ?? value.all, NaN);
-    const direct = toNumber(value.progress ?? value.progressRate ?? value.rate ?? value.percent ?? value.percentage, NaN);
-    const pct = Number.isFinite(read) && Number.isFinite(total) ? (total > 0 ? Math.round((read / total) * 100) : 0) : direct;
+    const pct = [value, value.value, value.stats, value.data].map(parseProgress).find(Number.isFinite);
     if (Number.isFinite(pct)) {
-      const title = value.title || value.topic || value.label || value.name || value.display_name || value.bookTitle || key;
-      const sig = `${title}|${pct}`;
-      if (!seen.has(sig)) { seen.add(sig); out.push(pct); }
+      const title = value.title || value.topic || value.label || value.name || value.display_name || value.displayName || value.book_title || value.bookTitle || key;
+      const usageId = value.usageId || value.usage_id || value.courseId || value.course_id || value.id || inheritedUsageId;
+      push(title, pct, usageId);
       return;
     }
-    if (Array.isArray(value)) value.forEach((item, i) => visit(item, `${key}.${i}`));
-    else Object.entries(value).forEach(([k, item]) => visit(item, k));
+    const nextUsageId = value.usageId || value.usage_id || value.courseId || value.course_id || inheritedUsageId;
+    if (Array.isArray(value)) value.forEach((item, i) => visit(item, key || String(i), nextUsageId));
+    else Object.entries(value).forEach(([k, item]) => visit(item, k, nextUsageId));
   };
-  visit(payload);
+  visit(payload, titleHint, usageHint);
   return out;
 };
-const videoProgressValues = (payload) => {
+const videoProgressEntries = (payload) => {
   const option = chartOption(payload);
   const labels = chartCategoryData(option.yAxis);
   const series = Array.isArray(option.series) ? option.series : [];
   const data = Array.isArray(series[0]?.data) ? series[0].data : [];
-  return data.slice(0, Math.max(labels.length, data.length)).map(chartNumber).filter(Number.isFinite);
+  const out = [];
+  for (let i = 0; i < Math.max(labels.length, data.length); i += 1) {
+    const title = String(labels[i] || "").trim();
+    const progress = chartNumber(data[i]);
+    if (!title || !Number.isFinite(progress)) continue;
+    out.push({ title, key: normalizeProgressTitle(title), usageId: "", progress: clamp(Math.round(progress), 0, 100) });
+  }
+  return out;
+};
+const findActivityProgress = (activity, entries, toolLabel) => {
+  const list = Array.isArray(entries) ? entries : [];
+  if (!list.length) return null;
+  const toolIds = (activity.tools || [])
+    .filter((tool) => String(tool.label || "").toLowerCase() === toolLabel)
+    .map((tool) => normalizeUsageId(tool.id))
+    .filter(Boolean);
+  const byUsageId = list.find((entry) => entry.usageId && toolIds.includes(normalizeUsageId(entry.usageId)));
+  if (byUsageId) return byUsageId;
+  const title = normalizeProgressTitle(activity.name);
+  const exact = list.find((entry) => normalizeProgressTitle(entry.key || entry.title) === title);
+  if (exact) return exact;
+  const core = progressTitleCore(activity.name);
+  if (!core) return null;
+  const exactCore = list.find((entry) => progressTitleCore(entry.key || entry.title) === core);
+  if (exactCore) return exactCore;
+  return list
+    .filter((entry) => {
+      const entryCore = progressTitleCore(entry.key || entry.title);
+      return entryCore.length >= 4 && (entryCore.includes(core) || core.includes(entryCore));
+    })
+    .sort((a, b) => progressTitleCore(b.key || b.title).length - progressTitleCore(a.key || a.title).length)[0] || null;
 };
 const chatbotTimeSeconds = (payload) => {
   const option = chartOption(payload);
@@ -1237,7 +1294,7 @@ async function loadStudentDetailApis(st) {
   const result = {
     studentId: st?.id, loading: true,
     readingLoading: true, videoLoading: true, chatbotLoading: true,
-    reading: null, video: null, chatbotSeconds: null, errors: []
+    reading: null, video: null, readingEntries: [], videoEntries: [], chatbotSeconds: null, errors: []
   };
   const publish = (patch) => {
     Object.assign(result, patch);
@@ -1251,19 +1308,29 @@ async function loadStudentDetailApis(st) {
   }
 
   const loadReading = async () => {
-    let values = [];
-    const bookrollTools = state.activities.flatMap((activity) => activity.tools)
-      .filter((tool) => String(tool.label).toLowerCase() === "bookroll");
-    try { values = readingProgressValues(await externalJson(bookrollReadingUrl(userId, cid))); }
+    let entries = [];
+    const bookrollTargets = state.activities.flatMap((activity) => activity.tools
+      .filter((tool) => String(tool.label).toLowerCase() === "bookroll")
+      .map((tool) => ({ usageId: tool.id, title: activity.name })));
+    try { entries = readingProgressEntries(await externalJson(bookrollReadingUrl(userId, cid)), { usageId: cid }); }
     catch (err) { result.errors.push(`BookRoll: ${err.message}`); }
-    if (!values.length) {
-      const usageIds = [...new Set(bookrollTools.map((tool) => tool.id).filter(Boolean))];
-      const responses = await Promise.allSettled(usageIds.map((usageId) => externalJson(bookrollReadingUrl(userId, usageId))));
-      responses.forEach((response) => {
-        if (response.status === "fulfilled") values.push(...readingProgressValues(response.value));
+    if (!entries.length) {
+      const targets = [...new Map(bookrollTargets.filter((target) => target.usageId).map((target) => [target.usageId, target])).values()];
+      const responses = await Promise.allSettled(targets.map((target) => externalJson(bookrollReadingUrl(userId, target.usageId))));
+      responses.forEach((response, index) => {
+        if (response.status === "fulfilled") {
+          entries.push(...readingProgressEntries(response.value, {
+            usageId: targets[index].usageId,
+            titleHint: targets[index].title
+          }));
+        }
       });
     }
-    publish({ reading: values.length ? summarizeProgress(values, bookrollTools.length) : null, readingLoading: false });
+    publish({
+      reading: entries.length ? summarizeProgress(entries.map((entry) => entry.progress), bookrollTargets.length) : null,
+      readingEntries: entries,
+      readingLoading: false
+    });
   };
 
   const loadVideo = async () => {
@@ -1272,8 +1339,11 @@ async function loadStudentDetailApis(st) {
     const candidates = [...new Set([email, userId].filter(Boolean))];
     for (const candidate of candidates) {
       try {
-        const values = videoProgressValues(await externalJson(videoProgressUrl(candidate, cid)));
-        if (values.length) { publish({ video: summarizeProgress(values, videoCount), videoLoading: false }); return; }
+        const entries = videoProgressEntries(await externalJson(videoProgressUrl(candidate, cid)));
+        if (entries.length) {
+          publish({ video: summarizeProgress(entries.map((entry) => entry.progress), videoCount), videoEntries: entries, videoLoading: false });
+          return;
+        }
       } catch (err) {
         result.errors.push(`Video (${candidate}): ${err.message}`);
       }
@@ -1301,7 +1371,24 @@ function viewDrawer() {
   const readingLoading = !!detail?.readingLoading;
   const videoLoading = !!detail?.videoLoading;
   const chatbotLoading = !!detail?.chatbotLoading;
-  const chapters = state.activities.map((c) => ({ name: c.name, code: c.code, tools: c.tools, lbl: "-", col: "#667085", bg: "#f2f4f7", dot: "#d0d5dd" }));
+  const chapters = state.activities.map((activity) => {
+    const labels = (activity.tools || []).map((tool) => String(tool.label || "").toLowerCase());
+    const hasReading = labels.includes("bookroll");
+    const hasVideo = labels.includes("video");
+    const values = [];
+    const readingEntry = hasReading ? findActivityProgress(activity, detail?.readingEntries, "bookroll") : null;
+    const videoEntry = hasVideo ? findActivityProgress(activity, detail?.videoEntries, "video") : null;
+    if (Number.isFinite(readingEntry?.progress)) values.push(readingEntry.progress);
+    if (Number.isFinite(videoEntry?.progress)) values.push(videoEntry.progress);
+    const isLoading = (hasReading && readingLoading) || (hasVideo && videoLoading);
+    if (!values.length) {
+      return { name: activity.name, code: activity.code, tools: activity.tools, lbl: isLoading ? "…" : "-", col: "#667085", bg: "#f2f4f7", dot: "#d0d5dd" };
+    }
+    const progress = Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+    if (progress >= 100) return { name: activity.name, code: activity.code, tools: activity.tools, lbl: "100%", col: "#0f766e", bg: "#d1fae5", dot: "#22c55e" };
+    if (progress > 0) return { name: activity.name, code: activity.code, tools: activity.tools, lbl: `${progress}%`, col: "#c2410c", bg: "#ffedd5", dot: "#f97316" };
+    return { name: activity.name, code: activity.code, tools: activity.tools, lbl: "0%", col: "#667085", bg: "#f2f4f7", dot: "#d0d5dd" };
+  });
   const ring = `conic-gradient(#0d9488 ${st.progress * 3.6}deg,#eaecf0 ${st.progress * 3.6}deg)`;
   const readRow = (color, label, val) => `<div style="display:flex;align-items:center;gap:8px;font:600 12px 'Noto Sans Thai';color:#475467"><span style="width:9px;height:9px;border-radius:50%;background:${color}"></span>${label}<span style="margin-left:auto;font:700 13px Inter;color:#101828">${val}</span></div>`;
   return `
@@ -1735,7 +1822,7 @@ const H = {
       studentDetail: {
         studentId: id, loading: true,
         readingLoading: true, videoLoading: true, chatbotLoading: true,
-        reading: null, video: null, chatbotSeconds: null, errors: []
+        reading: null, video: null, readingEntries: [], videoEntries: [], chatbotSeconds: null, errors: []
       }
     });
     const detail = await loadStudentDetailApis(st);
