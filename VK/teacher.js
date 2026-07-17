@@ -85,6 +85,7 @@ const apiGet = async (url, { auth = true } = {}) => {
   } catch (e) { entry.ok = false; entry.error = entry.error || e.message; throw e; }
 };
 const apiUser = (sub) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/user/${encodeURIComponent(sub)}`);
+const apiUserByEmail = (email) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/user/query?email=${encodeURIComponent(email)}`);
 const apiTeacher = (sub) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/teacher/${encodeURIComponent(sub)}`);
 const apiUserInfo = () => apiGet(OIDC.userinfoEndpoint);
 const apiClassrooms = (sub, instituteId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/course/teacher/${encodeURIComponent(sub)}${instituteId ? `?instituteId=${encodeURIComponent(instituteId)}` : ""}`);
@@ -174,6 +175,46 @@ const summarizeProgress = (values, expectedCount = 0) => {
 const normalizeProgressTitle = (value) => String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
 const progressTitleCore = (value) => normalizeProgressTitle(value).replace(/^\d+(?:[-.]\d+)*(?:\s+|$)/, "").trim();
 const normalizeUsageId = (value) => String(value || "").trim().toLowerCase();
+const studentApiUserIdCache = new Map();
+const apiUserRows = (payload) => {
+  const rows = [];
+  const visit = (value, depth = 0) => {
+    if (!value || depth > 3) return;
+    if (Array.isArray(value)) { value.forEach((item) => visit(item, depth + 1)); return; }
+    if (typeof value !== "object") return;
+    if (value.userId != null || value.user_id != null || value.sub != null || value.uuid != null || value.keycloakId != null) rows.push(value);
+    [value.data, value.results, value.rows, value.items, value.list, value.users, value.user, value.profile].forEach((item) => visit(item, depth + 1));
+  };
+  visit(payload);
+  return rows;
+};
+const apiUserIdFromPayload = (payload, email = "") => {
+  const rows = apiUserRows(payload);
+  const emailKey = String(email || "").trim().toLowerCase();
+  const row = rows.find((item) => String(item.email || "").trim().toLowerCase() === emailKey) || rows[0];
+  if (!row) return "";
+  const values = [row.userId, row.userID, row.user_id, row.sub, row.uuid, row.keycloakId, row.keycloak_id, row.keycloakUserId, row.id]
+    .map((value) => String(value || "").trim()).filter(Boolean);
+  return values.find((value) => /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(value))
+    || values.find((value) => !/^\d+$/.test(value))
+    || "";
+};
+const resolveStudentApiUserId = async (student) => {
+  const embedded = [student?.apiUserId, student?.userId, student?.user_id, student?.sub, student?.uuid]
+    .map((value) => String(value || "").trim())
+    .find((value) => value && !/^\d+$/.test(value));
+  if (embedded) return embedded;
+  const email = String(student?.email || "").trim().toLowerCase();
+  if (!email) return "";
+  if (studentApiUserIdCache.has(email)) return studentApiUserIdCache.get(email);
+  const pending = apiUserByEmail(email)
+    .then((payload) => apiUserIdFromPayload(payload, email))
+    .catch(() => "");
+  studentApiUserIdCache.set(email, pending);
+  const resolved = await pending;
+  studentApiUserIdCache.set(email, resolved);
+  return resolved;
+};
 const readingProgressEntries = (payload, opts = {}) => {
   const out = [];
   const seen = new Set();
@@ -184,12 +225,12 @@ const readingProgressEntries = (payload, opts = {}) => {
       const match = value.trim().match(/^(\d+)\s*:\s*(\d+)$/);
       if (!match) return null;
       const total = Number(match[2]);
-      return total > 0 ? Math.round((Number(match[1]) / total) * 100) : 0;
+      return total > 0 ? Math.round((Number(match[1]) / total) * 100) : null;
     }
     if (!value || typeof value !== "object") return null;
     const read = toNumber(value.read ?? value.readPage ?? value.read_page ?? value.current ?? value.done, NaN);
     const total = toNumber(value.total ?? value.totalPage ?? value.total_page ?? value.max ?? value.all, NaN);
-    if (Number.isFinite(read) && Number.isFinite(total)) return total > 0 ? Math.round((read / total) * 100) : 0;
+    if (Number.isFinite(read) && Number.isFinite(total)) return total > 0 ? Math.round((read / total) * 100) : null;
     const direct = toNumber(value.progress ?? value.progressRate ?? value.rate ?? value.percent ?? value.percentage, NaN);
     return Number.isFinite(direct) ? direct : null;
   };
@@ -209,7 +250,7 @@ const readingProgressEntries = (payload, opts = {}) => {
       const m = value.trim().match(/^(\d+)\s*:\s*(\d+)$/);
       if (m) {
         const total = Number(m[2]);
-        const pct = total > 0 ? Math.round((Number(m[1]) / total) * 100) : 0;
+        const pct = total > 0 ? Math.round((Number(m[1]) / total) * 100) : null;
         push(key, pct, inheritedUsageId);
       }
       return;
@@ -228,6 +269,13 @@ const readingProgressEntries = (payload, opts = {}) => {
   };
   visit(payload, titleHint, usageHint);
   return out;
+};
+const readingPayloadHasRows = (payload) => {
+  if (Array.isArray(payload)) return payload.length > 0;
+  if (!payload || typeof payload !== "object") return false;
+  const rows = payload.results ?? payload.result ?? payload.data;
+  if (Array.isArray(rows)) return rows.length > 0;
+  return !!rows && typeof rows === "object" && Object.keys(rows).length > 0;
 };
 const videoProgressEntries = (payload) => {
   const option = chartOption(payload);
@@ -340,6 +388,7 @@ const mergeStudents = (progressRows, scoreRows) => {
     const s = statusOf(progress);
     return {
       id: row.id ?? email,
+      apiUserId: row.userId || row.user_id || row.sub || row.uuid || "",
       email,
       name: fullName(row),
       room: (/\d/.test(row.levelOfEducation || "") ? String(row.levelOfEducation).trim() : "") || row.province || "-",
@@ -1289,32 +1338,44 @@ function viewMap() {
 async function loadStudentDetailApis(st) {
   const selected = selectedCourse();
   const cid = selected?.courseId || state.courseKey;
-  const userId = String(st?.id || "").trim();
   const email = String(st?.email || "").trim();
+  const identityPromise = resolveStudentApiUserId(st);
   const result = {
     studentId: st?.id, loading: true,
     readingLoading: true, videoLoading: true, chatbotLoading: true,
-    reading: null, video: null, readingEntries: [], videoEntries: [], chatbotSeconds: null, errors: []
+    apiUserId: null, reading: null, video: null, readingEntries: [], videoEntries: [], chatbotSeconds: null, errors: []
   };
   const publish = (patch) => {
     Object.assign(result, patch);
     if (String(state.student) !== String(st?.id)) return;
     setState({ studentDetail: { ...state.studentDetail, ...patch, studentId: st?.id, errors: [...result.errors] } });
   };
-  if (!cid || !userId) {
-    result.errors.push("ไม่พบ courseId หรือ student id");
+  if (!cid || (!email && !st?.apiUserId)) {
+    result.errors.push("ไม่พบ courseId หรือข้อมูลระบุตัวนักเรียน");
     publish({ loading: false, readingLoading: false, videoLoading: false, chatbotLoading: false });
     return result;
   }
+  identityPromise.then((userId) => publish({ apiUserId: userId || null }));
 
   const loadReading = async () => {
+    const userId = await identityPromise;
+    if (!userId) {
+      result.errors.push("BookRoll: ไม่พบ Keycloak userId ของนักเรียนจาก email");
+      publish({ reading: null, readingEntries: [], readingLoading: false });
+      return;
+    }
     let entries = [];
+    let courseLevelAnswered = false;
     const bookrollTargets = state.activities.flatMap((activity) => activity.tools
       .filter((tool) => String(tool.label).toLowerCase() === "bookroll")
       .map((tool) => ({ usageId: tool.id, title: activity.name })));
-    try { entries = readingProgressEntries(await externalJson(bookrollReadingUrl(userId, cid)), { usageId: cid }); }
+    try {
+      const payload = await externalJson(bookrollReadingUrl(userId, cid));
+      courseLevelAnswered = readingPayloadHasRows(payload);
+      entries = readingProgressEntries(payload, { usageId: cid });
+    }
     catch (err) { result.errors.push(`BookRoll: ${err.message}`); }
-    if (!entries.length) {
+    if (!entries.length && !courseLevelAnswered) {
       const targets = [...new Map(bookrollTargets.filter((target) => target.usageId).map((target) => [target.usageId, target])).values()];
       const responses = await Promise.allSettled(targets.map((target) => externalJson(bookrollReadingUrl(userId, target.usageId))));
       responses.forEach((response, index) => {
@@ -1336,6 +1397,7 @@ async function loadStudentDetailApis(st) {
   const loadVideo = async () => {
     const videoCount = state.activities.flatMap((activity) => activity.tools)
       .filter((tool) => String(tool.label).toLowerCase() === "video").length;
+    const userId = await identityPromise;
     const candidates = [...new Set([email, userId].filter(Boolean))];
     for (const candidate of candidates) {
       try {
@@ -1352,6 +1414,12 @@ async function loadStudentDetailApis(st) {
   };
 
   const loadChatbot = async () => {
+    const userId = await identityPromise;
+    if (!userId) {
+      result.errors.push("Chatbot: ไม่พบ Keycloak userId ของนักเรียนจาก email");
+      publish({ chatbotSeconds: null, chatbotLoading: false });
+      return;
+    }
     try { result.chatbotSeconds = chatbotTimeSeconds(await externalJson(chatbotSpeedUrl(cid, userId))); }
     catch (err) { result.errors.push(`Chatbot: ${err.message}`); }
     publish({ chatbotSeconds: result.chatbotSeconds, chatbotLoading: false });
@@ -1555,6 +1623,7 @@ function debugBodyHtml() {
     <div>profile: <span style="color:#a7f3d0">${esc(state.teacherName || "—")}</span> · ${esc(state.teacherEmail || "—")}</div>
     <div>token exp: ${auth?.token?.access_token ? esc(new Date((decodeJwt(auth.token.access_token)?.exp || 0) * 1000).toLocaleString("th-TH")) : "—"} · instituteId: ${esc(state.instituteId || "—")}</div>
     <div>classrooms mapped: <b style="color:#fbbf24">${state.classrooms.length}</b></div>
+    <div>selected student API userId: <span style="color:#a7f3d0">${esc(state.studentDetail?.apiUserId || "—")}</span></div>
     <div style="margin-top:6px;font:700 11px 'Noto Sans Thai'">API calls (${API_LOG.length})</div>
     ${calls || '<div style="color:#64748b">— ยังไม่มีการเรียก API —</div>'}`;
 }
@@ -1827,7 +1896,7 @@ const H = {
       studentDetail: {
         studentId: id, loading: true,
         readingLoading: true, videoLoading: true, chatbotLoading: true,
-        reading: null, video: null, readingEntries: [], videoEntries: [], chatbotSeconds: null, errors: []
+        apiUserId: null, reading: null, video: null, readingEntries: [], videoEntries: [], chatbotSeconds: null, errors: []
       }
     });
     const detail = await loadStudentDetailApis(st);
