@@ -176,13 +176,14 @@ const normalizeProgressTitle = (value) => String(value || "").replace(/\s+/g, " 
 const progressTitleCore = (value) => normalizeProgressTitle(value).replace(/^\d+(?:[-.]\d+)*(?:\s+|$)/, "").trim();
 const normalizeUsageId = (value) => String(value || "").trim().toLowerCase();
 const studentApiUserIdCache = new Map();
+const courseRosterCache = new Map();
 const apiUserRows = (payload) => {
   const rows = [];
   const visit = (value, depth = 0) => {
     if (!value || depth > 3) return;
     if (Array.isArray(value)) { value.forEach((item) => visit(item, depth + 1)); return; }
     if (typeof value !== "object") return;
-    if (value.userId != null || value.user_id != null || value.sub != null || value.uuid != null || value.keycloakId != null) rows.push(value);
+    if (value.userId != null || value.userID != null || value.user_id != null || value.sub != null || value.uuid != null || value.keycloakId != null || value.keycloakUserId != null) rows.push(value);
     [value.data, value.results, value.rows, value.items, value.list, value.users, value.user, value.profile].forEach((item) => visit(item, depth + 1));
   };
   visit(payload);
@@ -199,6 +200,37 @@ const apiUserIdFromPayload = (payload, email = "") => {
     || values.find((value) => !/^\d+$/.test(value))
     || "";
 };
+const resolveStudentApiUserIdFromRoster = async (student) => {
+  const cls = selectedCourse();
+  if (!cls) return "";
+  const query = {
+    instituteId: cls.instituteId || state.instituteId || "",
+    grade: cls.grade || "",
+    level: cls.level ?? "",
+    classRoom: cls.classRoom ?? ""
+  };
+  if (!query.instituteId && !query.grade && query.level === "" && query.classRoom === "") return "";
+  const cacheKey = JSON.stringify(query);
+  if (!courseRosterCache.has(cacheKey)) {
+    courseRosterCache.set(cacheKey, apiCourseSearch(query).catch(() => null));
+  }
+  const payload = await courseRosterCache.get(cacheKey);
+  const courses = Array.isArray(payload) ? payload : (payload?.data || payload?.results || payload?.items || []);
+  const course = (Array.isArray(courses) ? courses : []).find((item) => String(item.courseId || item.course_id || "") === String(cls.courseId)) || null;
+  const enrolls = course
+    ? (course.enrolls || course.enroll || course.students || course.learners || [])
+    : [];
+  if (!Array.isArray(enrolls) || !enrolls.length) return "";
+  const studentId = String(student?.id || "").trim();
+  const email = String(student?.email || "").trim().toLowerCase();
+  const match = enrolls.find((item) => {
+    const ids = [item?.enrollId, item?.enroll_id, item?.id, item?.studentId, item?.student_id, item?.user?.id]
+      .map((value) => String(value || "").trim()).filter(Boolean);
+    const itemEmail = String(item?.email || item?.user?.email || item?.profile?.email || "").trim().toLowerCase();
+    return (studentId && ids.includes(studentId)) || (email && itemEmail === email);
+  });
+  return match ? apiUserIdFromPayload(match, email) : "";
+};
 const resolveStudentApiUserId = async (student) => {
   const embedded = [student?.apiUserId, student?.userId, student?.user_id, student?.sub, student?.uuid]
     .map((value) => String(value || "").trim())
@@ -207,9 +239,15 @@ const resolveStudentApiUserId = async (student) => {
   const email = String(student?.email || "").trim().toLowerCase();
   if (!email) return "";
   if (studentApiUserIdCache.has(email)) return studentApiUserIdCache.get(email);
-  const pending = apiUserByEmail(email)
-    .then((payload) => apiUserIdFromPayload(payload, email))
-    .catch(() => "");
+  const pending = (async () => {
+    const rosterUserId = await resolveStudentApiUserIdFromRoster(student);
+    if (rosterUserId) return rosterUserId;
+    try {
+      const userId = apiUserIdFromPayload(await apiUserByEmail(email), email);
+      if (userId) return userId;
+    } catch (_) { /* teacher role may not have access to the management user search */ }
+    return "";
+  })();
   studentApiUserIdCache.set(email, pending);
   const resolved = await pending;
   studentApiUserIdCache.set(email, resolved);
@@ -642,6 +680,7 @@ const mapClassroom = (course, assign, i) => {
     title: course.courseName || course.courseTitle || course.title || courseId || "ห้องเรียน",
     classCode: [assign.grade, assign.level, assign.classRoom].filter(Boolean).join("/") || inst.instituteName || "—",
     grade: assign.grade || "", level: assign.level ?? "", classRoom: assign.classRoom ?? "",
+    instituteId: assign.instituteId || assign.institute_id || inst.instituteId || inst.institute_id || "",
     school: inst.instituteName || "",
     province: inst.province || "",
     students: numOr(assign.studentCount, assign.students, assign.enrollCount, assign.total, assign.memberCount),
