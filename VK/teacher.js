@@ -981,7 +981,7 @@ function viewDashboard() {
         <div style="font:700 11px 'Noto Sans Thai';color:#98a2b3;padding:2px 13px 10px">เมนูห้องเรียน</div>
         ${tabs.map(navV).join("")}
       </div>
-      <main class="scrolly" style="flex:1;min-height:0;padding:${compact ? "18px 18px 44px" : "26px 34px 60px"}">
+      <main class="scrolly" data-scroll-key="dashboard-main" style="flex:1;min-height:0;padding:${compact ? "18px 18px 44px" : "26px 34px 60px"}">
         <div style="max-width:1180px;margin:0 auto">${page}</div>
       </main>
     </div>`;
@@ -997,7 +997,7 @@ function viewDashboard() {
           ${tabs.map((t, i) => navT(t, i === tabs.length - 1)).join("")}
         </div>
       </div>
-      <main class="scrolly" style="flex:1;min-height:0;padding:${phone ? "16px 14px 48px" : "26px 30px 60px"}">
+      <main class="scrolly" data-scroll-key="dashboard-main" style="flex:1;min-height:0;padding:${phone ? "16px 14px 48px" : "26px 30px 60px"}">
         <div style="max-width:1180px;margin:0 auto">${page}</div>
       </main>
     </div>
@@ -1620,11 +1620,23 @@ function render() {
 function setState(patch) {
   const active = document.activeElement;
   let focus = null;
+  const scrollPositions = new Map(
+    [...document.querySelectorAll("[data-scroll-key]")].map((el) => [
+      el.dataset.scrollKey,
+      { top: el.scrollTop, left: el.scrollLeft }
+    ])
+  );
   if (active && active.id && (active.tagName === "INPUT" || active.tagName === "TEXTAREA")) {
     focus = { id: active.id, start: active.selectionStart, end: active.selectionEnd };
   }
   Object.assign(state, patch);
   render();
+  document.querySelectorAll("[data-scroll-key]").forEach((el) => {
+    const saved = scrollPositions.get(el.dataset.scrollKey);
+    if (!saved) return;
+    el.scrollTop = saved.top;
+    el.scrollLeft = saved.left;
+  });
   if (focus) {
     const el = document.getElementById(focus.id);
     if (el) { el.focus(); try { el.setSelectionRange(focus.start, focus.end); } catch (_) {} }
