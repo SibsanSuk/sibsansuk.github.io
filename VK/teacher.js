@@ -1372,22 +1372,27 @@ function viewDrawer() {
   const videoLoading = !!detail?.videoLoading;
   const chatbotLoading = !!detail?.chatbotLoading;
   const chapters = state.activities.map((activity) => {
-    const labels = (activity.tools || []).map((tool) => String(tool.label || "").toLowerCase());
-    const hasReading = labels.includes("bookroll");
-    const hasVideo = labels.includes("video");
-    const values = [];
-    const readingEntry = hasReading ? findActivityProgress(activity, detail?.readingEntries, "bookroll") : null;
-    const videoEntry = hasVideo ? findActivityProgress(activity, detail?.videoEntries, "video") : null;
-    if (Number.isFinite(readingEntry?.progress)) values.push(readingEntry.progress);
-    if (Number.isFinite(videoEntry?.progress)) values.push(videoEntry.progress);
-    const isLoading = (hasReading && readingLoading) || (hasVideo && videoLoading);
-    if (!values.length) {
-      return { name: activity.name, code: activity.code, tools: activity.tools, lbl: isLoading ? "…" : "-", col: "#667085", bg: "#f2f4f7", dot: "#d0d5dd" };
-    }
-    const progress = Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
-    if (progress >= 100) return { name: activity.name, code: activity.code, tools: activity.tools, lbl: "100%", col: "#0f766e", bg: "#d1fae5", dot: "#22c55e" };
-    if (progress > 0) return { name: activity.name, code: activity.code, tools: activity.tools, lbl: `${progress}%`, col: "#c2410c", bg: "#ffedd5", dot: "#f97316" };
-    return { name: activity.name, code: activity.code, tools: activity.tools, lbl: "0%", col: "#667085", bg: "#f2f4f7", dot: "#d0d5dd" };
+    const tools = (activity.tools || []).map((tool) => {
+      const label = String(tool.label || "").toLowerCase();
+      const isReading = label === "bookroll";
+      const isVideo = label === "video";
+      const entry = isReading
+        ? findActivityProgress(activity, detail?.readingEntries, "bookroll")
+        : (isVideo ? findActivityProgress(activity, detail?.videoEntries, "video") : null);
+      const loading = (isReading && readingLoading) || (isVideo && videoLoading);
+      const progress = Number.isFinite(entry?.progress) ? clamp(Math.round(entry.progress), 0, 100) : null;
+      if (loading && progress == null) return { ...tool, progress: null, progressLabel: "…", progressColor: "#667085", progressBg: "#f2f4f7" };
+      if (progress == null) return { ...tool, progress: null, progressLabel: "-", progressColor: "#667085", progressBg: "#f2f4f7" };
+      if (progress >= 100) return { ...tool, progress, progressLabel: "100%", progressColor: "#0f766e", progressBg: "#d1fae5" };
+      if (progress > 0) return { ...tool, progress, progressLabel: `${progress}%`, progressColor: "#c2410c", progressBg: "#ffedd5" };
+      return { ...tool, progress, progressLabel: "0%", progressColor: "#667085", progressBg: "#f2f4f7" };
+    });
+    const trackedTools = tools.filter((tool) => String(tool.label || "").toLowerCase() === "video" || String(tool.label || "").toLowerCase() === "bookroll");
+    const known = trackedTools.filter((tool) => Number.isFinite(tool.progress));
+    const dot = known.length && known.length === trackedTools.length && known.every((tool) => tool.progress >= 100)
+      ? "#22c55e"
+      : (known.some((tool) => tool.progress > 0) ? "#f97316" : "#d0d5dd");
+    return { name: activity.name, code: activity.code, tools, dot };
   });
   const ring = `conic-gradient(#0d9488 ${st.progress * 3.6}deg,#eaecf0 ${st.progress * 3.6}deg)`;
   const readRow = (color, label, val) => `<div style="display:flex;align-items:center;gap:8px;font:600 12px 'Noto Sans Thai';color:#475467"><span style="width:9px;height:9px;border-radius:50%;background:${color}"></span>${label}<span style="margin-left:auto;font:700 13px Inter;color:#101828">${val}</span></div>`;
@@ -1425,7 +1430,7 @@ function viewDrawer() {
         <div style="background:#fff;border:1px solid #ececf1;border-radius:14px;padding:16px 18px">
           <div style="font:700 14px 'Noto Sans Thai';color:#101828;margin-bottom:4px">หัวข้อการเรียนรู้รายบท</div>
           <div style="font:500 11.5px 'Noto Sans Thai';color:#98a2b3;margin-bottom:12px">สถานะการเรียนและเครื่องมือที่ใช้ในแต่ละบท</div>
-          ${chapters.map((c) => `<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid #f2f4f7"><span style="width:10px;height:10px;border-radius:50%;flex:none;background:${c.dot}"></span><div style="flex:1;min-width:0"><div style="font:600 13px 'Noto Sans Thai';color:#101828">${esc(c.name)}</div><div style="font:600 10.5px Inter;color:#b2b8c2">${esc(c.code)}</div></div><div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end">${c.tools.map((t) => `<span style="font:600 10.5px 'Noto Sans Thai';border-radius:6px;padding:3px 8px;${toolStyle(t.label)}">${esc(t.label)}</span>`).join("")}</div><span style="font:600 10.5px 'Noto Sans Thai';border-radius:999px;padding:3px 10px;white-space:nowrap;color:${c.col};background:${c.bg}">${c.lbl}</span></div>`).join("")}
+          ${chapters.map((c) => `<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid #f2f4f7"><span style="width:10px;height:10px;border-radius:50%;flex:none;background:${c.dot}"></span><div style="flex:1;min-width:0"><div style="font:600 13px 'Noto Sans Thai';color:#101828">${esc(c.name)}</div><div style="font:600 10.5px Inter;color:#b2b8c2">${esc(c.code)}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${c.tools.map((t) => `<span style="display:inline-flex;align-items:stretch;border-radius:6px;overflow:hidden;white-space:nowrap"><span style="font:600 10.5px 'Noto Sans Thai';padding:3px 7px;${toolStyle(t.label)}">${esc(t.label)}</span><span style="font:700 10.5px Inter;padding:3px 7px;color:${t.progressColor};background:${t.progressBg}">${esc(t.progressLabel)}</span></span>`).join("")}</div></div>`).join("")}
         </div>
         <div style="display:flex;gap:10px;margin-top:16px">
           <button class="h-teal" style="flex:1;border:none;background:#0d9488;color:#fff;border-radius:11px;padding:13px;font:700 14px 'Noto Sans Thai';cursor:pointer">เปิดหน้ารายละเอียดเต็ม</button>
