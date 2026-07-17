@@ -1110,7 +1110,7 @@ function viewDashboard() {
   else if (state.page === "students") page = viewStudents();
   else if (state.page === "tools") page = viewTools();
   else if (state.page === "map") page = viewMap();
-  const tabs = [["overview", "goOverview", "ภาพรวมทั้งห้อง"], ["students", "goStudents", "รายชื่อนักเรียน"], ["tools", "goTools", "การใช้งานเครื่องมือ"], ["map", "goMap", "แผนที่เปรียบเทียบ"]];
+  const tabs = [["overview", "goOverview", "ภาพรวมทั้งห้อง"], ["students", "goStudents", "รายชื่อนักเรียน"], ["tools", "goTools", "การใช้งานเครื่องมือ"]];
 
   // left vertical tab rail, content fills the rest (more vertical room on landscape / wide)
   if (side) {
@@ -1539,10 +1539,6 @@ function viewDrawer() {
           <div style="font:700 14px 'Noto Sans Thai';color:#101828;margin-bottom:4px">หัวข้อการเรียนรู้รายบท</div>
           <div style="font:500 11.5px 'Noto Sans Thai';color:#98a2b3;margin-bottom:12px">สถานะการเรียนและเครื่องมือที่ใช้ในแต่ละบท</div>
           ${chapters.map((c) => `<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid #f2f4f7"><span style="width:10px;height:10px;border-radius:50%;flex:none;background:${c.dot}"></span><div style="flex:1;min-width:0"><div style="font:600 13px 'Noto Sans Thai';color:#101828">${esc(c.name)}</div><div style="font:600 10.5px Inter;color:#b2b8c2">${esc(c.code)}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${c.tools.map((t) => `<span style="display:inline-flex;align-items:stretch;border-radius:6px;overflow:hidden;white-space:nowrap"><span style="font:600 10.5px 'Noto Sans Thai';padding:3px 7px;${toolStyle(t.label)}">${esc(t.label)}</span><span style="font:700 10.5px Inter;min-width:29px;padding:3px 7px;color:${t.progressColor};background:${t.progressBg};display:inline-flex;align-items:center;justify-content:center">${t.loading ? loadingSpinner(10, 1.5) : esc(t.progressLabel)}</span></span>`).join("")}</div></div>`).join("")}
-        </div>
-        <div style="display:flex;gap:10px;margin-top:16px">
-          <button class="h-teal" style="flex:1;border:none;background:#0d9488;color:#fff;border-radius:11px;padding:13px;font:700 14px 'Noto Sans Thai';cursor:pointer">เปิดหน้ารายละเอียดเต็ม</button>
-          <button class="h-light" style="border:1px solid #e4e7ec;background:#fff;color:#475467;border-radius:11px;padding:13px 18px;font:700 14px 'Noto Sans Thai';cursor:pointer">ส่งข้อความ</button>
         </div>
       </div>
     </div>
