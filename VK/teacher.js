@@ -98,15 +98,20 @@ const chatbotSpeedUrl = (courseId, userId) => `${teacherConfig.sbsUrl}/stats/ech
 const externalJson = async (url) => {
   const entry = { url, auth: false, at: new Date().toLocaleTimeString("th-TH") };
   API_LOG.push(entry);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: controller.signal });
     entry.status = res.status;
     if (!res.ok) { entry.ok = false; entry.error = `${res.status} ${res.statusText}`; throw new Error(entry.error); }
     const json = await res.json();
     entry.ok = true;
     if (DEBUG) entry.sample = json;
     return json;
-  } catch (e) { entry.ok = false; entry.error = entry.error || e.message; throw e; }
+  } catch (e) {
+    const error = e?.name === "AbortError" ? new Error("request timeout") : e;
+    entry.ok = false; entry.error = entry.error || error.message; throw error;
+  } finally { clearTimeout(timeoutId); }
 };
 const apiPost = async (url, body) => {
   const entry = { url, method: "POST", at: new Date().toLocaleTimeString("th-TH") };
@@ -1229,9 +1234,19 @@ async function loadStudentDetailApis(st) {
   const cid = selected?.courseId || state.courseKey;
   const userId = String(st?.id || "").trim();
   const email = String(st?.email || "").trim();
-  const result = { studentId: st?.id, loading: false, reading: null, video: null, chatbotSeconds: null, errors: [] };
+  const result = {
+    studentId: st?.id, loading: true,
+    readingLoading: true, videoLoading: true, chatbotLoading: true,
+    reading: null, video: null, chatbotSeconds: null, errors: []
+  };
+  const publish = (patch) => {
+    Object.assign(result, patch);
+    if (String(state.student) !== String(st?.id)) return;
+    setState({ studentDetail: { ...state.studentDetail, ...patch, studentId: st?.id, errors: [...result.errors] } });
+  };
   if (!cid || !userId) {
     result.errors.push("ไม่พบ courseId หรือ student id");
+    publish({ loading: false, readingLoading: false, videoLoading: false, chatbotLoading: false });
     return result;
   }
 
@@ -1248,7 +1263,7 @@ async function loadStudentDetailApis(st) {
         if (response.status === "fulfilled") values.push(...readingProgressValues(response.value));
       });
     }
-    result.reading = values.length ? summarizeProgress(values, bookrollTools.length) : null;
+    publish({ reading: values.length ? summarizeProgress(values, bookrollTools.length) : null, readingLoading: false });
   };
 
   const loadVideo = async () => {
@@ -1258,19 +1273,22 @@ async function loadStudentDetailApis(st) {
     for (const candidate of candidates) {
       try {
         const values = videoProgressValues(await externalJson(videoProgressUrl(candidate, cid)));
-        if (values.length) { result.video = summarizeProgress(values, videoCount); return; }
+        if (values.length) { publish({ video: summarizeProgress(values, videoCount), videoLoading: false }); return; }
       } catch (err) {
         result.errors.push(`Video (${candidate}): ${err.message}`);
       }
     }
+    publish({ video: null, videoLoading: false });
   };
 
   const loadChatbot = async () => {
     try { result.chatbotSeconds = chatbotTimeSeconds(await externalJson(chatbotSpeedUrl(cid, userId))); }
     catch (err) { result.errors.push(`Chatbot: ${err.message}`); }
+    publish({ chatbotSeconds: result.chatbotSeconds, chatbotLoading: false });
   };
 
   await Promise.allSettled([loadReading(), loadVideo(), loadChatbot()]);
+  publish({ loading: false, readingLoading: false, videoLoading: false, chatbotLoading: false });
   return result;
 }
 
@@ -1280,7 +1298,9 @@ function viewDrawer() {
   const detail = String(state.studentDetail?.studentId) === String(st.id) ? state.studentDetail : null;
   const reading = detail?.reading;
   const video = detail?.video;
-  const detailLoading = !!detail?.loading;
+  const readingLoading = !!detail?.readingLoading;
+  const videoLoading = !!detail?.videoLoading;
+  const chatbotLoading = !!detail?.chatbotLoading;
   const chapters = state.activities.map((c) => ({ name: c.name, code: c.code, tools: c.tools, lbl: "-", col: "#667085", bg: "#f2f4f7", dot: "#d0d5dd" }));
   const ring = `conic-gradient(#0d9488 ${st.progress * 3.6}deg,#eaecf0 ${st.progress * 3.6}deg)`;
   const readRow = (color, label, val) => `<div style="display:flex;align-items:center;gap:8px;font:600 12px 'Noto Sans Thai';color:#475467"><span style="width:9px;height:9px;border-radius:50%;background:${color}"></span>${label}<span style="margin-left:auto;font:700 13px Inter;color:#101828">${val}</span></div>`;
@@ -1303,16 +1323,16 @@ function viewDrawer() {
         <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:12px;align-items:center;background:#fff;border:1px solid #ececf1;border-radius:14px;padding:16px 18px;margin-bottom:16px">
           <div style="position:relative;width:78px;height:78px"><div style="width:78px;height:78px;border-radius:50%;background:${ring}"></div><div style="position:absolute;inset:11px;background:#fff;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center"><div style="font:800 18px Inter;color:#0f766e">${st.progW}</div></div></div>
           <div style="text-align:center;border-right:1px solid #eef0f3"><div style="font:800 22px Inter;color:#101828">${esc(st.quizText)}</div><div style="font:600 11.5px 'Noto Sans Thai';color:#98a2b3">คะแนน Quiz</div></div>
-          <div style="text-align:center"><div style="font:800 22px Inter;color:#101828">${detailLoading ? "…" : esc(formatDuration(detail?.chatbotSeconds))}</div><div style="font:600 11.5px 'Noto Sans Thai';color:#98a2b3">เวลาทำแบบฝึกหัด</div></div>
+          <div style="text-align:center"><div style="font:800 22px Inter;color:#101828">${chatbotLoading ? "…" : esc(formatDuration(detail?.chatbotSeconds))}</div><div style="font:600 11.5px 'Noto Sans Thai';color:#98a2b3">เวลาทำแบบฝึกหัด</div></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
           <div style="background:#fff;border:1px solid #ececf1;border-radius:14px;padding:15px 17px">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="width:24px;height:24px;border-radius:7px;background:#5ab877;color:#fff;display:inline-flex;align-items:center;justify-content:center;font:700 11px Inter">▤</span><span style="font:700 13px 'Noto Sans Thai';color:#101828">ความคืบหน้าการอ่าน</span></div>
-            <div style="display:flex;flex-direction:column;gap:7px">${readRow("#22c55e", "อ่านจบ", detailLoading ? "…" : (reading?.done ?? "-"))}${readRow("#f97316", "กำลังอ่าน", detailLoading ? "…" : (reading?.doing ?? "-"))}${readRow("#d0d5dd", "ยังไม่ได้อ่าน", detailLoading ? "…" : (reading?.todo ?? "-"))}</div>
+            <div style="display:flex;flex-direction:column;gap:7px">${readRow("#22c55e", "อ่านจบ", readingLoading ? "…" : (reading?.done ?? "-"))}${readRow("#f97316", "กำลังอ่าน", readingLoading ? "…" : (reading?.doing ?? "-"))}${readRow("#d0d5dd", "ยังไม่ได้อ่าน", readingLoading ? "…" : (reading?.todo ?? "-"))}</div>
           </div>
           <div style="background:#fff;border:1px solid #ececf1;border-radius:14px;padding:15px 17px">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="width:24px;height:24px;border-radius:7px;background:#7b83eb;color:#fff;display:inline-flex;align-items:center;justify-content:center;font:700 10px Inter">▶</span><span style="font:700 13px 'Noto Sans Thai';color:#101828">ความคืบหน้าวิดีโอ</span></div>
-            <div style="display:flex;flex-direction:column;gap:7px">${readRow("#22c55e", "ดูจบ", detailLoading ? "…" : (video?.done ?? "-"))}${readRow("#f97316", "กำลังดู", detailLoading ? "…" : (video?.doing ?? "-"))}${readRow("#d0d5dd", "ยังไม่ได้ดู", detailLoading ? "…" : (video?.todo ?? "-"))}</div>
+            <div style="display:flex;flex-direction:column;gap:7px">${readRow("#22c55e", "ดูจบ", videoLoading ? "…" : (video?.done ?? "-"))}${readRow("#f97316", "กำลังดู", videoLoading ? "…" : (video?.doing ?? "-"))}${readRow("#d0d5dd", "ยังไม่ได้ดู", videoLoading ? "…" : (video?.todo ?? "-"))}</div>
           </div>
         </div>
         <div style="background:#fff;border:1px solid #ececf1;border-radius:14px;padding:16px 18px">
@@ -1698,7 +1718,14 @@ const H = {
   openStudent: async (id) => {
     const st = state.students.find((item) => String(item.id) === String(id));
     if (!st) return;
-    setState({ student: id, studentDetail: { studentId: id, loading: true, reading: null, video: null, chatbotSeconds: null, errors: [] } });
+    setState({
+      student: id,
+      studentDetail: {
+        studentId: id, loading: true,
+        readingLoading: true, videoLoading: true, chatbotLoading: true,
+        reading: null, video: null, chatbotSeconds: null, errors: []
+      }
+    });
     const detail = await loadStudentDetailApis(st);
     if (String(state.student) === String(id)) setState({ studentDetail: detail });
   },
