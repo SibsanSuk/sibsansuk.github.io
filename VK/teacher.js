@@ -1478,6 +1478,7 @@ function viewDrawer() {
   const readingLoading = !!detail?.readingLoading;
   const videoLoading = !!detail?.videoLoading;
   const chatbotLoading = !!detail?.chatbotLoading;
+  const loadingSpinner = (size = 12, width = 2) => `<span role="status" aria-label="กำลังโหลด" title="กำลังโหลด" style="display:inline-block;width:${size}px;height:${size}px;border:${width}px solid #d0d5dd;border-top-color:#0d9488;border-radius:50%;animation:tdspin .75s linear infinite;vertical-align:middle"></span>`;
   const chapters = state.activities.map((activity) => {
     const tools = (activity.tools || []).map((tool) => {
       const label = String(tool.label || "").toLowerCase();
@@ -1488,11 +1489,11 @@ function viewDrawer() {
         : (isVideo ? findActivityProgress(activity, detail?.videoEntries, "video") : null);
       const loading = (isReading && readingLoading) || (isVideo && videoLoading);
       const progress = Number.isFinite(entry?.progress) ? clamp(Math.round(entry.progress), 0, 100) : null;
-      if (loading && progress == null) return { ...tool, progress: null, progressLabel: "…", progressColor: "#667085", progressBg: "#f2f4f7" };
-      if (progress == null) return { ...tool, progress: null, progressLabel: "-", progressColor: "#667085", progressBg: "#f2f4f7" };
-      if (progress >= 100) return { ...tool, progress, progressLabel: "100%", progressColor: "#0f766e", progressBg: "#d1fae5" };
-      if (progress > 0) return { ...tool, progress, progressLabel: `${progress}%`, progressColor: "#c2410c", progressBg: "#ffedd5" };
-      return { ...tool, progress, progressLabel: "0%", progressColor: "#667085", progressBg: "#f2f4f7" };
+      if (loading && progress == null) return { ...tool, loading: true, progress: null, progressLabel: "", progressColor: "#667085", progressBg: "#f2f4f7" };
+      if (progress == null) return { ...tool, loading: false, progress: null, progressLabel: "-", progressColor: "#667085", progressBg: "#f2f4f7" };
+      if (progress >= 100) return { ...tool, loading: false, progress, progressLabel: "100%", progressColor: "#0f766e", progressBg: "#d1fae5" };
+      if (progress > 0) return { ...tool, loading: false, progress, progressLabel: `${progress}%`, progressColor: "#c2410c", progressBg: "#ffedd5" };
+      return { ...tool, loading: false, progress, progressLabel: "0%", progressColor: "#667085", progressBg: "#f2f4f7" };
     });
     const trackedTools = tools.filter((tool) => String(tool.label || "").toLowerCase() === "video" || String(tool.label || "").toLowerCase() === "bookroll");
     const known = trackedTools.filter((tool) => Number.isFinite(tool.progress));
@@ -1522,22 +1523,22 @@ function viewDrawer() {
         <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:12px;align-items:center;background:#fff;border:1px solid #ececf1;border-radius:14px;padding:16px 18px;margin-bottom:16px">
           <div style="position:relative;width:78px;height:78px"><div style="width:78px;height:78px;border-radius:50%;background:${ring}"></div><div style="position:absolute;inset:11px;background:#fff;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center"><div style="font:800 18px Inter;color:#0f766e">${st.progW}</div></div></div>
           <div style="text-align:center;border-right:1px solid #eef0f3"><div style="font:800 22px Inter;color:#101828">${esc(st.quizText)}</div><div style="font:600 11.5px 'Noto Sans Thai';color:#98a2b3">คะแนน Quiz</div></div>
-          <div style="text-align:center"><div style="font:800 22px Inter;color:#101828">${chatbotLoading ? "…" : esc(formatDuration(detail?.chatbotSeconds))}</div><div style="font:600 11.5px 'Noto Sans Thai';color:#98a2b3">เวลาทำแบบฝึกหัด</div></div>
+          <div style="text-align:center"><div style="font:800 22px Inter;color:#101828;min-height:27px;display:flex;align-items:center;justify-content:center">${chatbotLoading ? loadingSpinner(16, 2) : esc(formatDuration(detail?.chatbotSeconds))}</div><div style="font:600 11.5px 'Noto Sans Thai';color:#98a2b3">เวลาทำแบบฝึกหัด</div></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
           <div style="background:#fff;border:1px solid #ececf1;border-radius:14px;padding:15px 17px">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="width:24px;height:24px;border-radius:7px;background:#5ab877;color:#fff;display:inline-flex;align-items:center;justify-content:center;font:700 11px Inter">▤</span><span style="font:700 13px 'Noto Sans Thai';color:#101828">ความคืบหน้าการอ่าน</span></div>
-            <div style="display:flex;flex-direction:column;gap:7px">${readRow("#22c55e", "อ่านจบ", readingLoading ? "…" : (reading?.done ?? "-"))}${readRow("#f97316", "กำลังอ่าน", readingLoading ? "…" : (reading?.doing ?? "-"))}${readRow("#d0d5dd", "ยังไม่ได้อ่าน", readingLoading ? "…" : (reading?.todo ?? "-"))}</div>
+            <div style="display:flex;flex-direction:column;gap:7px">${readRow("#22c55e", "อ่านจบ", readingLoading ? loadingSpinner() : (reading?.done ?? "-"))}${readRow("#f97316", "กำลังอ่าน", readingLoading ? loadingSpinner() : (reading?.doing ?? "-"))}${readRow("#d0d5dd", "ยังไม่ได้อ่าน", readingLoading ? loadingSpinner() : (reading?.todo ?? "-"))}</div>
           </div>
           <div style="background:#fff;border:1px solid #ececf1;border-radius:14px;padding:15px 17px">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span style="width:24px;height:24px;border-radius:7px;background:#7b83eb;color:#fff;display:inline-flex;align-items:center;justify-content:center;font:700 10px Inter">▶</span><span style="font:700 13px 'Noto Sans Thai';color:#101828">ความคืบหน้าวิดีโอ</span></div>
-            <div style="display:flex;flex-direction:column;gap:7px">${readRow("#22c55e", "ดูจบ", videoLoading ? "…" : (video?.done ?? "-"))}${readRow("#f97316", "กำลังดู", videoLoading ? "…" : (video?.doing ?? "-"))}${readRow("#d0d5dd", "ยังไม่ได้ดู", videoLoading ? "…" : (video?.todo ?? "-"))}</div>
+            <div style="display:flex;flex-direction:column;gap:7px">${readRow("#22c55e", "ดูจบ", videoLoading ? loadingSpinner() : (video?.done ?? "-"))}${readRow("#f97316", "กำลังดู", videoLoading ? loadingSpinner() : (video?.doing ?? "-"))}${readRow("#d0d5dd", "ยังไม่ได้ดู", videoLoading ? loadingSpinner() : (video?.todo ?? "-"))}</div>
           </div>
         </div>
         <div style="background:#fff;border:1px solid #ececf1;border-radius:14px;padding:16px 18px">
           <div style="font:700 14px 'Noto Sans Thai';color:#101828;margin-bottom:4px">หัวข้อการเรียนรู้รายบท</div>
           <div style="font:500 11.5px 'Noto Sans Thai';color:#98a2b3;margin-bottom:12px">สถานะการเรียนและเครื่องมือที่ใช้ในแต่ละบท</div>
-          ${chapters.map((c) => `<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid #f2f4f7"><span style="width:10px;height:10px;border-radius:50%;flex:none;background:${c.dot}"></span><div style="flex:1;min-width:0"><div style="font:600 13px 'Noto Sans Thai';color:#101828">${esc(c.name)}</div><div style="font:600 10.5px Inter;color:#b2b8c2">${esc(c.code)}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${c.tools.map((t) => `<span style="display:inline-flex;align-items:stretch;border-radius:6px;overflow:hidden;white-space:nowrap"><span style="font:600 10.5px 'Noto Sans Thai';padding:3px 7px;${toolStyle(t.label)}">${esc(t.label)}</span><span style="font:700 10.5px Inter;padding:3px 7px;color:${t.progressColor};background:${t.progressBg}">${esc(t.progressLabel)}</span></span>`).join("")}</div></div>`).join("")}
+          ${chapters.map((c) => `<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid #f2f4f7"><span style="width:10px;height:10px;border-radius:50%;flex:none;background:${c.dot}"></span><div style="flex:1;min-width:0"><div style="font:600 13px 'Noto Sans Thai';color:#101828">${esc(c.name)}</div><div style="font:600 10.5px Inter;color:#b2b8c2">${esc(c.code)}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${c.tools.map((t) => `<span style="display:inline-flex;align-items:stretch;border-radius:6px;overflow:hidden;white-space:nowrap"><span style="font:600 10.5px 'Noto Sans Thai';padding:3px 7px;${toolStyle(t.label)}">${esc(t.label)}</span><span style="font:700 10.5px Inter;min-width:29px;padding:3px 7px;color:${t.progressColor};background:${t.progressBg};display:inline-flex;align-items:center;justify-content:center">${t.loading ? loadingSpinner(10, 1.5) : esc(t.progressLabel)}</span></span>`).join("")}</div></div>`).join("")}
         </div>
         <div style="display:flex;gap:10px;margin-top:16px">
           <button class="h-teal" style="flex:1;border:none;background:#0d9488;color:#fff;border-radius:11px;padding:13px;font:700 14px 'Noto Sans Thai';cursor:pointer">เปิดหน้ารายละเอียดเต็ม</button>
