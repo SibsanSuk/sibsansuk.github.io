@@ -95,7 +95,6 @@ const apiGrades = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/a
 const apiCourseTree = (courseId) => apiGet(`${teacherConfig.sbsUrl}/lms/${encodeURIComponent(courseId)}`, { auth: false });
 const bookrollReadingUrl = (userId, usageId) => `https://bookroll.thaidlt.com/meca/student/readingData?userID=${encodeURIComponent(userId)}&usageId=${encodeURIComponent(usageId)}&view=student&ts=${Date.now()}`;
 const videoProgressUrl = (userName, courseId) => `https://viola.thaidlt.com/meca/chart/bar/?userName=${encodeURIComponent(userName)}&usageId=${encodeURIComponent(courseId)}`;
-const chatbotSpeedUrl = (courseId, userId) => `${teacherConfig.sbsUrl}/stats/echart/chatbotSpeed/${encodeURIComponent(courseId)}/${encodeURIComponent(userId)}`;
 const externalJson = async (url) => {
   const entry = { url, auth: false, at: new Date().toLocaleTimeString("th-TH") };
   API_LOG.push(entry);
@@ -352,20 +351,6 @@ const findActivityProgress = (activity, entries, toolLabel) => {
     })
     .sort((a, b) => progressTitleCore(b.key || b.title).length - progressTitleCore(a.key || a.title).length)[0] || null;
 };
-const chatbotTimeSeconds = (payload) => {
-  const option = chartOption(payload);
-  const series = Array.isArray(option.series) ? option.series : [];
-  const own = series.find((item) => /your|คุณ/i.test(String(item?.name || ""))) || series[0];
-  const values = Array.isArray(own?.data) ? own.data.map(chartNumber).filter(Number.isFinite) : [];
-  return values.length ? values.reduce((sum, value) => sum + Math.max(0, value), 0) : null;
-};
-const formatDuration = (seconds) => {
-  const value = Number(seconds);
-  if (!Number.isFinite(value)) return "-";
-  const mins = Math.floor(value / 60), secs = Math.round(value % 60);
-  return mins > 0 ? `${mins}:${String(secs).padStart(2, "0")} นาที` : `${secs} วินาที`;
-};
-
 const normalizeListPayload = (p) => {
   if (Array.isArray(p)) return p;
   if (!p || typeof p !== "object") return [];
@@ -1381,8 +1366,8 @@ async function loadStudentDetailApis(st) {
   const identityPromise = resolveStudentApiUserId(st);
   const result = {
     studentId: st?.id, loading: true,
-    readingLoading: true, videoLoading: true, chatbotLoading: true,
-    apiUserId: null, reading: null, video: null, readingEntries: [], videoEntries: [], chatbotSeconds: null, errors: []
+    readingLoading: true, videoLoading: true,
+    apiUserId: null, reading: null, video: null, readingEntries: [], videoEntries: [], errors: []
   };
   const publish = (patch) => {
     Object.assign(result, patch);
@@ -1391,7 +1376,7 @@ async function loadStudentDetailApis(st) {
   };
   if (!cid || (!email && !st?.apiUserId)) {
     result.errors.push("ไม่พบ courseId หรือข้อมูลระบุตัวนักเรียน");
-    publish({ loading: false, readingLoading: false, videoLoading: false, chatbotLoading: false });
+    publish({ loading: false, readingLoading: false, videoLoading: false });
     return result;
   }
   identityPromise.then((userId) => publish({ apiUserId: userId || null }));
@@ -1452,20 +1437,8 @@ async function loadStudentDetailApis(st) {
     publish({ video: null, videoLoading: false });
   };
 
-  const loadChatbot = async () => {
-    const userId = await identityPromise;
-    if (!userId) {
-      result.errors.push("Chatbot: ไม่พบ Keycloak userId ของนักเรียนจาก email");
-      publish({ chatbotSeconds: null, chatbotLoading: false });
-      return;
-    }
-    try { result.chatbotSeconds = chatbotTimeSeconds(await externalJson(chatbotSpeedUrl(cid, userId))); }
-    catch (err) { result.errors.push(`Chatbot: ${err.message}`); }
-    publish({ chatbotSeconds: result.chatbotSeconds, chatbotLoading: false });
-  };
-
-  await Promise.allSettled([loadReading(), loadVideo(), loadChatbot()]);
-  publish({ loading: false, readingLoading: false, videoLoading: false, chatbotLoading: false });
+  await Promise.allSettled([loadReading(), loadVideo()]);
+  publish({ loading: false, readingLoading: false, videoLoading: false });
   return result;
 }
 
@@ -1477,23 +1450,24 @@ function viewDrawer() {
   const video = detail?.video;
   const readingLoading = !!detail?.readingLoading;
   const videoLoading = !!detail?.videoLoading;
-  const chatbotLoading = !!detail?.chatbotLoading;
   const loadingSpinner = (size = 12, width = 2) => `<span role="status" aria-label="กำลังโหลด" title="กำลังโหลด" style="display:inline-block;width:${size}px;height:${size}px;border:${width}px solid #d0d5dd;border-top-color:#0d9488;border-radius:50%;animation:tdspin .75s linear infinite;vertical-align:middle"></span>`;
   const chapters = state.activities.map((activity) => {
     const tools = (activity.tools || []).map((tool) => {
       const label = String(tool.label || "").toLowerCase();
       const isReading = label === "bookroll";
       const isVideo = label === "video";
+      const showProgress = isReading || isVideo;
+      if (!showProgress) return { ...tool, showProgress: false };
       const entry = isReading
         ? findActivityProgress(activity, detail?.readingEntries, "bookroll")
         : (isVideo ? findActivityProgress(activity, detail?.videoEntries, "video") : null);
       const loading = (isReading && readingLoading) || (isVideo && videoLoading);
       const progress = Number.isFinite(entry?.progress) ? clamp(Math.round(entry.progress), 0, 100) : null;
-      if (loading && progress == null) return { ...tool, loading: true, progress: null, progressLabel: "", progressColor: "#667085", progressBg: "#f2f4f7" };
-      if (progress == null) return { ...tool, loading: false, progress: null, progressLabel: "-", progressColor: "#667085", progressBg: "#f2f4f7" };
-      if (progress >= 100) return { ...tool, loading: false, progress, progressLabel: "100%", progressColor: "#0f766e", progressBg: "#d1fae5" };
-      if (progress > 0) return { ...tool, loading: false, progress, progressLabel: `${progress}%`, progressColor: "#c2410c", progressBg: "#ffedd5" };
-      return { ...tool, loading: false, progress, progressLabel: "0%", progressColor: "#667085", progressBg: "#f2f4f7" };
+      if (loading && progress == null) return { ...tool, showProgress, loading: true, progress: null, progressLabel: "", progressColor: "#667085", progressBg: "#f2f4f7" };
+      if (progress == null) return { ...tool, showProgress, loading: false, progress: null, progressLabel: "-", progressColor: "#667085", progressBg: "#f2f4f7" };
+      if (progress >= 100) return { ...tool, showProgress, loading: false, progress, progressLabel: "100%", progressColor: "#0f766e", progressBg: "#d1fae5" };
+      if (progress > 0) return { ...tool, showProgress, loading: false, progress, progressLabel: `${progress}%`, progressColor: "#c2410c", progressBg: "#ffedd5" };
+      return { ...tool, showProgress, loading: false, progress, progressLabel: "0%", progressColor: "#667085", progressBg: "#f2f4f7" };
     });
     const trackedTools = tools.filter((tool) => String(tool.label || "").toLowerCase() === "video" || String(tool.label || "").toLowerCase() === "bookroll");
     const known = trackedTools.filter((tool) => Number.isFinite(tool.progress));
@@ -1520,10 +1494,9 @@ function viewDrawer() {
         </div>
       </div>
       <div style="padding:20px 22px 40px">
-        <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:12px;align-items:center;background:#fff;border:1px solid #ececf1;border-radius:14px;padding:16px 18px;margin-bottom:16px">
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;background:#fff;border:1px solid #ececf1;border-radius:14px;padding:16px 18px;margin-bottom:16px">
           <div style="position:relative;width:78px;height:78px"><div style="width:78px;height:78px;border-radius:50%;background:${ring}"></div><div style="position:absolute;inset:11px;background:#fff;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center"><div style="font:800 18px Inter;color:#0f766e">${st.progW}</div></div></div>
-          <div style="text-align:center;border-right:1px solid #eef0f3"><div style="font:800 22px Inter;color:#101828">${esc(st.quizText)}</div><div style="font:600 11.5px 'Noto Sans Thai';color:#98a2b3">คะแนน Quiz</div></div>
-          <div style="text-align:center"><div style="font:800 22px Inter;color:#101828;min-height:27px;display:flex;align-items:center;justify-content:center">${chatbotLoading ? loadingSpinner(16, 2) : esc(formatDuration(detail?.chatbotSeconds))}</div><div style="font:600 11.5px 'Noto Sans Thai';color:#98a2b3">เวลาทำแบบฝึกหัด</div></div>
+          <div style="text-align:center"><div style="font:800 22px Inter;color:#101828">${esc(st.quizText)}</div><div style="font:600 11.5px 'Noto Sans Thai';color:#98a2b3">คะแนน Quiz</div></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
           <div style="background:#fff;border:1px solid #ececf1;border-radius:14px;padding:15px 17px">
@@ -1538,7 +1511,7 @@ function viewDrawer() {
         <div style="background:#fff;border:1px solid #ececf1;border-radius:14px;padding:16px 18px">
           <div style="font:700 14px 'Noto Sans Thai';color:#101828;margin-bottom:4px">หัวข้อการเรียนรู้รายบท</div>
           <div style="font:500 11.5px 'Noto Sans Thai';color:#98a2b3;margin-bottom:12px">สถานะการเรียนและเครื่องมือที่ใช้ในแต่ละบท</div>
-          ${chapters.map((c) => `<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid #f2f4f7"><span style="width:10px;height:10px;border-radius:50%;flex:none;background:${c.dot}"></span><div style="flex:1;min-width:0"><div style="font:600 13px 'Noto Sans Thai';color:#101828">${esc(c.name)}</div><div style="font:600 10.5px Inter;color:#b2b8c2">${esc(c.code)}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${c.tools.map((t) => `<span style="display:inline-flex;align-items:stretch;border-radius:6px;overflow:hidden;white-space:nowrap"><span style="font:600 10.5px 'Noto Sans Thai';padding:3px 7px;${toolStyle(t.label)}">${esc(t.label)}</span><span style="font:700 10.5px Inter;min-width:29px;padding:3px 7px;color:${t.progressColor};background:${t.progressBg};display:inline-flex;align-items:center;justify-content:center">${t.loading ? loadingSpinner(10, 1.5) : esc(t.progressLabel)}</span></span>`).join("")}</div></div>`).join("")}
+          ${chapters.map((c) => `<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid #f2f4f7"><span style="width:10px;height:10px;border-radius:50%;flex:none;background:${c.dot}"></span><div style="flex:1;min-width:0"><div style="font:600 13px 'Noto Sans Thai';color:#101828">${esc(c.name)}</div><div style="font:600 10.5px Inter;color:#b2b8c2">${esc(c.code)}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${c.tools.map((t) => t.showProgress ? `<span style="display:inline-flex;align-items:stretch;border-radius:6px;overflow:hidden;white-space:nowrap"><span style="font:600 10.5px 'Noto Sans Thai';padding:3px 7px;${toolStyle(t.label)}">${esc(t.label)}</span><span style="font:700 10.5px Inter;min-width:29px;padding:3px 7px;color:${t.progressColor};background:${t.progressBg};display:inline-flex;align-items:center;justify-content:center">${t.loading ? loadingSpinner(10, 1.5) : esc(t.progressLabel)}</span></span>` : `<span style="font:600 10.5px 'Noto Sans Thai';border-radius:6px;padding:3px 7px;white-space:nowrap;${toolStyle(t.label)}">${esc(t.label)}</span>`).join("")}</div></div>`).join("")}
         </div>
       </div>
     </div>
@@ -1931,8 +1904,8 @@ const H = {
       student: id,
       studentDetail: {
         studentId: id, loading: true,
-        readingLoading: true, videoLoading: true, chatbotLoading: true,
-        apiUserId: null, reading: null, video: null, readingEntries: [], videoEntries: [], chatbotSeconds: null, errors: []
+        readingLoading: true, videoLoading: true,
+        apiUserId: null, reading: null, video: null, readingEntries: [], videoEntries: [], errors: []
       }
     });
     const detail = await loadStudentDetailApis(st);
