@@ -108,13 +108,16 @@ const apiAssign = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/a
 const apiProgress = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}/progress`);
 const apiGrades = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}/grades`);
 const apiCourseTree = (courseId) => apiGet(`${teacherConfig.sbsUrl}/lms/${encodeURIComponent(courseId)}`, { auth: false });
-// BookRoll reading progress, straight from the public service. Verified against the live API:
-// it accepts the learner's EMAIL in userID (no Keycloak userId lookup needed) and serves
-// `access-control-allow-origin: *`, so neither auth nor CORS is in the way. Answers
-// {"results": {"<doc title>": "<read>:<total>", …}}.
-// NOT the MECA proxy `/api/kidbright/course/{id}/data/bookroll` — that route 404s on this
-// backend, at both course and aetool level.
-const bookrollReadingUrl = (email, usageId) => `https://bookroll.thaidlt.com/meca/student/readingData?userID=${encodeURIComponent(email)}&usageId=${encodeURIComponent(usageId)}&view=student&ts=${Date.now()}`;
+// BookRoll reading progress via the MECA proxy. Verified on prod 2026-07-23: it resolves the
+// learner's EMAIL to their account and answers {"results": {"<doc title>": "<read>:<total>", …}}
+// for the whole course — a courseId and an aetool block id both return the same full list, so
+// one call per student is enough. A 404 here carries the body "Could not find any entity of
+// type User", i.e. that email has no account: a real answer about the data, not a broken route.
+//
+// Never fall back to bookroll.thaidlt.com. That service does not understand emails and replies
+// 200 with every document at "0:0" for any address including invented ones, which is
+// indistinguishable from a student who has genuinely read nothing.
+const bookrollReadingUrl = (email, usageId) => `${teacherConfig.baseUrl}/api/kidbright/course/${encodeURIComponent(usageId)}/data/bookroll?email=${encodeURIComponent(email)}`;
 const videoProgressUrl = (userName, courseId) => `https://viola.thaidlt.com/meca/chart/bar/?userName=${encodeURIComponent(userName)}&usageId=${encodeURIComponent(courseId)}`;
 // Time spent answering the chatbot, returned as an ECharts option. Keyed on Keycloak userId.
 const chatbotSpeedUrl = (courseId, userId) => `${teacherConfig.sbsUrl}/stats/echart/chatbotSpeed/${encodeURIComponent(courseId)}/${encodeURIComponent(userId)}`;
@@ -226,6 +229,10 @@ const progressTitleCore = (value) => normalizeProgressTitle(value).replace(/^\d+
 const normalizeUsageId = (value) => String(value || "").trim().toLowerCase();
 const studentApiUserIdCache = new Map();
 const courseRosterCache = new Map();
+// Only a real Keycloak UUID counts as an identity. The one consumer left (chatbotSpeed) answers
+// HTTP 200 with all-zero series for any identifier it doesn't know — including an email — so a
+// loose match would render believable but fabricated numbers instead of an honest "-".
+const KEYCLOAK_ID_RE = /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i;
 const apiUserRows = (payload) => {
   const rows = [];
   const visit = (value, depth = 0) => {
@@ -245,9 +252,7 @@ const apiUserIdFromPayload = (payload, email = "") => {
   if (!row) return "";
   const values = [row.userId, row.userID, row.user_id, row.sub, row.uuid, row.keycloakId, row.keycloak_id, row.keycloakUserId, row.id]
     .map((value) => String(value || "").trim()).filter(Boolean);
-  return values.find((value) => /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(value))
-    || values.find((value) => !/^\d+$/.test(value))
-    || "";
+  return values.find((value) => KEYCLOAK_ID_RE.test(value)) || "";
 };
 const resolveStudentApiUserIdFromRoster = async (student) => {
   const cls = selectedCourse();
@@ -281,9 +286,11 @@ const resolveStudentApiUserIdFromRoster = async (student) => {
   return match ? apiUserIdFromPayload(match, email) : "";
 };
 const resolveStudentApiUserId = async (student) => {
-  const embedded = [student?.apiUserId, student?.userId, student?.user_id, student?.sub, student?.uuid]
+  // `id` is in here because the /progress row's own id is sometimes the Keycloak UUID — the
+  // regex keeps its other form (an email, via the `row.id ?? email` fallback) out.
+  const embedded = [student?.apiUserId, student?.userId, student?.user_id, student?.sub, student?.uuid, student?.id]
     .map((value) => String(value || "").trim())
-    .find((value) => value && !/^\d+$/.test(value));
+    .find((value) => KEYCLOAK_ID_RE.test(value));
   if (embedded) return embedded;
   const email = String(student?.email || "").trim().toLowerCase();
   if (!email) return "";
@@ -1484,36 +1491,25 @@ async function loadStudentDetailApis(st) {
   }
   identityPromise.then((userId) => publish({ apiUserId: userId || null }));
 
-  // Keys on email via the MECA proxy — no need to wait on the Keycloak userId lookup at all.
+  // Keyed on email, so this never waits on the Keycloak userId lookup.
   const loadReading = async () => {
     let entries = [];
-    const bookrollTargets = state.activities.flatMap((activity) => activity.tools
-      .filter((tool) => String(tool.label).toLowerCase() === "bookroll")
-      .map((tool) => ({ usageId: tool.id, title: activity.name })));
+    const bookrollCount = state.activities.flatMap((activity) => activity.tools)
+      .filter((tool) => String(tool.label).toLowerCase() === "bookroll").length;
     try {
-      const payload = await externalJson(bookrollReadingUrl(email, cid));
-      // Course-level answers {"results": {title: "read:total"}}; the ECharts fallback is there
-      // in case this service ever switches to the chart shape the other stats endpoints use.
+      const payload = await apiGet(bookrollReadingUrl(email, cid), { critical: false });
+      // {"results": {title: "read:total"}}; the ECharts branch is insurance in case this ever
+      // switches to the chart shape the other stats endpoints use.
       entries = readingProgressEntries(payload, { usageId: cid });
       if (!entries.length) entries = echartProgressEntries(payload);
-      if (!entries.length) result.errors.push(`BookRoll (course): ตอบกลับ 200 แต่อ่านค่าไม่ได้ — ${describeShape(payload)}`);
-    }
-    catch (err) { result.errors.push(`BookRoll (course): ${err.message}`); }
-    // Unlike the MECA proxy, this service does accept a per-aetool usageId — so when the
-    // course-level call comes back empty, ask per BookRoll document instead.
-    if (!entries.length) {
-      const targets = [...new Map(bookrollTargets.filter((t) => t.usageId).map((t) => [t.usageId, t])).values()];
-      const responses = await Promise.allSettled(targets.map((t) => externalJson(bookrollReadingUrl(email, t.usageId))));
-      responses.forEach((response, i) => {
-        if (response.status !== "fulfilled") {
-          result.errors.push(`BookRoll (${targets[i].title}): ${response.reason?.message || "ล้มเหลว"}`);
-          return;
-        }
-        entries.push(...readingProgressEntries(response.value, { usageId: targets[i].usageId, titleHint: targets[i].title }));
-      });
+      if (!entries.length) result.errors.push(`BookRoll: ตอบกลับ 200 แต่อ่านค่าไม่ได้ — ${describeShape(payload)}`);
+    } catch (err) {
+      result.errors.push(String(err.message).startsWith("404")
+        ? `BookRoll: ไม่พบบัญชีผู้ใช้ของ ${email} ในระบบ (404)`
+        : `BookRoll: ${err.message}`);
     }
     publish({
-      reading: entries.length ? summarizeProgress(entries.map((entry) => entry.progress), bookrollTargets.length) : null,
+      reading: entries.length ? summarizeProgress(entries.map((entry) => entry.progress), bookrollCount) : null,
       readingEntries: entries,
       readingLoading: false
     });
@@ -1538,12 +1534,14 @@ async function loadStudentDetailApis(st) {
     publish({ video: null, videoLoading: false });
   };
 
-  // Unlike BookRoll, chatbotSpeed really is keyed on the Keycloak userId, so this one has to
-  // wait for the lookup and genuinely can't run without it.
+  // Unlike BookRoll, chatbotSpeed is keyed strictly on the Keycloak userId and cannot fall back
+  // to email: it answers 200 with an all-zero "Your Score" series for any identifier it doesn't
+  // recognise (verified with a made-up address), so guessing would fabricate data. Without a
+  // real UUID the honest result is no result.
   const loadChatbot = async () => {
     const userId = await identityPromise;
     if (!userId) {
-      result.errors.push("Chatbot: ไม่พบ Keycloak userId ของนักเรียนจาก email");
+      result.errors.push("Chatbot: ไม่พบ Keycloak userId (GET /user/query ตอบ 401 — role ครูไม่มีสิทธิ์) จึงข้ามไป เพราะ endpoint นี้ตอบ 0 ให้ทุก id ที่ไม่รู้จัก");
       publish({ chatbotSeconds: null, chatbotLoading: false });
       return;
     }
