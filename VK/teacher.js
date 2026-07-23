@@ -354,16 +354,11 @@ const readingProgressEntries = (payload, opts = {}) => {
   visit(payload, titleHint, usageHint);
   return out;
 };
-const readingPayloadHasRows = (payload) => {
-  if (Array.isArray(payload)) return payload.length > 0;
-  if (!payload || typeof payload !== "object") return false;
-  const rows = payload.results ?? payload.result ?? payload.data;
-  if (Array.isArray(rows)) return rows.length > 0;
-  return !!rows && typeof rows === "object" && Object.keys(rows).length > 0;
-};
-const videoProgressEntries = (payload) => {
+// The MECA/SBS stats endpoints answer with an ECharts option — a category axis of item titles
+// against one numeric series of percentages. Video and the BookRoll proxy both use this shape.
+const echartProgressEntries = (payload) => {
   const option = chartOption(payload);
-  const labels = chartCategoryData(option.yAxis);
+  const labels = chartCategoryData(option.yAxis).length ? chartCategoryData(option.yAxis) : chartCategoryData(option.xAxis);
   const series = Array.isArray(option.series) ? option.series : [];
   const data = Array.isArray(series[0]?.data) ? series[0].data : [];
   const out = [];
@@ -406,6 +401,15 @@ const chatbotTimeSeconds = (payload) => {
   const own = series.find((item) => /your|คุณ/i.test(String(item?.name || ""))) || series[0];
   const values = Array.isArray(own?.data) ? own.data.map(chartNumber).filter(Number.isFinite) : [];
   return values.length ? values.reduce((sum, value) => sum + Math.max(0, value), 0) : null;
+};
+// Compact description of an unknown payload, so "call worked but nothing parsed" can be told
+// apart from "call failed" without opening devtools.
+const describeShape = (payload) => {
+  if (payload == null) return String(payload);
+  if (Array.isArray(payload)) return `array[${payload.length}]${payload.length ? ` of ${typeof payload[0]}` : ""}`;
+  if (typeof payload !== "object") return typeof payload;
+  const keys = Object.keys(payload);
+  return `object{${keys.slice(0, 8).join(",")}${keys.length > 8 ? ",…" : ""}}`;
 };
 const formatDuration = (seconds) => {
   const value = Number(seconds);
@@ -723,15 +727,22 @@ function expireSession() {
   if (document.getElementById("app")) render();
 }
 
+// The whole shell renders inside a CSS `zoom` wrapper driven by the font-size picker, so the
+// room the layout actually gets is the viewport divided by that zoom. Breakpoints must be read
+// in those same units — measuring the raw viewport keeps a desktop layout at "ใหญ่" even though
+// it only has tablet-width space left, which is what makes the layout look broken.
+const zoomFactor = () => (state.fontSize === "sm" ? 0.9 : state.fontSize === "lg" ? 1.15 : 1);
+const vwZ = () => (window.innerWidth || 1200) / zoomFactor();
+const vhZ = () => (window.innerHeight || 800) / zoomFactor();
 /* responsive breakpoints: phone < 700 ≤ tablet < 1024 ≤ desktop */
-const BP = () => { const w = window.innerWidth || 1200; return w < 700 ? "phone" : w < 1024 ? "tablet" : "desktop"; };
+const BP = () => { const w = vwZ(); return w < 700 ? "phone" : w < 1024 ? "tablet" : "desktop"; };
 // Viewport too short to split a full-height row of cards (landscape phone ≈ 390-430px tall).
 // Side-by-side cards would crush their fixed-height contents and clip them behind overflow:hidden.
-const shortView = () => (window.innerHeight || 800) < 620;
+const shortView = () => vhZ() < 620;
 // Left tab rail when width outweighs height: wide desktop (≥1280) OR any landscape
 // phone/tablet (short viewport). Frees vertical room for content where it's scarce.
 const useSideNav = () => {
-  const w = window.innerWidth || 1200, h = window.innerHeight || 800;
+  const w = vwZ(), h = vhZ();
   return w >= 1280 || (w > h && w >= 640);
 };
 const layoutKey = () => BP() + (useSideNav() ? "|s" : "") + (shortView() ? "|h" : "");
@@ -1176,7 +1187,7 @@ function viewUserMenu(initials) {
 
 /* ---------------- dashboard shell ---------------- */
 function viewDashboard() {
-  const phone = BP() === "phone", side = useSideNav(), compact = (window.innerWidth || 1200) < 1024;
+  const phone = BP() === "phone", side = useSideNav(), compact = vwZ() < 1024;
   let page = "";
   if (!state.metrics) page = `<div style="padding:40px;text-align:center;font:600 14px 'Noto Sans Thai';color:#98a2b3">กำลังเตรียมข้อมูล...</div>`;
   else if (state.page === "overview") page = viewOverview();
@@ -1472,30 +1483,21 @@ async function loadStudentDetailApis(st) {
   // Keys on email via the MECA proxy — no need to wait on the Keycloak userId lookup at all.
   const loadReading = async () => {
     let entries = [];
-    let courseLevelAnswered = false;
-    const bookrollTargets = state.activities.flatMap((activity) => activity.tools
-      .filter((tool) => String(tool.label).toLowerCase() === "bookroll")
-      .map((tool) => ({ usageId: tool.id, title: activity.name })));
+    // Only used as the denominator for "ยังไม่ได้อ่าน" — the proxy is course-scoped, so there
+    // is nothing to fetch per aetool. (Passing a block id 404s: it only accepts a courseId.)
+    const bookrollCount = state.activities.flatMap((activity) => activity.tools)
+      .filter((tool) => String(tool.label).toLowerCase() === "bookroll").length;
     try {
       const payload = await apiGet(bookrollReadingUrl(email, cid), { critical: false });
-      courseLevelAnswered = readingPayloadHasRows(payload);
+      // Two shapes seen from this backend: row-ish JSON (read/total or "3:10"), and the ECharts
+      // option the stats endpoints return. Try rows first, fall back to the chart.
       entries = readingProgressEntries(payload, { usageId: cid });
+      if (!entries.length) entries = echartProgressEntries(payload);
+      if (!entries.length) result.errors.push(`BookRoll: ตอบกลับ 200 แต่อ่านค่าไม่ได้ — ${describeShape(payload)}`);
     }
     catch (err) { result.errors.push(`BookRoll: ${err.message}`); }
-    if (!entries.length && !courseLevelAnswered) {
-      const targets = [...new Map(bookrollTargets.filter((target) => target.usageId).map((target) => [target.usageId, target])).values()];
-      const responses = await Promise.allSettled(targets.map((target) => apiGet(bookrollReadingUrl(email, target.usageId), { critical: false })));
-      responses.forEach((response, index) => {
-        if (response.status === "fulfilled") {
-          entries.push(...readingProgressEntries(response.value, {
-            usageId: targets[index].usageId,
-            titleHint: targets[index].title
-          }));
-        }
-      });
-    }
     publish({
-      reading: entries.length ? summarizeProgress(entries.map((entry) => entry.progress), bookrollTargets.length) : null,
+      reading: entries.length ? summarizeProgress(entries.map((entry) => entry.progress), bookrollCount) : null,
       readingEntries: entries,
       readingLoading: false
     });
@@ -1508,7 +1510,7 @@ async function loadStudentDetailApis(st) {
     const candidates = [...new Set([email, userId].filter(Boolean))];
     for (const candidate of candidates) {
       try {
-        const entries = videoProgressEntries(await externalJson(videoProgressUrl(candidate, cid)));
+        const entries = echartProgressEntries(await externalJson(videoProgressUrl(candidate, cid)));
         if (entries.length) {
           publish({ video: summarizeProgress(entries.map((entry) => entry.progress), videoCount), videoEntries: entries, videoLoading: false });
           return;
@@ -1612,6 +1614,11 @@ function viewDrawer() {
           <div style="font:500 11.5px 'Noto Sans Thai';color:#98a2b3;margin-bottom:12px">สถานะการเรียนและเครื่องมือที่ใช้ในแต่ละบท</div>
           ${chapters.map((c) => `<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid #f2f4f7"><span style="width:10px;height:10px;border-radius:50%;flex:none;background:${c.dot}"></span><div style="flex:1;min-width:0"><div style="font:600 13px 'Noto Sans Thai';color:#101828">${esc(c.name)}</div><div style="font:600 10.5px Inter;color:#b2b8c2">${esc(c.code)}</div></div><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${c.tools.map((t) => t.showProgress ? `<span style="display:inline-flex;align-items:stretch;border-radius:6px;overflow:hidden;white-space:nowrap"><span style="font:600 10.5px 'Noto Sans Thai';padding:3px 7px;${toolStyle(t.label)}">${esc(t.label)}</span><span style="font:700 10.5px Inter;min-width:29px;padding:3px 7px;color:${t.progressColor};background:${t.progressBg};display:inline-flex;align-items:center;justify-content:center">${t.loading ? loadingSpinner(10, 1.5) : esc(t.progressLabel)}</span></span>` : `<span style="font:600 10.5px 'Noto Sans Thai';border-radius:6px;padding:3px 7px;white-space:nowrap;${toolStyle(t.label)}">${esc(t.label)}</span>`).join("")}</div></div>`).join("")}
         </div>
+        ${DEBUG && detail?.errors?.length ? `
+        <div style="background:#fff;border:1px solid #fecaca;border-radius:14px;padding:14px 16px;margin-top:14px">
+          <div style="font:700 12.5px 'Noto Sans Thai';color:#b42318;margin-bottom:7px">🐞 ปัญหาการดึงข้อมูล (${detail.errors.length})</div>
+          ${detail.errors.map((e) => `<div style="font:500 11px/1.6 ui-monospace,Menlo,monospace;color:#98424a;word-break:break-all;padding:3px 0;border-top:1px solid #fef2f2">${esc(e)}</div>`).join("")}
+        </div>` : ""}
       </div>
     </div>
   </div>`;
@@ -1905,7 +1912,7 @@ function renderTopbar(patch) {
 function render() {
   const app = document.getElementById("app");
   if (!app) return;
-  const zoom = state.fontSize === "sm" ? 0.9 : state.fontSize === "lg" ? 1.15 : 1;
+  const zoom = zoomFactor();
 
   if (!state.ready) {
     app.innerHTML = `<div style="height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;background:#0f766e;color:#fff">
@@ -2133,7 +2140,7 @@ const H = {
   // divide by zoom since it lives inside the zoomed app wrapper.
   toggleCardMenu: (id, el) => {
     if (state.cardMenu === id) { setState({ cardMenu: null, cardMenuPos: null }); return; }
-    const z = state.fontSize === "sm" ? 0.9 : state.fontSize === "lg" ? 1.15 : 1;
+    const z = zoomFactor();
     const r = el.getBoundingClientRect();
     setState({
       cardMenu: id,
@@ -2169,7 +2176,9 @@ const H = {
   setFilter: (key) => setState({ filter: key }),
   setCourseTab: (key) => setState({ courseTab: key }),
   pickLang: (code) => setState({ lang: code }),
-  pickFont: (size) => setState({ fontSize: size }),
+  // Font size changes the zoom, and the zoom feeds the breakpoints — so the layout key moves
+  // with it. Resync it after the render or the next resize compares against a stale key.
+  pickFont: (size) => { setState({ fontSize: size }); lastLayout = layoutKey(); },
   goSlide: (i) => { state.mapSlide = Number(i); stopSlideTimer(); applySlide(); startSlideTimer(); },
   downloadCsv: () => exportCsv(),
 };
