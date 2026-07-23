@@ -7,10 +7,11 @@
 | Name | Value |
 | --- | --- |
 | `BASEURL` | `https://adaptive-profile-bn-dev.ae.app.meca.in.th` |
+| `BOOKROLL_BASEURL` | `https://adaptive-profile-bn.ae.app.meca.in.th` (prod-only) |
 | `SBS_URL` | `https://sbs-backend.mooc.meca.in.th` |
 | API tester ใน repo นี้ | [http://localhost:3000/api-tester.html](http://localhost:3000/api-tester.html) |
 
-> หมายเหตุ: หลายเส้นของ `BASEURL` ต้องใช้ `Authorization: Bearer <keycloak token>` ถ้าคลิก link ตรง ๆ แล้วเจอ `401 Unauthorized` ให้เปิดผ่าน `api-tester.html` หลัง login หรือใช้ curl/Postman พร้อม Bearer token
+> หมายเหตุ: หลายเส้นของ `BASEURL` ต้องใช้ `Authorization: Bearer <keycloak token>` ถ้าคลิก link ตรง ๆ แล้วเจอ `401 Unauthorized` ให้เปิดผ่าน `api-tester.html` หลัง login หรือใช้ curl/Postman พร้อม Bearer token ส่วน BookRoll ต้องใช้ `BOOKROLL_BASEURL` เพราะ route นี้ไม่มีบน dev
 
 ## ค่าตัวอย่าง
 

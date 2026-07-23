@@ -1,9 +1,4 @@
-/* =====================================================================
- * Teacher Dashboard — "Teacher Dashboard Design" applied to live data.
- * Self-contained vanilla port of the design prototype.
- * Real course/progress/score JSON is wired into the dashboard tabs;
- * landing map has a design-data fallback for load failures.
- * ===================================================================== */
+/* Teacher dashboard client. */
 
 /* ------------------------------ config + loaders ------------------------------ */
 const teacherQuery = new URLSearchParams(globalThis.location?.search || "");
@@ -12,8 +7,9 @@ const readTeacherDashboardConfig = () => {
   return {
     oidc: runtime.oidc || {},
     instituteId: teacherQuery.get("instituteid") || teacherQuery.get("instituteId") || runtime.instituteId || "",
-    // live MECA API (see API_ENDPOINT_LINKS.md)
     baseUrl: runtime.baseUrl || "https://adaptive-profile-bn-dev.ae.app.meca.in.th",
+    // BookRoll is deployed separately from the remaining teacher APIs.
+    bookrollBaseUrl: runtime.bookrollBaseUrl || "https://adaptive-profile-bn.ae.app.meca.in.th",
     sbsUrl: runtime.sbsUrl || "https://sbs-backend.mooc.meca.in.th",
     clientId: runtime.clientId || "dashboard",
     assignId: teacherQuery.get("assignid") || teacherQuery.get("assignId") || runtime.assignId || "",
@@ -21,11 +17,7 @@ const readTeacherDashboardConfig = () => {
 };
 const teacherConfig = readTeacherDashboardConfig();
 
-/* =====================================================================
- * Live MECA integration — Keycloak (OIDC/PKCE) login + assign-based data.
- * Mirrors the flow in index.html. BASEURL calls require a Bearer token;
- * SBS /lms is public.
- * ===================================================================== */
+/* ------------------------------ authentication and API ------------------------------ */
 const OIDC = {
   authorizationEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/auth",
   tokenEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/token",
@@ -69,16 +61,11 @@ function oidcLogout() {
 }
 const authHeader = () => { const a = readAuth(); return a?.token?.access_token ? { Authorization: `Bearer ${a.token.access_token}` } : {}; };
 const SESSION_EXPIRED_MESSAGE = "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง";
-// A 401 proves the session is dead only when our own token has already expired. Backends here
-// also answer 401 when the token is fine but the role lacks access to that endpoint, and
-// clearing auth on those would sign a freshly-logged-in teacher out.
+// A valid token can receive 401 for insufficient permissions; expire only an invalid session.
 const sessionReallyExpired = () => { const a = readAuth(); return !a?.token?.access_token || authExpired(a); };
 const DEBUG = teacherQuery.get("debug") === "1";
 const API_LOG = [];
-// `critical: false` marks a call the app can live without — some endpoints (e.g. the management
-// user search) answer 401 for a perfectly valid teacher token simply because the role lacks
-// access. Treating that as an expired session logs the user out mid-session, so optional calls
-// just throw and let their caller ignore them.
+// Optional requests propagate errors without invalidating the authenticated session.
 const apiGet = async (url, { auth = true, critical = true } = {}) => {
   const entry = { url, auth, at: new Date().toLocaleTimeString("th-TH") };
   API_LOG.push(entry);
@@ -90,7 +77,22 @@ const apiGet = async (url, { auth = true, critical = true } = {}) => {
       expireSession();
       throw new Error(SESSION_EXPIRED_MESSAGE);
     }
-    if (!res.ok) { entry.ok = false; entry.error = `${res.status} ${res.statusText}`; throw new Error(entry.error); }
+    if (!res.ok) {
+      const raw = String(await res.text().catch(() => "")).trim();
+      let payload = null;
+      try { payload = raw ? JSON.parse(raw) : null; } catch (_) { payload = raw || null; }
+      const responseMessage = Array.isArray(payload?.message)
+        ? payload.message.join(", ")
+        : (payload?.message || payload?.error || (typeof payload === "string" ? payload : ""));
+      const detail = String(responseMessage || "").replace(/\s+/g, " ").slice(0, 500);
+      entry.ok = false;
+      entry.error = `${res.status} ${res.statusText}${detail ? ` — ${detail}` : ""}`;
+      const error = new Error(entry.error);
+      error.status = res.status;
+      error.payload = payload;
+      error.backendMessage = detail;
+      throw error;
+    }
     const json = await res.json();
     entry.ok = true;
     entry.count = Array.isArray(json) ? json.length : (Array.isArray(json?.data) ? json.data.length : undefined);
@@ -99,7 +101,6 @@ const apiGet = async (url, { auth = true, critical = true } = {}) => {
   } catch (e) { entry.ok = false; entry.error = entry.error || e.message; throw e; }
 };
 const apiUser = (sub) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/user/${encodeURIComponent(sub)}`);
-// Management-only search: role=user teachers get 401 here, which is expected, not a dead session.
 const apiUserByEmail = (email) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/user/query?email=${encodeURIComponent(email)}`, { critical: false });
 const apiTeacher = (sub) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/teacher/${encodeURIComponent(sub)}`);
 const apiUserInfo = () => apiGet(OIDC.userinfoEndpoint);
@@ -108,18 +109,11 @@ const apiAssign = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/a
 const apiProgress = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}/progress`);
 const apiGrades = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}/grades`);
 const apiCourseTree = (courseId) => apiGet(`${teacherConfig.sbsUrl}/lms/${encodeURIComponent(courseId)}`, { auth: false });
-// BookRoll reading progress via the MECA proxy. Verified on prod 2026-07-23: it resolves the
-// learner's EMAIL to their account and answers {"results": {"<doc title>": "<read>:<total>", …}}
-// for the whole course — a courseId and an aetool block id both return the same full list, so
-// one call per student is enough. A 404 here carries the body "Could not find any entity of
-// type User", i.e. that email has no account: a real answer about the data, not a broken route.
-//
-// Never fall back to bookroll.thaidlt.com. That service does not understand emails and replies
-// 200 with every document at "0:0" for any address including invented ones, which is
-// indistinguishable from a student who has genuinely read nothing.
-const bookrollReadingUrl = (email, usageId) => `${teacherConfig.baseUrl}/api/kidbright/course/${encodeURIComponent(usageId)}/data/bookroll?email=${encodeURIComponent(email)}`;
+// The proxy resolves learners by email and returns course-wide "<read>:<total>" results.
+// Direct BookRoll requests are avoided because unknown identities return zero data.
+const bookrollReadingUrl = (email, usageId) => `${teacherConfig.bookrollBaseUrl}/api/kidbright/course/${encodeURIComponent(usageId)}/data/bookroll?email=${encodeURIComponent(email)}`;
 const videoProgressUrl = (userName, courseId) => `https://viola.thaidlt.com/meca/chart/bar/?userName=${encodeURIComponent(userName)}&usageId=${encodeURIComponent(courseId)}`;
-// Time spent answering the chatbot, returned as an ECharts option. Keyed on Keycloak userId.
+// Chatbot statistics require the Keycloak user ID.
 const chatbotSpeedUrl = (courseId, userId) => `${teacherConfig.sbsUrl}/stats/echart/chatbotSpeed/${encodeURIComponent(courseId)}/${encodeURIComponent(userId)}`;
 const externalJson = async (url) => {
   const entry = { url, auth: false, at: new Date().toLocaleTimeString("th-TH") };
@@ -175,12 +169,7 @@ const apiDelete = async (url) => {
     return json;
   } catch (e) { entry.ok = false; entry.error = entry.error || e.message; throw e; }
 };
-// Catalog of courses a teacher can turn into a classroom.
-// GET /course?instituteId&grade&level&classRoom&createDate — note course uses `createDate`
-// (start,end), NOT the enroll aggregate's `createAt`. The backend returns nothing for an
-// empty query, so callers must pass at least one param.
-// opts is forwarded to apiGet: the add-classroom modal needs this call (critical), the student
-// drawer only probes it to resolve a userId (not critical).
+// Course search uses createDate; enrollment aggregation uses createAt.
 const apiCourseSearch = ({ grade, level, classRoom, instituteId, createDate } = {}, opts = {}) => {
   const qs = new URLSearchParams();
   if (grade) qs.set("grade", grade);
@@ -192,10 +181,8 @@ const apiCourseSearch = ({ grade, level, classRoom, instituteId, createDate } = 
   return apiGet(`${teacherConfig.baseUrl}/api/kidbright/course${q ? `?${q}` : ""}`, opts);
 };
 const apiCreateAssign = (body) => apiPost(`${teacherConfig.baseUrl}/api/kidbright/assign`, body);
-// Removes the classroom from the teacher's list (the assign record, not the course itself).
 const apiDeleteAssign = (assignId) => apiDelete(`${teacherConfig.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}`);
 const apiInstituteSearch = (name) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/institute?instituteName=${encodeURIComponent(name)}`);
-// Public nationwide enrollment aggregate (per-institute counts + coordinates), no auth.
 const ENROLL_RANGE = "2020-01-01," + new Date().toISOString().slice(0, 10);
 const apiEnrollAggregate = (range = ENROLL_RANGE) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/enroll/query?createAt=${range}`, { auth: false });
 
@@ -229,9 +216,7 @@ const progressTitleCore = (value) => normalizeProgressTitle(value).replace(/^\d+
 const normalizeUsageId = (value) => String(value || "").trim().toLowerCase();
 const studentApiUserIdCache = new Map();
 const courseRosterCache = new Map();
-// Only a real Keycloak UUID counts as an identity. The one consumer left (chatbotSpeed) answers
-// HTTP 200 with all-zero series for any identifier it doesn't know — including an email — so a
-// loose match would render believable but fabricated numbers instead of an honest "-".
+// Statistics endpoints return zero data for unknown IDs, so accept only Keycloak UUIDs.
 const KEYCLOAK_ID_RE = /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i;
 const apiUserRows = (payload) => {
   const rows = [];
@@ -286,8 +271,6 @@ const resolveStudentApiUserIdFromRoster = async (student) => {
   return match ? apiUserIdFromPayload(match, email) : "";
 };
 const resolveStudentApiUserId = async (student) => {
-  // `id` is in here because the /progress row's own id is sometimes the Keycloak UUID — the
-  // regex keeps its other form (an email, via the `row.id ?? email` fallback) out.
   const embedded = [student?.apiUserId, student?.userId, student?.user_id, student?.sub, student?.uuid, student?.id]
     .map((value) => String(value || "").trim())
     .find((value) => KEYCLOAK_ID_RE.test(value));
@@ -319,8 +302,7 @@ const readingProgressEntries = (payload, opts = {}) => {
       const match = value.trim().match(/^(\d+)\s*:\s*(\d+)$/);
       if (!match) return null;
       const total = Number(match[2]);
-      // "0:0" is a document the learner has simply not opened — 0%, not "no data". Dropping it
-      // would hide the row entirely and leave the drawer showing "-".
+      // "0:0" represents an unopened document.
       return total > 0 ? Math.round((Number(match[1]) / total) * 100) : 0;
     }
     if (!value || typeof value !== "object") return null;
@@ -365,8 +347,6 @@ const readingProgressEntries = (payload, opts = {}) => {
   visit(payload, titleHint, usageHint);
   return out;
 };
-// The MECA/SBS stats endpoints answer with an ECharts option — a category axis of item titles
-// against one numeric series of percentages. Video and the BookRoll proxy both use this shape.
 const echartProgressEntries = (payload) => {
   const option = chartOption(payload);
   const labels = chartCategoryData(option.yAxis).length ? chartCategoryData(option.yAxis) : chartCategoryData(option.xAxis);
@@ -404,8 +384,6 @@ const findActivityProgress = (activity, entries, toolLabel) => {
     })
     .sort((a, b) => progressTitleCore(b.key || b.title).length - progressTitleCore(a.key || a.title).length)[0] || null;
 };
-// chatbotSpeed answers with an ECharts option; sum this learner's series into total seconds.
-// The series carrying the student's own time is the one named "your…"/"คุณ", else the first.
 const chatbotTimeSeconds = (payload) => {
   const option = chartOption(payload);
   const series = Array.isArray(option.series) ? option.series : [];
@@ -413,8 +391,6 @@ const chatbotTimeSeconds = (payload) => {
   const values = Array.isArray(own?.data) ? own.data.map(chartNumber).filter(Number.isFinite) : [];
   return values.length ? values.reduce((sum, value) => sum + Math.max(0, value), 0) : null;
 };
-// Compact description of an unknown payload, so "call worked but nothing parsed" can be told
-// apart from "call failed" without opening devtools.
 const describeShape = (payload) => {
   if (payload == null) return String(payload);
   if (Array.isArray(payload)) return `array[${payload.length}]${payload.length ? ` of ${typeof payload[0]}` : ""}`;
@@ -567,7 +543,6 @@ const bucketize = (students) => {
   return { prog, quiz };
 };
 
-/* tool aggregate across the whole course for the Tools page summary cards */
 const toolSummary = (activities, scoreRows, studentCount) => {
   const counts = { video: 0, bookroll: 0, quiz: 0, profile: 0 };
   activities.forEach((a) => a.tools.forEach((t) => {
@@ -580,9 +555,7 @@ const toolSummary = (activities, scoreRows, studentCount) => {
   return counts;
 };
 
-/* ------------------------------ design demo data ------------------------------ */
-/* Landing insight/bubbles use this only as a fallback. Real numbers come from the
-   enroll aggregate (buildLandingFromAggregate). */
+/* ------------------------------ landing fallback data ------------------------------ */
 const DEMO = {
   insightSlides: [
     { bg: "#e9fbf4", label: "ผู้ใช้งานทั่วประเทศ", big: "22,497", unit: "คน", desc: "ครู นักเรียน และบุคลากรทางการศึกษาใช้งานระบบใน 62 จังหวัดทั่วประเทศ", view: { lat: 13.6, lng: 101.2, zoom: 5.3 } },
@@ -599,17 +572,14 @@ const DEMO = {
   ],
 };
 
-// Landing insight slides + map bubbles: real enroll aggregate if loaded, else demo.
 const insightSlides = () => state.landingStats || DEMO.insightSlides;
 const mapPoints = () => state.landingPoints || DEMO.mapPoints;
-// Coords outside Thailand mean bad/swapped lat-long or a junk province — exclude from the map.
 const inThailand = (lat, lng) => lat >= 5 && lat <= 21 && lng >= 97 && lng <= 106;
-// Turn the per-institute enroll aggregate into insight slides + province-level bubbles.
 function buildLandingFromAggregate(data) {
   if (!Array.isArray(data) || !data.length) return null;
   let totalUsers = 0;
-  const courses = new Map();          // courseId -> { name, users }
-  const prov = new Map();             // province -> { users, lat, lng, n }
+  const courses = new Map();
+  const prov = new Map();
   for (const it of data) {
     const uc = it.instituteUserCount || 0;
     totalUsers += uc;
@@ -620,7 +590,7 @@ function buildLandingFromAggregate(data) {
       courses.set(k, e);
     }
     const c = it.coordinates || {};
-    if (inThailand(c.lat, c.long)) {  // valid Thai coords only (skips "ระบุเอง" + bad records)
+    if (inThailand(c.lat, c.long)) {
       const key = it.instituteProvince || "-";
       const e = prov.get(key) || { users: 0, lat: 0, lng: 0, n: 0 };
       e.users += uc; e.lat += c.lat; e.lng += c.long; e.n += 1;
@@ -642,8 +612,6 @@ function buildLandingFromAggregate(data) {
   ];
   return { slides, points };
 }
-// Precomputed landing summary (10 overview slides + province bubbles), regenerated from the
-// enroll aggregate offline. Reading this small file avoids pulling the full 1.7k-row aggregate.
 const LANDING_OVERVIEW_PATH = "./overview.json";
 function applyLandingSummary(s) {
   if (!s || !Array.isArray(s.slides) || !s.slides.length) return false;
@@ -651,20 +619,18 @@ function applyLandingSummary(s) {
   if (Array.isArray(s.points) && s.points.length) state.landingPoints = s.points;
   if (s.totals) state.landingTotals = s.totals;
   if (Array.isArray(s.trend) && s.trend.length) state.landingTrend = s.trend;
-  if (maps.usage) { maps.usage.remove(); maps.usage = null; } // force rebuild with real markers
+  if (maps.usage) { maps.usage.remove(); maps.usage = null; }
   render();
   return true;
 }
-// Landing overview: read the small precomputed file first; only fall back to the live
-// aggregate (heavier) if the file is missing/invalid; demo data stands in if both fail.
 async function loadLandingStats() {
   try {
     if (applyLandingSummary(await fetchJson(LANDING_OVERVIEW_PATH))) return;
-  } catch (_) { /* fall through to live aggregate */ }
+  } catch (_) {}
   try {
     const built = buildLandingFromAggregate(await apiEnrollAggregate());
     if (built) applyLandingSummary(built);
-  } catch (_) { /* keep demo fallback */ }
+  } catch (_) {}
 }
 
 /* ------------------------------ icons ------------------------------ */
@@ -692,30 +658,22 @@ const state = {
   page: "overview", course: null, student: null, studentDetail: null,
   search: "", filter: "all", sort: "followup",
   authed: false, userMenuOpen: false, editOpen: false, notifOpen: false,
-  // "เพิ่มห้องเรียน" modal
   addOpen: false, addLoading: false, addSaving: false, addError: "", addCourses: [], addSel: null,
   addFilters: { from: "", to: "", grade: "", level: "", classRoom: "", instituteId: "" },
-  addOptions: { grades: [], levels: [], classRooms: [] }, // filter choices derived from course enrolls[]
-  addInstQuery: "", addInstOptions: [], // institute autocomplete (staff/admin)
-  // ⋮ menu on a classroom card + its "นำออกจากรายการ" confirm.
-  // cardMenuPos is measured from the ⋮ button so the menu can be position:fixed and escape
-  // the card's overflow:hidden and the scrolling list around it.
+  addOptions: { grades: [], levels: [], classRooms: [] },
+  addInstQuery: "", addInstOptions: [],
   cardMenu: null, cardMenuPos: null,
   delTarget: null, delSaving: false, delError: "",
   teacherRole: "",
-  // Identity/school are filled from the real profile.
   teacherSchool: "",
   leadoOpen: false, leadoDemo: false, leadoDemoed: false, leadoMsg: "", teacherName: "", teacherEmail: "",
   lang: "th", fontSize: "md", mapSlide: 0,
-  // derived (filled after load)
   students: [], activities: [], courseData: null, courseTitle: "-", courseKey: "-",
   metrics: null, prog: [], quiz: [], tools: null,
-  // landing insight slides + map bubbles from the real enroll aggregate (null → demo fallback)
   landingStats: null, landingPoints: null, landingTotals: null, landingTrend: null,
-  courseTab: "all", // ห้องเรียนของฉัน status filter
+  courseTab: "all",
 };
 
-/* runtime helpers not part of state */
 const maps = { usage: null };
 let slideTimer = null;
 
@@ -738,20 +696,12 @@ function expireSession() {
   if (document.getElementById("app")) render();
 }
 
-// The whole shell renders inside a CSS `zoom` wrapper driven by the font-size picker, so the
-// room the layout actually gets is the viewport divided by that zoom. Breakpoints must be read
-// in those same units — measuring the raw viewport keeps a desktop layout at "ใหญ่" even though
-// it only has tablet-width space left, which is what makes the layout look broken.
+// Layout measurements must account for the application zoom factor.
 const zoomFactor = () => (state.fontSize === "sm" ? 0.9 : state.fontSize === "lg" ? 1.15 : 1);
 const vwZ = () => (window.innerWidth || 1200) / zoomFactor();
 const vhZ = () => (window.innerHeight || 800) / zoomFactor();
-/* responsive breakpoints: phone < 700 ≤ tablet < 1024 ≤ desktop */
 const BP = () => { const w = vwZ(); return w < 700 ? "phone" : w < 1024 ? "tablet" : "desktop"; };
-// Viewport too short to split a full-height row of cards (landscape phone ≈ 390-430px tall).
-// Side-by-side cards would crush their fixed-height contents and clip them behind overflow:hidden.
 const shortView = () => vhZ() < 620;
-// Left tab rail when width outweighs height: wide desktop (≥1280) OR any landscape
-// phone/tablet (short viewport). Frees vertical room for content where it's scarce.
 const useSideNav = () => {
   const w = vwZ(), h = vhZ();
   return w >= 1280 || (w > h && w >= 640);
@@ -762,8 +712,6 @@ let lastLayout = layoutKey();
 /* ------------------------------ compute per render ------------------------------ */
 const CLASS_COLORS = ["#f43f7e", "#f5b301", "#22c55e", "#0f766e", "#6366f1", "#0ea5e9", "#ef4444", "#8b5cf6"];
 const numOr = (...vals) => { for (const v of vals) if (v != null && v !== "") return v; return null; };
-// One course from /course/teacher/{sub} holds an `assigns[]` array; each assign is
-// a classroom (holds assignId + institute/grade/level/classRoom). Flatten to one card each.
 const mapClassroom = (course, assign, i) => {
   const courseId = course.courseId || course.course_id || "";
   const inst = assign.institute || {};
@@ -789,14 +737,13 @@ const flattenClassrooms = (courses) => {
   (courses || []).forEach((course) => {
     const assigns = Array.isArray(course.assigns) && course.assigns.length ? course.assigns
       : Array.isArray(course.assign) && course.assign.length ? course.assign
-      : [course]; // back-compat: flat item that already carries assignId at top level
+      : [course];
     assigns.forEach((assign) => out.push(mapClassroom(course, assign, out.length)));
   });
   return out;
 };
 const courseList = () => state.classrooms;
 const selectedCourse = () => courseList().find((c) => c.id === state.course) || null;
-// Readable ระดับชั้น / ห้อง for a classroom card; "ทั้งหมด" when the assign has no value.
 const GRADE_TH = { primary: "ประถมศึกษา", secondary: "มัธยมศึกษา", vocational: "ปวช.", associate: "ปวส.", bachelor: "ปริญญาตรี", master: "ปริญญาโท", doctoral: "ปริญญาเอก" };
 const gradeText = (c) => {
   const g = GRADE_TH[c?.grade] || c?.grade || "";
@@ -805,9 +752,6 @@ const gradeText = (c) => {
 };
 const roomText = (c) => { const r = c?.classRoom; return (r === "" || r == null) ? "ทั้งหมด" : String(r); };
 
-// ---- landing map + classroom-card helpers ----
-// Bubble colour tier by user count. `label` is unused since the map legend was removed,
-// but kept as the readable definition of each tier's range.
 const USER_TIERS = [
   { min: 2000, color: "#ef4444", label: "มากกว่า 2,000" },
   { min: 1000, color: "#f97316", label: "1,000 - 2,000" },
@@ -826,17 +770,12 @@ const relativeTime = (d) => {
   if (s < 2592000) return `${Math.round(s / 86400)} วันที่แล้ว`;
   return new Date(d).toLocaleDateString("th-TH", { day: "numeric", month: "short" });
 };
-// Time-of-day greeting. Boundaries: เช้า 05-11, บ่าย 12-15, เย็น 16-18, ค่ำ 19-04.
 const greetingWord = (h = new Date().getHours()) =>
   h >= 19 || h < 5 ? "สวัสดีตอนค่ำ" : h >= 16 ? "สวัสดีตอนเย็น" : h >= 12 ? "สวัสดีตอนบ่าย" : "สวัสดีตอนเช้า";
-// "10 กรกฎาคม 2569" — th-TH renders the Buddhist era by default.
 const todayThai = () => new Date().toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" });
-// Module number from the course title ("... Module 4 ...") else sequential.
 const moduleNo = (c, i) => { const m = /module\s*(\d+)/i.exec(c?.title || ""); return String(m ? m[1] : i + 1).padStart(2, "0"); };
-// Short subject line: title with the "... : Module N ..." tail stripped, or the ระดับชั้น.
 const classroomStatus = (c) => (c?.progress == null || c.progress === 0 ? "pending" : c.progress >= 100 ? "done" : "active");
 const STATUS_TABS = [["all", "ทั้งหมด"], ["active", "กำลังสอน"], ["pending", "รอเริ่ม"], ["done", "สิ้นสุดแล้ว"]];
-// Inline SVG sparkline from a numeric series.
 const sparkline = (vals, color, w = 132, h = 34) => {
   const v = (vals || []).map(Number).filter(Number.isFinite);
   if (v.length < 2) return "";
@@ -1504,9 +1443,16 @@ async function loadStudentDetailApis(st) {
       if (!entries.length) entries = echartProgressEntries(payload);
       if (!entries.length) result.errors.push(`BookRoll: ตอบกลับ 200 แต่อ่านค่าไม่ได้ — ${describeShape(payload)}`);
     } catch (err) {
-      result.errors.push(String(err.message).startsWith("404")
-        ? `BookRoll: ไม่พบบัญชีผู้ใช้ของ ${email} ในระบบ (404)`
-        : `BookRoll: ${err.message}`);
+      const backendMessage = String(err?.backendMessage || err?.payload?.message || "");
+      const userNotFound = err?.status === 404 && /entity\s+of\s+type\s+["']?User|user.+not\s+found/i.test(backendMessage);
+      const routeNotFound = err?.status === 404 && /Cannot\s+GET/i.test(backendMessage);
+      if (userNotFound) {
+        result.errors.push(`BookRoll: ไม่พบบัญชีผู้ใช้ของ ${email} ในระบบ (404)`);
+      } else if (routeNotFound) {
+        result.errors.push(`BookRoll: ไม่พบ endpoint บน ${teacherConfig.bookrollBaseUrl} (404)`);
+      } else {
+        result.errors.push(`BookRoll: ${err.message}`);
+      }
     }
     publish({
       reading: entries.length ? summarizeProgress(entries.map((entry) => entry.progress), bookrollCount) : null,
@@ -1795,6 +1741,7 @@ function debugBodyHtml() {
     <div>profile: <span style="color:#a7f3d0">${esc(state.teacherName || "—")}</span> · ${esc(state.teacherEmail || "—")}</div>
     <div>token exp: ${auth?.token?.access_token ? esc(new Date((decodeJwt(auth.token.access_token)?.exp || 0) * 1000).toLocaleString("th-TH")) : "—"} · instituteId: ${esc(state.instituteId || "—")}</div>
     <div>baseUrl: <span style="color:#a7f3d0;user-select:all">${esc(teacherConfig.baseUrl)}</span></div>
+    <div>bookrollBaseUrl: <span style="color:#a7f3d0;user-select:all">${esc(teacherConfig.bookrollBaseUrl)}</span></div>
     <div>sbsUrl : <span style="color:#a7f3d0;user-select:all">${esc(teacherConfig.sbsUrl)}</span></div>
     <div>classrooms mapped: <b style="color:#fbbf24">${state.classrooms.length}</b></div>
     <div>selected student API userId: <span style="color:#a7f3d0">${esc(state.studentDetail?.apiUserId || "—")}</span></div>
