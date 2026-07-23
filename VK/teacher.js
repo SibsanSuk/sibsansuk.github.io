@@ -108,10 +108,13 @@ const apiAssign = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/a
 const apiProgress = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}/progress`);
 const apiGrades = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}/grades`);
 const apiCourseTree = (courseId) => apiGet(`${teacherConfig.sbsUrl}/lms/${encodeURIComponent(courseId)}`, { auth: false });
-// BookRoll reading progress through the MECA proxy instead of hitting bookroll.thaidlt.com
-// directly: the proxy carries our Bearer token, avoids CORS, and keys on email — so it needs
-// no Keycloak userId lookup. usageId takes either a courseId (whole course) or an aetool id.
-const bookrollReadingUrl = (email, usageId) => `${teacherConfig.baseUrl}/api/kidbright/course/${encodeURIComponent(usageId)}/data/bookroll?email=${encodeURIComponent(email)}`;
+// BookRoll reading progress, straight from the public service. Verified against the live API:
+// it accepts the learner's EMAIL in userID (no Keycloak userId lookup needed) and serves
+// `access-control-allow-origin: *`, so neither auth nor CORS is in the way. Answers
+// {"results": {"<doc title>": "<read>:<total>", …}}.
+// NOT the MECA proxy `/api/kidbright/course/{id}/data/bookroll` — that route 404s on this
+// backend, at both course and aetool level.
+const bookrollReadingUrl = (email, usageId) => `https://bookroll.thaidlt.com/meca/student/readingData?userID=${encodeURIComponent(email)}&usageId=${encodeURIComponent(usageId)}&view=student&ts=${Date.now()}`;
 const videoProgressUrl = (userName, courseId) => `https://viola.thaidlt.com/meca/chart/bar/?userName=${encodeURIComponent(userName)}&usageId=${encodeURIComponent(courseId)}`;
 // Time spent answering the chatbot, returned as an ECharts option. Keyed on Keycloak userId.
 const chatbotSpeedUrl = (courseId, userId) => `${teacherConfig.sbsUrl}/stats/echart/chatbotSpeed/${encodeURIComponent(courseId)}/${encodeURIComponent(userId)}`;
@@ -309,7 +312,9 @@ const readingProgressEntries = (payload, opts = {}) => {
       const match = value.trim().match(/^(\d+)\s*:\s*(\d+)$/);
       if (!match) return null;
       const total = Number(match[2]);
-      return total > 0 ? Math.round((Number(match[1]) / total) * 100) : null;
+      // "0:0" is a document the learner has simply not opened — 0%, not "no data". Dropping it
+      // would hide the row entirely and leave the drawer showing "-".
+      return total > 0 ? Math.round((Number(match[1]) / total) * 100) : 0;
     }
     if (!value || typeof value !== "object") return null;
     const read = toNumber(value.read ?? value.readPage ?? value.read_page ?? value.current ?? value.done, NaN);
@@ -334,8 +339,7 @@ const readingProgressEntries = (payload, opts = {}) => {
       const m = value.trim().match(/^(\d+)\s*:\s*(\d+)$/);
       if (m) {
         const total = Number(m[2]);
-        const pct = total > 0 ? Math.round((Number(m[1]) / total) * 100) : null;
-        push(key, pct, inheritedUsageId);
+        push(key, total > 0 ? Math.round((Number(m[1]) / total) * 100) : 0, inheritedUsageId);
       }
       return;
     }
@@ -1483,21 +1487,33 @@ async function loadStudentDetailApis(st) {
   // Keys on email via the MECA proxy — no need to wait on the Keycloak userId lookup at all.
   const loadReading = async () => {
     let entries = [];
-    // Only used as the denominator for "ยังไม่ได้อ่าน" — the proxy is course-scoped, so there
-    // is nothing to fetch per aetool. (Passing a block id 404s: it only accepts a courseId.)
-    const bookrollCount = state.activities.flatMap((activity) => activity.tools)
-      .filter((tool) => String(tool.label).toLowerCase() === "bookroll").length;
+    const bookrollTargets = state.activities.flatMap((activity) => activity.tools
+      .filter((tool) => String(tool.label).toLowerCase() === "bookroll")
+      .map((tool) => ({ usageId: tool.id, title: activity.name })));
     try {
-      const payload = await apiGet(bookrollReadingUrl(email, cid), { critical: false });
-      // Two shapes seen from this backend: row-ish JSON (read/total or "3:10"), and the ECharts
-      // option the stats endpoints return. Try rows first, fall back to the chart.
+      const payload = await externalJson(bookrollReadingUrl(email, cid));
+      // Course-level answers {"results": {title: "read:total"}}; the ECharts fallback is there
+      // in case this service ever switches to the chart shape the other stats endpoints use.
       entries = readingProgressEntries(payload, { usageId: cid });
       if (!entries.length) entries = echartProgressEntries(payload);
-      if (!entries.length) result.errors.push(`BookRoll: ตอบกลับ 200 แต่อ่านค่าไม่ได้ — ${describeShape(payload)}`);
+      if (!entries.length) result.errors.push(`BookRoll (course): ตอบกลับ 200 แต่อ่านค่าไม่ได้ — ${describeShape(payload)}`);
     }
-    catch (err) { result.errors.push(`BookRoll: ${err.message}`); }
+    catch (err) { result.errors.push(`BookRoll (course): ${err.message}`); }
+    // Unlike the MECA proxy, this service does accept a per-aetool usageId — so when the
+    // course-level call comes back empty, ask per BookRoll document instead.
+    if (!entries.length) {
+      const targets = [...new Map(bookrollTargets.filter((t) => t.usageId).map((t) => [t.usageId, t])).values()];
+      const responses = await Promise.allSettled(targets.map((t) => externalJson(bookrollReadingUrl(email, t.usageId))));
+      responses.forEach((response, i) => {
+        if (response.status !== "fulfilled") {
+          result.errors.push(`BookRoll (${targets[i].title}): ${response.reason?.message || "ล้มเหลว"}`);
+          return;
+        }
+        entries.push(...readingProgressEntries(response.value, { usageId: targets[i].usageId, titleHint: targets[i].title }));
+      });
+    }
     publish({
-      reading: entries.length ? summarizeProgress(entries.map((entry) => entry.progress), bookrollCount) : null,
+      reading: entries.length ? summarizeProgress(entries.map((entry) => entry.progress), bookrollTargets.length) : null,
       readingEntries: entries,
       readingLoading: false
     });
