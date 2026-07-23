@@ -45,6 +45,15 @@ button,
   -webkit-overflow-scrolling: touch;
 }
 
+.table-scroll-x {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;

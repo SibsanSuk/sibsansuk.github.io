@@ -187,6 +187,247 @@ class DrawerErrorBoundary extends React.Component {
     }, "ปิดหน้าต่าง"))));
   }
 }
+const readDebugUi = () => {
+  try { return JSON.parse(localStorage.getItem("td_debug_ui")) || {}; }
+  catch (_) { return {}; }
+};
+const saveDebugUi = patch => {
+  try {
+    localStorage.setItem("td_debug_ui", JSON.stringify({
+      ...readDebugUi(),
+      ...patch
+    }));
+  } catch (_) {}
+};
+const debugJson = value => {
+  try {
+    const text = JSON.stringify(value, null, 2);
+    return text.length > 6000 ? `${text.slice(0, 6000)}\n… ตัดการแสดงผลที่ 6,000 ตัวอักษร` : text;
+  } catch (_) {
+    return String(value);
+  }
+};
+function ApiDebugPanel({
+  authed,
+  teacher,
+  selected
+}) {
+  const initialUi = useMemo(readDebugUi, []);
+  const [entries, setEntries] = useState(() => API.manager.getEntries());
+  const [collapsed, setCollapsed] = useState(Boolean(initialUi.collapsed));
+  const [position, setPosition] = useState(() => ({
+    left: Number.isFinite(Number(initialUi.left)) ? Number(initialUi.left) : Math.max(8, window.innerWidth - 440),
+    top: Number.isFinite(Number(initialUi.top)) ? Number(initialUi.top) : Math.max(8, window.innerHeight - 430)
+  }));
+  const [copiedId, setCopiedId] = useState(null);
+  const panelRef = useRef(null);
+  const bodyRef = useRef(null);
+  const dragRef = useRef(null);
+  const followBottomRef = useRef(true);
+
+  useEffect(() => API.manager.subscribe(nextEntries => {
+    const body = bodyRef.current;
+    followBottomRef.current = !body || body.scrollHeight - body.scrollTop - body.clientHeight < 48;
+    setEntries(nextEntries);
+  }), []);
+  useEffect(() => {
+    if (followBottomRef.current && bodyRef.current) {
+      bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+    }
+  }, [entries]);
+  useEffect(() => {
+    const clampPosition = () => {
+      const panel = panelRef.current;
+      if (!panel) return;
+      setPosition(current => ({
+        left: Math.max(0, Math.min(window.innerWidth - Math.min(panel.offsetWidth, 80), current.left)),
+        top: Math.max(0, Math.min(window.innerHeight - 28, current.top))
+      }));
+    };
+    window.addEventListener("resize", clampPosition);
+    return () => window.removeEventListener("resize", clampPosition);
+  }, []);
+
+  const beginDrag = event => {
+    if (event.target.closest("button")) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const bounds = panel.getBoundingClientRect();
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      left: bounds.left,
+      top: bounds.top
+    };
+    try { event.currentTarget.setPointerCapture(event.pointerId); } catch (_) {}
+    event.preventDefault();
+  };
+  const moveDrag = event => {
+    const drag = dragRef.current;
+    const panel = panelRef.current;
+    if (!drag || drag.pointerId !== event.pointerId || !panel) return;
+    setPosition({
+      left: Math.max(0, Math.min(window.innerWidth - Math.min(panel.offsetWidth, 80), drag.left + event.clientX - drag.startX)),
+      top: Math.max(0, Math.min(window.innerHeight - 28, drag.top + event.clientY - drag.startY))
+    });
+  };
+  const endDrag = event => {
+    if (!dragRef.current || dragRef.current.pointerId !== event.pointerId) return;
+    dragRef.current = null;
+    setPosition(current => {
+      saveDebugUi(current);
+      return current;
+    });
+  };
+  const toggleCollapsed = () => {
+    setCollapsed(current => {
+      saveDebugUi({ collapsed: !current });
+      return !current;
+    });
+  };
+  const copyUrl = async entry => {
+    try {
+      await navigator.clipboard.writeText(entry.url);
+      setCopiedId(entry.id);
+      setTimeout(() => setCopiedId(current => current === entry.id ? null : current), 1200);
+    } catch (_) {
+      setCopiedId(null);
+    }
+  };
+
+  const auth = API.readAuth();
+  const claims = API.decodeJwt(auth?.token?.access_token || "");
+  const expiresAt = claims?.exp ? new Date(claims.exp * 1000).toLocaleString("th-TH") : "—";
+  const successCount = entries.filter(entry => entry.state === "success" || entry.state === "cached").length;
+  const errorCount = entries.filter(entry => entry.state === "error").length;
+  const loadingCount = entries.filter(entry => entry.state === "loading").length;
+
+  const panel = React.createElement("section", {
+    ref: panelRef,
+    "aria-label": "API Debug Panel",
+    style: {
+      position: "fixed",
+      left: position.left,
+      top: position.top,
+      zIndex: 2147483000,
+      width: 420,
+      maxWidth: "92vw",
+      overflow: "hidden"
+    },
+    className: "rounded-xl border border-slate-700 bg-slate-950 font-mono text-[11px] text-slate-200 shadow-2xl"
+  }, React.createElement("div", {
+    onPointerDown: beginDrag,
+    onPointerMove: moveDrag,
+    onPointerUp: endDrag,
+    onPointerCancel: endDrag,
+    className: "flex touch-none select-none items-center gap-2 border-b border-slate-700 bg-slate-900 px-3 py-2.5",
+    style: {
+      cursor: "move"
+    }
+  }, React.createElement("b", {
+    className: "flex-1 font-sans text-xs"
+  }, "🐞 API Debug Manager"), React.createElement("span", {
+    className: "text-[10px] text-amber-300"
+  }, loadingCount ? `${loadingCount} กำลังโหลด` : `${entries.length} calls`), React.createElement("button", {
+    type: "button",
+    onClick: () => API.manager.clearLog(),
+    title: "ล้าง API log",
+    className: "rounded-md bg-slate-700 px-2 py-1 text-[10px] font-bold text-slate-200 hover:bg-slate-600"
+  }, "ล้าง"), React.createElement("button", {
+    type: "button",
+    onClick: toggleCollapsed,
+    title: "ย่อ/ขยาย",
+    className: "h-[22px] w-[26px] rounded-md bg-slate-700 text-sm font-bold leading-none text-slate-200 hover:bg-slate-600"
+  }, collapsed ? "+" : "−")), !collapsed && React.createElement("div", {
+    ref: bodyRef,
+    className: "overflow-auto px-3 py-2.5",
+    style: {
+      maxHeight: "60vh"
+    }
+  }, React.createElement("div", {
+    className: "space-y-0.5 font-sans text-[11px] leading-[1.55] text-slate-400"
+  }, React.createElement("div", null, "authed: ", React.createElement("b", {
+    className: authed ? "text-emerald-400" : "text-red-400"
+  }, String(Boolean(authed))), " · sub: ", React.createElement("span", {
+    className: "font-mono text-blue-300"
+  }, API.authSub(auth) || "—")), React.createElement("div", null, "profile: ", React.createElement("span", {
+    className: "text-emerald-200"
+  }, teacher?.name || "—"), " · ", teacher?.email || "—"), React.createElement("div", null, "token exp: ", expiresAt), React.createElement("div", null, "course: ", React.createElement("span", {
+    className: "text-emerald-200"
+  }, selected?.courseId || "—")), React.createElement("div", {
+    className: "break-all"
+  }, "baseUrl: ", React.createElement("span", {
+    className: "select-all text-emerald-200"
+  }, API.config.baseUrl)), React.createElement("div", {
+    className: "break-all"
+  }, "bookrollBaseUrl: ", React.createElement("span", {
+    className: "select-all text-emerald-200"
+  }, API.config.bookrollBaseUrl)), React.createElement("div", {
+    className: "break-all"
+  }, "sbsUrl: ", React.createElement("span", {
+    className: "select-all text-emerald-200"
+  }, API.config.sbsUrl)), React.createElement("div", {
+    className: "pt-1 font-bold text-slate-300"
+  }, "API calls ", entries.length, " · ", React.createElement("span", {
+    className: "text-emerald-400"
+  }, successCount, " สำเร็จ"), " · ", React.createElement("span", {
+    className: "text-red-400"
+  }, errorCount, " ผิดพลาด"), " · ใหม่สุดอยู่ล่างสุด")), entries.length === 0 ? React.createElement("div", {
+    className: "mt-2 border-t border-slate-800 py-3 text-center text-slate-500"
+  }, "— ยังไม่มีการเรียก API —") : entries.map(entry => {
+    const isLoading = entry.state === "loading";
+    const isError = entry.state === "error";
+    const isCached = entry.state === "cached";
+    const stateClass = isLoading ? "text-amber-300" : isError ? "text-red-400" : isCached ? "text-cyan-300" : "text-emerald-400";
+    const stateText = isLoading ? "กำลังเรียก" : isError ? "ผิดพลาด" : isCached ? "CACHE" : "สำเร็จ";
+    return React.createElement("article", {
+      key: entry.id,
+      className: "border-t border-slate-800 py-2"
+    }, React.createElement("div", {
+      className: "flex items-center gap-1.5"
+    }, React.createElement("span", {
+      className: cx("shrink-0 font-bold", stateClass)
+    }, isLoading && React.createElement("span", {
+      className: "spinner mr-1 inline-block h-2.5 w-2.5 rounded-full border-2 border-amber-900 border-t-amber-300 align-[-1px]"
+    }), stateText, entry.status ? ` ${entry.status}` : ""), React.createElement("span", {
+      className: "shrink-0 text-slate-500"
+    }, entry.method), entry.authSent && React.createElement("span", {
+      className: "shrink-0 rounded bg-violet-950 px-1 text-[9px] font-bold text-violet-300"
+    }, "AUTH SENT"), entry.auth && !entry.authSent && React.createElement("span", {
+      className: "shrink-0 rounded bg-red-950 px-1 text-[9px] font-bold text-red-300"
+    }, "NO TOKEN"), entry.count != null && React.createElement("span", {
+      className: "shrink-0 text-amber-300"
+    }, entry.count, " rows"), entry.durationMs != null && React.createElement("span", {
+      className: "shrink-0 text-cyan-300"
+    }, entry.durationMs, " ms"), React.createElement("span", {
+      className: "flex-1 text-right text-slate-600"
+    }, entry.at), React.createElement("button", {
+      type: "button",
+      onClick: () => copyUrl(entry),
+      className: "shrink-0 rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-semibold text-slate-300 hover:bg-slate-700"
+    }, copiedId === entry.id ? "copied" : "copy")), React.createElement("div", {
+      className: "mt-1 font-sans text-[11px] font-bold text-slate-200"
+    }, entry.label), React.createElement("div", {
+      className: "mt-0.5 select-all break-all text-blue-300"
+    }, entry.url), entry.error && React.createElement("div", {
+      className: "mt-1 whitespace-pre-wrap break-all font-sans text-red-300"
+    }, entry.error), entry.requestBody !== undefined && React.createElement("details", {
+      className: "mt-1"
+    }, React.createElement("summary", {
+      className: "cursor-pointer select-none font-sans text-slate-400"
+    }, "Request body"), React.createElement("pre", {
+      className: "mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-md bg-slate-900 p-1.5 text-slate-300"
+    }, debugJson(entry.requestBody))), entry.sample !== undefined && React.createElement("div", {
+      className: "mt-1"
+    }, React.createElement("div", {
+      className: "mb-1 font-sans text-[10px] font-bold text-slate-500"
+    }, isCached ? "Response จาก cache" : "Response"), React.createElement("pre", {
+      className: "max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-md bg-slate-900 p-1.5 text-slate-300"
+    }, debugJson(entry.sample))));
+  })));
+  return ReactDOM.createPortal(panel, document.body);
+}
 function App() {
   const [ready, setReady] = useState(false);
   const [authed, setAuthed] = useState(false);
@@ -356,8 +597,10 @@ function App() {
       chatbotLoading: true,
       reading: null,
       video: null,
+      chatbot: null,
       readingEntries: [],
       videoEntries: [],
+      chatbotEntries: [],
       chatbotSeconds: null,
       errors: []
     });
@@ -389,10 +632,14 @@ function App() {
     await refreshClassrooms(teacher.sub, teacher.instituteId);
   };
   if (!ready) {
-    return React.createElement("div", {
+    return React.createElement(React.Fragment, null, React.createElement("div", {
       className: "flex h-dvh items-center justify-center bg-slate-100"
     }, React.createElement(Spinner, {
       label: "กำลังเตรียม Teacher Dashboard..."
+    })), API.debug && React.createElement(ApiDebugPanel, {
+      authed: authed,
+      teacher: teacher,
+      selected: selected
     }));
   }
   return React.createElement("div", {
@@ -470,7 +717,11 @@ function App() {
   })), loadingCourse && React.createElement(LoadingOverlay, null), error && React.createElement(ErrorToast, {
     message: error,
     onClose: () => setError("")
-  }), sessionExpired && React.createElement(SessionExpired, null));
+  }), sessionExpired && React.createElement(SessionExpired, null), API.debug && React.createElement(ApiDebugPanel, {
+    authed: authed,
+    teacher: teacher,
+    selected: selected
+  }));
 }
 function Header({
   authed,
@@ -1193,27 +1444,6 @@ function OverviewPage({
     color: "#cbd5e1",
     count: students.filter(item => item.progress === 0).length
   }];
-  const quizBuckets = [{
-    label: "80–100%",
-    color: "#22c55e",
-    count: students.filter(item => item.rate >= 80).length
-  }, {
-    label: "60–79%",
-    color: "#14b8a6",
-    count: students.filter(item => item.rate >= 60 && item.rate < 80).length
-  }, {
-    label: "40–59%",
-    color: "#f59e0b",
-    count: students.filter(item => item.rate >= 40 && item.rate < 60).length
-  }, {
-    label: "0–39%",
-    color: "#ef4444",
-    count: students.filter(item => item.rate != null && item.rate < 40).length
-  }, {
-    label: "ไม่มีคะแนน",
-    color: "#94a3b8",
-    count: students.filter(item => item.rate == null).length
-  }];
   return React.createElement(React.Fragment, null, React.createElement(CourseHero, {
     selected: selected,
     title: dataset.title
@@ -1250,10 +1480,10 @@ function OverviewPage({
     badge: `${metrics.records} records`
   })), React.createElement("div", {
     className: "mb-4 grid gap-4 lg:grid-cols-[1.15fr_1fr]"
-  }, React.createElement(DistributionBars, {
-    data: progressBuckets
-  }), React.createElement(DonutChart, {
-    data: quizBuckets,
+  }, React.createElement(QuizDistributionChart, {
+    students: students
+  }), React.createElement(ProgressOverviewChart, {
+    data: progressBuckets,
     total: total
   })), React.createElement("section", {
     className: "overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-panel"
@@ -1321,9 +1551,115 @@ function MetricCard({
     className: "font-sans text-xs font-semibold text-slate-400 sm:text-sm"
   }, suffix)));
 }
-function DistributionBars({
-  data
+function QuizDistributionChart({
+  students
 }) {
+  const [gradeMode, setGradeMode] = useState("numeric");
+  const data = useMemo(() => {
+    const scales = gradeMode === "letter" ? [{
+      label: "F",
+      range: "0–49%",
+      min: 0,
+      max: 49.999,
+      color: "#ef4444"
+    }, {
+      label: "D",
+      range: "50–54%",
+      min: 50,
+      max: 54.999,
+      color: "#f97316"
+    }, {
+      label: "D+",
+      range: "55–59%",
+      min: 55,
+      max: 59.999,
+      color: "#fb923c"
+    }, {
+      label: "C",
+      range: "60–64%",
+      min: 60,
+      max: 64.999,
+      color: "#f59e0b"
+    }, {
+      label: "C+",
+      range: "65–69%",
+      min: 65,
+      max: 69.999,
+      color: "#eab308"
+    }, {
+      label: "B",
+      range: "70–74%",
+      min: 70,
+      max: 74.999,
+      color: "#14b8a6"
+    }, {
+      label: "B+",
+      range: "75–79%",
+      min: 75,
+      max: 79.999,
+      color: "#0d9488"
+    }, {
+      label: "A",
+      range: "80–100%",
+      min: 80,
+      max: 100,
+      color: "#22c55e"
+    }] : [{
+      label: "0",
+      range: "0–49%",
+      min: 0,
+      max: 49.999,
+      color: "#ef4444"
+    }, {
+      label: "1",
+      range: "50–59%",
+      min: 50,
+      max: 59.999,
+      color: "#f97316"
+    }, {
+      label: "2",
+      range: "60–69%",
+      min: 60,
+      max: 69.999,
+      color: "#f59e0b"
+    }, {
+      label: "3",
+      range: "70–79%",
+      min: 70,
+      max: 79.999,
+      color: "#14b8a6"
+    }, {
+      label: "4",
+      range: "80–100%",
+      min: 80,
+      max: 100,
+      color: "#22c55e"
+    }];
+    const buckets = scales.map(scale => ({
+      ...scale,
+      count: 0
+    }));
+    let noScore = 0;
+    students.forEach(student => {
+      if (student.rate == null || !Number.isFinite(Number(student.rate))) {
+        noScore += 1;
+        return;
+      }
+      const score = API.clamp(Number(student.rate));
+      const bucket = buckets.find(item => score >= item.min && score <= item.max);
+      if (bucket) bucket.count += 1;
+    });
+    const total = students.length || 1;
+    return [...buckets, {
+      label: "ไม่มีคะแนน",
+      range: "ยังไม่มีผลคะแนน",
+      count: noScore,
+      color: "#94a3b8"
+    }].map(item => ({
+      ...item,
+      percent: Math.round(item.count / total * 1000) / 10
+    }));
+  }, [students, gradeMode]);
   const option = useMemo(() => ({
     animationDuration: 550,
     aria: {
@@ -1345,18 +1681,23 @@ function DistributionBars({
       textStyle: {
         color: "#fff",
         fontFamily: "Noto Sans Thai, Inter, sans-serif",
-        fontSize: 12
+        fontSize: 14,
+        fontStyle: "normal"
       },
       formatter: params => {
         const item = params?.[0];
-        return `${item?.axisValue || ""}<br/><b>${item?.value ?? 0} คน</b>`;
+        const row = data[item?.dataIndex] || {};
+        const value = Number(item?.value) || 0;
+        const percent = Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1);
+        const title = row.label === "ไม่มีคะแนน" ? row.label : `เกรด ${row.label} (${row.range})`;
+        return `${title}<br/><b>${percent}%</b><br/>${row.count || 0} คน`;
       }
     },
     grid: {
-      left: 8,
+      left: 10,
       right: 8,
       top: 30,
-      bottom: 8,
+      bottom: 14,
       containLabel: true
     },
     xAxis: {
@@ -1373,16 +1714,25 @@ function DistributionBars({
       axisLabel: {
         color: "#98a2b3",
         fontFamily: "Inter, Noto Sans Thai, sans-serif",
-        fontSize: 11,
+        fontSize: 14,
         fontWeight: 600,
-        interval: 0
+        fontStyle: "normal",
+        interval: 0,
+        formatter: value => value === "ไม่มีคะแนน" ? "ไม่มี\nคะแนน" : value
       }
     },
     yAxis: {
       type: "value",
-      minInterval: 1,
+      min: 0,
+      max: 100,
+      interval: 25,
       axisLabel: {
-        show: false
+        show: true,
+        color: "#98a2b3",
+        fontFamily: "Inter, sans-serif",
+        fontSize: 12,
+        fontStyle: "normal",
+        formatter: value => `${value}%`
       },
       axisLine: {
         show: false
@@ -1399,9 +1749,9 @@ function DistributionBars({
     series: [{
       name: "ผู้เรียน",
       type: "bar",
-      barMaxWidth: 46,
+      barMaxWidth: 40,
       data: data.map(item => ({
-        value: item.count,
+        value: item.percent,
         itemStyle: {
           color: item.color,
           borderRadius: [6, 6, 0, 0]
@@ -1412,8 +1762,13 @@ function DistributionBars({
         position: "top",
         color: "#475467",
         fontFamily: "Inter, sans-serif",
-        fontSize: 12,
-        fontWeight: 700
+        fontSize: 14,
+        fontWeight: 700,
+        fontStyle: "normal",
+        formatter: params => {
+          const value = Number(params.value) || 0;
+          return `${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1)}%`;
+        }
       },
       emphasis: {
         itemStyle: {
@@ -1426,18 +1781,27 @@ function DistributionBars({
   return React.createElement("section", {
     className: "rounded-2xl border border-slate-200 bg-white p-5 shadow-panel"
   }, React.createElement("div", {
-    className: "mb-1"
-  }, React.createElement("h3", {
+    className: "mb-1 flex items-start justify-between gap-3"
+  }, React.createElement("div", null, React.createElement("h3", {
     className: "text-[15px] font-bold"
-  }, "การกระจายความคืบหน้า"), React.createElement("p", {
-    className: "mt-0.5 text-[11px] text-slate-400"
-  }, "จำนวนผู้เรียนในแต่ละช่วง")), React.createElement(EChart, {
+  }, "การกระจายคะแนน Quiz"), React.createElement("p", {
+    className: "mt-0.5 text-[13px] font-medium text-slate-400"
+  }, "เปอร์เซ็นต์ผู้เรียนทั้งห้องในแต่ละระดับเกรด")), React.createElement("select", {
+    value: gradeMode,
+    onChange: event => setGradeMode(event.target.value),
+    "aria-label": "เลือกรูปแบบเกรด",
+    className: "field shrink-0 rounded-[9px] border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600"
+  }, React.createElement("option", {
+    value: "numeric"
+  }, "เกรด 0–4"), React.createElement("option", {
+    value: "letter"
+  }, "เกรด F–A"))), React.createElement(EChart, {
     option,
     className: "h-[214px] w-full",
-    ariaLabel: "กราฟแท่งแสดงการกระจายความคืบหน้าของผู้เรียน"
+    ariaLabel: `กราฟแท่งแสดงการกระจายคะแนน Quiz แบบ${gradeMode === "letter" ? "เกรดตัวอักษร" : "เกรด 0 ถึง 4"}`
   }));
 }
-function DonutChart({
+function ProgressOverviewChart({
   data,
   total
 }) {
@@ -1456,7 +1820,8 @@ function DonutChart({
       textStyle: {
         color: "#fff",
         fontFamily: "Noto Sans Thai, Inter, sans-serif",
-        fontSize: 12
+        fontSize: 14,
+        fontStyle: "normal"
       },
       formatter: params => `${params.marker}${params.name}<br/><b>${params.value} คน (${params.percent}%)</b>`
     },
@@ -1476,17 +1841,20 @@ function DonutChart({
       textStyle: {
         rich: {
           label: {
-            width: 76,
+            width: 98,
             color: "#667085",
             fontFamily: "Noto Sans Thai, Inter, sans-serif",
-            fontSize: 11,
-            fontWeight: 600
+            fontSize: 14,
+            fontWeight: 600,
+            fontStyle: "normal"
           },
           value: {
+            width: 30,
             color: "#344054",
             fontFamily: "Inter, sans-serif",
-            fontSize: 11,
+            fontSize: 14,
             fontWeight: 700,
+            fontStyle: "normal",
             align: "right"
           }
         }
@@ -1506,7 +1874,7 @@ function DonutChart({
           textAlign: "center",
           textVerticalAlign: "middle",
           fill: "#101828",
-          font: "800 24px Inter"
+          font: "normal 800 30px Inter"
         }
       }, {
         type: "text",
@@ -1517,12 +1885,12 @@ function DonutChart({
           textAlign: "center",
           textVerticalAlign: "middle",
           fill: "#98a2b3",
-          font: "600 11px Noto Sans Thai"
+          font: "normal 600 13px Noto Sans Thai"
         }
       }]
     }],
     series: [{
-      name: "ผลคะแนน Quiz",
+      name: "ความคืบหน้าทั้งห้อง",
       type: "pie",
       center: ["30%", "50%"],
       radius: ["48%", "72%"],
@@ -1554,12 +1922,12 @@ function DonutChart({
     className: "rounded-2xl border border-slate-200 bg-white p-5 shadow-panel"
   }, React.createElement("div", null, React.createElement("h3", {
     className: "text-[15px] font-bold"
-  }, "ผลคะแนน Quiz"), React.createElement("p", {
-    className: "mt-0.5 text-[11px] text-slate-400"
-  }, "สัดส่วนคะแนนรวมของผู้เรียน")), React.createElement(EChart, {
+  }, "ภาพรวมความคืบหน้า"), React.createElement("p", {
+    className: "mt-0.5 text-[13px] font-medium text-slate-400"
+  }, "สัดส่วนความคืบหน้าของผู้เรียนทั้งห้อง")), React.createElement(EChart, {
     option,
     className: "h-[214px] w-full",
-    ariaLabel: "กราฟวงกลมแสดงสัดส่วนคะแนน Quiz ของผู้เรียน"
+    ariaLabel: "กราฟวงกลมแสดงสัดส่วนความคืบหน้าของผู้เรียนทั้งห้อง"
   }));
 }
 function Avatar({
@@ -1664,7 +2032,7 @@ function StudentsPage({
     onClick: () => setFilter(key),
     className: cx("rounded-full border px-3 py-1.5 text-[11px] font-bold", filter === key ? "border-brand-600 bg-brand-50 text-brand-700" : "border-slate-200 text-slate-500")
   }, label)))), React.createElement("div", {
-    className: "scrolly"
+    className: "table-scroll-x"
   }, React.createElement("table", {
     className: "w-full min-w-[780px] border-collapse text-left"
   }, React.createElement("thead", {
@@ -1801,7 +2169,7 @@ function ToolsPage({
   }, "การใช้งานเครื่องมือ"), React.createElement("p", {
     className: "mt-0.5 text-xs text-slate-400"
   }, "เครื่องมือที่ใช้ในแต่ละบทเรียนและจำนวนผู้เรียนที่เข้าถึง")), React.createElement("div", {
-    className: "scrolly"
+    className: "table-scroll-x"
   }, React.createElement("table", {
     className: "w-full min-w-[680px]"
   }, React.createElement("thead", {
@@ -1925,17 +2293,20 @@ function StudentDrawer({
       const label = String(tool.label || "").toLowerCase();
       const isReading = label === "bookroll";
       const isVideo = label === "video";
-      if (!isReading && !isVideo) return {
+      const isQuiz = label === "quiz";
+      if (!isReading && !isVideo && !isQuiz) return {
         ...tool,
         showProgress: false
       };
       const entry = isReading
         ? API.findActivityProgress(activity, detail?.readingEntries, "bookroll")
-        : API.findActivityProgress(activity, detail?.videoEntries, "video");
+        : isVideo
+          ? API.findActivityProgress(activity, detail?.videoEntries, "video")
+          : API.findActivityProgress(activity, detail?.chatbotEntries, "quiz");
       return {
         ...tool,
         showProgress: true,
-        loading: isReading ? readingLoading : videoLoading,
+        loading: isReading ? readingLoading : isVideo ? videoLoading : chatbotLoading,
         progress: Number.isFinite(entry?.progress) ? API.clamp(Math.round(entry.progress)) : null
       };
     });
