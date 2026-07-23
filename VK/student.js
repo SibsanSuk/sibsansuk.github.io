@@ -78,6 +78,11 @@ const readAuth = () => {
   try { return JSON.parse(raw); } catch { return null; }
 };
 const clearAuth = () => sessionStorage.removeItem("oidc_auth");
+const authExpired = (value) => {
+  const token = value?.token?.access_token;
+  const claims = token ? decodeJwt(token) : null;
+  return !!(claims?.exp && claims.exp * 1000 <= Date.now());
+};
 
 const logout = (auth) => {
   clearAuth();
@@ -117,6 +122,10 @@ const fetchUserInfo = async (accessToken) => {
   const res = await fetch(OIDC.userinfoEndpoint, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
+  if (res.status === 401) {
+    showSessionExpired();
+    throw new Error("เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง");
+  }
   if (!res.ok) return null;
   return res.json();
 };
@@ -3042,7 +3051,9 @@ const fetchChatbotScoreV2Debug = async () => {
     let payload = raw;
     try { payload = raw ? JSON.parse(raw) : null; } catch (_) {}
     if (!res.ok) {
-      const message = `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
+      const message = res.status === 401
+        ? "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง"
+        : `HTTP ${res.status}${res.statusText ? ` ${res.statusText}` : ""}`;
       setDebugApiEntry("chatbot-score-v2", {
         label: "คะแนน Quiz (endpoint ใหม่)",
         state: "error",
@@ -3052,6 +3063,7 @@ const fetchChatbotScoreV2Debug = async () => {
           { label: "GET /me/data/chatbot/{courseId}", url: srcUrl, state: "error", message, payload }
         ]
       });
+      if (res.status === 401) showSessionExpired();
       return { state: "error", message };
     }
     setDebugApiEntry("chatbot-score-v2", {
@@ -3187,8 +3199,15 @@ const globalLoadingCloseEl = document.getElementById("global-loading-close");
 const globalLoadingRetryFailedEl = document.getElementById("global-loading-retry-failed");
 const globalLoadingToggleEl = document.getElementById("global-loading-toggle");
 const videoHoverTooltipEl = document.getElementById("video-hover-tooltip");
+const sessionExpiredOverlayEl = document.getElementById("session-expired-overlay");
+const sessionExpiredLoginEl = document.getElementById("session-expired-login");
 if (SHOW_DEBUG_CARD) renderDebugApiCard();
 let auth = readAuth();
+let sessionExpired = authExpired(auth);
+if (sessionExpired) {
+  clearAuth();
+  auth = null;
+}
 
 const updateAuthUi = () => {
   const loggedIn = !!auth?.userId;
@@ -3203,12 +3222,26 @@ const updateAuthUi = () => {
 
 const setAuthState = (nextAuth) => {
   auth = nextAuth;
+  if (nextAuth) {
+    sessionExpired = false;
+    sessionExpiredOverlayEl?.classList.remove("active");
+  }
   updateAuthUi();
   userId = auth?.userId || null;
   if (inputUserEl) inputUserEl.value = userId || "";
   applyParams(courseId);
   syncHeader();
   updateLoginDebugPanel();
+};
+
+const showSessionExpired = () => {
+  if (!sessionExpired) {
+    sessionExpired = true;
+    clearAuth();
+    setAuthState(null);
+  }
+  globalLoadingOverlayEl?.classList.remove("active");
+  sessionExpiredOverlayEl?.classList.add("active");
 };
 
 const dashboardTaskStateMeta = {
@@ -3563,6 +3596,7 @@ document.addEventListener("scroll", () => {
 
 if (loginBtn) loginBtn.addEventListener("click", startLogin);
 if (logoutBtn) logoutBtn.addEventListener("click", () => logout(auth));
+if (sessionExpiredLoginEl) sessionExpiredLoginEl.addEventListener("click", startLogin);
 
 const code = params.get("code");
 const error = params.get("error");
@@ -3614,6 +3648,7 @@ if (error) {
   })();
 } else {
   setAuthState(auth);
-  if (!SHOW_LOGIN_BUTTONS && !auth?.userId) startLogin();
+  if (sessionExpired) showSessionExpired();
+  else if (!SHOW_LOGIN_BUTTONS && !auth?.userId) startLogin();
   else loadDashboardData();
 }

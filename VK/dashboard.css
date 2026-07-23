@@ -340,6 +340,69 @@ textarea:focus-visible{
 @media (orientation: portrait){
   .page-scroll{ padding-bottom: 12px; }
 }
+.session-expired-overlay{
+  position: fixed;
+  inset: 0;
+  z-index: 10020;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15,23,42,.58);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.session-expired-overlay.active{
+  display: flex;
+}
+.session-expired-card{
+  width: min(100%, 420px);
+  padding: 26px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 24px 64px rgba(15,23,42,.28);
+  text-align: center;
+}
+.session-expired-icon{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 16px;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 24px;
+  font-weight: 800;
+}
+.session-expired-title{
+  color: #0f172a;
+  font-size: 20px;
+  font-weight: 800;
+}
+.session-expired-message{
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+.session-expired-login{
+  width: 100%;
+  margin-top: 22px;
+  padding: 13px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--brand-600), var(--brand-500));
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.session-expired-login:hover{
+  background: linear-gradient(135deg, var(--brand-700), var(--brand-600));
+}
 .global-loading-overlay{
   position: fixed;
   inset: 0;

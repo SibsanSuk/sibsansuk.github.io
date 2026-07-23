@@ -68,6 +68,7 @@ function oidcLogout() {
   globalThis.location.href = `${OIDC.logoutEndpoint}?${params.toString()}`;
 }
 const authHeader = () => { const a = readAuth(); return a?.token?.access_token ? { Authorization: `Bearer ${a.token.access_token}` } : {}; };
+const SESSION_EXPIRED_MESSAGE = "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง";
 const DEBUG = teacherQuery.get("debug") === "1";
 const API_LOG = [];
 const apiGet = async (url, { auth = true } = {}) => {
@@ -76,6 +77,11 @@ const apiGet = async (url, { auth = true } = {}) => {
   try {
     const res = await fetch(url, { headers: auth ? authHeader() : {} });
     entry.status = res.status;
+    if (auth && res.status === 401) {
+      entry.ok = false; entry.error = SESSION_EXPIRED_MESSAGE;
+      expireSession();
+      throw new Error(SESSION_EXPIRED_MESSAGE);
+    }
     if (!res.ok) { entry.ok = false; entry.error = `${res.status} ${res.statusText}`; throw new Error(entry.error); }
     const json = await res.json();
     entry.ok = true;
@@ -119,8 +125,31 @@ const apiPost = async (url, body) => {
   try {
     const res = await fetch(url, { method: "POST", headers: { ...authHeader(), "Content-Type": "application/json" }, body: JSON.stringify(body) });
     entry.status = res.status;
+    if (res.status === 401) {
+      entry.ok = false; entry.error = SESSION_EXPIRED_MESSAGE;
+      expireSession();
+      throw new Error(SESSION_EXPIRED_MESSAGE);
+    }
     if (!res.ok) { entry.ok = false; entry.error = `${res.status} ${res.statusText}`; throw new Error(entry.error); }
     const json = await res.json().catch(() => ({}));
+    entry.ok = true;
+    if (DEBUG) entry.sample = json;
+    return json;
+  } catch (e) { entry.ok = false; entry.error = entry.error || e.message; throw e; }
+};
+const apiDelete = async (url) => {
+  const entry = { url, method: "DELETE", at: new Date().toLocaleTimeString("th-TH") };
+  API_LOG.push(entry);
+  try {
+    const res = await fetch(url, { method: "DELETE", headers: authHeader() });
+    entry.status = res.status;
+    if (res.status === 401) {
+      entry.ok = false; entry.error = SESSION_EXPIRED_MESSAGE;
+      expireSession();
+      throw new Error(SESSION_EXPIRED_MESSAGE);
+    }
+    if (!res.ok) { entry.ok = false; entry.error = `${res.status} ${res.statusText}`; throw new Error(entry.error); }
+    const json = await res.json().catch(() => ({})); // 204 / empty body is a valid success here
     entry.ok = true;
     if (DEBUG) entry.sample = json;
     return json;
@@ -141,6 +170,8 @@ const apiCourseSearch = ({ grade, level, classRoom, instituteId, createDate } = 
   return apiGet(`${teacherConfig.baseUrl}/api/kidbright/course${q ? `?${q}` : ""}`);
 };
 const apiCreateAssign = (body) => apiPost(`${teacherConfig.baseUrl}/api/kidbright/assign`, body);
+// Removes the classroom from the teacher's list (the assign record, not the course itself).
+const apiDeleteAssign = (assignId) => apiDelete(`${teacherConfig.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}`);
 const apiInstituteSearch = (name) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/institute?instituteName=${encodeURIComponent(name)}`);
 // Public nationwide enrollment aggregate (per-institute counts + coordinates), no auth.
 const ENROLL_RANGE = "2020-01-01," + new Date().toISOString().slice(0, 10);
@@ -604,12 +635,14 @@ const ICO = {
   id: svg(["M3.5 6h17v12h-17z", "M8 11a1.7 1.7 0 1 0 0-3.4A1.7 1.7 0 0 0 8 11", "M5.6 15.2c.4-1.3 1.4-2 2.4-2s2 .7 2.4 2", "M13.5 9h4", "M13.5 12h4", "M13.5 15h2.5"], 1.9),
   lock: svg(["M6 10.5h12v9.5H6z", "M8.2 10.5V7.2a3.8 3.8 0 0 1 7.6 0v3.3"], 2),
   calendar: svg(["M4.5 6.5h15v13h-15z", "M4.5 10h15", "M8 4v4", "M16 4v4"], 2),
+  trash: svg(["M4.5 7h15", "M9.5 7V4.8h5V7", "M6.5 7l1 12.2h9L17.5 7", "M10.3 10.5v5.5", "M13.7 10.5v5.5"], 2),
+  warn: svg(["M12 4.5 21 20H3l9-15.5z", "M12 10v4.2", "M12 17.1v.1"], 2),
 };
 const toolStyle = (label) => { const m = { Profile: "#12a89b", Video: "#7b83eb", BookRoll: "#5ab877", Quiz: "#f59e0b" }; return `background:${m[label] || "#94a3b8"};color:#fff`; };
 
 /* ------------------------------ state ------------------------------ */
 const state = {
-  ready: false, sub: "", instituteId: "", classrooms: [], loadingCourse: false, authError: null,
+  ready: false, sub: "", instituteId: "", classrooms: [], loadingCourse: false, authError: null, sessionExpired: false,
   page: "overview", course: null, student: null, studentDetail: null,
   search: "", filter: "all", sort: "followup",
   authed: false, userMenuOpen: false, editOpen: false, notifOpen: false,
@@ -618,6 +651,11 @@ const state = {
   addFilters: { from: "", to: "", grade: "", level: "", classRoom: "", instituteId: "" },
   addOptions: { grades: [], levels: [], classRooms: [] }, // filter choices derived from course enrolls[]
   addInstQuery: "", addInstOptions: [], // institute autocomplete (staff/admin)
+  // ⋮ menu on a classroom card + its "นำออกจากรายการ" confirm.
+  // cardMenuPos is measured from the ⋮ button so the menu can be position:fixed and escape
+  // the card's overflow:hidden and the scrolling list around it.
+  cardMenu: null, cardMenuPos: null,
+  delTarget: null, delSaving: false, delError: "",
   teacherRole: "",
   // Identity/school are filled from the real profile.
   teacherSchool: "",
@@ -634,6 +672,25 @@ const state = {
 /* runtime helpers not part of state */
 const maps = { usage: null };
 let slideTimer = null;
+
+function expireSession() {
+  clearAuth();
+  Object.assign(state, {
+    ready: true,
+    authed: false,
+    sessionExpired: true,
+    authError: null,
+    loadingCourse: false,
+    student: null,
+    userMenuOpen: false,
+    addOpen: false,
+    editOpen: false,
+    cardMenu: null,
+    delTarget: null,
+    delSaving: false,
+  });
+  if (document.getElementById("app")) render();
+}
 
 /* responsive breakpoints: phone < 700 ≤ tablet < 1024 ≤ desktop */
 const BP = () => { const w = window.innerWidth || 1200; return w < 700 ? "phone" : w < 1024 ? "tablet" : "desktop"; };
@@ -845,7 +902,7 @@ function moduleCard(c, i) {
       </div>
       <div style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:8px">
         <button data-act="pickCourse" data-arg="${esc(c.id)}" style="border:none;border-radius:9px;padding:8px 13px;font:700 11.5px 'Noto Sans Thai';cursor:pointer;white-space:nowrap;${actStyle}">${actLabel}</button>
-        <button data-act="noop" title="ตัวเลือก" style="border:none;background:none;color:#c0c6cf;cursor:pointer;font:700 17px Inter;line-height:1;padding:2px 5px">⋮</button>
+        <button data-act="toggleCardMenu" data-arg="${esc(c.id)}" title="ตัวเลือก" style="border:none;background:${state.cardMenu === c.id ? "#f2f4f7" : "none"};border-radius:7px;color:${state.cardMenu === c.id ? "#475467" : "#c0c6cf"};cursor:pointer;font:700 17px Inter;line-height:1;padding:2px 5px">⋮</button>
       </div>
     </div>
   </div>`;
@@ -1541,6 +1598,41 @@ function viewEditModal() {
   </div>`;
 }
 
+// ⋮ menu for one classroom card. position:fixed at coordinates measured from the button, so
+// neither the card's overflow:hidden nor the scrolling list can clip it.
+function viewCardMenu() {
+  const p = state.cardMenuPos;
+  if (!p) return "";
+  return `
+  <div data-act="noop" style="position:fixed;top:${p.top}px;right:${p.right}px;z-index:97;width:198px;background:#fff;border:1px solid #eceef1;border-radius:12px;box-shadow:0 14px 34px rgba(16,24,40,.18);overflow:hidden;padding:5px">
+    <button data-act="askRemoveClass" data-arg="${esc(state.cardMenu)}" class="h-red" style="display:flex;align-items:center;gap:10px;width:100%;border:none;background:none;cursor:pointer;padding:10px 11px;border-radius:8px;font:600 13px 'Noto Sans Thai';color:#dc2626;text-align:left"><span style="width:17px;height:17px;color:#dc2626;display:inline-flex;flex:none">${ICO.trash}</span>นำออกจากรายการ</button>
+  </div>`;
+}
+
+// Confirm before DELETE /assign/{assignId} — the card disappears for every teacher on that assign.
+function viewRemoveModal() {
+  const c = state.classrooms.find((x) => String(x.id) === String(state.delTarget));
+  if (!c) return "";
+  return `
+  <div style="position:fixed;inset:0;z-index:1400;display:flex;align-items:center;justify-content:center;padding:24px">
+    <div data-act="closeRemove" style="position:absolute;inset:0;background:rgba(16,24,40,.5)"></div>
+    <div style="position:relative;width:100%;max-width:410px;background:#fff;border-radius:16px;box-shadow:0 24px 60px rgba(16,24,40,.28);overflow:hidden">
+      <div style="padding:24px 24px 18px;display:flex;gap:14px">
+        <span style="width:42px;height:42px;border-radius:11px;background:#fef2f2;color:#dc2626;display:inline-flex;align-items:center;justify-content:center;flex:none;padding:10px">${ICO.warn}</span>
+        <div style="min-width:0">
+          <div style="font:800 16.5px 'Noto Sans Thai';color:#101828">นำห้องเรียนออกจากรายการ</div>
+          <div style="font:500 12.5px/1.6 'Noto Sans Thai';color:#667085;margin-top:6px">ห้องเรียน <b style="color:#344054">${esc(c.title)}</b> จะถูกนำออกจากรายการของคุณ และจะไม่สามารถเปิดดูความคืบหน้าของนักเรียนในห้องนี้ได้อีก</div>
+        </div>
+      </div>
+      ${state.delError ? `<div style="margin:0 24px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 12px;font:600 12px/1.5 'Noto Sans Thai';color:#dc2626">${esc(state.delError)}</div>` : ""}
+      <div style="padding:14px 24px;border-top:1px solid #f2f4f7;display:flex;gap:10px;justify-content:flex-end">
+        <button type="button" data-act="closeRemove" class="h-light" style="border:1px solid #e4e7ec;background:#fff;color:#475467;border-radius:999px;padding:11px 18px;font:700 13.5px 'Noto Sans Thai';cursor:pointer">ยกเลิก</button>
+        <button type="button" data-act="confirmRemove" class="h-bright" style="border:none;background:${state.delSaving ? "#f7a3a3" : "#dc2626"};color:#fff;border-radius:999px;padding:11px 22px;font:700 13.5px 'Noto Sans Thai';cursor:${state.delSaving ? "default" : "pointer"}"${state.delSaving ? " disabled" : ""}>${state.delSaving ? "กำลังนำออก..." : "นำออก"}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function viewAddModal() {
   const phone = BP() === "phone";
   const f = state.addFilters;
@@ -1702,12 +1794,23 @@ function viewErrorToast() {
     <button data-act="closeError" style="border:none;background:#fef2f2;color:#b42318;width:26px;height:26px;border-radius:7px;cursor:pointer;font:700 13px Inter;flex:none">✕</button>
   </div>`;
 }
+function viewSessionExpired() {
+  return `<div role="alertdialog" aria-modal="true" aria-labelledby="session-expired-title" style="position:fixed;inset:0;z-index:1600;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(16,24,40,.58);backdrop-filter:blur(3px)">
+    <div style="width:min(420px,100%);background:#fff;border:1px solid #e4e7ec;border-radius:18px;padding:26px;box-shadow:0 24px 64px rgba(16,24,40,.28);text-align:center">
+      <div style="width:52px;height:52px;margin:0 auto 16px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#fff7ed;color:#c2410c;font:800 24px Inter">!</div>
+      <div id="session-expired-title" style="font:800 20px 'Noto Sans Thai';color:#101828">เซสชันหมดอายุ</div>
+      <div style="margin-top:8px;font:500 13.5px/1.65 'Noto Sans Thai';color:#667085">เพื่อความปลอดภัย ระบบได้ออกจากระบบแล้ว กรุณาเข้าสู่ระบบอีกครั้งเพื่อโหลดข้อมูลต่อ</div>
+      <button data-act="relogin" style="width:100%;margin-top:22px;border:none;border-radius:999px;padding:13px 18px;background:linear-gradient(100deg,#12a594,#0d9488);color:#fff;cursor:pointer;font:700 14px 'Noto Sans Thai'">เข้าสู่ระบบอีกครั้ง</button>
+    </div>
+  </div>`;
+}
 
 /* ============================== ROOT RENDER ============================== */
 function overlaysHtml() {
   return (state.userMenuOpen ? `<div data-act="closeUserMenu" style="position:fixed;inset:0;z-index:95"></div>` : "") +
     (state.notifOpen ? `<div data-act="closeNotif" style="position:fixed;inset:0;z-index:95"></div>` : "") +
-    (state.leadoOpen ? `<div data-act="closeLeado" style="position:fixed;inset:0;z-index:94"></div>` : "");
+    (state.leadoOpen ? `<div data-act="closeLeado" style="position:fixed;inset:0;z-index:94"></div>` : "") +
+    (state.cardMenu ? `<div data-act="closeCardMenu" style="position:fixed;inset:0;z-index:96"></div>${viewCardMenu()}` : "");
 }
 
 /* ---- Leado attention demo + typewriter greeting ---- */
@@ -1775,9 +1878,11 @@ function render() {
       ${state.course ? viewDashboard() : ""}
       ${state.editOpen ? viewEditModal() : ""}
       ${state.addOpen ? viewAddModal() : ""}
+      ${state.delTarget ? viewRemoveModal() : ""}
       ${state.student != null ? viewDrawer() : ""}
       ${state.authError ? viewErrorToast() : ""}
       ${state.loadingCourse ? viewLoadingOverlay() : ""}
+      ${state.sessionExpired ? viewSessionExpired() : ""}
     </div>`;
 
   if (DEBUG) updateDebugPanel();
@@ -1892,11 +1997,12 @@ const H = {
       applyDataset({ course, progress, score: grades, title: cls.title, key: cls.courseId });
       setState({ course: id, page: "overview", student: null, loadingCourse: false });
     } catch (err) {
-      setState({ loadingCourse: false, authError: "โหลดข้อมูลห้องเรียนไม่สำเร็จ: " + err.message });
+      if (!state.sessionExpired) setState({ loadingCourse: false, authError: "โหลดข้อมูลห้องเรียนไม่สำเร็จ: " + err.message });
     }
   },
   switchCourse: () => setState({ course: null, student: null, userMenuOpen: false }),
   closeError: () => setState({ authError: null }),
+  relogin: () => startLogin(),
   openStudent: async (id) => {
     const st = state.students.find((item) => String(item.id) === String(id));
     if (!st) return;
@@ -1978,6 +2084,35 @@ const H = {
       setState({ addSaving: false, addError: "เพิ่มห้องเรียนไม่สำเร็จ: " + err.message });
     }
   },
+  // ⋮ on a classroom card. The button's rect is measured now because the menu renders fixed;
+  // divide by zoom since it lives inside the zoomed app wrapper.
+  toggleCardMenu: (id, el) => {
+    if (state.cardMenu === id) { setState({ cardMenu: null, cardMenuPos: null }); return; }
+    const z = state.fontSize === "sm" ? 0.9 : state.fontSize === "lg" ? 1.15 : 1;
+    const r = el.getBoundingClientRect();
+    setState({
+      cardMenu: id,
+      cardMenuPos: { top: (r.bottom + 6) / z, right: (window.innerWidth - r.right) / z },
+    });
+  },
+  closeCardMenu: () => setState({ cardMenu: null, cardMenuPos: null }),
+  askRemoveClass: (id) => setState({ cardMenu: null, cardMenuPos: null, delTarget: id, delError: "", delSaving: false }),
+  closeRemove: () => { if (!state.delSaving) setState({ delTarget: null, delError: "" }); },
+  confirmRemove: async () => {
+    const cls = state.classrooms.find((c) => String(c.id) === String(state.delTarget));
+    if (!cls || state.delSaving) return;
+    if (!cls.assignId) { setState({ delError: "ห้องเรียนนี้ไม่มี assignId จึงนำออกไม่ได้" }); return; }
+    setState({ delSaving: true, delError: "" });
+    try {
+      await apiDeleteAssign(cls.assignId);
+      // Refetch rather than splice locally, same as confirmAdd — the server list is the truth.
+      const resp = await apiClassrooms(state.sub, state.instituteId);
+      state.classrooms = flattenClassrooms(normalizeListPayload(resp));
+      setState({ delTarget: null, delSaving: false });
+    } catch (err) {
+      if (!state.sessionExpired) setState({ delSaving: false, delError: "นำห้องเรียนออกไม่สำเร็จ: " + err.message });
+    }
+  },
   signOut: () => oidcLogout(),
   toggleNotif: () => renderTopbar({ notifOpen: !state.notifOpen, userMenuOpen: false, leadoOpen: false }),
   closeNotif: () => renderTopbar({ notifOpen: false }),
@@ -2030,7 +2165,8 @@ function bindEvents() {
     const t = e.target.closest("[data-act]");
     if (!t) return;
     const fn = H[t.dataset.act];
-    if (fn) { if (t.dataset.act !== "noop") e.preventDefault(); fn(t.dataset.arg); }
+    // 2nd arg is the clicked element — handlers that anchor a popover need its rect
+    if (fn) { if (t.dataset.act !== "noop") e.preventDefault(); fn(t.dataset.arg, t); }
   });
   document.addEventListener("input", (e) => {
     const t = e.target.closest("[data-inp]");
@@ -2053,8 +2189,11 @@ function bindEvents() {
   });
   // responsive: full re-render only when crossing a breakpoint; otherwise just resize maps
   window.addEventListener("resize", () => {
+    // the card ⋮ menu is pinned to coordinates measured before the resize — drop it
+    const hadMenu = !!state.cardMenu;
+    if (hadMenu) { state.cardMenu = null; state.cardMenuPos = null; }
     const k = layoutKey();
-    if (k !== lastLayout) { lastLayout = k; render(); }
+    if (k !== lastLayout || hadMenu) { lastLayout = k; render(); }
     else ["usage"].forEach((k) => maps[k] && maps[k].invalidateSize());
   });
 }
@@ -2099,7 +2238,8 @@ async function apiInit() {
 
   const auth = readAuth();
   const sub = authSub(auth);
-  if (!auth || !sub || authExpired(auth)) { state.ready = true; state.authed = false; render(); return; }
+  if (auth && authExpired(auth)) { expireSession(); return; }
+  if (!auth || !sub) { state.ready = true; state.authed = false; render(); return; }
   state.authed = true; state.sub = sub;
 
   // ---- real profile: token claims -> user/{sub} -> teacher/{sub} ----
@@ -2110,7 +2250,7 @@ async function apiInit() {
 
   try {
     let user = null;
-    try { user = await apiUser(sub); } catch (_) {}
+    try { user = await apiUser(sub); } catch (err) { if (state.sessionExpired) throw err; }
     state.debugUser = user;
     if (user) {
       const un = user.firstName ? `${user.firstName} ${user.lastName || ""}`.trim() : (user.name || user.displayName);
@@ -2119,7 +2259,7 @@ async function apiInit() {
     }
 
     let teacher = null;
-    try { teacher = await apiTeacher(sub); } catch (_) {}
+    try { teacher = await apiTeacher(sub); } catch (err) { if (state.sessionExpired) throw err; }
     state.debugTeacher = teacher;
     // Role decides the add-classroom flow: user = pinned institute, staff/admin = search institute.
     state.teacherRole = (user && user.role) || (teacher && teacher.user && teacher.user.role) || "";
@@ -2151,7 +2291,7 @@ async function apiInit() {
     }
   } catch (err) {
     state.ready = true;
-    state.authError = "โหลดรายชื่อห้องเรียนไม่สำเร็จ: " + err.message;
+    if (!state.sessionExpired) state.authError = "โหลดรายชื่อห้องเรียนไม่สำเร็จ: " + err.message;
     render();
   }
 }
