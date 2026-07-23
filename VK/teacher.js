@@ -1621,7 +1621,7 @@ function viewRemoveModal() {
         <span style="width:42px;height:42px;border-radius:11px;background:#fef2f2;color:#dc2626;display:inline-flex;align-items:center;justify-content:center;flex:none;padding:10px">${ICO.warn}</span>
         <div style="min-width:0">
           <div style="font:800 16.5px 'Noto Sans Thai';color:#101828">นำห้องเรียนออกจากรายการ</div>
-          <div style="font:500 12.5px/1.6 'Noto Sans Thai';color:#667085;margin-top:6px">ห้องเรียน <b style="color:#344054">${esc(c.title)}</b> จะถูกนำออกจากรายการของคุณ และจะไม่สามารถเปิดดูความคืบหน้าของนักเรียนในห้องนี้ได้อีก</div>
+          <div style="font:500 12.5px/1.6 'Noto Sans Thai';color:#667085;margin-top:6px">ห้องเรียน <b style="color:#344054">${esc(c.title)}</b> จะถูกนำออกจากรายการของคุณ</div>
         </div>
       </div>
       ${state.delError ? `<div style="margin:0 24px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 12px;font:600 12px/1.5 'Noto Sans Thai';color:#dc2626">${esc(state.delError)}</div>` : ""}
@@ -1821,8 +1821,11 @@ function cancelLeadoDemo() {
   state.leadoDemo = false;
 }
 // Once per session, auto-expand the Leado panel from its icon, hold ~2s, then shrink back —
-// a one-time hint that the AI assistant lives here.
+// a one-time hint that the AI assistant lives here. Currently off: the pop-out on load was
+// distracting. Flip to true to bring it back (the `leadoDemo` keyframes stay in teacher.html).
+const LEADO_DEMO_ENABLED = false;
 function maybePlayLeadoDemo() {
+  if (!LEADO_DEMO_ENABLED) return;
   if (state.leadoDemoed || !state.ready || !state.authed) return;
   state.leadoDemoed = true;
   leadoDemoT1 = setTimeout(() => {
