@@ -20,7 +20,10 @@ body {
   background: #eef1f4;
   color: #101828;
   font-family: "Noto Sans Thai", "Inter", system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
+  font-weight: 500;
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: optimizeLegibility;
   overscroll-behavior: none;
 }
 
@@ -80,6 +83,43 @@ button,
   box-shadow: 0 0 0 3px rgba(13, 148, 136, .12);
   outline: none;
 }
+
+/*
+ * Accessibility font sizes.
+ * Scale typography utilities only—never the cards, spacing, maps, or viewport.
+ * !important is required because Tailwind CDN injects its utilities after this file.
+ */
+.font-size-sm {
+  --app-font-scale: 1;
+}
+
+.font-size-md {
+  --app-font-scale: 1.08;
+}
+
+.font-size-lg {
+  --app-font-scale: 1.16;
+}
+
+.font-size-shell {
+  font-size: calc(16px * var(--app-font-scale) + 2px);
+}
+
+.font-size-shell .text-\[10px\] { font-size: calc(10px * var(--app-font-scale) + 2px) !important; }
+.font-size-shell .text-\[11px\] { font-size: calc(11px * var(--app-font-scale) + 2px) !important; }
+.font-size-shell .text-xs { font-size: calc(12px * var(--app-font-scale) + 2px) !important; }
+.font-size-shell .text-\[13px\] { font-size: calc(13px * var(--app-font-scale) + 2px) !important; }
+.font-size-shell .text-sm { font-size: calc(14px * var(--app-font-scale) + 2px) !important; }
+.font-size-shell .text-\[15px\] { font-size: calc(15px * var(--app-font-scale) + 2px) !important; }
+.font-size-shell .text-base { font-size: calc(16px * var(--app-font-scale) + 2px) !important; }
+.font-size-shell .text-lg { font-size: calc(18px * var(--app-font-scale) + 2px) !important; }
+.font-size-shell .text-\[19px\] { font-size: calc(19px * var(--app-font-scale) + 2px) !important; }
+.font-size-shell .text-xl { font-size: calc(20px * var(--app-font-scale) + 2px) !important; }
+.font-size-shell .text-2xl { font-size: calc(24px * var(--app-font-scale) + 2px) !important; }
+.font-size-shell .text-\[26px\] { font-size: calc(26px * var(--app-font-scale) + 2px) !important; }
+.font-size-shell .text-\[29px\] { font-size: calc(29px * var(--app-font-scale) + 2px) !important; }
+.font-size-shell .text-3xl { font-size: calc(30px * var(--app-font-scale) + 2px) !important; }
+.font-size-shell .text-\[32px\] { font-size: calc(32px * var(--app-font-scale) + 2px) !important; }
 
 .leaflet-container {
   font-family: inherit;

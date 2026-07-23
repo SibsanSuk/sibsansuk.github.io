@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="./src/styles.css" />
+  <link rel="stylesheet" href="./src/styles.css?v=20260723-3" />
 
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script>
@@ -56,17 +56,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
-  <script src="./src/teacher-api.js"></script>
-  <script>
-    // Browsers block Babel's local-file request when this page is opened via
-    // double-click. Use the ready-to-run copy for file://, but keep live JSX
-    // transformation during normal HTTP development.
-    if (location.protocol === "file:") {
-      document.write('<script src="./src/app.runtime.js"><\/script>');
-    } else {
-      document.write('<script type="text/babel" data-presets="react" src="./src/app.js"><\/script>');
-    }
-  </script>
+  <script src="./src/teacher-api.js?v=20260723-3"></script>
+  <script src="./src/app.js?v=20260723-3"></script>
 </body>
 </html>

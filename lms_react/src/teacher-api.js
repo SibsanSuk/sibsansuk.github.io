@@ -386,6 +386,38 @@
       : value;
     return Number.isFinite(Number(raw)) ? Number(raw) : null;
   };
+  const normalizeProgressTitle = (value) => String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
+  const progressTitleCore = (value) => normalizeProgressTitle(value).replace(/^\d+(?:[-.]\d+)*(?:\s+|$)/, "").trim();
+  const normalizeUsageId = (value) => String(value || "").trim().toLowerCase();
+  function findActivityProgress(activity, entries, toolLabelValue) {
+    const safeActivity = activity && typeof activity === "object" ? activity : {};
+    const rows = Array.isArray(entries)
+      ? entries.filter((entry) => entry && typeof entry === "object")
+      : [];
+    if (!rows.length) return null;
+    const tools = Array.isArray(safeActivity.tools)
+      ? safeActivity.tools.filter((tool) => tool && typeof tool === "object")
+      : [];
+    const toolIds = tools
+      .filter((tool) => String(tool.label || "").toLowerCase() === toolLabelValue)
+      .map((tool) => normalizeUsageId(tool.id))
+      .filter(Boolean);
+    const usageMatch = rows.find((entry) => entry.usageId && toolIds.includes(normalizeUsageId(entry.usageId)));
+    if (usageMatch) return usageMatch;
+    const title = normalizeProgressTitle(safeActivity.name);
+    const exact = rows.find((entry) => normalizeProgressTitle(entry.key || entry.title) === title);
+    if (exact) return exact;
+    const core = progressTitleCore(safeActivity.name);
+    if (!core) return null;
+    const exactCore = rows.find((entry) => progressTitleCore(entry.key || entry.title) === core);
+    if (exactCore) return exactCore;
+    return rows
+      .filter((entry) => {
+        const entryCore = progressTitleCore(entry.key || entry.title);
+        return entryCore.length >= 4 && (entryCore.includes(core) || core.includes(entryCore));
+      })
+      .sort((left, right) => progressTitleCore(right.key || right.title).length - progressTitleCore(left.key || left.title).length)[0] || null;
+  }
   const summarize = (values, expected = 0) => {
     const valid = values.map(Number).filter(Number.isFinite).map(clamp);
     return {
@@ -394,19 +426,47 @@
       todo: valid.filter((value) => value <= 0).length + Math.max(0, expected - valid.length)
     };
   };
-  function readingEntries(payload) {
+  function readingEntries(payload, usageHint = "") {
     const output = [];
-    const visit = (value, title = "") => {
+    const seen = new Set();
+    const push = (titleValue, progressValue, usageIdValue = "") => {
+      if (!Number.isFinite(progressValue)) return;
+      const title = String(titleValue || "").trim();
+      const progress = clamp(Math.round(progressValue));
+      const usageId = normalizeUsageId(usageIdValue || usageHint);
+      const signature = `${usageId}|${normalizeProgressTitle(title)}|${progress}`;
+      if (seen.has(signature)) return;
+      seen.add(signature);
+      output.push({ title, key: normalizeProgressTitle(title), usageId, progress });
+    };
+    const directProgress = (value) => {
+      if (!value || typeof value !== "object") return null;
+      const read = Number(value.read ?? value.readPage ?? value.read_page ?? value.current ?? value.done);
+      const total = Number(value.total ?? value.totalPage ?? value.total_page ?? value.max ?? value.all);
+      if (Number.isFinite(read) && Number.isFinite(total)) return total > 0 ? read / total * 100 : 0;
+      const direct = Number(value.progress ?? value.progressRate ?? value.rate ?? value.percent ?? value.percentage);
+      return Number.isFinite(direct) ? direct : null;
+    };
+    const visit = (value, title = "", inheritedUsageId = "") => {
       if (typeof value === "string") {
         const match = value.trim().match(/^(\d+)\s*:\s*(\d+)$/);
-        if (match) output.push({ title, progress: Number(match[2]) > 0 ? clamp(Number(match[1]) / Number(match[2]) * 100) : 0 });
+        if (match) push(title, Number(match[2]) > 0 ? Number(match[1]) / Number(match[2]) * 100 : 0, inheritedUsageId);
         return;
       }
       if (!value || typeof value !== "object") return;
-      if (Array.isArray(value)) value.forEach((item, index) => visit(item, title || String(index)));
-      else Object.entries(value).forEach(([key, item]) => visit(item, key));
+      const progress = directProgress(value)
+        ?? directProgress(value.value)
+        ?? directProgress(value.stats)
+        ?? directProgress(value.data);
+      const nextUsageId = value.usageId || value.usage_id || value.courseId || value.course_id || inheritedUsageId;
+      if (Number.isFinite(progress)) {
+        push(value.title || value.topic || value.label || value.name || value.display_name || value.displayName || title, progress, nextUsageId);
+        return;
+      }
+      if (Array.isArray(value)) value.forEach((item, index) => visit(item, title || String(index), nextUsageId));
+      else Object.entries(value).forEach(([key, item]) => visit(item, key, nextUsageId));
     };
-    visit(payload);
+    visit(payload, "", usageHint);
     return output;
   }
   function videoEntries(payload) {
@@ -415,6 +475,8 @@
     const data = Array.isArray(option.series?.[0]?.data) ? option.series[0].data : [];
     return data.map((value, index) => ({
       title: String(axis?.data?.[index] || ""),
+      key: normalizeProgressTitle(axis?.data?.[index] || ""),
+      usageId: "",
       progress: clamp(chartNumber(value))
     })).filter((entry) => entry.title);
   }
@@ -424,31 +486,80 @@
     const values = (own?.data || []).map(chartNumber).filter(Number.isFinite);
     return values.length ? values.reduce((sum, value) => sum + Math.max(0, value), 0) : null;
   }
-  async function studentDetails(student, classroom, activities) {
+  async function studentDetails(student, classroom, activities, onUpdate) {
     const errors = [];
-    const expectedReading = activities.filter((activity) => activity.tools.some((tool) => tool.label === "BookRoll")).length;
-    const expectedVideo = activities.filter((activity) => activity.tools.some((tool) => tool.label === "Video")).length;
-    let userId = [student.apiUserId, student.userId, student.sub, student.uuid, student.id]
-      .map((value) => String(value || "").trim())
-      .find((value) => KEYCLOAK_ID.test(value)) || "";
-    const settle = (promise) => promise.then(
-      (value) => ({ status: "fulfilled", value }),
-      (reason) => ({ status: "rejected", reason })
-    );
-    const readingPromise = settle(endpoints.bookroll(student.email, classroom.courseId));
-    const videoPromise = settle(endpoints.video(student.email, classroom.courseId));
-    if (!userId) {
+    const safeStudent = student && typeof student === "object" ? student : {};
+    const safeClassroom = classroom && typeof classroom === "object" ? classroom : {};
+    const safeActivities = Array.isArray(activities)
+      ? activities.filter((activity) => activity && typeof activity === "object")
+      : [];
+    const countTools = (label) => safeActivities
+      .flatMap((activity) => Array.isArray(activity.tools) ? activity.tools : [])
+      .filter((tool) => String(tool?.label || "").toLowerCase() === label).length;
+    const expectedReading = countTools("bookroll");
+    const expectedVideo = countTools("video");
+    const result = {
+      studentId: safeStudent.id,
+      loading: true,
+      readingLoading: true,
+      videoLoading: true,
+      chatbotLoading: true,
+      reading: null,
+      video: null,
+      readingEntries: [],
+      videoEntries: [],
+      chatbotSeconds: null,
+      apiUserId: null,
+      errors
+    };
+    const publish = (patch) => {
+      Object.assign(result, patch);
+      result.errors = [...errors];
+      if (typeof onUpdate === "function") {
+        onUpdate({
+          ...patch,
+          studentId: safeStudent.id,
+          errors: [...errors]
+        });
+      }
+    };
+    const courseId = safeClassroom.courseId;
+    const email = String(safeStudent.email || "").trim();
+    if (!courseId || !email) {
+      errors.push("ไม่พบ courseId หรืออีเมลนักเรียน");
+      publish({
+        loading: false,
+        readingLoading: false,
+        videoLoading: false,
+        chatbotLoading: false
+      });
+      return result;
+    }
+
+    const resolveUserId = async () => {
+      let userId = [
+        safeStudent.apiUserId,
+        safeStudent.userId,
+        safeStudent.user_id,
+        safeStudent.sub,
+        safeStudent.uuid,
+        safeStudent.id
+      ].map((value) => String(value || "").trim())
+        .find((value) => KEYCLOAK_ID.test(value)) || "";
+      if (userId) return userId;
       try {
         const rosterPayload = await endpoints.courses({
-          instituteId: classroom.instituteId || "",
-          grade: classroom.grade || "",
-          level: classroom.level ?? "",
-          classRoom: classroom.classRoom ?? ""
+          instituteId: safeClassroom.instituteId || "",
+          grade: safeClassroom.grade || "",
+          level: safeClassroom.level ?? "",
+          classRoom: safeClassroom.classRoom ?? ""
         });
-        const course = list(rosterPayload).find((item) => String(item.courseId || item.course_id || "") === String(classroom.courseId));
+        const course = list(rosterPayload)
+          .find((item) => String(item.courseId || item.course_id || "") === String(courseId));
         const enrollments = course?.enrolls || course?.enroll || course?.students || course?.learners || [];
-        const email = String(student.email || "").trim().toLowerCase();
-        const match = enrollments.find((item) => String(item.email || item.user?.email || item.profile?.email || "").trim().toLowerCase() === email);
+        const normalizedEmail = email.toLowerCase();
+        const match = enrollments.find((item) => String(item.email || item.user?.email || item.profile?.email || "")
+          .trim().toLowerCase() === normalizedEmail);
         userId = [
           match?.userId, match?.user_id, match?.sub, match?.uuid,
           match?.keycloakId, match?.keycloak_id, match?.keycloakUserId,
@@ -457,26 +568,74 @@
       } catch (error) {
         errors.push(`Student ID: ${error.message}`);
       }
-    }
-    const [readingResult, videoResult, chatbotResult] = await Promise.all([
-      readingPromise,
-      videoPromise,
-      settle(userId ? endpoints.chatbot(classroom.courseId, userId) : Promise.resolve(null))
-    ]);
-    const readings = readingResult.status === "fulfilled" ? readingEntries(readingResult.value) : [];
-    const videos = videoResult.status === "fulfilled" ? videoEntries(videoResult.value) : [];
-    if (readingResult.status === "rejected") errors.push(`BookRoll: ${readingResult.reason.message}`);
-    if (videoResult.status === "rejected") errors.push(`Video: ${videoResult.reason.message}`);
-    if (chatbotResult.status === "rejected") errors.push(`Chatbot: ${chatbotResult.reason.message}`);
-    return {
-      reading: summarize(readings.map((entry) => entry.progress), expectedReading),
-      video: summarize(videos.map((entry) => entry.progress), expectedVideo),
-      readingEntries: readings,
-      videoEntries: videos,
-      chatbotSeconds: chatbotResult.status === "fulfilled" && chatbotResult.value ? chatbotSeconds(chatbotResult.value) : null,
-      apiUserId: userId || null,
-      errors
+      return userId;
     };
+
+    const identityPromise = resolveUserId().then((userId) => {
+      publish({
+        apiUserId: userId || null
+      });
+      return userId;
+    });
+    const readingTask = (async () => {
+      let readings = [];
+      try {
+        readings = readingEntries(await endpoints.bookroll(email, courseId), courseId);
+        if (!readings.length) errors.push("BookRoll: ตอบกลับสำเร็จแต่อ่านค่าความคืบหน้าไม่ได้");
+      } catch (error) {
+        errors.push(`BookRoll: ${error.message}`);
+      }
+      publish({
+        reading: summarize(readings.map((entry) => entry.progress), expectedReading),
+        readingEntries: readings,
+        readingLoading: false
+      });
+    })();
+    const videoTask = (async () => {
+      let videos = [];
+      try {
+        videos = videoEntries(await endpoints.video(email, courseId));
+        if (!videos.length) errors.push("Video: ตอบกลับสำเร็จแต่อ่านค่าความคืบหน้าไม่ได้");
+      } catch (error) {
+        errors.push(`Video: ${error.message}`);
+      }
+      publish({
+        video: summarize(videos.map((entry) => entry.progress), expectedVideo),
+        videoEntries: videos,
+        videoLoading: false
+      });
+    })();
+    const chatbotTask = (async () => {
+      const userId = await identityPromise;
+      if (!userId) {
+        errors.push("Chatbot: ไม่พบรหัสผู้ใช้สำหรับโหลดเวลาทำแบบฝึกหัด");
+        publish({
+          chatbotSeconds: null,
+          chatbotLoading: false
+        });
+        return;
+      }
+      let seconds = null;
+      try {
+        const payload = await endpoints.chatbot(courseId, userId);
+        seconds = payload ? chatbotSeconds(payload) : null;
+      } catch (error) {
+        errors.push(`Chatbot: ${error.message}`);
+      }
+      publish({
+        chatbotSeconds: seconds,
+        chatbotLoading: false
+      });
+    })();
+
+    await Promise.allSettled([readingTask, videoTask, chatbotTask]);
+    publish({
+      loading: false,
+      readingLoading: false,
+      videoLoading: false,
+      chatbotLoading: false
+    });
+    return result;
   }
 
   async function overview() {
@@ -515,6 +674,7 @@
     flattenClassrooms,
     buildDataset,
     studentDetails,
+    findActivityProgress,
     statusFor
   };
 })(window);

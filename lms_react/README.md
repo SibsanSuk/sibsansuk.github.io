@@ -16,16 +16,15 @@ python3 -m http.server 3000
 
 | ไฟล์ | หน้าที่ |
 |---|---|
-| `index.html` | โหลด React, Babel, Tailwind, Leaflet และ runtime config |
+| `index.html` | โหลด React, Tailwind, Leaflet และ runtime config |
 | `src/teacher-api.js` | OIDC, API endpoints และ data normalization |
-| `src/app.js` | React components (JSX) และ state ของ dashboard |
-| `src/app.runtime.js` | JavaScript พร้อมใช้สำหรับเปิด `index.html` ด้วย double-click |
+| `src/app.js` | React components และ state ของ dashboard (JavaScript พร้อมใช้) |
 | `src/styles.css` | CSS เฉพาะส่วนที่ Tailwind ไม่ครอบคลุม |
 | `References/overview.json` | ข้อมูล aggregate สำหรับแผนที่หน้าแรก |
 
 ## เปิดด้วย double-click
 
-สามารถ double-click `index.html` เพื่อดูหน้า Preview ได้ทันที ระบบจะใช้ `src/app.runtime.js`
+สามารถ double-click `index.html` เพื่อดูหน้า Preview ได้ทันที ระบบใช้ `src/app.js` โดยตรง
 
 ข้อจำกัดของ `file://`:
 
@@ -54,7 +53,7 @@ python3 -m http.server 3000
 
 ## แนวทางแก้ไข
 
-- แก้หน้าตาและ component หลักที่ `src/app.js`
+- แก้หน้าตาและ component ที่ `src/app.js` ซึ่งเป็น source of truth เพียงไฟล์เดียว
 - แก้ endpoint หรือการแปลงข้อมูลที่ `src/teacher-api.js`
 - สีหลักและ font อยู่ใน `tailwind.config` ที่ `index.html`
 - ไม่มี mock data ใน runtime; ถ้า API ล้มเหลว UI จะแสดง error หรือ empty state
