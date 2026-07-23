@@ -1,1 +1,0 @@
-{"title":{"text":"Done Chapter View"},"tooltip":{"trigger":"axis"},"xAxis":{"type":"category","data":["บทที่ 1","บทที่ 2","บทที่ 3","บทที่ 4"]},"yAxis":{"type":"value"},"series":[{"name":"ผ่านแล้ว","type":"bar","data":[1,1,0,0]}]}

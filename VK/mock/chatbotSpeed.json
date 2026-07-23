@@ -1,1 +1,0 @@
-{"title":{"text":"Learning Speed"},"tooltip":{"trigger":"axis"},"xAxis":{"type":"category","data":["010402","010403","010404","wpOK010403"],"axisLabel":{"rotate":0}},"yAxis":{"type":"value"},"series":[{"name":"Average Score","type":"line","data":[10,68,5,2]},{"name":"Your Score","type":"line","data":[8,60,4,1]}]}

@@ -1,1 +1,0 @@
-{"title":{"text":"Learning Performance"},"tooltip":{"trigger":"axis"},"xAxis":{"type":"category","data":["010402","010403","010404","wpOK010403"],"axisLabel":{"rotate":0}},"yAxis":{"type":"value"},"series":[{"name":"Average Score","type":"line","data":[12,70,6,3]},{"name":"Your Score","type":"line","data":[9,62,4,2]}]}

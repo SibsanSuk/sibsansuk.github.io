@@ -101,7 +101,6 @@ const apiGet = async (url, { auth = true, critical = true } = {}) => {
   } catch (e) { entry.ok = false; entry.error = entry.error || e.message; throw e; }
 };
 const apiUser = (sub) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/user/${encodeURIComponent(sub)}`);
-const apiUserByEmail = (email) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/user/query?email=${encodeURIComponent(email)}`, { critical: false });
 const apiTeacher = (sub) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/teacher/${encodeURIComponent(sub)}`);
 const apiUserInfo = () => apiGet(OIDC.userinfoEndpoint);
 const apiClassrooms = (sub, instituteId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/course/teacher/${encodeURIComponent(sub)}${instituteId ? `?instituteId=${encodeURIComponent(instituteId)}` : ""}`);
@@ -183,8 +182,6 @@ const apiCourseSearch = ({ grade, level, classRoom, instituteId, createDate } = 
 const apiCreateAssign = (body) => apiPost(`${teacherConfig.baseUrl}/api/kidbright/assign`, body);
 const apiDeleteAssign = (assignId) => apiDelete(`${teacherConfig.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}`);
 const apiInstituteSearch = (name) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/institute?instituteName=${encodeURIComponent(name)}`);
-const ENROLL_RANGE = "2020-01-01," + new Date().toISOString().slice(0, 10);
-const apiEnrollAggregate = (range = ENROLL_RANGE) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/enroll/query?createAt=${range}`, { auth: false });
 
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 const toNumber = (v, f = 0) => { const n = Number(v); return Number.isFinite(n) ? n : f; };
@@ -251,7 +248,7 @@ const resolveStudentApiUserIdFromRoster = async (student) => {
   if (!query.instituteId && !query.grade && query.level === "" && query.classRoom === "") return "";
   const cacheKey = JSON.stringify(query);
   if (!courseRosterCache.has(cacheKey)) {
-    courseRosterCache.set(cacheKey, apiCourseSearch(query, { critical: false }).catch(() => null));
+    courseRosterCache.set(cacheKey, apiCourseSearch(query, { critical: false }));
   }
   const payload = await courseRosterCache.get(cacheKey);
   const courses = Array.isArray(payload) ? payload : (payload?.data || payload?.results || payload?.items || []);
@@ -278,15 +275,7 @@ const resolveStudentApiUserId = async (student) => {
   const email = String(student?.email || "").trim().toLowerCase();
   if (!email) return "";
   if (studentApiUserIdCache.has(email)) return studentApiUserIdCache.get(email);
-  const pending = (async () => {
-    const rosterUserId = await resolveStudentApiUserIdFromRoster(student);
-    if (rosterUserId) return rosterUserId;
-    try {
-      const userId = apiUserIdFromPayload(await apiUserByEmail(email), email);
-      if (userId) return userId;
-    } catch (_) { /* teacher role may not have access to the management user search */ }
-    return "";
-  })();
+  const pending = resolveStudentApiUserIdFromRoster(student);
   studentApiUserIdCache.set(email, pending);
   const resolved = await pending;
   studentApiUserIdCache.set(email, resolved);
@@ -408,13 +397,6 @@ const normalizeListPayload = (p) => {
   if (Array.isArray(p)) return p;
   if (!p || typeof p !== "object") return [];
   return p.data || p.results || p.items || p.rows || [];
-};
-const fetchJson = async (url) => {
-  const full = new URL(url, globalThis.location?.href || "http://localhost/");
-  full.searchParams.set("v", String(Date.now()));
-  const res = await fetch(full.toString());
-  if (!res.ok) throw new Error(`โหลด ${url} ไม่สำเร็จ (${res.status})`);
-  return res.json();
 };
 /* ------------------------------ data derivation ------------------------------ */
 const compareSortPath = (a, b) => {
@@ -554,82 +536,39 @@ const toolSummary = (activities, scoreRows, studentCount) => {
   return counts;
 };
 
-/* ------------------------------ landing fallback data ------------------------------ */
-const DEMO = {
-  insightSlides: [
-    { bg: "#e9fbf4", label: "ผู้ใช้งานทั่วประเทศ", big: "22,497", unit: "คน", desc: "ครู นักเรียน และบุคลากรทางการศึกษาใช้งานระบบใน 62 จังหวัดทั่วประเทศ", view: { lat: 13.6, lng: 101.2, zoom: 5.3 } },
-    { bg: "#eef2ff", label: "วิชาที่เปิดสอนทั้งหมด", big: "48", unit: "วิชา", desc: "ครอบคลุมปัญญาประดิษฐ์ สะเต็มศึกษา และทักษะดิจิทัลสำหรับทุกช่วงชั้น", view: { lat: 15.6, lng: 101.6, zoom: 5.6 } },
-    { bg: "#fff1e6", label: "วิชาที่กำลังนิยม", big: "AI เบื้องต้น", unit: "", desc: "มีผู้เรียนมากที่สุด 6,820 คนในเดือนนี้ นำโดยภาคตะวันออกเฉียงเหนือ", view: { lat: 15.0, lng: 102.6, zoom: 6.4 } },
-    { bg: "#eafaf3", label: "ผู้ใช้ใหม่ใน 30 วัน", big: "+3,150", unit: "คน", desc: "เพิ่มขึ้น 16% จากเดือนก่อนหน้า นำโดยกรุงเทพฯ และปริมณฑล", view: { lat: 13.8, lng: 100.7, zoom: 6.9 } },
-  ],
-  mapPoints: [
-    { lat: 18.79, lng: 98.98, n: 18, size: 38 }, { lat: 18.29, lng: 99.49, n: 22, size: 40 },
-    { lat: 17.0, lng: 100.3, n: 39, size: 46 }, { lat: 17.4, lng: 102.8, n: 27, size: 42 },
-    { lat: 16.5, lng: 104.4, n: 18, size: 38 }, { lat: 14.97, lng: 102.1, n: 42, size: 48 },
-    { lat: 14.0, lng: 99.5, n: 16, size: 36 }, { lat: 13.75, lng: 100.52, n: 110, size: 62, big: true },
-    { lat: 12.6, lng: 102.1, n: 23, pin: true },
-  ],
-};
-
-const insightSlides = () => state.landingStats || DEMO.insightSlides;
-const mapPoints = () => state.landingPoints || DEMO.mapPoints;
-const inThailand = (lat, lng) => lat >= 5 && lat <= 21 && lng >= 97 && lng <= 106;
-function buildLandingFromAggregate(data) {
-  if (!Array.isArray(data) || !data.length) return null;
-  let totalUsers = 0;
-  const courses = new Map();
-  const prov = new Map();
-  for (const it of data) {
-    const uc = it.instituteUserCount || 0;
-    totalUsers += uc;
-    for (const co of it.courses || []) {
-      const k = co.courseId || co.courseName;
-      const e = courses.get(k) || { name: co.courseName, users: 0 };
-      e.users += co.courseUserCount || 0;
-      courses.set(k, e);
-    }
-    const c = it.coordinates || {};
-    if (inThailand(c.lat, c.long)) {
-      const key = it.instituteProvince || "-";
-      const e = prov.get(key) || { users: 0, lat: 0, lng: 0, n: 0 };
-      e.users += uc; e.lat += c.lat; e.lng += c.long; e.n += 1;
-      prov.set(key, e);
-    }
-  }
-  const provinces = [...prov.values()].map((e) => ({ users: e.users, lat: e.lat / e.n, lng: e.lng / e.n })).filter((p) => p.users > 0);
-  if (!provinces.length) return null;
-  const maxU = Math.max(...provinces.map((p) => p.users), 1);
-  const points = provinces.map((p) => ({ lat: p.lat, lng: p.lng, n: p.users, size: Math.round(30 + 34 * Math.sqrt(p.users / maxU)), big: p.users === maxU }));
-  const top = [...courses.values()].sort((a, b) => b.users - a.users)[0] || { name: "-", users: 0 };
-  const fmt = (n) => Number(n || 0).toLocaleString("en-US");
-  const short = (s, n = 44) => { s = String(s || ""); return s.length > n ? s.slice(0, n) + "…" : s; };
-  const slides = [
-    { bg: "#e9fbf4", label: "ผู้ใช้งานทั่วประเทศ", big: fmt(totalUsers), unit: "คน", desc: `ครู นักเรียน และบุคลากรทางการศึกษาใช้งานระบบใน ${prov.size} จังหวัดทั่วประเทศ`, view: { lat: 13.6, lng: 101.2, zoom: 5.3 } },
-    { bg: "#eef2ff", label: "วิชาที่เปิดสอนทั้งหมด", big: fmt(courses.size), unit: "วิชา", desc: "ครอบคลุมปัญญาประดิษฐ์ สะเต็มศึกษา และทักษะดิจิทัลสำหรับทุกช่วงชั้น", view: { lat: 15.6, lng: 101.6, zoom: 5.6 } },
-    { bg: "#fff1e6", label: "วิชายอดนิยม", big: fmt(top.users), unit: "คน", desc: `“${short(top.name)}” มีผู้เรียนมากที่สุด`, view: { lat: 15.0, lng: 102.6, zoom: 6.4 } },
-    { bg: "#eafaf3", label: "สถาบันที่ร่วมโครงการ", big: fmt(data.length), unit: "แห่ง", desc: "โรงเรียนและสถาบันการศึกษาที่มีผู้เรียนใช้งานระบบ", view: { lat: 13.8, lng: 100.7, zoom: 6.9 } },
-  ];
-  return { slides, points };
-}
-const LANDING_OVERVIEW_PATH = "./overview.json";
-function applyLandingSummary(s) {
-  if (!s || !Array.isArray(s.slides) || !s.slides.length) return false;
-  state.landingStats = s.slides;
-  if (Array.isArray(s.points) && s.points.length) state.landingPoints = s.points;
-  if (s.totals) state.landingTotals = s.totals;
-  if (Array.isArray(s.trend) && s.trend.length) state.landingTrend = s.trend;
-  if (maps.usage) { maps.usage.remove(); maps.usage = null; }
-  render();
-  return true;
-}
+const insightSlides = () => state.landingStats || [];
+const mapPoints = () => state.landingPoints || [];
+const OVERVIEW_URL = "./overview.json";
 async function loadLandingStats() {
   try {
-    if (applyLandingSummary(await fetchJson(LANDING_OVERVIEW_PATH))) return;
-  } catch (_) {}
-  try {
-    const built = buildLandingFromAggregate(await apiEnrollAggregate());
-    if (built) applyLandingSummary(built);
-  } catch (_) {}
+    const url = new URL(OVERVIEW_URL, globalThis.location.href);
+    url.searchParams.set("v", String(Date.now()));
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) throw new Error(`โหลด overview.json ไม่สำเร็จ (${response.status})`);
+    const overview = await response.json();
+    if (!Array.isArray(overview?.slides) || !overview.slides.length) {
+      throw new Error("overview.json ไม่มีข้อมูล slides ที่ใช้งานได้");
+    }
+    Object.assign(state, {
+      landingStats: overview.slides,
+      landingPoints: Array.isArray(overview.points) ? overview.points : [],
+      landingTotals: overview.totals && typeof overview.totals === "object" ? overview.totals : null,
+      landingTrend: Array.isArray(overview.trend) ? overview.trend : [],
+      landingLoading: false,
+      landingError: "",
+      mapSlide: 0,
+    });
+  } catch (err) {
+    Object.assign(state, {
+      landingStats: [],
+      landingPoints: [],
+      landingLoading: false,
+      landingError: err?.message || "โหลดข้อมูลภาพรวมไม่สำเร็จ",
+      mapSlide: 0,
+    });
+  }
+  if (maps.usage) { maps.usage.remove(); maps.usage = null; }
+  render();
 }
 
 /* ------------------------------ icons ------------------------------ */
@@ -665,11 +604,12 @@ const state = {
   delTarget: null, delSaving: false, delError: "",
   teacherRole: "",
   teacherSchool: "",
-  leadoOpen: false, leadoDemo: false, leadoDemoed: false, leadoMsg: "", teacherName: "", teacherEmail: "",
+  leadoOpen: false, leadoMsg: "", teacherName: "", teacherEmail: "",
   lang: "th", fontSize: "md", mapSlide: 0,
   students: [], activities: [], courseData: null, courseTitle: "-", courseKey: "-",
   metrics: null, prog: [], quiz: [], tools: null,
-  landingStats: null, landingPoints: null, landingTotals: null, landingTrend: null,
+  landingStats: [], landingPoints: [], landingTotals: null, landingTrend: null,
+  landingLoading: true, landingError: "",
   courseTab: "all",
 };
 
@@ -926,10 +866,16 @@ function viewMapInsight(compact) {
   const vals = (state.landingTrend || []).map((x) => x.users);
   const pct = vals.length >= 2 && vals[vals.length - 2] ? Math.round((vals[vals.length - 1] - vals[vals.length - 2]) / vals[vals.length - 2] * 100) : null;
   const up = pct == null || pct >= 0;
+  const emptyState = state.landingLoading
+    ? `<div style="display:flex;align-items:center;justify-content:center;min-height:${stageMin};font:600 12px 'Noto Sans Thai';color:#667085">กำลังโหลดข้อมูลจริงจาก API…</div>`
+    : `<div style="display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:${stageMin}">
+        <div style="font:700 13px 'Noto Sans Thai';color:#344054">ไม่มีข้อมูลภาพรวมให้แสดง</div>
+        <div style="font:500 11.5px/1.5 'Noto Sans Thai';color:#98a2b3;margin-top:5px">${esc(state.landingError || "API ไม่ส่งข้อมูล")}</div>
+      </div>`;
   return `
     <div style="position:absolute;top:${compact ? 14 : 20}px;left:${compact ? 14 : 20}px;${compact ? "right:14px;" : "width:290px;"}z-index:600;background:rgba(255,255,255,.97);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.7);border-radius:16px;box-shadow:0 12px 30px rgba(16,24,40,.18);padding:${compact ? "15px 17px" : "18px 20px"};overflow:hidden">
       <div id="slide-stage" style="position:relative;min-height:${stageMin}">
-        ${slides.map((sl, i) => `
+        ${slides.length ? slides.map((sl, i) => `
           <div class="slide" data-i="${i}" style="position:absolute;inset:0;transition:opacity .5s ease,transform .5s ease;opacity:${i === state.mapSlide ? 1 : 0};transform:${i === state.mapSlide ? "translateY(0)" : "translateY(8px)"};pointer-events:none">
             <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">
               <span style="width:6px;height:20px;border-radius:99px;background:${sl.bg};flex:none"></span>
@@ -937,11 +883,11 @@ function viewMapInsight(compact) {
             </div>
             <div style="font:800 ${bigFs} Inter;color:#101828;line-height:1.15;word-break:break-word">${esc(sl.big)} <span style="font:700 14px 'Noto Sans Thai';color:#98a2b3">${esc(sl.unit)}</span></div>
             <div style="font:500 12px/1.55 'Noto Sans Thai';color:#98a2b3;margin-top:7px">${esc(sl.desc)}</div>
-          </div>`).join("")}
+          </div>`).join("") : emptyState}
       </div>
-      <div style="display:flex;gap:5px;margin-top:12px">
+      ${slides.length > 1 ? `<div style="display:flex;gap:5px;margin-top:12px">
         ${slides.map((sl, i) => `<button data-act="goSlide" data-arg="${i}" class="slide-dot" data-i="${i}" style="border:none;cursor:pointer;padding:0;height:5px;border-radius:99px;flex:1;background:${i === state.mapSlide ? "#0d9488" : "#e2e5e9"};transition:background .3s"></button>`).join("")}
-      </div>
+      </div>` : ""}
       ${vals.length >= 2 ? `<div style="height:1px;background:#eef0f3;margin:12px 0 8px"></div>
         <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px">
           <div style="min-width:0"><div style="font:600 10.5px 'Noto Sans Thai';color:#98a2b3;margin-bottom:2px">แนวโน้ม 6 เดือน</div>${sparkline(vals, "#0d9488", compact ? 110 : 150, 26)}</div>
@@ -1019,12 +965,10 @@ function viewTopBar() {
   const langFlag = state.lang === "th" ? "🇹🇭" : "🇬🇧";
   const notifs = [];
   const unread = notifs.filter((n) => n.unread).length;
-  const leadoOpen = state.leadoOpen, leadoDemo = state.leadoDemo;
-  const leadoStyle = leadoDemo
-    ? "opacity:0;animation:leadoDemo 2.6s ease forwards;pointer-events:none"
-    : leadoOpen
-      ? "opacity:1;transform:scale(1) translateY(0);animation:leadoIn .3s cubic-bezier(.2,.8,.2,1);pointer-events:auto"
-      : "opacity:0;transform:scale(.4) translateY(-14px);pointer-events:none";
+  const leadoOpen = state.leadoOpen;
+  const leadoStyle = leadoOpen
+    ? "opacity:1;transform:scale(1) translateY(0);animation:leadoIn .3s cubic-bezier(.2,.8,.2,1);pointer-events:auto"
+    : "opacity:0;transform:scale(.4) translateY(-14px);pointer-events:none";
   const sel = selectedCourse();
   return `
   <div data-act="closeAllPanels" style="position:fixed;top:0;left:0;right:0;height:60px;z-index:1200;background:rgba(255,255,255,.9);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid rgba(0,0,0,.06);box-shadow:0 2px 10px rgba(16,24,40,.08);display:flex;align-items:center;justify-content:space-between;padding:0 ${phone ? "12px" : "22px"}">
@@ -1391,21 +1335,24 @@ function viewMap() {
 /* ---------------- student drawer ---------------- */
 async function loadStudentDetailApis(st) {
   const selected = selectedCourse();
-  const cid = selected?.courseId || state.courseKey;
+  const cid = selected?.courseId;
   const email = String(st?.email || "").trim();
-  const identityPromise = resolveStudentApiUserId(st);
   const result = {
     studentId: st?.id, loading: true,
     readingLoading: true, videoLoading: true, chatbotLoading: true,
     apiUserId: null, reading: null, video: null, readingEntries: [], videoEntries: [], chatbotSeconds: null, errors: []
   };
+  const identityPromise = resolveStudentApiUserId(st).catch((err) => {
+    result.errors.push(`Chatbot: โหลด Keycloak userId จากข้อมูลห้องเรียนไม่สำเร็จ — ${err.message}`);
+    return "";
+  });
   const publish = (patch) => {
     Object.assign(result, patch);
     if (String(state.student) !== String(st?.id)) return;
     setState({ studentDetail: { ...state.studentDetail, ...patch, studentId: st?.id, errors: [...result.errors] } });
   };
-  if (!cid || (!email && !st?.apiUserId)) {
-    result.errors.push("ไม่พบ courseId หรือข้อมูลระบุตัวนักเรียน");
+  if (!cid || !email) {
+    result.errors.push("ไม่พบ courseId หรืออีเมลนักเรียน");
     publish({ loading: false, readingLoading: false, videoLoading: false, chatbotLoading: false });
     return result;
   }
@@ -1418,7 +1365,6 @@ async function loadStudentDetailApis(st) {
     try {
       const payload = await apiGet(bookrollReadingUrl(email, cid), { critical: false });
       entries = readingProgressEntries(payload, { usageId: cid });
-      if (!entries.length) entries = echartProgressEntries(payload);
       if (!entries.length) result.errors.push(`BookRoll: ตอบกลับ 200 แต่อ่านค่าไม่ได้ — ${describeShape(payload)}`);
     } catch (err) {
       const backendMessage = String(err?.backendMessage || err?.payload?.message || "");
@@ -1442,27 +1388,25 @@ async function loadStudentDetailApis(st) {
   const loadVideo = async () => {
     const videoCount = state.activities.flatMap((activity) => activity.tools)
       .filter((tool) => String(tool.label).toLowerCase() === "video").length;
-    const userId = await identityPromise;
-    const candidates = [...new Set([email, userId].filter(Boolean))];
-    for (const candidate of candidates) {
-      try {
-        const entries = echartProgressEntries(await externalJson(videoProgressUrl(candidate, cid)));
-        if (entries.length) {
-          publish({ video: summarizeProgress(entries.map((entry) => entry.progress), videoCount), videoEntries: entries, videoLoading: false });
-          return;
-        }
-      } catch (err) {
-        result.errors.push(`Video (${candidate}): ${err.message}`);
-      }
+    try {
+      const entries = echartProgressEntries(await externalJson(videoProgressUrl(email, cid)));
+      if (!entries.length) result.errors.push(`Video: ตอบกลับ 200 แต่อ่านค่าไม่ได้`);
+      publish({
+        video: entries.length ? summarizeProgress(entries.map((entry) => entry.progress), videoCount) : null,
+        videoEntries: entries,
+        videoLoading: false
+      });
+      return;
+    } catch (err) {
+      result.errors.push(`Video: ${err.message}`);
     }
     publish({ video: null, videoLoading: false });
   };
 
-  // Unknown chatbot identities return zero-valued data, so email fallback is unsafe.
   const loadChatbot = async () => {
     const userId = await identityPromise;
     if (!userId) {
-      result.errors.push("Chatbot: ไม่พบ Keycloak userId (GET /user/query ตอบ 401 — role ครูไม่มีสิทธิ์) จึงข้ามไป เพราะ endpoint นี้ตอบ 0 ให้ทุก id ที่ไม่รู้จัก");
+      result.errors.push("Chatbot: ไม่พบ Keycloak userId จากข้อมูลนักเรียนในห้องเรียน จึงไม่ได้เรียก API");
       publish({ chatbotSeconds: null, chatbotLoading: false });
       return;
     }
@@ -1817,23 +1761,7 @@ function overlaysHtml() {
 }
 
 /* ------------------------------ Leado panel ------------------------------ */
-let leadoDemoT1 = null, leadoDemoT2 = null, leadoTyper = null;
-function cancelLeadoDemo() {
-  clearTimeout(leadoDemoT1); clearTimeout(leadoDemoT2);
-  leadoDemoT1 = leadoDemoT2 = null;
-  state.leadoDemo = false;
-}
-const LEADO_DEMO_ENABLED = false;
-function maybePlayLeadoDemo() {
-  if (!LEADO_DEMO_ENABLED) return;
-  if (state.leadoDemoed || !state.ready || !state.authed) return;
-  state.leadoDemoed = true;
-  leadoDemoT1 = setTimeout(() => {
-    if (!state.authed || state.leadoOpen) return;
-    state.leadoDemo = true; renderTopbar();
-    leadoDemoT2 = setTimeout(() => { state.leadoDemo = false; renderTopbar(); }, 2600);
-  }, 1000);
-}
+let leadoTyper = null;
 function runLeadoTyper() {
   const el = document.getElementById("leado-greet");
   if (!el || el.dataset.done) return;
@@ -1854,7 +1782,7 @@ function renderTopbar(patch) {
   layer.innerHTML = overlaysHtml() + viewTopBar();
   const inp = document.getElementById("leadoMsg");
   if (inp && state.leadoOpen) inp.focus();
-  if (state.leadoOpen || state.leadoDemo) runLeadoTyper();
+  if (state.leadoOpen) runLeadoTyper();
 }
 
 function render() {
@@ -1887,8 +1815,7 @@ function render() {
 
   if (DEBUG) updateDebugPanel();
   requestAnimationFrame(mountMaps);
-  if (state.leadoOpen || state.leadoDemo) runLeadoTyper();
-  maybePlayLeadoDemo();
+  if (state.leadoOpen) runLeadoTyper();
 }
 
 /* focus retention across full re-render */
@@ -1949,6 +1876,7 @@ function mountMaps() {
 
 function startSlideTimer() {
   stopSlideTimer();
+  if (insightSlides().length < 2) return;
   slideTimer = setInterval(() => {
     state.mapSlide = (state.mapSlide + 1) % insightSlides().length;
     applySlide();
@@ -1987,8 +1915,9 @@ const H = {
     if (!cls) return;
     setState({ loadingCourse: true, authError: null, userMenuOpen: false });
     try {
+      if (!cls.courseId) throw new Error("ไม่พบ courseId ของห้องเรียน");
       const [course, progress, grades] = await Promise.all([
-        cls.courseId ? apiCourseTree(cls.courseId) : Promise.resolve(state.courseData || {}),
+        apiCourseTree(cls.courseId),
         apiProgress(cls.assignId),
         apiGrades(cls.assignId),
       ]);
@@ -2106,9 +2035,9 @@ const H = {
   signOut: () => oidcLogout(),
   toggleNotif: () => renderTopbar({ notifOpen: !state.notifOpen, userMenuOpen: false, leadoOpen: false }),
   closeNotif: () => renderTopbar({ notifOpen: false }),
-  toggleLeado: () => { cancelLeadoDemo(); renderTopbar({ leadoOpen: !state.leadoOpen, notifOpen: false, userMenuOpen: false }); },
-  closeLeado: () => { cancelLeadoDemo(); renderTopbar({ leadoOpen: false }); },
-  closeAllPanels: () => { cancelLeadoDemo(); renderTopbar({ leadoOpen: false, notifOpen: false, userMenuOpen: false }); },
+  toggleLeado: () => renderTopbar({ leadoOpen: !state.leadoOpen, notifOpen: false, userMenuOpen: false }),
+  closeLeado: () => renderTopbar({ leadoOpen: false }),
+  closeAllPanels: () => renderTopbar({ leadoOpen: false, notifOpen: false, userMenuOpen: false }),
   noop: () => {},
   signIn: () => startLogin(),
   setFilter: (key) => setState({ filter: key }),
@@ -2278,7 +2207,7 @@ async function apiInit() {
 async function init() {
   bindEvents();
   render();
-  loadLandingStats(); // real landing stats/bubbles from the public enroll aggregate (non-blocking)
+  loadLandingStats();
   return apiInit();
 }
 init();

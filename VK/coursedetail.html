@@ -158,13 +158,12 @@
               <input id="input-userid" class="panel px-3 py-2 text-sm outline-none bg-white" placeholder="กรอก userid (optional)" />
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-2">
-              <input id="input-url" class="panel px-3 py-2 text-sm outline-none bg-white" placeholder="วาง URL API (อาจติด CORS) หรือปล่อยว่างเพื่อใช้ mock" />
+              <input id="input-url" class="panel px-3 py-2 text-sm outline-none bg-white" placeholder="วาง URL API (อาจติด CORS)" />
               <div class="flex gap-2">
                 <button id="btn-load" class="pill px-4 py-2 text-sm font-semibold tracking-wide text-white grad-brand">โหลด</button>
-                <button id="btn-mock" class="pill px-4 py-2 text-sm font-semibold tracking-wide text-white grad-brand">ใช้ mock</button>
               </div>
             </div>
-            <div class="mt-2 text-xs text-slate-500" id="load-status">ค่าเริ่มต้น: โหลดจาก <span class="mono">mock/courseDetail.json</span></div>
+            <div class="mt-2 text-xs text-slate-500" id="load-status">ระบุ courseid หรือ URL API เพื่อโหลดข้อมูลจริง</div>
           </div>
 
           <details class="panel p-3 text-xs text-slate-600">
@@ -207,7 +206,6 @@
   </div>
 
   <script>
-    const DEFAULT_MOCK_URL = "mock/courseDetail.json";
     const COURSE_API_BASE = "https://sbs-backend.mooc.meca.in.th/lms/";
 
     const decodeIfMojibake = (text) => {
@@ -431,8 +429,8 @@
       return { label: "Unknown", cls: "badge tool-mixed" };
     };
 
-    const pickTitle = (node, fallback) =>
-      decodeIfMojibake(node?.title || node?.fields?.title || fallback || "-");
+    const pickTitle = (node, defaultTitle) =>
+      decodeIfMojibake(node?.title || node?.fields?.title || defaultTitle || "-");
 
     const normalizeThaiDigits = (s) =>
       String(s || "").replace(/[๐-๙]/g, (d) => "๐๑๒๓๔๕๖๗๘๙".indexOf(d));
@@ -888,16 +886,6 @@
       return res.json();
     };
 
-    const loadMock = async () => {
-      const data = await loadFromUrl(DEFAULT_MOCK_URL);
-      setData(data, `โหลดจาก mock: ${DEFAULT_MOCK_URL}`);
-    };
-
-    // Event wiring
-    el("btn-mock").addEventListener("click", () => loadMock().catch((e) => {
-      el("load-status").textContent = `โหลด mock ไม่สำเร็จ: ${e?.message || e}`;
-    }));
-
     el("btn-load").addEventListener("click", async () => {
       const nextCourseId = el("input-courseid").value.trim();
       const nextUserId = el("input-userid").value.trim();
@@ -907,7 +895,10 @@
 
       let url = el("input-url").value.trim();
       if (!url && ctx.courseid) url = buildCourseApiUrl(ctx.courseid);
-      if (!url) { await loadMock(); return; }
+      if (!url) {
+        el("load-status").textContent = "กรุณาระบุ courseid หรือ URL API";
+        return;
+      }
       try {
         el("load-status").textContent = "กำลังโหลด...";
         const data = await loadFromUrl(url);
@@ -953,7 +944,6 @@
       renderTree();
     });
 
-    // Init inputs from URL params + keep URL in sync for easy copy/share.
     el("input-courseid").value = ctx.courseid;
     el("input-userid").value = ctx.userid;
     if (ctx.courseid) el("input-url").value = buildCourseApiUrl(ctx.courseid);
@@ -972,20 +962,15 @@
       setContextChips();
     });
 
-    // Auto-load on start: prefer courseid -> API URL, else mock.
     (async () => {
-      if (ctx.courseid) {
-        const url = buildCourseApiUrl(ctx.courseid);
-        try {
-          el("load-status").textContent = "กำลังโหลด...";
-          const data = await loadFromUrl(url);
-          setData(data, `โหลดจาก URL: ${url}`);
-          return;
-        } catch (e) {
-          el("load-status").textContent = `โหลด URL ไม่สำเร็จ (อาจติด CORS): ${e?.message || e} • ใช้ mock แทน`;
-        }
+      if (!ctx.courseid) {
+        el("load-status").textContent = "ระบุ courseid หรือ URL API เพื่อโหลดข้อมูลจริง";
+        return;
       }
-      await loadMock();
+      const url = buildCourseApiUrl(ctx.courseid);
+      el("load-status").textContent = "กำลังโหลด...";
+      const data = await loadFromUrl(url);
+      setData(data, `โหลดจาก URL: ${url}`);
     })().catch((e) => {
       el("load-status").textContent = `โหลดไม่สำเร็จ: ${e?.message || e}`;
     });

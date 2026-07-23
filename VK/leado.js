@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const API_BASE = "https://adaptive-profile-bn-dev.ae.app.meca.in.th";
+  const API_BASE = "https://adaptive-profile-bn.ae.app.meca.in.th";
   const API_PATH = "/api/kidbright/enroll/query";
   const TOP_LIMIT = 8;
 

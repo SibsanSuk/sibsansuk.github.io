@@ -221,9 +221,6 @@ if (topicTabsEl) {
 }
 
 
-const bookrollUrl = (uid, cid) =>
-  `https://bookroll.thaidlt.com/meca/student/BR_activity?userID=${encodeURIComponent(uid)}&usageId=${encodeURIComponent(cid)}`;
-
 const bookrollReadingDataUrl = (uid, cid) =>
   `https://bookroll.thaidlt.com/meca/student/readingData?userID=${encodeURIComponent(uid)}&usageId=${encodeURIComponent(cid)}&view=student&ts=${Date.now()}`;
 
@@ -319,16 +316,9 @@ const getAdaptiveQuizBlockIdFromCourse = (course) => {
 
 const getAdaptiveQuizLearnerEmail = () => {
   const profile = auth?.profile && typeof auth.profile === "object" ? auth.profile : {};
-  const candidates = [
-    STUDENT_CONFIG.adaptiveQuiz?.learnerEmail,
-    qs.get("learner_email"),
-    qs.get("learnerEmail"),
-    profile.email,
-    auth?.userinfo?.email,
-    auth?.claims?.email,
-    userId
-  ];
-  return String(candidates.find((value) => typeof value === "string" && value.includes("@")) || "").trim();
+  return typeof profile.email === "string" && profile.email.includes("@")
+    ? profile.email.trim()
+    : "";
 };
 
 const isLikelyCourseId = (cid) =>
@@ -876,30 +866,12 @@ const renderVideoHeatmapStrip = (entry) => {
   `;
 };
 
-const resolveVideoUserNameCandidates = () => {
-  const profile = auth?.profile && typeof auth.profile === "object" ? auth.profile : {};
-  const raw = [
-    { value: (params.get("userName") || params.get("username") || params.get("email") || "").trim(), source: "querystring" },
-    { value: (typeof profile.email === "string" ? profile.email : "").trim(), source: "auth.profile.email" },
-    { value: (typeof profile.preferred_username === "string" ? profile.preferred_username : "").trim(), source: "auth.profile.preferred_username" },
-    { value: String(userId || "").trim(), source: "userId" }
-  ];
-  const out = [];
-  const seen = new Set();
-  raw.forEach((x) => {
-    if (!x.value) return;
-    const key = x.value.toLowerCase();
-    if (seen.has(key)) return;
-    seen.add(key);
-    out.push(x);
-  });
-  return out;
-};
-
 const resolveVideoUserNameInfo = () => {
-  if (window.videoUserNameResolved?.value) return window.videoUserNameResolved;
-  const first = resolveVideoUserNameCandidates()[0];
-  return first || { value: "", source: "-" };
+  const profile = auth?.profile && typeof auth.profile === "object" ? auth.profile : {};
+  const email = typeof profile.email === "string" ? profile.email.trim() : "";
+  return email
+    ? { value: email, source: "auth.profile.email" }
+    : { value: "", source: "-" };
 };
 
 const countKinds = (node, acc) => {
@@ -951,7 +923,6 @@ const renderDebugApiCard = () => {
     "login-auth",
     "course-detail",
     "bookroll-reading",
-    "bookroll-activity",
     "video-progress",
     "chatbot-speed",
     "chatbot-performance",
@@ -1449,7 +1420,7 @@ const rebuildChatbotOrderMap = () => {
   window.chatbotOrderMap = buildChatbotOrderMap(window.courseDetailData, window.chatbotPerfData, window.chatbotSpeedRawData);
 };
 
-const pickTitle = (node, fallback) => decodeIfMojibake(node?.title || node?.fields?.title || fallback || "-");
+const pickTitle = (node, defaultTitle) => decodeIfMojibake(node?.title || node?.fields?.title || defaultTitle || "-");
 
 const isRegistrationOrProfileAeTool = (vertical, tool = null) => {
   const resolvedTool = tool || inferVerticalTool(vertical);
@@ -1826,16 +1797,16 @@ const buildProgressModel = () => {
               chatbotTimeAvg: chatbotItem?.timeAvg ?? null
             };
           });
-        const fallbackVideo = isAeVideoTool(baseTool) ? getVideoProgressForVertical(v, baseTool) : null;
-        const fallbackVideoHeatmap = isAeVideoTool(baseTool) ? getVideoHeatmapForVertical(v, baseTool) : null;
+        const verticalVideo = isAeVideoTool(baseTool) ? getVideoProgressForVertical(v, baseTool) : null;
+        const verticalVideoHeatmap = isAeVideoTool(baseTool) ? getVideoHeatmapForVertical(v, baseTool) : null;
         const effectiveSubtools = subtools.length
           ? subtools
           : [{
             id: resolveLearningItemId(v, baseTool),
             title: pickTitle(v, `Vertical ${vIdx + 1}`),
             tool: baseTool,
-            video: fallbackVideo,
-            videoHeatmap: fallbackVideoHeatmap,
+            video: verticalVideo,
+            videoHeatmap: verticalVideoHeatmap,
             pct: computeVerticalProgress({
               vertical: v,
               tool: baseTool
@@ -2383,9 +2354,9 @@ const renderTopicTabsAndDetail = () => {
       return out;
     };
 
-    const renderIdLines = (node, fallbackId) => {
+    const renderIdLines = (node, defaultId) => {
       const lines = collectNodeIdLines(node);
-      if (!lines.length && fallbackId) lines.push({ depth: 0, kind: "vertical", id: String(fallbackId) });
+      if (!lines.length && defaultId) lines.push({ depth: 0, kind: "vertical", id: String(defaultId) });
       if (!lines.length) return `<div>VERTICAL • ID: -</div>`;
       return lines.map((line) => {
         const pad = Math.min(Number(line.depth || 0) * 14, 84);
@@ -2677,103 +2648,35 @@ const fetchBookrollReadingData = async () => {
     });
     return Array.from(map.values());
   };
-  const fetchReadingEntriesByUsageId = async (usageId, titleHint = "") => {
-    const srcUrl = bookrollReadingDataUrl(userId, usageId);
+  try {
+    const srcUrl = bookrollReadingDataUrl(userId, courseId);
     const res = await fetch(srcUrl);
     if (!res.ok) throw await createHttpError(res);
     const data = await res.json();
-    return {
-      title: titleHint,
-      sourceUrl: srcUrl,
-      data,
-      entries: buildReadingProgressMap(data, { usageId, titleHint })
-    };
-  };
-  const collectBookrollUsageTargets = () => {
-    const course = window.courseDetailData;
-    if (!course) return [];
-    const out = [];
-    const seen = new Set();
-    const chapters = getSortedChapters(course);
-    chapters.forEach((ch) => {
-      const sequentials = (ch?.children || []).filter((c) => c?.kind === "sequential");
-      sequentials.forEach((seq) => {
-        const verticals = (seq?.children || []).filter((c) => c?.kind === "vertical");
-        verticals.forEach((v) => {
-          const tool = inferVerticalTool(v);
-          const subtype = String(tool?.sublabel || "").toLowerCase();
-          const isBookroll = subtype.includes("bookroll") || String(tool?.label || "").toLowerCase().includes("bookroll");
-          if (!isBookroll) return;
-          const title = pickTitle(v, "");
-          getBookrollUsageIdsFromVertical(v).forEach((usageId) => {
-            const key = normalizeUsageId(usageId);
-            if (!key || seen.has(key)) return;
-            seen.add(key);
-            out.push({ usageId, title });
-          });
-        });
-      });
-    });
-    return out;
-  };
-  try {
-    const aggregate = [];
-    const debugSources = [];
-    const debugRequests = [];
-    let hasCourseLevelReading = false;
-
-    try {
-      const srcUrl = bookrollReadingDataUrl(userId, courseId);
-      const res = await fetch(srcUrl);
-      if (res.ok) {
-        const data = await res.json();
-        const courseEntries = buildReadingProgressMap(data, { usageId: courseId });
-        debugSources.push({ url: srcUrl, data });
-        debugRequests.push({ label: "ระดับรายวิชา", url: srcUrl, state: "success", message: "พร้อมแสดงผล", payload: data });
-        aggregate.push(...courseEntries);
-        hasCourseLevelReading = courseEntries.length > 0;
-      } else {
-        const err = await createHttpError(res);
-        debugRequests.push({ label: "ระดับรายวิชา", url: srcUrl, state: "error", message: "มีปัญหา", payload: err?.message || "เกิดข้อผิดพลาด" });
-        console.warn("Bookroll readingData API error:", err);
-      }
-    } catch (err) {
-      debugRequests.push({ label: "ระดับรายวิชา", url: bookrollReadingDataUrl(userId, courseId), state: "error", message: "มีปัญหา", payload: err?.message || "เกิดข้อผิดพลาด" });
-      console.warn("Bookroll readingData API error:", err);
-    }
-
-    const targets = collectBookrollUsageTargets();
-    if (!hasCourseLevelReading && targets.length) {
-      const responses = await Promise.all(
-        targets.map(async (target) => {
-          try {
-            return await fetchReadingEntriesByUsageId(target.usageId, target.title);
-          } catch {
-            return null;
-          }
-        })
-      );
-      responses.filter(Boolean).forEach((hit) => {
-        debugSources.push({ url: hit.sourceUrl, data: hit.data });
-        debugRequests.push({ label: hit.title || "ระดับบทเรียน", url: hit.sourceUrl, state: "success", message: "พร้อมแสดงผล", payload: hit.data });
-        aggregate.push(...hit.entries);
-      });
-    }
-
-    window.bookrollReadingData = debugSources.length ? debugSources[0].data : null;
-    window.bookrollReadingProgress = mergeReadingEntries(aggregate);
+    window.bookrollReadingData = data;
+    window.bookrollReadingProgress = mergeReadingEntries(
+      buildReadingProgressMap(data, { usageId: courseId })
+    );
     const displayCount = getBookrollReadingDisplayCount(window.bookrollReadingProgress);
-    const hasData = window.bookrollReadingProgress.length > 0 || !!window.bookrollReadingData;
+    const hasData = window.bookrollReadingProgress.length > 0;
     setDebugApiEntry("bookroll-reading", {
       label: "ความคืบหน้าการอ่าน",
       state: hasData ? "success" : "error",
       badge: hasData ? "พร้อมแสดงผล" : "มีปัญหา",
-      message: hasData ? `พบข้อมูลการอ่าน ${displayCount} รายการ` : "ไม่พบข้อมูลการอ่าน",
-      requests: debugRequests
+      message: hasData ? `พบข้อมูลการอ่าน ${displayCount} รายการ` : "API ตอบกลับแต่ไม่พบข้อมูลการอ่าน",
+      requests: [
+        {
+          label: "ระดับรายวิชา",
+          url: srcUrl,
+          state: hasData ? "success" : "error",
+          message: hasData ? "พร้อมแสดงผล" : "ไม่พบข้อมูล",
+          payload: data
+        }
+      ]
     });
     return {
       state: hasData ? "success" : "error",
-      message: hasData ? `พบข้อมูลการอ่าน ${displayCount} รายการ` : "ไม่พบข้อมูลการอ่าน"
+      message: hasData ? `พบข้อมูลการอ่าน ${displayCount} รายการ` : "API ตอบกลับแต่ไม่พบข้อมูลการอ่าน"
     };
   } catch (err) {
     window.bookrollReadingData = null;
@@ -2784,7 +2687,15 @@ const fetchBookrollReadingData = async () => {
       state: "error",
       badge: "มีปัญหา",
       message: "ไม่สามารถแสดงข้อมูลการอ่านได้ในขณะนี้",
-      requests: []
+      requests: [
+        {
+          label: "ระดับรายวิชา",
+          url: bookrollReadingDataUrl(userId, courseId),
+          state: "error",
+          message: "มีปัญหา",
+          payload: err?.message || "เกิดข้อผิดพลาด"
+        }
+      ]
     });
     return { state: "error", message: "ไม่สามารถแสดงข้อมูลการอ่านได้ในขณะนี้" };
   } finally {
@@ -2811,8 +2722,8 @@ const fetchVideoLearningProgress = async () => {
     });
     return { state: "skipped", message: "ยังไม่พร้อมแสดงความคืบหน้าวิดีโอ" };
   }
-  const candidates = resolveVideoUserNameCandidates();
-  if (!candidates.length) {
+  const info = resolveVideoUserNameInfo();
+  if (!info.value) {
     window.videoLearningRaw = null;
     window.videoProgressData = [];
     window.videoHeatmapRaw = null;
@@ -2831,61 +2742,44 @@ const fetchVideoLearningProgress = async () => {
     return { state: "skipped", message: "ยังไม่พร้อมแสดงความคืบหน้าวิดีโอ" };
   }
   try {
-    let best = { entries: [], data: null, heatmapEntries: [], heatmapData: null, info: null };
-    let okResponseCount = 0;
     const debugRequests = [];
-    for (const info of candidates) {
-      const srcUrl = videoBarUrl(info.value, courseId);
-      const heatmapSrcUrl = videoHeatmapUrl(info.value, courseId);
-      const res = await fetch(srcUrl);
-      if (!res.ok) {
-        debugRequests.push({ label: info.source, url: srcUrl, state: "error", message: "มีปัญหา", payload: `HTTP ${res.status}` });
-        continue;
-      }
-      okResponseCount += 1;
-      const data = await res.json();
-      const entries = buildVideoProgressMap(data);
-      debugRequests.push({ label: info.source, url: srcUrl, state: "success", message: "พร้อมแสดงผล", payload: data });
-      let heatmapData = null;
-      let heatmapEntries = [];
-      try {
-        const heatmapRes = await fetch(heatmapSrcUrl);
-        if (!heatmapRes.ok) throw await createHttpError(heatmapRes);
-        heatmapData = await heatmapRes.json();
-        heatmapEntries = buildVideoHeatmapMap(heatmapData);
-        debugRequests.push({ label: `${info.source} • ช่วงเวลาการรับชม`, url: heatmapSrcUrl, state: "success", message: "พร้อมแสดงผล", payload: heatmapData });
-      } catch (err) {
-        debugRequests.push({ label: `${info.source} • ช่วงเวลาการรับชม`, url: heatmapSrcUrl, state: "error", message: "มีปัญหา", payload: err?.message || "เกิดข้อผิดพลาด" });
-      }
-      if (entries.length) {
-        best = { entries, data, heatmapEntries, heatmapData, info };
-        break;
-      }
-      if (!best.data) best = { entries, data, heatmapEntries, heatmapData, info };
+    const srcUrl = videoBarUrl(info.value, courseId);
+    const heatmapSrcUrl = videoHeatmapUrl(info.value, courseId);
+    const res = await fetch(srcUrl);
+    if (!res.ok) throw await createHttpError(res);
+    const data = await res.json();
+    const entries = buildVideoProgressMap(data);
+    debugRequests.push({ label: info.source, url: srcUrl, state: "success", message: "พร้อมแสดงผล", payload: data });
+    let heatmapData = null;
+    let heatmapEntries = [];
+    try {
+      const heatmapRes = await fetch(heatmapSrcUrl);
+      if (!heatmapRes.ok) throw await createHttpError(heatmapRes);
+      heatmapData = await heatmapRes.json();
+      heatmapEntries = buildVideoHeatmapMap(heatmapData);
+      debugRequests.push({ label: `${info.source} • ช่วงเวลาการรับชม`, url: heatmapSrcUrl, state: "success", message: "พร้อมแสดงผล", payload: heatmapData });
+    } catch (err) {
+      debugRequests.push({ label: `${info.source} • ช่วงเวลาการรับชม`, url: heatmapSrcUrl, state: "error", message: "มีปัญหา", payload: err?.message || "เกิดข้อผิดพลาด" });
     }
-    window.videoLearningRaw = best.data;
-    window.videoProgressData = best.entries;
-    window.videoHeatmapRaw = best.heatmapData;
-    window.videoHeatmapData = best.heatmapEntries;
-    window.videoUserNameResolved = best.info || candidates[0] || null;
-    window.videoApiStatus = okResponseCount > 0 ? "ok" : "error";
-    const activeHeatmapCount = Array.isArray(best.heatmapEntries)
-      ? best.heatmapEntries.filter((entry) => Number(entry?.activeBuckets) > 0).length
+    window.videoLearningRaw = data;
+    window.videoProgressData = entries;
+    window.videoHeatmapRaw = heatmapData;
+    window.videoHeatmapData = heatmapEntries;
+    window.videoUserNameResolved = info;
+    window.videoApiStatus = "ok";
+    const activeHeatmapCount = Array.isArray(heatmapEntries)
+      ? heatmapEntries.filter((entry) => Number(entry?.activeBuckets) > 0).length
       : 0;
     setDebugApiEntry("video-progress", {
       label: "ความคืบหน้าวิดีโอ",
-      state: okResponseCount > 0 ? "success" : "error",
-      badge: okResponseCount > 0 ? "พร้อมแสดงผล" : "มีปัญหา",
-      message: okResponseCount > 0
-        ? `พบข้อมูลวิดีโอ ${best.entries.length} รายการ • ช่วงเวลาการรับชม ${activeHeatmapCount} รายการ`
-        : "ไม่พบข้อมูลวิดีโอ",
+      state: "success",
+      badge: "พร้อมแสดงผล",
+      message: `พบข้อมูลวิดีโอ ${entries.length} รายการ • ช่วงเวลาการรับชม ${activeHeatmapCount} รายการ`,
       requests: debugRequests
     });
     return {
-      state: okResponseCount > 0 ? "success" : "error",
-      message: okResponseCount > 0
-        ? `พบข้อมูลวิดีโอ ${best.entries.length} รายการ • ช่วงเวลาการรับชม ${activeHeatmapCount} รายการ`
-        : "ไม่พบข้อมูลวิดีโอ"
+      state: "success",
+      message: `พบข้อมูลวิดีโอ ${entries.length} รายการ • ช่วงเวลาการรับชม ${activeHeatmapCount} รายการ`
     };
   } catch (err) {
     window.videoLearningRaw = null;

@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Student Dashboard</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700;800&family=Noto+Sans+Thai:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <link rel="stylesheet" href="./dashboard.css" />
+</head>
+
+<body class="min-h-screen dots">
+  <div class="app-frame">
+    <div class="app-body">
+      <div class="app-content">
+        <div class="app-shell">
+          <main class="app-main">
+            <div class="page-screen">
+              <div class="page-scroll">
+                <div class="clay p-5 sm:p-6">
+                  <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                    <div>
+                      <div class="text-2xl font-extrabold">วิเคราะห์การเรียนรู้</div>
+                      <div class="mt-2 text-sm text-slate-600">
+                        ชื่อวิชา: <span id="header-course-name" class="font-semibold">-</span>
+                      </div>
+                      <div class="mt-1 text-sm text-slate-600">
+                        ชื่อผู้เรียน: <span id="header-learner-name" class="font-semibold">-</span>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <button id="btn-login" class="pill text-sm px-4 py-3 font-semibold tracking-wide text-white grad-brand"><span>เข้าสู่ระบบ</span></button>
+                      <button id="btn-logout" class="pill text-sm px-4 py-3 font-semibold tracking-wide text-white grad-danger"><span>ออกจากระบบ</span></button>
+                    </div>
+                  </div>
+
+                  <div class="mt-5">
+                    <div class="clay-soft p-5 cat-card cat-1">
+                      <div class="flex items-center justify-between gap-3">
+                        <div class="font-bold">ภาพรวมความคืบหน้าทั้งหมด</div>
+                        <div class="text-3xl font-black mono text-brand-soft" id="overall-value-wide">0%</div>
+                      </div>
+                      <div class="mt-3 h-4 bg-slate-200 rounded-full overflow-hidden">
+                        <div class="h-full grad-brand" id="overall-bar-wide" style="width: 0%"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mt-5">
+                    <div class="clay-soft p-4 cat-card cat-4">
+                      <div class="flex items-start justify-between gap-3">
+                        <div>
+                          <div class="font-bold">หัวข้อการเรียนรู้</div>
+                          <div class="mt-1 text-sm text-slate-600">เลือกบทเพื่อดูรายละเอียดการใช้เครื่องมือและผลการเรียนรู้รายบท</div>
+                        </div>
+                        <div class="text-xs text-slate-500 mono" id="topic-status">รอข้อมูล</div>
+                      </div>
+
+                      <div class="mt-3 panel p-2 hidden">
+                        <div id="topic-tabs" class="flex flex-wrap gap-2"></div>
+                      </div>
+
+                      <div class="mt-3 panel p-4 hidden" id="topic-detail">
+                        <div class="text-sm text-slate-600">ยังไม่ได้เลือกบท</div>
+                      </div>
+
+                      <!-- New: per-unit accordion list -->
+                      <div class="mt-3 grid gap-4" id="topic-units">
+                        <div class="text-sm text-slate-600">รอข้อมูลบทเรียน...</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mt-5 grid grid-cols-1 gap-4 hidden" id="overall-tool-cards">
+                    <div class="clay-soft p-4 cat-card cat-2" id="overall-card-bookroll">
+                      <div class="flex items-center gap-2 text-sm text-slate-500">
+                        <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-amber-100 text-amber-700 border border-amber-200" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 5.2c-1.1-1-2.6-1.6-4.3-1.6H4.8A1.8 1.8 0 0 0 3 5.4v12.9c0 1 .8 1.8 1.8 1.8h2.9c1.7 0 3.2.6 4.3 1.7"/>
+                            <path d="M12 5.2c1.1-1 2.6-1.6 4.3-1.6h2.9A1.8 1.8 0 0 1 21 5.4v12.9c0 1-.8 1.8-1.8 1.8h-2.9c-1.7 0-3.2.6-4.3 1.7"/>
+                            <path d="M12 5.2v16.6"/>
+                          </svg>
+                        </span>
+                        <span>ความคืบหน้าการอ่าน</span>
+                      </div>
+                      <div class="mt-3 h-[220px]">
+                        <canvas class="chart-canvas" id="bookrollOverallChart"></canvas>
+                      </div>
+                      <div class="mt-2 text-xs text-slate-600">
+                        อ่านจบ <span class="mono font-bold" id="bookroll-donut-done">0</span> เรื่อง •
+                        กำลังอ่าน <span class="mono font-bold" id="bookroll-donut-doing">0</span> เรื่อง •
+                        ยังไม่ได้อ่าน <span class="mono font-bold" id="bookroll-donut-todo">0</span> เรื่อง
+                      </div>
+                    </div>
+
+                    <div class="clay-soft p-4 cat-card cat-3" id="overall-card-video">
+                      <div class="flex items-center gap-2 text-sm text-slate-500">
+                        <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-red-100 text-red-600 border border-red-200" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+                            <path d="M8 6.8a1 1 0 0 1 1.53-.85l7.1 4.6a1.72 1.72 0 0 1 0 2.9l-7.1 4.6A1 1 0 0 1 8 17.2V6.8z"/>
+                          </svg>
+                        </span>
+                        <span>ความคืบหน้าวิดีโอ</span>
+                      </div>
+                      <div class="mt-3 h-[220px]">
+                        <canvas class="chart-canvas" id="videoOverallChart"></canvas>
+                      </div>
+                      <div class="mt-2 text-xs text-slate-600">
+                        ดูจบ <span class="mono font-bold" id="video-donut-done">0</span> เรื่อง •
+                        กำลังดู <span class="mono font-bold" id="video-donut-doing">0</span> เรื่อง •
+                        เหลือ <span class="mono font-bold" id="video-donut-remain">0</span> เรื่อง
+                      </div>
+                    </div>
+
+                    <div class="clay-soft p-4 cat-card cat-4" id="overall-card-chatbot">
+                      <div class="flex items-center gap-2 text-sm text-slate-500">
+                        <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-sky-100 text-sky-700 border border-sky-200" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 3v2"/>
+                            <path d="M8 5h8a4 4 0 0 1 4 4v5a4 4 0 0 1-4 4h-3l-3 3v-3H8a4 4 0 0 1-4-4V9a4 4 0 0 1 4-4z"/>
+                            <path d="M9 11h.01"/>
+                            <path d="M12 11h.01"/>
+                            <path d="M15 11h.01"/>
+                          </svg>
+                        </span>
+                        <span>ผลการทำแบบฝึกหัด</span>
+                      </div>
+                      <div class="mt-3 h-[220px]">
+                        <canvas class="chart-canvas" id="chatbotQuizOverallChart"></canvas>
+                      </div>
+                      <div class="mt-2 text-xs text-slate-600" id="chatbot-quiz-summary">ยังไม่มีข้อมูลคะแนน</div>
+                    </div>
+                  </div>
+
+                </div>
+                <div id="debug-api-card" class="hidden px-1 pb-8 pt-5">
+                  <details class="clay-soft p-4 debug-api-card">
+                    <summary class="flex cursor-pointer items-center justify-between gap-3">
+                      <div>
+                        <div class="font-bold">ข้อมูลการเชื่อมต่อ</div>
+                        <div class="mt-1 text-sm text-slate-600">ใช้สำหรับตรวจสอบเส้นทางที่เรียกและผลลัพธ์ที่ได้รับ</div>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-semibold text-slate-500">แสดงรายละเอียด</span>
+                        <span class="debug-api-summary-icon" aria-hidden="true">▾</span>
+                      </div>
+                    </summary>
+                    <div id="debug-api-content" class="mt-4"></div>
+                  </details>
+                </div>
+              </div>
+            </div>
+
+          </main>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="session-expired-overlay" class="session-expired-overlay" role="alertdialog" aria-modal="true" aria-labelledby="session-expired-title">
+    <div class="session-expired-card">
+      <div class="session-expired-icon" aria-hidden="true">!</div>
+      <div id="session-expired-title" class="session-expired-title">เซสชันหมดอายุ</div>
+      <div class="session-expired-message">เพื่อความปลอดภัย ระบบได้ออกจากระบบแล้ว กรุณาเข้าสู่ระบบอีกครั้งเพื่อโหลดข้อมูลต่อ</div>
+      <button id="session-expired-login" type="button" class="session-expired-login">เข้าสู่ระบบอีกครั้ง</button>
+    </div>
+  </div>
+  <div id="global-loading-overlay" class="global-loading-overlay" aria-live="polite" aria-busy="true">
+    <div class="global-loading-card">
+      <div class="global-loading-header">
+        <div class="global-loading-header-main">
+          <div id="global-loading-spinner" class="global-loading-spinner" aria-hidden="true"></div>
+          <div class="global-loading-header-copy">
+            <div class="font-bold text-slate-700">กำลังอัปเดตข้อมูลการเรียนรู้</div>
+            <div id="global-loading-text" class="mt-1 text-sm text-slate-500">โปรดรอสักครู่...</div>
+          </div>
+        </div>
+        <button id="global-loading-close" type="button" class="global-loading-btn">ปิด</button>
+      </div>
+      <div id="global-loading-list" class="global-loading-list"></div>
+      <div class="global-loading-actions">
+        <button id="global-loading-retry-failed" type="button" class="global-loading-btn primary">ลองอีกครั้ง</button>
+      </div>
+    </div>
+  </div>
+  <button id="global-loading-toggle" type="button" class="global-loading-toggle">สถานะการอัปเดต</button>
+  <div id="video-hover-tooltip" class="video-hover-tooltip" role="tooltip" aria-hidden="true"></div>
+
+  <script>
+    window.STUDENT_DASHBOARD_CONFIG = {
+      // oidc: {
+      //   redirectUri: "https://example.com/student.html",
+      // },
+    };
+    const studentScript = document.createElement("script");
+    studentScript.src = `./student.js?v=${Date.now()}`;
+    studentScript.async = false;
+    document.currentScript.after(studentScript);
+  </script>
+</body>
+</html>

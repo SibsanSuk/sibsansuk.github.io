@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Teacher Dashboard</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    *{box-sizing:border-box}
+    /* app shell: lock the page to the viewport; only inner regions scroll */
+    html,body{margin:0;height:100%;overflow:hidden}
+    html{height:100dvh}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Noto Sans Thai','Inter',system-ui,sans-serif;background:#eef0f3;color:#101828;-webkit-font-smoothing:antialiased;overscroll-behavior:none;position:relative}
+    #app{height:100%;overflow:hidden}
+    /* internal scroll regions: momentum + no scroll-chaining/rubber-band */
+    .scrolly{overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+    ::-webkit-scrollbar{width:10px;height:10px}
+    ::-webkit-scrollbar-thumb{background:#d0d5dd;border-radius:8px;border:2px solid transparent;background-clip:content-box}
+    ::-webkit-scrollbar-thumb:hover{background:#b6bdc7;background-clip:content-box}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes riseIn{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+    @keyframes tdspin{to{transform:rotate(360deg)}}
+    @keyframes leadoIn{0%{opacity:0;transform:scale(.4) translateY(-14px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+    button{font-family:inherit}
+    input,select{font-family:inherit}
+    /* hover helpers (design used a style-hover DSL attribute) */
+    .h-soft:hover{background:#e9ebef !important}
+    .h-soft2:hover{background:#f4f5f7 !important}
+    .h-row:hover{background:#f9fafb !important}
+    .h-card:hover{box-shadow:0 10px 24px rgba(16,24,40,.1) !important;border-color:#dfe3e8 !important}
+    .h-teal:hover{background:#0f766e !important}
+    .h-teal2:hover{background:#f0fdfa !important}
+    .h-bright:hover{filter:brightness(1.06)}
+    .h-red:hover{background:#fef2f2 !important}
+    .h-light:hover{background:#f9fafb !important}
+    .fld:focus{border-color:#0d9488 !important;box-shadow:0 0 0 3px rgba(13,148,136,.12) !important}
+    #compare-map,#th-usage-map{background:#dfe7ea}
+    .leaflet-container{font-family:inherit}
+  </style>
+</head>
+
+<body>
+  <div id="app"></div>
+
+  <script>
+    window.TEACHER_DASHBOARD_CONFIG = {
+      // Optional runtime overrides:
+      // baseUrl: "https://adaptive-profile-bn.ae.app.meca.in.th",
+      // bookrollBaseUrl: "https://adaptive-profile-bn.ae.app.meca.in.th",
+      // sbsUrl: "https://sbs-backend.mooc.meca.in.th",
+      // clientId: "dashboard",
+      // instituteId: "1010720039",
+      // assignId: "",
+    };
+    const teacherScript = document.createElement("script");
+    teacherScript.src = `./teacher.js?v=${Date.now()}`;
+    teacherScript.async = false;
+    document.currentScript.after(teacherScript);
+  </script>
+</body>
+</html>
