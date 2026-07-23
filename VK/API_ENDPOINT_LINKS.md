@@ -66,6 +66,7 @@
 | `GET` | `{BASEURL}/api/kidbright/course?createDate={dateRange}` | [ค้น course ตามวันที่](https://adaptive-profile-bn-dev.ae.app.meca.in.th/api/kidbright/course?createDate=2025-02-01,2025-04-30) | - |
 | `GET` | `{BASEURL}/api/kidbright/course?grade={grade}&level={level}&classRoom={classRoom}&instituteId={instituteId}` | [ค้น course ตามห้อง](https://adaptive-profile-bn-dev.ae.app.meca.in.th/api/kidbright/course?grade=secondary&level=2&classRoom=1&instituteId=1010720039) | - |
 | `POST` | `{BASEURL}/api/kidbright/course` | `https://adaptive-profile-bn-dev.ae.app.meca.in.th/api/kidbright/course` | `{"courseId":"course-v1:NECTEC+AIUPPERSECONDARY01+NECTEC_000006","courseName":"ปัญญาประดิษฐ์สำหรับนักเรียนระดับชั้นมัธยมศึกษาตอนปลาย"}` |
+| `GET` | `{BASEURL}/api/kidbright/course/{usageId}/data/bookroll?email={email}` | `https://adaptive-profile-bn-dev.ae.app.meca.in.th/api/kidbright/course/course-v1%3ANECTEC%2BAIUPPERSECONDARY01%2BNECTEC_000006/data/bookroll?email=test@example.com` | - |
 
 ## Assign / Teacher Dashboard
 
@@ -171,6 +172,7 @@ GET {BASEURL}/api/kidbright/course?grade=secondary&level=2&classRoom=1&createDat
 | Method | Endpoint | Sample link / URL | Body ตัวอย่าง |
 | --- | --- | --- | --- |
 | `GET` | `{SBS_URL}/lms/{courseId}` | [เปิดตัวอย่าง course tree](https://sbs-backend.mooc.meca.in.th/lms/course-v1:NECTEC+AIUPPERSECONDARY01+NECTEC_000006) | - |
+| `GET` | `{SBS_URL}/stats/echart/chatbotSpeed/{courseId}/{userId}` | `https://sbs-backend.mooc.meca.in.th/stats/echart/chatbotSpeed/course-v1%3ANECTEC%2BAIUPPERSECONDARY01%2BNECTEC_000006/{userId}` | - |
 | `POST` | `{SBS_URL}/me` | `https://sbs-backend.mooc.meca.in.th/me` | `{"userId":"{sub}","grade":"secondary","level":2,"classRoom":"1","instituteId":"1010720039","province":"กรุงเทพมหานคร","firstName":"ทดสอบ","lastName":"ระบบ","email":"test@example.com"}` |
 
 ## คำอธิบายว่าแต่ละเส้นน่าจะไว้ทำอะไร
@@ -214,6 +216,7 @@ GET {BASEURL}/api/kidbright/course?grade=secondary&level=2&classRoom=1&createDat
 | `GET {BASEURL}/api/kidbright/course?createDate={dateRange}` | ค้นหารายวิชา/รายการ enroll ตามช่วงวันที่ เพื่อใช้เลือก course สำหรับสร้างห้องเรียน | ปานกลาง: โค้ดใช้ query dynamic จากหน้า `Course`; response shape อนุมานจาก type `Course` |
 | `GET {BASEURL}/api/kidbright/course?grade={grade}&level={level}&classRoom={classRoom}&instituteId={instituteId}` | ค้นหารายวิชาที่มีผู้เรียนตรงกับโรงเรียน/ระดับชั้น/ห้อง เพื่อเลือก course ตอนเพิ่มห้องเรียน | สูง |
 | `POST {BASEURL}/api/kidbright/course` | สร้างหรือ upsert course ลง backend จาก courseId/courseName ที่ได้จาก SBS `/lms` ตอนลงทะเบียนเรียน | สูง |
+| `GET {BASEURL}/api/kidbright/course/{usageId}/data/bookroll?email={email}` | ดึงความคืบหน้าการอ่าน BookRoll ของนักเรียน 1 คน ใช้ในลิ้นชักรายละเอียดผู้เรียน (การ์ด "ความคืบหน้าการอ่าน" + แถบ % ต่อบทเรียน) เป็น **proxy ฝั่ง MECA แทนการยิง `bookroll.thaidlt.com` ตรง** จึงผ่าน Bearer token และไม่ติด CORS ระบุตัวนักเรียนด้วย **email** ไม่ใช่ Keycloak userId `{usageId}` ใส่ได้ทั้ง courseId (ทั้งวิชา) และ aetool id (ราย BookRoll) | สูง |
 
 ### Assign / Teacher Dashboard
 
@@ -250,6 +253,7 @@ GET {BASEURL}/api/kidbright/course?grade=secondary&level=2&classRoom=1&createDat
 | --- | --- | --- |
 | `GET {SBS_URL}/lms/{courseId}` | ดึงโครงสร้างรายวิชาจาก SBS/LMS เช่น courseKey, courseTitle, chapter, vertical, aetool และ iframe URL | สูง |
 | `POST {SBS_URL}/me` | sync ข้อมูล profile/enrollment บางส่วนไปฝั่ง SBS เช่น userId, institute, province, ชื่อ, อีเมล, grade/level/classRoom | ปานกลาง: โค้ดส่งข้อมูลชัดเจน แต่ response/schema ของ SBS ไม่ได้ระบุใน repo |
+| `GET {SBS_URL}/stats/echart/chatbotSpeed/{courseId}/{userId}` | ดึงเวลาที่นักเรียนใช้ตอบ chatbot/แบบฝึกหัด คืนมาเป็น ECharts option ฝั่ง client รวม `series[].data` เป็นวินาทีแล้วโชว์เป็น "เวลาทำแบบฝึกหัด" ในลิ้นชักผู้เรียน ต้องใช้ **Keycloak userId** ไม่ใช่ email | สูง |
 
 ## Keycloak Config
 
@@ -268,7 +272,7 @@ GET {BASEURL}/api/kidbright/course?grade=secondary&level=2&classRoom=1&createDat
 | Service | Endpoint template | Sample link | น่าจะไว้ทำอะไร / ความมั่นใจ |
 | --- | --- | --- | --- |
 | Bookroll activity | `https://bookroll.thaidlt.com/meca/student/BR_activity?userID={uid}&usageId={courseId}` | `https://bookroll.thaidlt.com/meca/student/BR_activity?userID={uid}&usageId=course-v1%3ANECTEC%2BAIUPPERSECONDARY01%2BNECTEC_000006` | เปิด/ดึงหน้ากิจกรรม BookRoll ของผู้เรียนในรายวิชา ความมั่นใจปานกลาง: ชื่อ endpoint ชัด แต่ prototype ใช้เป็น URL ภายนอกมากกว่า schema API |
-| Bookroll reading data | `https://bookroll.thaidlt.com/meca/student/readingData?userID={uid}&usageId={courseId}&view=student&ts={timestamp}` | `https://bookroll.thaidlt.com/meca/student/readingData?userID={uid}&usageId=course-v1%3ANECTEC%2BAIUPPERSECONDARY01%2BNECTEC_000006&view=student` | ดึงข้อมูลความคืบหน้าการอ่าน BookRoll เพื่อทำ card/กราฟ reading progress ความมั่นใจสูงจากชื่อ function และการ consume ใน prototype |
+| Bookroll reading data | `https://bookroll.thaidlt.com/meca/student/readingData?userID={uid}&usageId={courseId}&view=student&ts={timestamp}` | `https://bookroll.thaidlt.com/meca/student/readingData?userID={uid}&usageId=course-v1%3ANECTEC%2BAIUPPERSECONDARY01%2BNECTEC_000006&view=student` | ดึงข้อมูลความคืบหน้าการอ่าน BookRoll เพื่อทำ card/กราฟ reading progress ความมั่นใจสูงจากชื่อ function และการ consume ใน prototype **⚠️ เลิกใช้แล้วใน teacher dashboard** — ยิงตรงแบบไม่มี auth ต้องหา Keycloak userId เองและติด CORS ให้ใช้ `GET {BASEURL}/api/kidbright/course/{usageId}/data/bookroll?email={email}` แทน |
 | Viola video bar | `https://viola.thaidlt.com/meca/chart/bar/?userName={userName}&usageId={courseId}` | `https://viola.thaidlt.com/meca/chart/bar/?userName={userName}&usageId=course-v1%3ANECTEC%2BAIUPPERSECONDARY01%2BNECTEC_000006` | ดึง/เปิดข้อมูลกราฟแท่งการดูวิดีโอของผู้เรียน ความมั่นใจปานกลาง: ชื่อ URL ชัด แต่ response schema ไม่อยู่ใน repo |
 | Viola video heatmap | `https://viola.thaidlt.com/meca/chart/heatmapTime/?userName={userName}&usageId={courseId}` | `https://viola.thaidlt.com/meca/chart/heatmapTime/?userName={userName}&usageId=course-v1%3ANECTEC%2BAIUPPERSECONDARY01%2BNECTEC_000006` | ดึง/เปิด heatmap เวลาการดูวิดีโอของผู้เรียน ความมั่นใจปานกลาง |
 | SBS chatbot speed | `{SBS_URL}/stats/echart/chatbotSpeed/{courseId}/{uid}` | `https://sbs-backend.mooc.meca.in.th/stats/echart/chatbotSpeed/course-v1%3ANECTEC%2BAIUPPERSECONDARY01%2BNECTEC_000006/{uid}` | ดึงสถิติความเร็ว/เวลาในการทำ chatbot/adaptive activity ความมั่นใจปานกลาง: เคยใช้กับ student dashboard แต่ schema ไม่ได้อยู่ใน React app หลัก |

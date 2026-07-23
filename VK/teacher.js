@@ -69,15 +69,23 @@ function oidcLogout() {
 }
 const authHeader = () => { const a = readAuth(); return a?.token?.access_token ? { Authorization: `Bearer ${a.token.access_token}` } : {}; };
 const SESSION_EXPIRED_MESSAGE = "เซสชันหมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง";
+// A 401 proves the session is dead only when our own token has already expired. Backends here
+// also answer 401 when the token is fine but the role lacks access to that endpoint, and
+// clearing auth on those would sign a freshly-logged-in teacher out.
+const sessionReallyExpired = () => { const a = readAuth(); return !a?.token?.access_token || authExpired(a); };
 const DEBUG = teacherQuery.get("debug") === "1";
 const API_LOG = [];
-const apiGet = async (url, { auth = true } = {}) => {
+// `critical: false` marks a call the app can live without — some endpoints (e.g. the management
+// user search) answer 401 for a perfectly valid teacher token simply because the role lacks
+// access. Treating that as an expired session logs the user out mid-session, so optional calls
+// just throw and let their caller ignore them.
+const apiGet = async (url, { auth = true, critical = true } = {}) => {
   const entry = { url, auth, at: new Date().toLocaleTimeString("th-TH") };
   API_LOG.push(entry);
   try {
     const res = await fetch(url, { headers: auth ? authHeader() : {} });
     entry.status = res.status;
-    if (auth && res.status === 401) {
+    if (auth && critical && res.status === 401 && sessionReallyExpired()) {
       entry.ok = false; entry.error = SESSION_EXPIRED_MESSAGE;
       expireSession();
       throw new Error(SESSION_EXPIRED_MESSAGE);
@@ -91,7 +99,8 @@ const apiGet = async (url, { auth = true } = {}) => {
   } catch (e) { entry.ok = false; entry.error = entry.error || e.message; throw e; }
 };
 const apiUser = (sub) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/user/${encodeURIComponent(sub)}`);
-const apiUserByEmail = (email) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/user/query?email=${encodeURIComponent(email)}`);
+// Management-only search: role=user teachers get 401 here, which is expected, not a dead session.
+const apiUserByEmail = (email) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/user/query?email=${encodeURIComponent(email)}`, { critical: false });
 const apiTeacher = (sub) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/teacher/${encodeURIComponent(sub)}`);
 const apiUserInfo = () => apiGet(OIDC.userinfoEndpoint);
 const apiClassrooms = (sub, instituteId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/course/teacher/${encodeURIComponent(sub)}${instituteId ? `?instituteId=${encodeURIComponent(instituteId)}` : ""}`);
@@ -99,8 +108,13 @@ const apiAssign = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/a
 const apiProgress = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}/progress`);
 const apiGrades = (assignId) => apiGet(`${teacherConfig.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}/grades`);
 const apiCourseTree = (courseId) => apiGet(`${teacherConfig.sbsUrl}/lms/${encodeURIComponent(courseId)}`, { auth: false });
-const bookrollReadingUrl = (userId, usageId) => `https://bookroll.thaidlt.com/meca/student/readingData?userID=${encodeURIComponent(userId)}&usageId=${encodeURIComponent(usageId)}&view=student&ts=${Date.now()}`;
+// BookRoll reading progress through the MECA proxy instead of hitting bookroll.thaidlt.com
+// directly: the proxy carries our Bearer token, avoids CORS, and keys on email — so it needs
+// no Keycloak userId lookup. usageId takes either a courseId (whole course) or an aetool id.
+const bookrollReadingUrl = (email, usageId) => `${teacherConfig.baseUrl}/api/kidbright/course/${encodeURIComponent(usageId)}/data/bookroll?email=${encodeURIComponent(email)}`;
 const videoProgressUrl = (userName, courseId) => `https://viola.thaidlt.com/meca/chart/bar/?userName=${encodeURIComponent(userName)}&usageId=${encodeURIComponent(courseId)}`;
+// Time spent answering the chatbot, returned as an ECharts option. Keyed on Keycloak userId.
+const chatbotSpeedUrl = (courseId, userId) => `${teacherConfig.sbsUrl}/stats/echart/chatbotSpeed/${encodeURIComponent(courseId)}/${encodeURIComponent(userId)}`;
 const externalJson = async (url) => {
   const entry = { url, auth: false, at: new Date().toLocaleTimeString("th-TH") };
   API_LOG.push(entry);
@@ -125,7 +139,7 @@ const apiPost = async (url, body) => {
   try {
     const res = await fetch(url, { method: "POST", headers: { ...authHeader(), "Content-Type": "application/json" }, body: JSON.stringify(body) });
     entry.status = res.status;
-    if (res.status === 401) {
+    if (res.status === 401 && sessionReallyExpired()) {
       entry.ok = false; entry.error = SESSION_EXPIRED_MESSAGE;
       expireSession();
       throw new Error(SESSION_EXPIRED_MESSAGE);
@@ -143,7 +157,7 @@ const apiDelete = async (url) => {
   try {
     const res = await fetch(url, { method: "DELETE", headers: authHeader() });
     entry.status = res.status;
-    if (res.status === 401) {
+    if (res.status === 401 && sessionReallyExpired()) {
       entry.ok = false; entry.error = SESSION_EXPIRED_MESSAGE;
       expireSession();
       throw new Error(SESSION_EXPIRED_MESSAGE);
@@ -159,7 +173,9 @@ const apiDelete = async (url) => {
 // GET /course?instituteId&grade&level&classRoom&createDate — note course uses `createDate`
 // (start,end), NOT the enroll aggregate's `createAt`. The backend returns nothing for an
 // empty query, so callers must pass at least one param.
-const apiCourseSearch = ({ grade, level, classRoom, instituteId, createDate } = {}) => {
+// opts is forwarded to apiGet: the add-classroom modal needs this call (critical), the student
+// drawer only probes it to resolve a userId (not critical).
+const apiCourseSearch = ({ grade, level, classRoom, instituteId, createDate } = {}, opts = {}) => {
   const qs = new URLSearchParams();
   if (grade) qs.set("grade", grade);
   if (level) qs.set("level", level);
@@ -167,7 +183,7 @@ const apiCourseSearch = ({ grade, level, classRoom, instituteId, createDate } = 
   if (instituteId) qs.set("instituteId", instituteId);
   if (createDate) qs.set("createDate", createDate);
   const q = qs.toString();
-  return apiGet(`${teacherConfig.baseUrl}/api/kidbright/course${q ? `?${q}` : ""}`);
+  return apiGet(`${teacherConfig.baseUrl}/api/kidbright/course${q ? `?${q}` : ""}`, opts);
 };
 const apiCreateAssign = (body) => apiPost(`${teacherConfig.baseUrl}/api/kidbright/assign`, body);
 // Removes the classroom from the teacher's list (the assign record, not the course itself).
@@ -242,7 +258,7 @@ const resolveStudentApiUserIdFromRoster = async (student) => {
   if (!query.instituteId && !query.grade && query.level === "" && query.classRoom === "") return "";
   const cacheKey = JSON.stringify(query);
   if (!courseRosterCache.has(cacheKey)) {
-    courseRosterCache.set(cacheKey, apiCourseSearch(query).catch(() => null));
+    courseRosterCache.set(cacheKey, apiCourseSearch(query, { critical: false }).catch(() => null));
   }
   const payload = await courseRosterCache.get(cacheKey);
   const courses = Array.isArray(payload) ? payload : (payload?.data || payload?.results || payload?.items || []);
@@ -381,6 +397,21 @@ const findActivityProgress = (activity, entries, toolLabel) => {
       return entryCore.length >= 4 && (entryCore.includes(core) || core.includes(entryCore));
     })
     .sort((a, b) => progressTitleCore(b.key || b.title).length - progressTitleCore(a.key || a.title).length)[0] || null;
+};
+// chatbotSpeed answers with an ECharts option; sum this learner's series into total seconds.
+// The series carrying the student's own time is the one named "your…"/"คุณ", else the first.
+const chatbotTimeSeconds = (payload) => {
+  const option = chartOption(payload);
+  const series = Array.isArray(option.series) ? option.series : [];
+  const own = series.find((item) => /your|คุณ/i.test(String(item?.name || ""))) || series[0];
+  const values = Array.isArray(own?.data) ? own.data.map(chartNumber).filter(Number.isFinite) : [];
+  return values.length ? values.reduce((sum, value) => sum + Math.max(0, value), 0) : null;
+};
+const formatDuration = (seconds) => {
+  const value = Number(seconds);
+  if (!Number.isFinite(value)) return "-";
+  const mins = Math.floor(value / 60), secs = Math.round(value % 60);
+  return mins > 0 ? `${mins}:${String(secs).padStart(2, "0")} นาที` : `${secs} วินาที`;
 };
 const normalizeListPayload = (p) => {
   if (Array.isArray(p)) return p;
@@ -1423,8 +1454,8 @@ async function loadStudentDetailApis(st) {
   const identityPromise = resolveStudentApiUserId(st);
   const result = {
     studentId: st?.id, loading: true,
-    readingLoading: true, videoLoading: true,
-    apiUserId: null, reading: null, video: null, readingEntries: [], videoEntries: [], errors: []
+    readingLoading: true, videoLoading: true, chatbotLoading: true,
+    apiUserId: null, reading: null, video: null, readingEntries: [], videoEntries: [], chatbotSeconds: null, errors: []
   };
   const publish = (patch) => {
     Object.assign(result, patch);
@@ -1433,32 +1464,27 @@ async function loadStudentDetailApis(st) {
   };
   if (!cid || (!email && !st?.apiUserId)) {
     result.errors.push("ไม่พบ courseId หรือข้อมูลระบุตัวนักเรียน");
-    publish({ loading: false, readingLoading: false, videoLoading: false });
+    publish({ loading: false, readingLoading: false, videoLoading: false, chatbotLoading: false });
     return result;
   }
   identityPromise.then((userId) => publish({ apiUserId: userId || null }));
 
+  // Keys on email via the MECA proxy — no need to wait on the Keycloak userId lookup at all.
   const loadReading = async () => {
-    const userId = await identityPromise;
-    if (!userId) {
-      result.errors.push("BookRoll: ไม่พบ Keycloak userId ของนักเรียนจาก email");
-      publish({ reading: null, readingEntries: [], readingLoading: false });
-      return;
-    }
     let entries = [];
     let courseLevelAnswered = false;
     const bookrollTargets = state.activities.flatMap((activity) => activity.tools
       .filter((tool) => String(tool.label).toLowerCase() === "bookroll")
       .map((tool) => ({ usageId: tool.id, title: activity.name })));
     try {
-      const payload = await externalJson(bookrollReadingUrl(userId, cid));
+      const payload = await apiGet(bookrollReadingUrl(email, cid), { critical: false });
       courseLevelAnswered = readingPayloadHasRows(payload);
       entries = readingProgressEntries(payload, { usageId: cid });
     }
     catch (err) { result.errors.push(`BookRoll: ${err.message}`); }
     if (!entries.length && !courseLevelAnswered) {
       const targets = [...new Map(bookrollTargets.filter((target) => target.usageId).map((target) => [target.usageId, target])).values()];
-      const responses = await Promise.allSettled(targets.map((target) => externalJson(bookrollReadingUrl(userId, target.usageId))));
+      const responses = await Promise.allSettled(targets.map((target) => apiGet(bookrollReadingUrl(email, target.usageId), { critical: false })));
       responses.forEach((response, index) => {
         if (response.status === "fulfilled") {
           entries.push(...readingProgressEntries(response.value, {
@@ -1494,8 +1520,22 @@ async function loadStudentDetailApis(st) {
     publish({ video: null, videoLoading: false });
   };
 
-  await Promise.allSettled([loadReading(), loadVideo()]);
-  publish({ loading: false, readingLoading: false, videoLoading: false });
+  // Unlike BookRoll, chatbotSpeed really is keyed on the Keycloak userId, so this one has to
+  // wait for the lookup and genuinely can't run without it.
+  const loadChatbot = async () => {
+    const userId = await identityPromise;
+    if (!userId) {
+      result.errors.push("Chatbot: ไม่พบ Keycloak userId ของนักเรียนจาก email");
+      publish({ chatbotSeconds: null, chatbotLoading: false });
+      return;
+    }
+    try { result.chatbotSeconds = chatbotTimeSeconds(await externalJson(chatbotSpeedUrl(cid, userId))); }
+    catch (err) { result.errors.push(`Chatbot: ${err.message}`); }
+    publish({ chatbotSeconds: result.chatbotSeconds, chatbotLoading: false });
+  };
+
+  await Promise.allSettled([loadReading(), loadVideo(), loadChatbot()]);
+  publish({ loading: false, readingLoading: false, videoLoading: false, chatbotLoading: false });
   return result;
 }
 
@@ -1507,6 +1547,7 @@ function viewDrawer() {
   const video = detail?.video;
   const readingLoading = !!detail?.readingLoading;
   const videoLoading = !!detail?.videoLoading;
+  const chatbotLoading = !!detail?.chatbotLoading;
   const loadingSpinner = (size = 12, width = 2) => `<span role="status" aria-label="กำลังโหลด" title="กำลังโหลด" style="display:inline-block;width:${size}px;height:${size}px;border:${width}px solid #d0d5dd;border-top-color:#0d9488;border-radius:50%;animation:tdspin .75s linear infinite;vertical-align:middle"></span>`;
   const chapters = state.activities.map((activity) => {
     const tools = (activity.tools || []).map((tool) => {
@@ -1551,9 +1592,10 @@ function viewDrawer() {
         </div>
       </div>
       <div style="padding:20px 22px 40px">
-        <div style="display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;background:#fff;border:1px solid #ececf1;border-radius:14px;padding:16px 18px;margin-bottom:16px">
+        <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:12px;align-items:center;background:#fff;border:1px solid #ececf1;border-radius:14px;padding:16px 18px;margin-bottom:16px">
           <div style="position:relative;width:78px;height:78px"><div style="width:78px;height:78px;border-radius:50%;background:${ring}"></div><div style="position:absolute;inset:11px;background:#fff;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center"><div style="font:800 18px Inter;color:#0f766e">${st.progW}</div></div></div>
-          <div style="text-align:center"><div style="font:800 22px Inter;color:#101828">${esc(st.quizText)}</div><div style="font:600 11.5px 'Noto Sans Thai';color:#98a2b3">คะแนน Quiz</div></div>
+          <div style="text-align:center;border-right:1px solid #eef0f3"><div style="font:800 22px Inter;color:#101828">${esc(st.quizText)}</div><div style="font:600 11.5px 'Noto Sans Thai';color:#98a2b3">คะแนน Quiz</div></div>
+          <div style="text-align:center"><div style="font:800 22px Inter;color:#101828;min-height:27px;display:flex;align-items:center;justify-content:center">${chatbotLoading ? loadingSpinner(16, 2) : esc(formatDuration(detail?.chatbotSeconds))}</div><div style="font:600 11.5px 'Noto Sans Thai';color:#98a2b3">เวลาทำแบบฝึกหัด</div></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
           <div style="background:#fff;border:1px solid #ececf1;border-radius:14px;padding:15px 17px">
@@ -2013,8 +2055,8 @@ const H = {
       student: id,
       studentDetail: {
         studentId: id, loading: true,
-        readingLoading: true, videoLoading: true,
-        apiUserId: null, reading: null, video: null, readingEntries: [], videoEntries: [], errors: []
+        readingLoading: true, videoLoading: true, chatbotLoading: true,
+        apiUserId: null, reading: null, video: null, readingEntries: [], videoEntries: [], chatbotSeconds: null, errors: []
       }
     });
     const detail = await loadStudentDetailApis(st);
