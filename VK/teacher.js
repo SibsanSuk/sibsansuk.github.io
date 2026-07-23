@@ -1776,9 +1776,17 @@ const saveDbgUi = () => { try { localStorage.setItem("td_debug_ui", JSON.stringi
 function debugBodyHtml() {
   const auth = readAuth();
   const sub = authSub(auth);
-  const short = (s) => (s ? String(s).replace(teacherConfig.baseUrl, "").replace(teacherConfig.sbsUrl, "") : "");
-  const calls = API_LOG.map((e) => `<div style="padding:6px 0;border-top:1px solid #223">
-      <div style="display:flex;gap:6px;align-items:center"><span style="color:${e.ok ? "#22c55e" : "#f87171"};font-weight:700">${e.ok ? "✓" : "✗"}${e.status ? " " + e.status : ""}</span><span style="color:#93c5fd;word-break:break-all;flex:1">${esc(short(e.url))}</span>${e.count != null ? `<span style="color:#fbbf24">${e.count} rows</span>` : ""}</div>
+  // Full absolute URLs, never trimmed — the host is half the diagnosis (prod vs dev answer
+  // differently), and a shortened URL cannot be pasted into curl.
+  const calls = API_LOG.map((e, i) => `<div style="padding:6px 0;border-top:1px solid #223">
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="color:${e.ok ? "#22c55e" : "#f87171"};font-weight:700;flex:none">${e.ok ? "✓" : "✗"}${e.status ? " " + e.status : ""}</span>
+        <span style="color:#64748b;flex:none">${esc(e.method || "GET")}</span>
+        ${e.count != null ? `<span style="color:#fbbf24;flex:none">${e.count} rows</span>` : ""}
+        <span style="color:#475569;flex:1;text-align:right">${esc(e.at || "")}</span>
+        <button data-copy="${esc(e.url)}" title="คัดลอก URL" style="flex:none;border:none;background:#233047;color:#cbd5e1;border-radius:5px;padding:2px 7px;cursor:pointer;font:600 10px ui-monospace,Menlo,monospace">copy</button>
+      </div>
+      <div style="color:#93c5fd;word-break:break-all;margin-top:3px;user-select:all">${esc(e.url)}</div>
       ${e.error ? `<div style="color:#fca5a5;margin-top:2px">${esc(e.error)}</div>` : ""}
       ${e.sample ? `<pre style="margin:4px 0 0;white-space:pre-wrap;color:#cbd5e1;max-height:160px;overflow:auto;background:#0b1220;padding:6px;border-radius:6px">${esc(JSON.stringify(e.sample, null, 1).slice(0, 4000))}</pre>` : ""}
     </div>`).join("");
@@ -1786,9 +1794,11 @@ function debugBodyHtml() {
     <div>authed: <b style="color:${state.authed ? "#22c55e" : "#f87171"}">${state.authed}</b> · sub: <span style="color:#93c5fd">${esc(sub || "—")}</span></div>
     <div>profile: <span style="color:#a7f3d0">${esc(state.teacherName || "—")}</span> · ${esc(state.teacherEmail || "—")}</div>
     <div>token exp: ${auth?.token?.access_token ? esc(new Date((decodeJwt(auth.token.access_token)?.exp || 0) * 1000).toLocaleString("th-TH")) : "—"} · instituteId: ${esc(state.instituteId || "—")}</div>
+    <div>baseUrl: <span style="color:#a7f3d0;user-select:all">${esc(teacherConfig.baseUrl)}</span></div>
+    <div>sbsUrl : <span style="color:#a7f3d0;user-select:all">${esc(teacherConfig.sbsUrl)}</span></div>
     <div>classrooms mapped: <b style="color:#fbbf24">${state.classrooms.length}</b></div>
     <div>selected student API userId: <span style="color:#a7f3d0">${esc(state.studentDetail?.apiUserId || "—")}</span></div>
-    <div style="margin-top:6px;font:700 11px 'Noto Sans Thai'">API calls (${API_LOG.length})</div>
+    <div style="margin-top:6px;font:700 11px 'Noto Sans Thai'">API calls (${API_LOG.length}) — ใหม่สุดอยู่ล่างสุด</div>
     ${calls || '<div style="color:#64748b">— ยังไม่มีการเรียก API —</div>'}`;
 }
 
@@ -1813,6 +1823,21 @@ function ensureDebugPanel() {
   const applyCollapsed = () => { dbgBody.style.display = dbgUi.collapsed ? "none" : "block"; minBtn.textContent = dbgUi.collapsed ? "+" : "–"; };
   minBtn.addEventListener("click", (e) => { e.stopPropagation(); dbgUi.collapsed = !dbgUi.collapsed; applyCollapsed(); saveDbgUi(); });
   applyCollapsed();
+
+  // delegated: the body's innerHTML is replaced on every update, so bind once here
+  dbgBody.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-copy]");
+    if (!btn) return;
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(btn.dataset.copy);
+      btn.textContent = "copied";
+    } catch (_) {
+      // clipboard needs a secure context; the URL is user-select:all so it can still be grabbed
+      btn.textContent = "เลือกเอง";
+    }
+    setTimeout(() => { btn.textContent = "copy"; }, 1200);
+  });
 
   // drag via pointer events
   const head = el.querySelector("#td-debug-head");
@@ -1839,7 +1864,12 @@ function ensureDebugPanel() {
 function updateDebugPanel() {
   if (!DEBUG) return;
   ensureDebugPanel();
-  if (dbgBody) dbgBody.innerHTML = debugBodyHtml();
+  if (!dbgBody) return;
+  // Follow the newest call like a log tail, but stop following the moment the reader scrolls up
+  // to study an earlier response — otherwise a late request yanks the view away mid-read.
+  const atBottom = dbgBody.scrollHeight - dbgBody.scrollTop - dbgBody.clientHeight < 40;
+  dbgBody.innerHTML = debugBodyHtml();
+  if (atBottom) dbgBody.scrollTop = dbgBody.scrollHeight;
 }
 
 function viewLoadingOverlay() {

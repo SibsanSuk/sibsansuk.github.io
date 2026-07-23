@@ -175,6 +175,28 @@ GET {BASEURL}/api/kidbright/course?grade=secondary&level=2&classRoom=1&createDat
 | `GET` | `{SBS_URL}/stats/echart/chatbotSpeed/{courseId}/{userId}` | `https://sbs-backend.mooc.meca.in.th/stats/echart/chatbotSpeed/course-v1%3ANECTEC%2BAIUPPERSECONDARY01%2BNECTEC_000006/{userId}` | - |
 | `POST` | `{SBS_URL}/me` | `https://sbs-backend.mooc.meca.in.th/me` | `{"userId":"{sub}","grade":"secondary","level":2,"classRoom":"1","instituteId":"1010720039","province":"กรุงเทพมหานคร","firstName":"ทดสอบ","lastName":"ระบบ","email":"test@example.com"}` |
 
+## ⚠️ ก่อนนำ endpoint รายบุคคลไปใช้ ต้องตรวจ 3 ข้อนี้ก่อน
+
+หลาย service ในระบบนี้ **ตอบ HTTP 200 พร้อม payload ครบถ้วนแต่เป็นศูนย์ทั้งหมด** ให้กับ id ที่มันไม่รู้จัก ซึ่งหน้าตาเหมือนนักเรียนที่ยังไม่ได้ทำอะไรเลยเป๊ะ ๆ แยกไม่ออก ผลคือ dashboard แสดงตัวเลขที่ดูน่าเชื่อถือแต่เป็นของปลอม เคยเกิดมาแล้วจริงกับ `bookroll.thaidlt.com` และ `chatbotSpeed` โดยตัวแรกหลุดขึ้นหน้าจอไปแล้วก่อนจะจับได้
+
+**1. ยิงด้วย id ที่ไม่มีอยู่จริง** — ถ้าได้ผลเหมือน id จริง แปลว่า endpoint ไม่ได้อ่าน id ที่ส่งไป ห้ามใช้เป็นข้อมูลรายคน
+
+**2. เทียบผู้เรียน 2 คนที่มีกิจกรรมต่างกัน** — ถ้าได้ผลเท่ากันก็แปลว่าไม่แยกผู้ใช้ ข้อนี้จำเป็นเพราะวิชาที่ไม่มีใครใช้เลยจะได้ศูนย์ทั้งหมดทุกคนอยู่แล้ว ทำให้ข้อ 1 สรุปไม่ได้
+
+**3. ถ้ามี 2 แหล่งที่ควรให้คำตอบเดียวกัน ให้เทียบกัน** — ข้อนี้ชี้ขาดที่สุด กรณี BookRoll จับได้เพราะ proxy ตอบ `"Intro to KB AI":"1:36"` ขณะที่ service ตรงตอบ `"0:0"` ให้ผู้เรียนคนเดียวกัน
+
+รันข้อ 1-2 อัตโนมัติได้ด้วย:
+
+```bash
+node teacher_dashboard_data/probe-endpoints.mjs \
+  --course "course-v1:..." --email active@learner --email2 other@learner \
+  --token "$(: เอาจาก JSON.parse(sessionStorage.oidc_auth).token.access_token)"
+```
+
+exit code ไม่เป็น 0 เมื่อมี endpoint ที่ปลอมหรือที่ยัง**สรุปไม่ได้** — "ยังไม่ได้ตรวจ" ไม่นับว่าผ่าน
+
+**อย่าใส่ fallback ข้าม service** เมื่อแหล่งหลักล้มเหลว เว้นแต่แหล่งสำรองผ่านการตรวจ 3 ข้อนี้แล้ว การ fallback ไปยัง service ที่ตอบศูนย์ให้ทุกคน แย่กว่าปล่อยให้ขึ้น `-` เพราะกลบ error ที่มองเห็นได้ ให้กลายเป็นข้อมูลผิดที่มองไม่เห็น
+
 ## คำอธิบายว่าแต่ละเส้นน่าจะไว้ทำอะไร
 
 คำอธิบายด้านล่างอิงจาก call site ใน `src/`, `public/api-tester.html`, และไฟล์ prototype ใน `design_ref/` ถ้า endpoint ไหนชื่อสื่อความหมายแต่ไม่มี schema/response ยืนยันในโค้ด จะระบุว่า "ไม่แน่ใจ" หรือ "อนุมาน"
