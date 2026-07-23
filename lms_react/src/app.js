@@ -103,6 +103,48 @@ function Spinner({
     className: "spinner h-6 w-6 rounded-full border-[3px] border-teal-100 border-t-brand-600"
   }), label);
 }
+function EChart({
+  option,
+  className = "h-52 w-full",
+  ariaLabel = "กราฟข้อมูล"
+}) {
+  const elementRef = useRef(null);
+  const chartRef = useRef(null);
+  useEffect(() => {
+    if (!elementRef.current || !window.echarts) return undefined;
+    const chart = window.echarts.init(elementRef.current, null, {
+      renderer: "svg"
+    });
+    chartRef.current = chart;
+    const resize = () => chart.resize();
+    const resizeObserver = window.ResizeObserver ? new ResizeObserver(resize) : null;
+    resizeObserver?.observe(elementRef.current);
+    window.addEventListener("resize", resize);
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", resize);
+      chart.dispose();
+      chartRef.current = null;
+    };
+  }, []);
+  useEffect(() => {
+    chartRef.current?.setOption(option, {
+      notMerge: true,
+      lazyUpdate: false
+    });
+  }, [option]);
+  if (!window.echarts) {
+    return React.createElement("div", {
+      className: cx(className, "flex items-center justify-center text-xs font-semibold text-slate-400")
+    }, "ไม่สามารถโหลดกราฟได้");
+  }
+  return React.createElement("div", {
+    ref: elementRef,
+    className,
+    role: "img",
+    "aria-label": ariaLabel
+  });
+}
 class DrawerErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -833,23 +875,57 @@ function UsageMap({
 function Sparkline({
   values
 }) {
-  const width = 140,
-    height = 28;
-  const min = Math.min(...values),
-    max = Math.max(...values),
-    span = max - min || 1;
-  const points = values.map((value, index) => `${2 + index / (values.length - 1) * (width - 4)},${height - 3 - (value - min) / span * (height - 8)}`).join(" ");
-  return React.createElement("svg", {
-    viewBox: `0 0 ${width} ${height}`,
-    className: "h-7 w-[140px]"
-  }, React.createElement("polyline", {
-    points: points,
-    fill: "none",
-    stroke: "#0d9488",
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round"
-  }));
+  const option = useMemo(() => ({
+    animationDuration: 450,
+    grid: {
+      left: 2,
+      right: 2,
+      top: 3,
+      bottom: 3
+    },
+    xAxis: {
+      type: "category",
+      show: false,
+      boundaryGap: false,
+      data: values.map((_, index) => index)
+    },
+    yAxis: {
+      type: "value",
+      show: false,
+      scale: true
+    },
+    series: [{
+      type: "line",
+      data: values,
+      smooth: 0.35,
+      symbol: "none",
+      lineStyle: {
+        color: "#0d9488",
+        width: 2
+      },
+      areaStyle: {
+        color: {
+          type: "linear",
+          x: 0,
+          y: 0,
+          x2: 0,
+          y2: 1,
+          colorStops: [{
+            offset: 0,
+            color: "rgba(13,148,136,.18)"
+          }, {
+            offset: 1,
+            color: "rgba(13,148,136,0)"
+          }]
+        }
+      }
+    }]
+  }), [values]);
+  return React.createElement(EChart, {
+    option,
+    className: "h-7 w-[140px]",
+    ariaLabel: "กราฟแนวโน้มผู้ใช้งานหกเดือน"
+  });
 }
 function CourseList({
   classrooms,
@@ -1248,80 +1324,243 @@ function MetricCard({
 function DistributionBars({
   data
 }) {
-  const max = Math.max(1, ...data.map(item => item.count));
+  const option = useMemo(() => ({
+    animationDuration: 550,
+    aria: {
+      enabled: true,
+      decal: {
+        show: false
+      }
+    },
+    tooltip: {
+      trigger: "axis",
+      axisPointer: {
+        type: "shadow",
+        shadowStyle: {
+          color: "rgba(15,118,110,.06)"
+        }
+      },
+      backgroundColor: "rgba(16,24,40,.94)",
+      borderWidth: 0,
+      textStyle: {
+        color: "#fff",
+        fontFamily: "Noto Sans Thai, Inter, sans-serif",
+        fontSize: 12
+      },
+      formatter: params => {
+        const item = params?.[0];
+        return `${item?.axisValue || ""}<br/><b>${item?.value ?? 0} คน</b>`;
+      }
+    },
+    grid: {
+      left: 8,
+      right: 8,
+      top: 30,
+      bottom: 8,
+      containLabel: true
+    },
+    xAxis: {
+      type: "category",
+      data: data.map(item => item.label),
+      axisTick: {
+        show: false
+      },
+      axisLine: {
+        lineStyle: {
+          color: "#e2e8f0"
+        }
+      },
+      axisLabel: {
+        color: "#98a2b3",
+        fontFamily: "Inter, Noto Sans Thai, sans-serif",
+        fontSize: 11,
+        fontWeight: 600,
+        interval: 0
+      }
+    },
+    yAxis: {
+      type: "value",
+      minInterval: 1,
+      axisLabel: {
+        show: false
+      },
+      axisLine: {
+        show: false
+      },
+      axisTick: {
+        show: false
+      },
+      splitLine: {
+        lineStyle: {
+          color: "#f1f5f9"
+        }
+      }
+    },
+    series: [{
+      name: "ผู้เรียน",
+      type: "bar",
+      barMaxWidth: 46,
+      data: data.map(item => ({
+        value: item.count,
+        itemStyle: {
+          color: item.color,
+          borderRadius: [6, 6, 0, 0]
+        }
+      })),
+      label: {
+        show: true,
+        position: "top",
+        color: "#475467",
+        fontFamily: "Inter, sans-serif",
+        fontSize: 12,
+        fontWeight: 700
+      },
+      emphasis: {
+        itemStyle: {
+          shadowBlur: 10,
+          shadowColor: "rgba(16,24,40,.14)"
+        }
+      }
+    }]
+  }), [data]);
   return React.createElement("section", {
     className: "rounded-2xl border border-slate-200 bg-white p-5 shadow-panel"
   }, React.createElement("div", {
-    className: "mb-5"
+    className: "mb-1"
   }, React.createElement("h3", {
     className: "text-[15px] font-bold"
   }, "การกระจายความคืบหน้า"), React.createElement("p", {
     className: "mt-0.5 text-[11px] text-slate-400"
-  }, "จำนวนผู้เรียนในแต่ละช่วง")), React.createElement("div", {
-    className: "flex h-44 items-end justify-around gap-3 border-b border-slate-200 px-2"
-  }, data.map(item => React.createElement("div", {
-    key: item.label,
-    className: "flex h-full flex-1 flex-col items-center justify-end"
-  }, React.createElement("span", {
-    className: "mb-1.5 font-inter text-xs font-bold text-slate-600"
-  }, item.count), React.createElement("span", {
-    className: "w-full max-w-12 rounded-t-md",
-    style: {
-      height: `${Math.max(item.count ? 10 : 2, item.count / max * 125)}px`,
-      background: item.color
-    }
-  })))), React.createElement("div", {
-    className: "mt-2.5 flex justify-around gap-2"
-  }, data.map(item => React.createElement("span", {
-    key: item.label,
-    className: "flex-1 text-center font-inter text-[10px] text-slate-400"
-  }, item.label))));
+  }, "จำนวนผู้เรียนในแต่ละช่วง")), React.createElement(EChart, {
+    option,
+    className: "h-[214px] w-full",
+    ariaLabel: "กราฟแท่งแสดงการกระจายความคืบหน้าของผู้เรียน"
+  }));
 }
 function DonutChart({
   data,
   total
 }) {
-  let accumulated = 0;
-  const denominator = data.reduce((sum, item) => sum + item.count, 0) || 1;
-  const gradient = data.map(item => {
-    const start = accumulated / denominator * 360;
-    accumulated += item.count;
-    return `${item.color} ${start}deg ${accumulated / denominator * 360}deg`;
-  }).join(",");
+  const option = useMemo(() => ({
+    animationDuration: 600,
+    aria: {
+      enabled: true,
+      decal: {
+        show: false
+      }
+    },
+    tooltip: {
+      trigger: "item",
+      backgroundColor: "rgba(16,24,40,.94)",
+      borderWidth: 0,
+      textStyle: {
+        color: "#fff",
+        fontFamily: "Noto Sans Thai, Inter, sans-serif",
+        fontSize: 12
+      },
+      formatter: params => `${params.marker}${params.name}<br/><b>${params.value} คน (${params.percent}%)</b>`
+    },
+    legend: {
+      orient: "vertical",
+      left: "58%",
+      top: "center",
+      itemWidth: 10,
+      itemHeight: 10,
+      itemGap: 11,
+      icon: "circle",
+      data: data.map(item => item.label),
+      formatter: name => {
+        const item = data.find(row => row.label === name);
+        return `{label|${name}}  {value|${item?.count ?? 0}}`;
+      },
+      textStyle: {
+        rich: {
+          label: {
+            width: 76,
+            color: "#667085",
+            fontFamily: "Noto Sans Thai, Inter, sans-serif",
+            fontSize: 11,
+            fontWeight: 600
+          },
+          value: {
+            color: "#344054",
+            fontFamily: "Inter, sans-serif",
+            fontSize: 11,
+            fontWeight: 700,
+            align: "right"
+          }
+        }
+      }
+    },
+    graphic: [{
+      type: "group",
+      left: "30%",
+      top: "center",
+      silent: true,
+      children: [{
+        type: "text",
+        style: {
+          x: 0,
+          y: -10,
+          text: String(total),
+          textAlign: "center",
+          textVerticalAlign: "middle",
+          fill: "#101828",
+          font: "800 24px Inter"
+        }
+      }, {
+        type: "text",
+        style: {
+          x: 0,
+          y: 13,
+          text: "ผู้เรียน",
+          textAlign: "center",
+          textVerticalAlign: "middle",
+          fill: "#98a2b3",
+          font: "600 11px Noto Sans Thai"
+        }
+      }]
+    }],
+    series: [{
+      name: "ผลคะแนน Quiz",
+      type: "pie",
+      center: ["30%", "50%"],
+      radius: ["48%", "72%"],
+      avoidLabelOverlap: true,
+      label: {
+        show: false
+      },
+      labelLine: {
+        show: false
+      },
+      itemStyle: {
+        borderColor: "#fff",
+        borderWidth: 2,
+        borderRadius: 3
+      },
+      emphasis: {
+        scaleSize: 5
+      },
+      data: data.map(item => ({
+        name: item.label,
+        value: item.count,
+        itemStyle: {
+          color: item.color
+        }
+      }))
+    }]
+  }), [data, total]);
   return React.createElement("section", {
     className: "rounded-2xl border border-slate-200 bg-white p-5 shadow-panel"
   }, React.createElement("div", null, React.createElement("h3", {
     className: "text-[15px] font-bold"
   }, "ผลคะแนน Quiz"), React.createElement("p", {
     className: "mt-0.5 text-[11px] text-slate-400"
-  }, "สัดส่วนคะแนนรวมของผู้เรียน")), React.createElement("div", {
-    className: "mt-5 flex items-center justify-center gap-7"
-  }, React.createElement("div", {
-    className: "relative h-36 w-36 shrink-0 rounded-full",
-    style: {
-      background: `conic-gradient(${gradient})`
-    }
-  }, React.createElement("span", {
-    className: "absolute inset-[19px] flex flex-col items-center justify-center rounded-full bg-white"
-  }, React.createElement("b", {
-    className: "font-inter text-2xl"
-  }, total), React.createElement("small", {
-    className: "text-[10px] text-slate-400"
-  }, "ผู้เรียน"))), React.createElement("div", {
-    className: "space-y-2"
-  }, data.map(item => React.createElement("div", {
-    key: item.label,
-    className: "flex items-center gap-2 text-[11px] text-slate-500"
-  }, React.createElement("span", {
-    className: "h-2.5 w-2.5 rounded-full",
-    style: {
-      background: item.color
-    }
-  }), React.createElement("span", {
-    className: "min-w-[62px]"
-  }, item.label), React.createElement("b", {
-    className: "font-inter text-slate-700"
-  }, item.count))))));
+  }, "สัดส่วนคะแนนรวมของผู้เรียน")), React.createElement(EChart, {
+    option,
+    className: "h-[214px] w-full",
+    ariaLabel: "กราฟวงกลมแสดงสัดส่วนคะแนน Quiz ของผู้เรียน"
+  }));
 }
 function Avatar({
   student,
