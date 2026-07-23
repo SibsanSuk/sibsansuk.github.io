@@ -52,16 +52,13 @@
 
   <script>
     window.TEACHER_DASHBOARD_CONFIG = {
-      // DEFAULT = live MECA login/API. The "เข้าสู่ระบบด้วย MECA ID" button runs the
-      // real Keycloak (OIDC/PKCE) login, then loads the teacher's classrooms
-      // (course/teacher/{sub}) and each classroom's assign progress + grades + SBS /lms.
-      //
-      // baseUrl: "https://adaptive-profile-bn-dev.ae.app.meca.in.th", // needs Bearer token + CORS from this origin
-      // bookrollBaseUrl: "https://adaptive-profile-bn.ae.app.meca.in.th", // BookRoll proxy is prod-only
-      // sbsUrl:  "https://sbs-backend.mooc.meca.in.th",               // public
-      // clientId: "dashboard",       // Keycloak client (this page's URL must be a registered redirect URI)
-      // instituteId: "1010720039",   // fallback if teacher/{sub} omits it
-      // assignId: "",                // optional: open one classroom directly
+      // Optional runtime overrides:
+      // baseUrl: "https://adaptive-profile-bn.ae.app.meca.in.th",
+      // bookrollBaseUrl: "https://adaptive-profile-bn.ae.app.meca.in.th",
+      // sbsUrl: "https://sbs-backend.mooc.meca.in.th",
+      // clientId: "dashboard",
+      // instituteId: "1010720039",
+      // assignId: "",
     };
     const teacherScript = document.createElement("script");
     teacherScript.src = `./teacher.js?v=${Date.now()}`;

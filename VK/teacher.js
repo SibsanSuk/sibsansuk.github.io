@@ -7,8 +7,8 @@ const readTeacherDashboardConfig = () => {
   return {
     oidc: runtime.oidc || {},
     instituteId: teacherQuery.get("instituteid") || teacherQuery.get("instituteId") || runtime.instituteId || "",
-    baseUrl: runtime.baseUrl || "https://adaptive-profile-bn-dev.ae.app.meca.in.th",
-    // BookRoll is deployed separately from the remaining teacher APIs.
+    baseUrl: runtime.baseUrl || "https://adaptive-profile-bn.ae.app.meca.in.th",
+    // BookRoll can be configured independently when environments differ.
     bookrollBaseUrl: runtime.bookrollBaseUrl || "https://adaptive-profile-bn.ae.app.meca.in.th",
     sbsUrl: runtime.sbsUrl || "https://sbs-backend.mooc.meca.in.th",
     clientId: runtime.clientId || "dashboard",
@@ -499,7 +499,6 @@ const toolLabel = (type) => {
   return type ? type[0].toUpperCase() + type.slice(1) : "Tool";
 };
 const collectActivities = (course, scoreRows = []) => {
-  // distinct learners who engaged per module (only quiz/score modules have real data)
   const byModule = new Map();
   scoreRows.forEach((r) => {
     if (!r?.moduleId) return;
@@ -786,7 +785,6 @@ const sparkline = (vals, color, w = 132, h = 34) => {
   const last = pts[pts.length - 1];
   return `<svg viewBox="0 0 ${w} ${h}" style="width:${w}px;height:${h}px;display:block"><path d="${area}" fill="${color}" opacity="0.12"></path><path d="${line}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.6" fill="${color}"></circle></svg>`;
 };
-// Darken a hex colour for the module block's gradient.
 const shade = (hex, amt = 0.8) => {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
   if (!m) return hex;
@@ -794,7 +792,6 @@ const shade = (hex, amt = 0.8) => {
   const r = Math.round(((n >> 16) & 255) * amt), g = Math.round(((n >> 8) & 255) * amt), b = Math.round((n & 255) * amt);
   return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
 };
-// The module's topic (text after "Module N") and its education level, for the card's title/subtitle.
 const moduleTopic = (title) => { const m = /module\s*\d+\s*[:：]?\s*(.+)$/i.exec(title || ""); return ((m ? m[1] : title) || "").trim() || (title || ""); };
 const moduleLevel = (c) => {
   const m = /(มัธยมศึกษาตอน(?:ต้น|ปลาย)|ประถมศึกษา|ปวช\.?|ปวส\.?|ปริญญา\S*)/.exec(c?.title || "");
@@ -803,14 +800,12 @@ const moduleLevel = (c) => {
   return g === "ทั้งหมด" ? "ทุกระดับชั้น" : g;
 };
 
-// ---- "เพิ่มห้องเรียน" helpers ----
-// GET /course returns Course[] each with courseName + enrolls[]; keep the fields the modal needs.
+/* ------------------------------ classroom form helpers ------------------------------ */
 const mapCourseRow = (rows) => (rows || []).map((c) => ({
   courseId: c.courseId || c.course_id || "",
   courseName: c.courseName || c.courseTitle || c.title || c.courseId || "",
   enrolls: Array.isArray(c.enrolls) ? c.enrolls : [],
 }));
-// Filter choices are the distinct grade/level/classRoom actually present in the courses' enrolls[].
 const deriveAddOptions = (courses) => {
   const grades = new Set(), levels = new Set(), classRooms = new Set();
   for (const c of courses || []) for (const e of c.enrolls || []) {
@@ -873,8 +868,6 @@ function moduleCard(c, i) {
   const status = classroomStatus(c);
   const actLabel = status === "pending" ? "เริ่มใช้งาน" : "เปิดห้องเรียน";
   const actStyle = status === "pending" ? "background:#eef2ff;color:#4f46e5" : `background:${color};color:#fff`;
-  // flex:none keeps the card at its natural height — a flex column would otherwise shrink cards
-  // instead of scrolling. Colour bar identifies the classroom (no module number — they aren't ordered).
   return `
   <div class="h-card" style="flex:none;display:flex;align-items:stretch;background:#fff;border:1px solid #ececf1;border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.05);overflow:hidden">
     <div data-act="pickCourse" data-arg="${esc(c.id)}" style="flex:none;width:8px;background:linear-gradient(180deg,${color},${shade(color)});cursor:pointer"></div>
@@ -926,7 +919,6 @@ function viewCourseList(phone) {
   </div>`;
 }
 
-// Rotating overview topics (from overview.json slides) + a 6-month trend, shown over the map.
 function viewMapInsight(compact) {
   const slides = insightSlides();
   const stageMin = compact ? "110px" : "128px";
@@ -970,8 +962,6 @@ function viewMapCard(compact) {
 }
 
 function viewSignInCard(phone) {
-  // Side-by-side: scroll inside the card rather than clip. The card is height-constrained by the
-  // row, and overflow:hidden would swallow the sign-in button on any viewport too short to fit it.
   const overflow = phone ? "overflow:hidden" : "overflow-x:hidden;overflow-y:auto";
   return `
     <div ${phone ? "" : 'class="scrolly"'} style="${phone ? "flex:none" : "flex:1;max-width:520px"};display:flex;background:#fff;border:1px solid #ececf1;border-radius:${phone ? 14 : 18}px;box-shadow:0 1px 3px rgba(16,24,40,.06);${overflow};min-height:0">
@@ -981,7 +971,6 @@ function viewSignInCard(phone) {
     </div>`;
 }
 
-// Greeting + today's date above the landing cards. Signed-in only — it needs a name.
 function viewGreeting(phone) {
   const name = (state.teacherName || "").trim();
   return `
@@ -995,8 +984,6 @@ function viewGreeting(phone) {
 
 function viewLanding() {
   const authed = state.authed;
-  // Stack + page-scroll on a narrow viewport OR a short one (landscape phone): both lack the
-  // room to hold two full-height cards side by side without clipping their contents.
   const phone = BP() === "phone" || shortView();
   const rightPanel = authed ? viewCourseList(phone) : viewSignInCard(phone);
   const footer = `
@@ -1006,10 +993,7 @@ function viewLanding() {
       <span style="font:500 11.5px 'Noto Sans Thai';color:#98a2b3">· 112 ถนนพหลโยธิน ต.คลองหนึ่ง อ.คลองหลวง จ.ปทุมธานี 12120, Thailand</span>
       <span style="font:500 11.5px Inter;color:#0f766e">· info@nectec.or.th</span>
     </div>`;
-  // The greeting supplies the top padding when present, so the cards drop theirs to avoid a double gap.
   const pad = phone ? (authed ? "12px 14px 14px" : "14px") : (authed ? "16px 22px 22px" : "22px");
-  // phone: flex:none so the page scrolls the full content + footer (flex:1 would compress the
-  // cards and let their fixed-height children spill over the footer). desktop: flex:1 fills the viewport.
   const cards = `<div style="${phone ? "flex:none" : "flex:1;min-height:0"};display:flex;${phone ? "flex-direction:column;" : ""}gap:${phone ? 14 : 18}px;padding:${pad}">
       ${viewMapCard(phone)}
       ${rightPanel}
@@ -1033,7 +1017,6 @@ function viewTopBar() {
   const showLanding = !state.course, inCourse = !!state.course, showProfile = state.authed;
   const initials = (state.teacherName || "").replace(/\s/g, "").slice(0, 2);
   const langFlag = state.lang === "th" ? "🇹🇭" : "🇬🇧";
-  // Notifications: no live endpoint yet — show the empty-state concept (no demo data pulled).
   const notifs = [];
   const unread = notifs.filter((n) => n.unread).length;
   const leadoOpen = state.leadoOpen, leadoDemo = state.leadoDemo;
@@ -1146,7 +1129,6 @@ function viewDashboard() {
   else if (state.page === "map") page = viewMap();
   const tabs = [["overview", "goOverview", "ภาพรวมทั้งห้อง"], ["students", "goStudents", "รายชื่อนักเรียน"], ["tools", "goTools", "การใช้งานเครื่องมือ"]];
 
-  // left vertical tab rail, content fills the rest (more vertical room on landscape / wide)
   if (side) {
     const railW = compact ? 190 : 236;
     const navV = ([p, act, label]) => {
@@ -1203,7 +1185,6 @@ function viewOverview() {
   const records = state.metrics.records;
   const pmax = Math.max(15, Math.ceil(Math.max(...state.prog.map((b) => b.count), 1) / 15) * 15);
   const axis = [pmax, pmax * 0.75, pmax * 0.5, pmax * 0.25, 0].map((v) => Math.round(v));
-  // donut
   const qtotal = state.quiz.reduce((a, b) => a + b.count, 0) || 1;
   let acc = 0;
   const seg = state.quiz.map((x) => { const a0 = (acc / qtotal) * 360; acc += x.count; const a1 = (acc / qtotal) * 360; return `${x.color} ${a0.toFixed(1)}deg ${a1.toFixed(1)}deg`; });
@@ -1430,15 +1411,12 @@ async function loadStudentDetailApis(st) {
   }
   identityPromise.then((userId) => publish({ apiUserId: userId || null }));
 
-  // Keyed on email, so this never waits on the Keycloak userId lookup.
   const loadReading = async () => {
     let entries = [];
     const bookrollCount = state.activities.flatMap((activity) => activity.tools)
       .filter((tool) => String(tool.label).toLowerCase() === "bookroll").length;
     try {
       const payload = await apiGet(bookrollReadingUrl(email, cid), { critical: false });
-      // {"results": {title: "read:total"}}; the ECharts branch is insurance in case this ever
-      // switches to the chart shape the other stats endpoints use.
       entries = readingProgressEntries(payload, { usageId: cid });
       if (!entries.length) entries = echartProgressEntries(payload);
       if (!entries.length) result.errors.push(`BookRoll: ตอบกลับ 200 แต่อ่านค่าไม่ได้ — ${describeShape(payload)}`);
@@ -1480,10 +1458,7 @@ async function loadStudentDetailApis(st) {
     publish({ video: null, videoLoading: false });
   };
 
-  // Unlike BookRoll, chatbotSpeed is keyed strictly on the Keycloak userId and cannot fall back
-  // to email: it answers 200 with an all-zero "Your Score" series for any identifier it doesn't
-  // recognise (verified with a made-up address), so guessing would fabricate data. Without a
-  // real UUID the honest result is no result.
+  // Unknown chatbot identities return zero-valued data, so email fallback is unsafe.
   const loadChatbot = async () => {
     const userId = await identityPromise;
     if (!userId) {
@@ -1607,8 +1582,6 @@ function viewEditModal() {
   </div>`;
 }
 
-// ⋮ menu for one classroom card. position:fixed at coordinates measured from the button, so
-// neither the card's overflow:hidden nor the scrolling list can clip it.
 function viewCardMenu() {
   const p = state.cardMenuPos;
   if (!p) return "";
@@ -1618,7 +1591,6 @@ function viewCardMenu() {
   </div>`;
 }
 
-// Confirm before DELETE /assign/{assignId} — the card disappears for every teacher on that assign.
 function viewRemoveModal() {
   const c = state.classrooms.find((x) => String(x.id) === String(state.delTarget));
   if (!c) return "";
@@ -1650,13 +1622,11 @@ function viewAddModal() {
   const fldStl = "border:1px solid #e4e7ec;border-radius:10px;padding:10px 12px;font:500 13px 'Noto Sans Thai';color:#344054;outline:none;background:#fff";
   const opt = (v, cur, label) => `<option value="${esc(v)}"${String(cur) === String(v) ? " selected" : ""}>${esc(label)}</option>`;
   const sel = (chg, cur, ph, opts) => `<select data-chg="${chg}" style="${fldStl};flex:1;min-width:0;cursor:pointer;color:${cur ? "#344054" : "#98a2b3"}"><option value=""${cur ? "" : " selected"}>${esc(ph)}</option>${opts}</select>`;
-  // Filter options are derived from the fetched courses' enrolls[] (like the original).
   const gradeOpts = state.addOptions.grades.map((g) => opt(g, f.grade, GRADE_TH[g] || g)).join("");
   const levelOpts = state.addOptions.levels.map((l) => opt(l, f.level, `ชั้นปี ${l}`)).join("");
   const roomOpts = state.addOptions.classRooms.map((r) => opt(r, f.classRoom, `ห้อง ${r}`)).join("");
   const check = (on) => `<span style="width:24px;height:24px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;background:${on ? "#0d9488" : "#f4f5f7"};color:${on ? "#fff" : "#cdd2da"};border:1px solid ${on ? "#0d9488" : "#e4e7ec"};transition:all .15s"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><path d="M5 12.5l4.5 4.5L19 7"></path></svg></span>`;
 
-  // school field: readonly for role=user, searchable AutoComplete for staff/admin
   const schoolField = isStaff
     ? `<div style="position:relative;flex:1;min-width:0">
         <input id="addInst" data-inp="setAddInst" value="${esc(state.addInstQuery)}" placeholder="ค้นหาชื่อโรงเรียน..." autocomplete="off" style="${fldStl};width:100%">
@@ -1714,7 +1684,7 @@ function viewAddModal() {
   </div>`;
 }
 
-/* ---------- draggable / collapsible debug panel (lives outside #app) ---------- */
+/* ------------------------------ diagnostics panel ------------------------------ */
 let dbgEl = null, dbgBody = null;
 const dbgUi = (() => { try { return JSON.parse(localStorage.getItem("td_debug_ui")) || {}; } catch (_) { return {}; } })();
 const saveDbgUi = () => { try { localStorage.setItem("td_debug_ui", JSON.stringify(dbgUi)); } catch (_) {} };
@@ -1722,8 +1692,6 @@ const saveDbgUi = () => { try { localStorage.setItem("td_debug_ui", JSON.stringi
 function debugBodyHtml() {
   const auth = readAuth();
   const sub = authSub(auth);
-  // Full absolute URLs, never trimmed — the host is half the diagnosis (prod vs dev answer
-  // differently), and a shortened URL cannot be pasted into curl.
   const calls = API_LOG.map((e, i) => `<div style="padding:6px 0;border-top:1px solid #223">
       <div style="display:flex;gap:6px;align-items:center">
         <span style="color:${e.ok ? "#22c55e" : "#f87171"};font-weight:700;flex:none">${e.ok ? "✓" : "✗"}${e.status ? " " + e.status : ""}</span>
@@ -1771,7 +1739,6 @@ function ensureDebugPanel() {
   minBtn.addEventListener("click", (e) => { e.stopPropagation(); dbgUi.collapsed = !dbgUi.collapsed; applyCollapsed(); saveDbgUi(); });
   applyCollapsed();
 
-  // delegated: the body's innerHTML is replaced on every update, so bind once here
   dbgBody.addEventListener("click", async (e) => {
     const btn = e.target.closest("[data-copy]");
     if (!btn) return;
@@ -1780,13 +1747,11 @@ function ensureDebugPanel() {
       await navigator.clipboard.writeText(btn.dataset.copy);
       btn.textContent = "copied";
     } catch (_) {
-      // clipboard needs a secure context; the URL is user-select:all so it can still be grabbed
       btn.textContent = "เลือกเอง";
     }
     setTimeout(() => { btn.textContent = "copy"; }, 1200);
   });
 
-  // drag via pointer events
   const head = el.querySelector("#td-debug-head");
   let dragging = false, sx = 0, sy = 0, ox = 0, oy = 0;
   head.addEventListener("pointerdown", (e) => {
@@ -1812,8 +1777,6 @@ function updateDebugPanel() {
   if (!DEBUG) return;
   ensureDebugPanel();
   if (!dbgBody) return;
-  // Follow the newest call like a log tail, but stop following the moment the reader scrolls up
-  // to study an earlier response — otherwise a late request yanks the view away mid-read.
   const atBottom = dbgBody.scrollHeight - dbgBody.scrollTop - dbgBody.clientHeight < 40;
   dbgBody.innerHTML = debugBodyHtml();
   if (atBottom) dbgBody.scrollTop = dbgBody.scrollHeight;
@@ -1853,16 +1816,13 @@ function overlaysHtml() {
     (state.cardMenu ? `<div data-act="closeCardMenu" style="position:fixed;inset:0;z-index:96"></div>${viewCardMenu()}` : "");
 }
 
-/* ---- Leado attention demo + typewriter greeting ---- */
+/* ------------------------------ Leado panel ------------------------------ */
 let leadoDemoT1 = null, leadoDemoT2 = null, leadoTyper = null;
 function cancelLeadoDemo() {
   clearTimeout(leadoDemoT1); clearTimeout(leadoDemoT2);
   leadoDemoT1 = leadoDemoT2 = null;
   state.leadoDemo = false;
 }
-// Once per session, auto-expand the Leado panel from its icon, hold ~2s, then shrink back —
-// a one-time hint that the AI assistant lives here. Currently off: the pop-out on load was
-// distracting. Flip to true to bring it back (the `leadoDemo` keyframes stay in teacher.html).
 const LEADO_DEMO_ENABLED = false;
 function maybePlayLeadoDemo() {
   if (!LEADO_DEMO_ENABLED) return;
@@ -1874,7 +1834,6 @@ function maybePlayLeadoDemo() {
     leadoDemoT2 = setTimeout(() => { state.leadoDemo = false; renderTopbar(); }, 2600);
   }, 1000);
 }
-// Type the greeting bubble out character-by-character on each Leado open.
 function runLeadoTyper() {
   const el = document.getElementById("leado-greet");
   if (!el || el.dataset.done) return;
@@ -1888,8 +1847,6 @@ function runLeadoTyper() {
   }, 34);
 }
 
-/* Lightweight update for header panels (Leado/notif/user menu) — rebuilds only the
-   topbar layer so the landing map is never destroyed/recreated (no flicker). */
 function renderTopbar(patch) {
   if (patch) Object.assign(state, patch);
   const layer = document.getElementById("tb-layer");
@@ -1963,7 +1920,6 @@ function setState(patch) {
 
 /* ------------------------------ maps ------------------------------ */
 function mountMaps() {
-  // clear stale instances whose container is gone
   ["usage"].forEach((k) => {
     const m = maps[k];
     if (m && !document.body.contains(m.getContainer())) { m.remove(); maps[k] = null; }
@@ -1978,14 +1934,14 @@ function mountMaps() {
     L.control.zoom({ position: "bottomright" }).addTo(map);
     mapPoints().forEach((p) => {
       const label = kFmt(p.n);
-      const col = p.pin ? "#ef4444" : tierColor(p.n); // colour by user-count tier
+      const col = p.pin ? "#ef4444" : tierColor(p.n);
       let html;
       if (p.pin) html = `<div style="position:relative;transform:translate(-50%,-100%)"><div style="width:34px;height:34px;border-radius:50%;background:${col};border:3px solid #fff;box-shadow:0 3px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font:800 13px Inter;color:#fff">${label}</div><div style="position:absolute;left:50%;top:30px;transform:translateX(-50%);width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:11px solid ${col}"></div></div>`;
       else { const fs = p.big ? 15 : 12, halo = p.big ? 11 : 7; html = `<div style="width:${p.size}px;height:${p.size}px;border-radius:50%;background:${col};opacity:.9;border:2px solid rgba(255,255,255,.85);display:flex;align-items:center;justify-content:center;font:700 ${fs}px Inter;color:#fff;box-shadow:0 0 0 ${halo}px ${col}22,0 2px 6px rgba(0,0,0,.18)">${label}</div>`; }
       L.marker([p.lat, p.lng], { icon: L.divIcon({ html, className: "", iconSize: [0, 0], iconAnchor: [0, 0] }), interactive: false }).addTo(map);
     });
     setTimeout(() => maps.usage && maps.usage.invalidateSize(), 250);
-    startSlideTimer(); // auto-rotate the overview topics
+    startSlideTimer();
   }
   if (!usageEl) stopSlideTimer();
 
@@ -2006,7 +1962,6 @@ function applySlide() {
     el.style.transform = on ? "translateY(0)" : "translateY(8px)";
   });
   document.querySelectorAll(".slide-dot").forEach((el) => { el.style.background = Number(el.dataset.i) === state.mapSlide ? "#0d9488" : "#e2e5e9"; });
-  // map stays fixed on Thailand (no per-slide flyTo) so all province bubbles remain visible
 }
 
 /* ------------------------------ CSV export ------------------------------ */
@@ -2067,7 +2022,6 @@ const H = {
   closeEdit: () => setState({ editOpen: false }),
   saveEdit: () => setState({ editOpen: false }),
   openAdd: () => {
-    // Fresh filter state each open; role=user is pinned to their institute, staff/admin can search.
     state.addFilters = { from: "", to: "", grade: "", level: "", classRoom: "", instituteId: state.instituteId || "" };
     state.addOptions = { grades: [], levels: [], classRooms: [] };
     state.addInstQuery = state.teacherSchool || "";
@@ -2077,11 +2031,9 @@ const H = {
     H.loadAddCourses();
   },
   closeAdd: () => setState({ addOpen: false }),
-  // Re-query the catalog when any filter changes (grade/level/classRoom/date/institute) — matches the original.
   reloadAddCourses: () => { state.addCourses = []; H.loadAddCourses(); },
   loadAddCourses: async () => {
-    if (state.addCourses.length) return; // cached until a filter change clears it
-    // Build the GET /course query from the modal filters. Like the original, no query → no fetch.
+    if (state.addCourses.length) return;
     const f = state.addFilters;
     const q = {};
     if (f.instituteId) q.instituteId = f.instituteId;
@@ -2098,7 +2050,6 @@ const H = {
       setState({ addCourses: [], addLoading: false, addError: "โหลดรายวิชาไม่สำเร็จ: " + err.message });
     }
   },
-  // institute autocomplete (staff/admin): pick a result → set instituteId → reload the catalog
   selectAddInst: (id) => {
     const opt = (state.addInstOptions || []).find((o) => o.value === id);
     state.addFilters.instituteId = id;
@@ -2112,7 +2063,6 @@ const H = {
     const c = (state.addCourses || []).find((x) => x.courseId === state.addSel);
     if (!c || state.addSaving) return;
     const f = state.addFilters;
-    // Create the assign, then refetch the real classroom list.
     setState({ addSaving: true, addError: "" });
     try {
       await apiCreateAssign({
@@ -2127,8 +2077,6 @@ const H = {
       setState({ addSaving: false, addError: "เพิ่มห้องเรียนไม่สำเร็จ: " + err.message });
     }
   },
-  // ⋮ on a classroom card. The button's rect is measured now because the menu renders fixed;
-  // divide by zoom since it lives inside the zoomed app wrapper.
   toggleCardMenu: (id, el) => {
     if (state.cardMenu === id) { setState({ cardMenu: null, cardMenuPos: null }); return; }
     const z = zoomFactor();
@@ -2148,7 +2096,6 @@ const H = {
     setState({ delSaving: true, delError: "" });
     try {
       await apiDeleteAssign(cls.assignId);
-      // Refetch rather than splice locally, same as confirmAdd — the server list is the truth.
       const resp = await apiClassrooms(state.sub, state.instituteId);
       state.classrooms = flattenClassrooms(normalizeListPayload(resp));
       setState({ delTarget: null, delSaving: false });
@@ -2167,13 +2114,10 @@ const H = {
   setFilter: (key) => setState({ filter: key }),
   setCourseTab: (key) => setState({ courseTab: key }),
   pickLang: (code) => setState({ lang: code }),
-  // Font size changes the zoom, and the zoom feeds the breakpoints — so the layout key moves
-  // with it. Resync it after the render or the next resize compares against a stale key.
   pickFont: (size) => { setState({ fontSize: size }); lastLayout = layoutKey(); },
   goSlide: (i) => { state.mapSlide = Number(i); stopSlideTimer(); applySlide(); startSlideTimer(); },
   downloadCsv: () => exportCsv(),
 };
-// debounced institute search for the add-classroom modal (staff/admin)
 let instSearchTimer = null;
 function scheduleInstSearch(text) {
   clearTimeout(instSearchTimer);
@@ -2191,12 +2135,10 @@ const INP = {
   setSearch: (v) => setState({ search: v }),
   setLeadoMsg: (v) => { state.leadoMsg = v; },
   setTeacherName: (v) => { state.teacherName = v; },
-  // type in the institute box (staff/admin): store text + debounce a search, no full re-render per keystroke
   setAddInst: (v) => { state.addFilters.instituteId = ""; state.addInstQuery = v; scheduleInstSearch(v); },
 };
 const CHG = {
   setSort: (v) => setState({ sort: v }),
-  // every add-classroom filter re-queries GET /course (options are derived from the response)
   setAddGrade: (v) => { state.addFilters.grade = v; H.reloadAddCourses(); },
   setAddLevel: (v) => { state.addFilters.level = v; H.reloadAddCourses(); },
   setAddRoom: (v) => { state.addFilters.classRoom = v; H.reloadAddCourses(); },
@@ -2210,7 +2152,6 @@ function bindEvents() {
     const t = e.target.closest("[data-act]");
     if (!t) return;
     const fn = H[t.dataset.act];
-    // 2nd arg is the clicked element — handlers that anchor a popover need its rect
     if (fn) { if (t.dataset.act !== "noop") e.preventDefault(); fn(t.dataset.arg, t); }
   });
   document.addEventListener("input", (e) => {
@@ -2232,9 +2173,7 @@ function bindEvents() {
     const fn = SUB[t.dataset.sub];
     if (fn) fn();
   });
-  // responsive: full re-render only when crossing a breakpoint; otherwise just resize maps
   window.addEventListener("resize", () => {
-    // the card ⋮ menu is pinned to coordinates measured before the resize — drop it
     const hadMenu = !!state.cardMenu;
     if (hadMenu) { state.cardMenu = null; state.cardMenuPos = null; }
     const k = layoutKey();
@@ -2271,7 +2210,6 @@ function cleanAuthParams() {
 }
 
 async function apiInit() {
-  // handle Keycloak redirect callback
   try {
     const params = new URLSearchParams(globalThis.location.search || "");
     if (params.get("code")) {
@@ -2287,7 +2225,6 @@ async function apiInit() {
   if (!auth || !sub) { state.ready = true; state.authed = false; render(); return; }
   state.authed = true; state.sub = sub;
 
-  // ---- real profile: token claims -> user/{sub} -> teacher/{sub} ----
   const claims = decodeJwt(auth?.token?.id_token || auth?.token?.access_token || "") || {};
   const claimName = claims.name || `${claims.given_name || ""} ${claims.family_name || ""}`.trim();
   if (claimName) state.teacherName = claimName;
@@ -2306,7 +2243,6 @@ async function apiInit() {
     let teacher = null;
     try { teacher = await apiTeacher(sub); } catch (err) { if (state.sessionExpired) throw err; }
     state.debugTeacher = teacher;
-    // Role decides the add-classroom flow: user = pinned institute, staff/admin = search institute.
     state.teacherRole = (user && user.role) || (teacher && teacher.user && teacher.user.role) || "";
     if (teacher) {
       if (!user) {
@@ -2321,7 +2257,6 @@ async function apiInit() {
     state.debugClassroomsRaw = classroomsResp;
     const raw = normalizeListPayload(classroomsResp);
     state.classrooms = flattenClassrooms(raw);
-    // Real school label for the add-classroom modal: from teacher's institute, else first classroom.
     const instName = teacher?.institute?.instituteName || teacher?.instituteName || "";
     const instProv = teacher?.institute?.province || teacher?.province || "";
     const withSchool = state.classrooms.find((c) => c.school);
@@ -2329,7 +2264,6 @@ async function apiInit() {
     else if (withSchool) state.teacherSchool = withSchool.school + (withSchool.province ? ` (${withSchool.province})` : "");
     state.ready = true;
     render();
-    // optional direct deep-link ?assignid=... opens a classroom immediately
     if (teacherConfig.assignId) {
       const match = state.classrooms.find((c) => String(c.assignId) === String(teacherConfig.assignId));
       if (match) H.pickCourse(match.id);

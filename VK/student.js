@@ -1190,10 +1190,7 @@ const chapterSortKey = (rawTitle) => {
     : [];
   const hasIndex = parts.length > 0;
 
-  // group: lower first
-  // 0: pre-test/numbered lessons
-  // 1: other items
-  // 2: post-test
+  // Sort pre-tests and numbered lessons first, followed by other items and post-tests.
   if (/ก่อนเรียน/.test(title)) return { group: 0, parts: [0], title };
   if (hasIndex) return { group: 0, parts, title };
   if (/หลังเรียน|ปลายหน่วย|ปลายบท/.test(title)) return { group: 2, parts: [9999], title };
@@ -1526,7 +1523,6 @@ const collectTextDeep = (node, out, maxLen = 16000) => {
   tryPush(node.id);
   tryPush(node.title);
   if (node.fields && typeof node.fields === "object") {
-    // Common places where tool identifiers/URLs exist.
     ["display_name", "displayName", "title", "data", "url", "href", "src", "launch_url", "launchUrl"].forEach((k) => {
       tryPush(node.fields?.[k]);
     });
@@ -1626,7 +1622,6 @@ const inferAeToolSubtype = (vertical, kinds = new Set()) => {
 const inferVerticalTool = (vertical) => {
   const kinds = new Set();
   (vertical?.children || []).forEach((c) => collectKindsDeep(c, kinds));
-  // remove container kinds if present
   kinds.delete("vertical");
   kinds.delete("sequential");
   kinds.delete("chapter");
@@ -2356,7 +2351,6 @@ const renderTopicTabsAndDetail = () => {
   window.progressModel = buildProgressModel();
   updateOverviewFromModel(window.progressModel);
 
-  // New UI: Unit accordion list (preferred)
   if (unitsEl && window.progressModel) {
     const model = window.progressModel;
     const palette = [
