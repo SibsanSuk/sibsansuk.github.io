@@ -1,0 +1,156 @@
+@import "tailwindcss";
+@source "../../teacher.js";
+
+@theme {
+  --font-thai: "Noto Sans Thai", sans-serif;
+  --font-inter: "Inter", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#teacher-root {
+  height: 100%;
+}
+
+html {
+  height: 100dvh;
+}
+
+html[data-react-teacher-topbar="ready"] #legacy-teacher-topbar {
+  display: none !important;
+}
+
+body {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: #eef0f3;
+  color: #101828;
+  font-family: -apple-system, BlinkMacSystemFont, "Noto Sans Thai", "Inter",
+    system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+}
+
+/* Internal scroll regions keep momentum without chaining to the page. */
+.scrolly {
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: #d0d5dd;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #b6bdc7;
+  background-clip: content-box;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tdspin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes leadoIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) translateY(-14px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Temporary compatibility helpers for the legacy teacher views. */
+.h-soft:hover {
+  background: #e9ebef !important;
+}
+
+.h-soft2:hover {
+  background: #f4f5f7 !important;
+}
+
+.h-row:hover {
+  background: #f9fafb !important;
+}
+
+.h-card:hover {
+  border-color: #dfe3e8 !important;
+  box-shadow: 0 10px 24px rgb(16 24 40 / 10%) !important;
+}
+
+.h-teal:hover {
+  background: #0f766e !important;
+}
+
+.h-teal2:hover {
+  background: #f0fdfa !important;
+}
+
+.h-bright:hover {
+  filter: brightness(1.06);
+}
+
+.h-red:hover {
+  background: #fef2f2 !important;
+}
+
+.h-light:hover {
+  background: #f9fafb !important;
+}
+
+.fld:focus {
+  border-color: #0d9488 !important;
+  box-shadow: 0 0 0 3px rgb(13 148 136 / 12%) !important;
+}
+
+#compare-map,
+#th-usage-map {
+  background: #dfe7ea;
+}
+
+.leaflet-container {
+  font-family: inherit;
+}

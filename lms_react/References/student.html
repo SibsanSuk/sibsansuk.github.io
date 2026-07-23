@@ -196,7 +196,10 @@
       //   redirectUri: "https://example.com/student.html",
       // },
     };
+    const studentScript = document.createElement("script");
+    studentScript.src = `./student.js?v=${Date.now()}`;
+    studentScript.async = false;
+    document.currentScript.after(studentScript);
   </script>
-  <script type="module" src="./student.js"></script>
 </body>
 </html>

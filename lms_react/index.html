@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d9488" />
+  <title>MECA Teacher Dashboard</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="./src/styles.css" />
+
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: "#f0fdfa",
+              100: "#ccfbf1",
+              500: "#14b8a6",
+              600: "#0d9488",
+              700: "#0f766e"
+            }
+          },
+          fontFamily: {
+            sans: ["Noto Sans Thai", "Inter", "system-ui", "sans-serif"],
+            inter: ["Inter", "system-ui", "sans-serif"]
+          },
+          boxShadow: {
+            panel: "0 1px 3px rgba(16,24,40,.06)",
+            float: "0 18px 44px rgba(16,24,40,.20)"
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script>
+    window.TEACHER_DASHBOARD_CONFIG = {
+      // baseUrl: "https://adaptive-profile-bn.ae.app.meca.in.th",
+      // bookrollBaseUrl: "https://adaptive-profile-bn.ae.app.meca.in.th",
+      // sbsUrl: "https://sbs-backend.mooc.meca.in.th",
+      // clientId: "dashboard",
+      // instituteId: "",
+      // assignId: "",
+      // oidc: { redirectUri: "https://your-domain.example/" }
+    };
+  </script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.26.4/babel.min.js"></script>
+  <script src="./src/teacher-api.js"></script>
+  <script>
+    // Browsers block Babel's local-file request when this page is opened via
+    // double-click. Use the ready-to-run copy for file://, but keep live JSX
+    // transformation during normal HTTP development.
+    if (location.protocol === "file:") {
+      document.write('<script src="./src/app.runtime.js"><\/script>');
+    } else {
+      document.write('<script type="text/babel" data-presets="react" src="./src/app.js"><\/script>');
+    }
+  </script>
+</body>
+</html>

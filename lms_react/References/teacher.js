@@ -2,35 +2,6 @@
 
 /* ------------------------------ config + loaders ------------------------------ */
 const teacherQuery = new URLSearchParams(globalThis.location?.search || "");
-const TEACHER_REACT_MODE = globalThis.__TEACHER_REACT_MODE__ === true;
-const TEACHER_REACT_TOPBAR_MODE =
-  globalThis.__TEACHER_REACT_TOPBAR_MODE__ === true;
-const teacherStateListeners = new Set();
-let teacherStateSnapshot = null;
-
-const publishTeacherState = () => {
-  teacherStateSnapshot = { ...state };
-  teacherStateListeners.forEach((listener) => listener());
-};
-
-export const subscribeTeacherState = (listener) => {
-  teacherStateListeners.add(listener);
-  return () => teacherStateListeners.delete(listener);
-};
-
-export const getTeacherStateSnapshot = () => teacherStateSnapshot || { ...state };
-export const getTeacherActions = () => H;
-export const dispatchTeacherInput = (name, value) => {
-  const handler = INP[name];
-  if (handler) handler(value);
-  publishTeacherState();
-};
-export const dispatchTeacherChange = (name, value) => {
-  const handler = CHG[name];
-  if (handler) handler(value);
-  publishTeacherState();
-};
-
 const readTeacherDashboardConfig = () => {
   const runtime = globalThis.TEACHER_DASHBOARD_CONFIG || {};
   return {
@@ -40,7 +11,6 @@ const readTeacherDashboardConfig = () => {
     // BookRoll can be configured independently when environments differ.
     bookrollBaseUrl: runtime.bookrollBaseUrl || "https://adaptive-profile-bn.ae.app.meca.in.th",
     sbsUrl: runtime.sbsUrl || "https://sbs-backend.mooc.meca.in.th",
-    videoBaseUrl: runtime.videoBaseUrl || (["localhost", "127.0.0.1"].includes(globalThis.location?.hostname) ? "/__viola" : "https://viola.thaidlt.com"),
     clientId: runtime.clientId || "dashboard",
     assignId: teacherQuery.get("assignid") || teacherQuery.get("assignId") || runtime.assignId || "",
   };
@@ -141,7 +111,7 @@ const apiCourseTree = (courseId) => apiGet(`${teacherConfig.sbsUrl}/lms/${encode
 // The proxy resolves learners by email and returns course-wide "<read>:<total>" results.
 // Direct BookRoll requests are avoided because unknown identities return zero data.
 const bookrollReadingUrl = (email, usageId) => `${teacherConfig.bookrollBaseUrl}/api/kidbright/course/${encodeURIComponent(usageId)}/data/bookroll?email=${encodeURIComponent(email)}`;
-const videoProgressUrl = (userName, courseId) => `${teacherConfig.videoBaseUrl}/meca/chart/bar/?userName=${encodeURIComponent(userName)}&usageId=${encodeURIComponent(courseId)}`;
+const videoProgressUrl = (userName, courseId) => `https://viola.thaidlt.com/meca/chart/bar/?userName=${encodeURIComponent(userName)}&usageId=${encodeURIComponent(courseId)}`;
 // Chatbot statistics require the Keycloak user ID.
 const chatbotSpeedUrl = (courseId, userId) => `${teacherConfig.sbsUrl}/stats/echart/chatbotSpeed/${encodeURIComponent(courseId)}/${encodeURIComponent(userId)}`;
 const externalJson = async (url) => {
@@ -568,7 +538,7 @@ const toolSummary = (activities, scoreRows, studentCount) => {
 
 const insightSlides = () => state.landingStats || [];
 const mapPoints = () => state.landingPoints || [];
-const OVERVIEW_URL = new URL("./overview.json", import.meta.url).href;
+const OVERVIEW_URL = "./overview.json";
 async function loadLandingStats() {
   try {
     const url = new URL(OVERVIEW_URL, globalThis.location.href);
@@ -1001,7 +971,7 @@ function viewTopBar() {
     : "opacity:0;transform:scale(.4) translateY(-14px);pointer-events:none";
   const sel = selectedCourse();
   return `
-  <div id="legacy-teacher-topbar" data-act="closeAllPanels" style="position:fixed;top:0;left:0;right:0;height:60px;z-index:1200;background:rgba(255,255,255,.9);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid rgba(0,0,0,.06);box-shadow:0 2px 10px rgba(16,24,40,.08);display:flex;align-items:center;justify-content:space-between;padding:0 ${phone ? "12px" : "22px"}">
+  <div data-act="closeAllPanels" style="position:fixed;top:0;left:0;right:0;height:60px;z-index:1200;background:rgba(255,255,255,.9);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid rgba(0,0,0,.06);box-shadow:0 2px 10px rgba(16,24,40,.08);display:flex;align-items:center;justify-content:space-between;padding:0 ${phone ? "12px" : "22px"}">
     <div style="display:flex;align-items:center;gap:14px;min-width:0">
       ${showLanding ? `
         <button data-act="switchCourse" class="h-soft2" title="หน้าแรก" style="background:none;border:none;cursor:pointer;padding:4px 6px;display:flex;align-items:center;border-radius:8px">
@@ -1784,9 +1754,9 @@ function viewSessionExpired() {
 
 /* ============================== ROOT RENDER ============================== */
 function overlaysHtml() {
-  return (!TEACHER_REACT_TOPBAR_MODE && state.userMenuOpen ? `<div data-act="closeUserMenu" style="position:fixed;inset:0;z-index:95"></div>` : "") +
-    (!TEACHER_REACT_TOPBAR_MODE && state.notifOpen ? `<div data-act="closeNotif" style="position:fixed;inset:0;z-index:95"></div>` : "") +
-    (!TEACHER_REACT_TOPBAR_MODE && state.leadoOpen ? `<div data-act="closeLeado" style="position:fixed;inset:0;z-index:94"></div>` : "") +
+  return (state.userMenuOpen ? `<div data-act="closeUserMenu" style="position:fixed;inset:0;z-index:95"></div>` : "") +
+    (state.notifOpen ? `<div data-act="closeNotif" style="position:fixed;inset:0;z-index:95"></div>` : "") +
+    (state.leadoOpen ? `<div data-act="closeLeado" style="position:fixed;inset:0;z-index:94"></div>` : "") +
     (state.cardMenu ? `<div data-act="closeCardMenu" style="position:fixed;inset:0;z-index:96"></div>${viewCardMenu()}` : "");
 }
 
@@ -1807,17 +1777,6 @@ function runLeadoTyper() {
 
 function renderTopbar(patch) {
   if (patch) Object.assign(state, patch);
-  if (TEACHER_REACT_MODE || TEACHER_REACT_TOPBAR_MODE) {
-    publishTeacherState();
-    if (
-      TEACHER_REACT_TOPBAR_MODE &&
-      document.documentElement.dataset.reactTeacherTopbar !== "ready"
-    ) {
-      const layer = document.getElementById("tb-layer");
-      if (layer) layer.innerHTML = overlaysHtml() + viewTopBar();
-    }
-    return;
-  }
   const layer = document.getElementById("tb-layer");
   if (!layer) { render(); return; }
   layer.innerHTML = overlaysHtml() + viewTopBar();
@@ -1827,11 +1786,6 @@ function renderTopbar(patch) {
 }
 
 function render() {
-  if (TEACHER_REACT_MODE) {
-    publishTeacherState();
-    if (DEBUG) updateDebugPanel();
-    return;
-  }
   const app = document.getElementById("app");
   if (!app) return;
   const zoom = zoomFactor();
@@ -1862,16 +1816,10 @@ function render() {
   if (DEBUG) updateDebugPanel();
   requestAnimationFrame(mountMaps);
   if (state.leadoOpen) runLeadoTyper();
-  if (TEACHER_REACT_TOPBAR_MODE) publishTeacherState();
 }
 
 /* focus retention across full re-render */
 function setState(patch) {
-  if (TEACHER_REACT_MODE) {
-    Object.assign(state, patch);
-    publishTeacherState();
-    return;
-  }
   const active = document.activeElement;
   let focus = null;
   const scrollPositions = new Map(
@@ -2129,7 +2077,6 @@ const CHG = {
 const SUB = { saveEdit: () => setState({ editOpen: false }) };
 
 function bindEvents() {
-  if (TEACHER_REACT_MODE) return;
   document.addEventListener("click", (e) => {
     const t = e.target.closest("[data-act]");
     if (!t) return;
