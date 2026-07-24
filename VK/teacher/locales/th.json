@@ -1,0 +1,325 @@
+{
+  "_meta": {
+    "locale": "th",
+    "language": "ไทย",
+    "version": 7
+  },
+  "app": {
+    "title": "MECA Teacher Dashboard"
+  },
+  "common": {
+    "loading": "กำลังโหลด...",
+    "error": "เกิดข้อผิดพลาด",
+    "retry": "ลองอีกครั้ง",
+    "close": "ปิด",
+    "or": "หรือ",
+    "and": "และ",
+    "all": "ทั้งหมด",
+    "chartAria": "กราฟข้อมูล",
+    "chartLoadError": "ไม่สามารถโหลดกราฟได้"
+  },
+  "language": {
+    "label": "ภาษา",
+    "thai": "ไทย",
+    "english": "English",
+    "loadError": "ไม่สามารถโหลดภาษาได้"
+  },
+  "header": {
+    "home": "หน้าแรก",
+    "notifications": "การแจ้งเตือน"
+  },
+  "notifications": {
+    "title": "การแจ้งเตือน",
+    "emptyTitle": "ยังไม่มีการแจ้งเตือน",
+    "emptyDescription": "เราจะแจ้งเตือนคุณเมื่อมีความเคลื่อนไหว"
+  },
+  "leado": {
+    "assistant": "ผู้ช่วย AI",
+    "readyMessage": "Leado พร้อมให้บริการ ถามข้อมูลได้ที่นี่นะครับ",
+    "placeholder": "พิมพ์คำถามของคุณ..."
+  },
+  "profile": {
+    "fontSize": "ขนาดตัวอักษร",
+    "edit": "แก้ไขข้อมูลผู้ใช้",
+    "logout": "ออกจากระบบ"
+  },
+  "auth": {
+    "preparingDashboard": "กำลังเตรียม Teacher Dashboard...",
+    "teacherSignIn": "เข้าสู่ระบบผู้สอน",
+    "signInWithMecaId": "เข้าสู่ระบบด้วย MECA ID",
+    "secureDescription": "การเข้าสู่ระบบดำเนินการผ่าน MECA ID อย่างปลอดภัย ระบบไม่เก็บรหัสผ่านของท่าน",
+    "noAccount": "ยังไม่มีบัญชี MECA ID?",
+    "registerHere": "ลงทะเบียนที่นี่",
+    "acceptancePrefix": "การเข้าใช้งานถือว่าท่านยอมรับ",
+    "terms": "เงื่อนไขการใช้บริการ",
+    "privacy": "นโยบายความเป็นส่วนตัว",
+    "sessionExpiredTitle": "เซสชันหมดอายุ",
+    "sessionExpiredDescription": "เพื่อความปลอดภัย ระบบได้ออกจากระบบแล้ว กรุณาเข้าสู่ระบบอีกครั้งเพื่อโหลดข้อมูลต่อ",
+    "signInAgain": "เข้าสู่ระบบอีกครั้ง"
+  },
+  "loading": {
+    "classroom": "กำลังโหลดข้อมูลห้องเรียน..."
+  },
+  "landing": {
+    "greeting": {
+      "morning": "สวัสดีตอนเช้า",
+      "afternoon": "สวัสดีตอนบ่าย",
+      "evening": "สวัสดีตอนเย็น",
+      "night": "สวัสดีตอนค่ำ"
+    },
+    "today": "วันนี้ {{date}}",
+    "map": {
+      "loading": "กำลังโหลดข้อมูลภาพรวม…",
+      "emptyTitle": "ไม่มีข้อมูลภาพรวมให้แสดง",
+      "noData": "ไม่พบข้อมูล",
+      "sixMonthTrend": "แนวโน้ม 6 เดือน",
+      "viewFullMap": "ดูรายละเอียดแผนที่เต็ม",
+      "trendAria": "กราฟแนวโน้มผู้ใช้งานหกเดือน",
+      "slides": {
+        "nationwideUsers": {
+          "label": "ผู้ใช้งานทั่วประเทศ",
+          "unit": "คน",
+          "description": "ครู นักเรียน และบุคลากรทางการศึกษาใช้งานระบบทั่วประเทศ"
+        },
+        "institutes": {
+          "label": "สถาบันที่ร่วมโครงการ",
+          "unit": "แห่ง",
+          "description": "โรงเรียนและสถาบันการศึกษาที่มีผู้เรียนใช้งานระบบ"
+        },
+        "courses": {
+          "label": "วิชาที่เปิดสอนทั้งหมด",
+          "unit": "วิชา",
+          "description": "รายวิชาที่มีผู้เรียนลงทะเบียนในระบบ"
+        },
+        "provinceCoverage": {
+          "label": "จังหวัดที่ครอบคลุม",
+          "unit": "จังหวัด",
+          "description": "ครอบคลุมการใช้งานในจังหวัดต่าง ๆ ทั่วประเทศ"
+        },
+        "popularCourse": {
+          "label": "วิชายอดนิยม",
+          "unit": "คน",
+          "description": "รายวิชาที่มีผู้เรียนลงทะเบียนมากที่สุด"
+        },
+        "topProvince": {
+          "label": "จังหวัดที่ใช้งานสูงสุด",
+          "unit": "ผู้ใช้",
+          "description": "จังหวัดที่มีผู้ใช้งานระบบมากที่สุด"
+        },
+        "topInstitute": {
+          "label": "สถาบันที่ใช้งานสูงสุด",
+          "unit": "ผู้ใช้",
+          "description": "สถาบันที่มีการใช้งานระบบสูงที่สุด"
+        },
+        "enrollments": {
+          "label": "การลงทะเบียนเรียนสะสม",
+          "unit": "ครั้ง",
+          "description": "รวมการลงทะเบียนเรียนทุกวิชาในระบบ"
+        },
+        "averageUsers": {
+          "label": "ค่าเฉลี่ยผู้ใช้ต่อสถาบัน",
+          "unit": "คน/แห่ง",
+          "description": "ค่าเฉลี่ยจากสถาบันที่ร่วมโครงการ"
+        },
+        "activeProvinces": {
+          "label": "จังหวัดที่ใช้งานเข้มข้น",
+          "unit": "จังหวัด",
+          "description": "จังหวัดที่มีจำนวนผู้ใช้งานระบบในระดับสูง"
+        }
+      }
+    },
+    "classrooms": {
+      "title": "ห้องเรียนของฉัน",
+      "add": "เพิ่มห้องเรียน",
+      "tabs": {
+        "all": "ทั้งหมด",
+        "active": "กำลังสอน",
+        "pending": "รอเริ่ม",
+        "done": "สิ้นสุดแล้ว"
+      },
+      "empty": "ยังไม่มีห้องเรียนในสถานะนี้",
+      "studentCount_one": "{{formattedCount}} คน",
+      "studentCount_other": "{{formattedCount}} คน",
+      "started": "เริ่มสอนเมื่อ {{time}}",
+      "start": "เริ่มใช้งาน",
+      "open": "เปิดห้องเรียน",
+      "openAria": "เปิดห้องเรียน {{name}}",
+      "options": "ตัวเลือกห้องเรียน {{name}}",
+      "closeMenu": "ปิดเมนู",
+      "remove": "นำออกจากรายการ"
+    },
+    "footer": {
+      "primaryName": "ศูนย์เทคโนโลยีอิเล็กทรอนิกส์และคอมพิวเตอร์แห่งชาติ",
+      "secondaryName": "National Electronics and Computer Technology Center: NECTEC",
+      "address": "112 ถนนพหลโยธิน ต.คลองหนึ่ง อ.คลองหลวง จ.ปทุมธานี 12120 ประเทศไทย",
+      "email": "info@nectec.or.th"
+    }
+  },
+  "dashboard": {
+    "navigation": {
+      "menu": "เมนูห้องเรียน",
+      "overview": "ภาพรวมทั้งห้อง",
+      "students": "รายชื่อนักเรียน",
+      "tools": "การใช้งานเครื่องมือ"
+    },
+    "hero": {
+      "school": "โรงเรียน: {{value}}",
+      "grade": "ระดับชั้น: {{value}}",
+      "room": "ห้อง: {{value}}",
+      "grades": {
+        "primary": "ประถมศึกษา",
+        "secondary": "มัธยมศึกษา",
+        "vocational": "ปวช.",
+        "associate": "ปวส.",
+        "bachelor": "ปริญญาตรี",
+        "master": "ปริญญาโท",
+        "doctoral": "ปริญญาเอก"
+      }
+    },
+    "overview": {
+      "title": "ภาพรวมของทั้งห้องเรียน",
+      "metrics": {
+        "totalLearners": "ผู้เรียนทั้งหมด",
+        "learnerUnit_one": "คน",
+        "learnerUnit_other": "คน",
+        "averageProgress": "ความคืบหน้าเฉลี่ย",
+        "wholeClassAverage": "เฉลี่ยทั้งห้อง",
+        "completed": "เรียนครบแล้ว",
+        "averageQuiz": "คะแนน Quiz เฉลี่ย",
+        "recordCount_one": "{{formattedCount}} รายการ",
+        "recordCount_other": "{{formattedCount}} รายการ"
+      },
+      "attention": {
+        "title": "ผู้เรียนที่ควรติดตาม",
+        "subtitle": "เรียงจากความคืบหน้าน้อยที่สุด",
+        "count_one": "{{formattedCount}} คน",
+        "count_other": "{{formattedCount}} คน",
+        "empty": "ไม่มีผู้เรียนที่ต้องติดตาม"
+      },
+      "charts": {
+        "quiz": {
+          "title": "การกระจายคะแนน Quiz",
+          "subtitle": "จำนวนผู้เรียนทั้งห้องในแต่ละระดับเกรด",
+          "gradeModeAria": "เลือกรูปแบบเกรด",
+          "numericMode": "เกรด 4,3,2,1",
+          "letterMode": "เกรด A,B,C,D",
+          "noScore": "ไม่มีคะแนน",
+          "noScoreAxis": "ไม่มี\nคะแนน",
+          "noScoreRange": "ยังไม่มีผลคะแนน",
+          "gradeTitle": "เกรด {{grade}} ({{range}})",
+          "learnerSeries": "ผู้เรียน",
+          "learnerCount_one": "{{formattedCount}} คน",
+          "learnerCount_other": "{{formattedCount}} คน",
+          "ariaNumeric": "กราฟแท่งแสดงการกระจายคะแนน Quiz แบบเกรด 4 ถึง 0",
+          "ariaLetter": "กราฟแท่งแสดงการกระจายคะแนน Quiz แบบเกรดตัวอักษร A ถึง F"
+        },
+        "progress": {
+          "title": "ภาพรวมความคืบหน้า",
+          "subtitle": "สัดส่วนความคืบหน้าของผู้เรียนทั้งห้อง",
+          "series": "ความคืบหน้าทั้งห้อง",
+          "learnerSeries": "จำนวนผู้เรียน",
+          "learnerCaption": "ผู้เรียน",
+          "aria": "กราฟวงกลมแสดงสัดส่วนความคืบหน้าของผู้เรียนทั้งห้อง"
+        }
+      }
+    },
+    "students": {
+      "title": "รายชื่อนักเรียน",
+      "summary": "ทั้งหมด {{total}} คน · แสดง {{shown}} คน",
+      "searchPlaceholder": "ค้นหาชื่อ อีเมล หรือจังหวัด...",
+      "sortAria": "เรียงรายชื่อนักเรียน",
+      "sort": {
+        "followup": "เรียง: ควรติดตามก่อน",
+        "progress": "ความคืบหน้าสูงสุด",
+        "quiz": "คะแนนสูงสุด",
+        "name": "ชื่อ ก–ฮ"
+      },
+      "filters": {
+        "all": "ทั้งหมด",
+        "followup": "ต้องติดตาม",
+        "learning": "กำลังเรียน",
+        "done": "เรียนจบ"
+      },
+      "table": {
+        "learner": "ผู้เรียน",
+        "group": "กลุ่ม",
+        "progress": "ความคืบหน้า",
+        "quiz": "คะแนน Quiz",
+        "updated": "อัปเดตล่าสุด",
+        "status": "สถานะ"
+      },
+      "status": {
+        "followup": "ต้องติดตาม",
+        "learning": "กำลังเรียน",
+        "done": "เรียนจบ",
+        "unknown": "ไม่ทราบสถานะ"
+      },
+      "empty": "ไม่พบผู้เรียนตามเงื่อนไข",
+      "csv": {
+        "button": "CSV",
+        "fileName": "students-th.csv",
+        "headers": {
+          "name": "ชื่อ",
+          "email": "อีเมล",
+          "group": "กลุ่ม",
+          "progress": "ความคืบหน้า(%)",
+          "score": "คะแนน",
+          "updated": "อัปเดตล่าสุด",
+          "status": "สถานะ"
+        }
+      }
+    },
+    "tools": {
+      "title": "การใช้งานเครื่องมือ",
+      "subtitle": "เครื่องมือที่ใช้ในแต่ละบทเรียนและจำนวนผู้เรียนที่เข้าถึง",
+      "activityCount_one": "{{formattedCount}} กิจกรรม",
+      "activityCount_other": "{{formattedCount}} กิจกรรม",
+      "table": {
+        "lesson": "บทเรียน",
+        "code": "รหัส",
+        "tools": "เครื่องมือ",
+        "reached": "ผู้เรียนที่เข้าถึง"
+      },
+      "labels": {
+        "video": "Video",
+        "bookroll": "BookRoll",
+        "quiz": "Quiz",
+        "profile": "Profile",
+        "unknown": "เครื่องมือ"
+      },
+      "empty": "ไม่พบเครื่องมือในรายวิชานี้"
+    },
+    "studentDrawer": {
+      "title": "รายละเอียดผู้เรียน",
+      "unnamed": "ไม่ระบุชื่อ",
+      "quizScore": "คะแนน Quiz",
+      "exerciseTime": "เวลาทำแบบฝึกหัด",
+      "exerciseTimeLoading": "กำลังโหลดเวลาทำแบบฝึกหัด",
+      "errorStatus": "โหลดข้อมูลไม่สำเร็จ",
+      "errorHint": "วางเมาส์หรือโฟกัสที่เครื่องหมายตกใจเพื่อดูสาเหตุ",
+      "renderErrorTitle": "แสดงรายละเอียดผู้เรียนไม่สำเร็จ",
+      "renderErrorDescription": "หน้าต่างนี้ยังเปิดอยู่เพื่อให้คุณตรวจสอบและรายงานปัญหาได้",
+      "durationMinutes": "{{value}} นาที",
+      "durationSeconds": "{{value}} วินาที",
+      "progressAria": "ความคืบหน้า {{value}}%",
+      "reading": {
+        "title": "ความคืบหน้าการอ่าน",
+        "done": "อ่านจบ",
+        "doing": "กำลังอ่าน",
+        "todo": "ยังไม่ได้อ่าน"
+      },
+      "video": {
+        "title": "ความคืบหน้าวิดีโอ",
+        "done": "ดูจบ",
+        "doing": "กำลังดู",
+        "todo": "ยังไม่ได้ดู"
+      },
+      "chapters": {
+        "title": "หัวข้อการเรียนรู้รายบท",
+        "subtitle": "สถานะการเรียนและเครื่องมือที่ใช้ในแต่ละบท",
+        "defaultName": "บทที่ {{number}}",
+        "empty": "ยังไม่มีหัวข้อการเรียนรู้"
+      }
+    }
+  }
+}

@@ -8,44 +8,51 @@ const {
 } = React;
 const API = window.TeacherAPI;
 const cx = (...values) => values.filter(Boolean).join(" ");
-const fmtNumber = (value, digits = 0) => new Intl.NumberFormat("th-TH", {
-  maximumFractionDigits: digits,
-  minimumFractionDigits: digits
-}).format(Number(value) || 0);
-const todayThai = () => new Date().toLocaleDateString("th-TH", {
-  day: "numeric",
-  month: "long",
-  year: "numeric"
-});
-const greeting = () => {
+let chartLibraryIssueReported = false;
+const greetingPeriod = () => {
   const hour = new Date().getHours();
-  if (hour >= 19 || hour < 5) return "สวัสดีตอนค่ำ";
-  if (hour >= 16) return "สวัสดีตอนเย็น";
-  if (hour >= 12) return "สวัสดีตอนบ่าย";
-  return "สวัสดีตอนเช้า";
-};
-const relativeTime = value => {
-  if (!value || Number.isNaN(new Date(value).getTime())) return "";
-  const seconds = Math.max(0, (Date.now() - new Date(value).getTime()) / 1000);
-  if (seconds < 3600) return `${Math.max(1, Math.round(seconds / 60))} นาทีที่แล้ว`;
-  if (seconds < 86400) return `${Math.round(seconds / 3600)} ชั่วโมงที่แล้ว`;
-  if (seconds < 2592000) return `${Math.round(seconds / 86400)} วันที่แล้ว`;
-  return new Date(value).toLocaleDateString("th-TH", {
-    day: "numeric",
-    month: "short"
-  });
+  if (hour >= 19 || hour < 5) return "night";
+  if (hour >= 16) return "evening";
+  if (hour >= 12) return "afternoon";
+  return "morning";
 };
 const classroomStatus = course => course.progress == null || course.progress === 0 ? "pending" : course.progress >= 100 ? "done" : "active";
-const gradeText = course => {
-  const grade = API.gradeLabels[course?.grade] || course?.grade || "";
-  return [grade, course?.level].filter(value => value !== "" && value != null).join(" ").trim() || "ทั้งหมด";
+const gradeText = (course, t) => {
+  const gradeKey = course?.grade;
+  const sourceGrade = API.gradeLabels[gradeKey] || gradeKey || "";
+  const grade = gradeKey && API.gradeLabels[gradeKey] ? t(`dashboard.hero.grades.${gradeKey}`, {}, sourceGrade) : sourceGrade;
+  return [grade, course?.level].filter(value => value !== "" && value != null).join(" ").trim() || t("common.all", {}, "ทั้งหมด");
 };
-const roomText = course => course?.classRoom === "" || course?.classRoom == null ? "ทั้งหมด" : course.classRoom;
-const formatDuration = seconds => {
+const roomText = (course, t) => course?.classRoom === "" || course?.classRoom == null ? t("common.all", {}, "ทั้งหมด") : course.classRoom;
+const OVERVIEW_SLIDE_KEYS = Object.freeze({
+  "ผู้ใช้งานทั่วประเทศ": "nationwideUsers",
+  "สถาบันที่ร่วมโครงการ": "institutes",
+  "วิชาที่เปิดสอนทั้งหมด": "courses",
+  "จังหวัดที่ครอบคลุม": "provinceCoverage",
+  "วิชายอดนิยม": "popularCourse",
+  "จังหวัดที่ใช้งานสูงสุด": "topProvince",
+  "สถาบันที่ใช้งานสูงสุด": "topInstitute",
+  "การลงทะเบียนเรียนสะสม": "enrollments",
+  "ค่าเฉลี่ยผู้ใช้ต่อสถาบัน": "averageUsers",
+  "จังหวัดที่ใช้งานเข้มข้น": "activeProvinces"
+});
+const formatDuration = (seconds, t, formatNumber) => {
   if (!Number.isFinite(Number(seconds))) return "—";
   const minutes = Math.floor(Number(seconds) / 60);
   const remain = Math.round(Number(seconds) % 60);
-  return minutes ? `${minutes}:${String(remain).padStart(2, "0")} นาที` : `${remain} วินาที`;
+  if (minutes) {
+    const value = `${formatNumber(minutes)}:${formatNumber(remain, {
+      minimumIntegerDigits: 2,
+      useGrouping: false
+    })}`;
+    return t("dashboard.studentDrawer.durationMinutes", {
+      value
+    }, `${value} นาที`);
+  }
+  const value = formatNumber(remain);
+  return t("dashboard.studentDrawer.durationSeconds", {
+    value
+  }, `${value} วินาที`);
 };
 const ICONS = {
   home: ["M3 11.5 12 4l9 7.5", "M5.5 10v10h13V10", "M9.5 20v-6h5v6"],
@@ -95,21 +102,33 @@ function Icon({
   })));
 }
 function Spinner({
-  label = "กำลังโหลด..."
+  label
 }) {
+  const {
+    t
+  } = window.TeacherI18n.useI18n();
   return React.createElement("div", {
     className: "flex items-center justify-center gap-3 py-10 text-sm font-semibold text-slate-500"
   }, React.createElement("span", {
     className: "spinner h-6 w-6 rounded-full border-[3px] border-teal-100 border-t-brand-600"
-  }), label);
+  }), label || t("common.loading", {}, "กำลังโหลด..."));
 }
 function EChart({
   option,
   className = "h-52 w-full",
-  ariaLabel = "กราฟข้อมูล"
+  ariaLabel
 }) {
+  const { t } = window.TeacherI18n.useI18n();
   const elementRef = useRef(null);
   const chartRef = useRef(null);
+  useEffect(() => {
+    if (!window.echarts && !chartLibraryIssueReported) {
+      chartLibraryIssueReported = true;
+      API.manager.reportIssue("ECharts library", "ไม่พบ window.echarts", {
+        url: "client://dependencies/echarts"
+      });
+    }
+  }, []);
   useEffect(() => {
     if (!elementRef.current || !window.echarts) return undefined;
     const chart = window.echarts.init(elementRef.current, null, {
@@ -135,14 +154,18 @@ function EChart({
   }, [option]);
   if (!window.echarts) {
     return React.createElement("div", {
-      className: cx(className, "flex items-center justify-center text-xs font-semibold text-slate-400")
-    }, "ไม่สามารถโหลดกราฟได้");
+      className: cx(className, "flex items-center justify-center rounded-xl bg-slate-50")
+    }, React.createElement(ErrorStateIcon, {
+      message: t("common.chartLoadError", {}, "ไม่สามารถโหลดกราฟได้"),
+      label: t("common.chartLoadError", {}, "ไม่สามารถโหลดกราฟได้"),
+      align: "center"
+    }));
   }
   return React.createElement("div", {
     ref: elementRef,
     className,
     role: "img",
-    "aria-label": ariaLabel
+    "aria-label": ariaLabel || t("common.chartAria", {}, "กราฟข้อมูล")
   });
 }
 class DrawerErrorBoundary extends React.Component {
@@ -158,34 +181,91 @@ class DrawerErrorBoundary extends React.Component {
     };
   }
   componentDidCatch(error, info) {
-    console.error("Student drawer error:", error, info);
+    API.manager.reportIssue("Student drawer render", error, {
+      url: "client://student-drawer/render",
+      context: {
+        componentStack: info?.componentStack || ""
+      }
+    });
   }
   render() {
     if (!this.state.error) return this.props.children;
-    return React.createElement("div", {
-      className: "fixed inset-0 z-[1200]"
-    }, React.createElement("button", {
-      onClick: this.props.onClose,
-      "aria-label": "ปิด",
-      className: "absolute inset-0 bg-slate-900/40"
-    }), React.createElement("aside", {
-      className: "absolute bottom-0 right-0 top-0 flex w-full max-w-[620px] items-center justify-center bg-[#f7f8fa] p-6 shadow-2xl"
-    }, React.createElement("div", {
-      className: "w-full rounded-[16px] border border-amber-200 bg-white p-6 text-center"
-    }, React.createElement("div", {
-      className: "mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-amber-50 text-amber-600"
-    }, React.createElement(Icon, {
-      name: "alert",
-      size: 21
-    })), React.createElement("h2", {
-      className: "text-base font-extrabold text-slate-800"
-    }, "แสดงรายละเอียดผู้เรียนไม่สำเร็จ"), React.createElement("p", {
-      className: "mt-2 text-xs leading-6 text-slate-500"
-    }, "ข้อมูลบางรายการมีรูปแบบไม่สมบูรณ์ กรุณาปิดหน้าต่างแล้วลองอีกครั้ง"), React.createElement("button", {
-      onClick: this.props.onClose,
-      className: "mt-5 rounded-full bg-brand-600 px-6 py-2.5 text-xs font-bold text-white"
-    }, "ปิดหน้าต่าง"))));
+    return React.createElement(DrawerRenderFailure, {
+      error: this.state.error,
+      onClose: this.props.onClose
+    });
   }
+}
+function ErrorStateIcon({
+  message,
+  label,
+  compact = false,
+  align = "right"
+}) {
+  const { t } = window.TeacherI18n.useI18n();
+  const reason = String(message || t("common.error", {}, "เกิดข้อผิดพลาด"));
+  const status = label || t("dashboard.studentDrawer.errorStatus", {}, "โหลดข้อมูลไม่สำเร็จ");
+  const positionClass = align === "center"
+    ? "left-1/2 -translate-x-1/2"
+    : align === "left" ? "left-0" : "right-0";
+  return React.createElement("span", {
+    className: "group relative inline-flex align-middle",
+    tabIndex: 0,
+    role: "img",
+    "aria-label": `${status}: ${reason}`
+  }, React.createElement("span", {
+    "aria-hidden": "true",
+    className: cx(
+      "inline-flex items-center justify-center rounded-full border border-red-200 bg-red-50 font-inter font-extrabold text-red-600",
+      compact ? "h-4 w-4 text-[10px]" : "h-5 w-5 text-xs"
+    )
+  }, "!"), React.createElement("span", {
+    role: "tooltip",
+    className: cx(
+      "pointer-events-none invisible absolute bottom-full z-[1300] mb-2 w-max max-w-[260px] rounded-lg bg-slate-900 px-3 py-2 text-left font-sans text-[11px] font-semibold leading-5 text-white opacity-0 shadow-xl transition-opacity group-hover:visible group-hover:opacity-100 group-focus:visible group-focus:opacity-100",
+      positionClass
+    )
+  }, reason));
+}
+function DrawerRenderFailure({
+  error,
+  onClose
+}) {
+  const { t } = window.TeacherI18n.useI18n();
+  return React.createElement("div", {
+    className: "fixed inset-0 z-[1200]"
+  }, React.createElement("button", {
+    onClick: onClose,
+    "aria-label": t("common.close", {}, "ปิด"),
+    className: "absolute inset-0 bg-slate-900/40 backdrop-blur-[1px]"
+  }), React.createElement("aside", {
+    className: "animate-fade-up absolute bottom-0 right-0 top-0 flex w-full max-w-[620px] flex-col bg-[#f7f8fa] shadow-2xl"
+  }, React.createElement("div", {
+    className: "flex items-center justify-between bg-gradient-to-r from-brand-700 to-teal-500 p-5 text-white sm:p-6"
+  }, React.createElement("span", {
+    className: "text-sm font-bold"
+  }, t("dashboard.studentDrawer.title", {}, "รายละเอียดผู้เรียน")), React.createElement("button", {
+    onClick: onClose,
+    "aria-label": t("common.close", {}, "ปิด"),
+    className: "rounded-lg bg-white/15 p-2"
+  }, React.createElement(Icon, {
+    name: "close",
+    size: 15
+  }))), React.createElement("div", {
+    className: "flex flex-1 items-center justify-center p-6"
+  }, React.createElement("div", {
+    className: "w-full rounded-[16px] border border-red-100 bg-white p-6 text-center shadow-panel"
+  }, React.createElement(ErrorStateIcon, {
+    message: error?.message,
+    label: t("dashboard.studentDrawer.errorStatus", {}, "โหลดข้อมูลไม่สำเร็จ"),
+    align: "center"
+  }), React.createElement("h2", {
+    className: "mt-3 text-base font-extrabold text-slate-800"
+  }, t("dashboard.studentDrawer.renderErrorTitle", {}, "แสดงรายละเอียดผู้เรียนไม่สำเร็จ")), React.createElement("p", {
+    className: "mt-2 text-xs leading-5 text-slate-500"
+  }, t("dashboard.studentDrawer.renderErrorDescription", {}, "หน้าต่างนี้ยังเปิดอยู่เพื่อให้คุณตรวจสอบและรายงานปัญหาได้")), React.createElement("p", {
+    className: "mt-2 text-[11px] font-semibold text-slate-400"
+  }, t("dashboard.studentDrawer.errorHint", {}, "วางเมาส์หรือโฟกัสที่เครื่องหมายตกใจเพื่อดูสาเหตุ"))))));
 }
 const readDebugUi = () => {
   try { return JSON.parse(localStorage.getItem("td_debug_ui")) || {}; }
@@ -429,6 +509,9 @@ function ApiDebugPanel({
   return ReactDOM.createPortal(panel, document.body);
 }
 function App() {
+  const {
+    t
+  } = window.TeacherI18n.useI18n();
   const [ready, setReady] = useState(false);
   const [authed, setAuthed] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
@@ -543,7 +626,8 @@ function App() {
           if (match) setTimeout(() => openCourse(match), 0);
         }
       } catch (cause) {
-        if (cause.sessionExpired) setSessionExpired(true);else setError(`โหลดข้อมูลห้องเรียนไม่สำเร็จ: ${cause.message}`);
+        if (cause.sessionExpired) setSessionExpired(true);
+        else setError(cause.message || String(cause));
       } finally {
         if (live) setReady(true);
       }
@@ -554,6 +638,13 @@ function App() {
   }, []);
   const openCourse = async course => {
     if (!course?.courseId) {
+      API.manager.reportIssue("Open classroom input", "ไม่พบ courseId ของห้องเรียน", {
+        url: "client://classroom/open",
+        context: {
+          classroomId: course?.id || "",
+          classroomTitle: course?.title || ""
+        }
+      });
       setError("ไม่พบ courseId ของห้องเรียน");
       return;
     }
@@ -566,7 +657,8 @@ function App() {
       setSelectedId(course.id);
       setPage("overview");
     } catch (cause) {
-      if (cause.sessionExpired) setSessionExpired(true);else setError(`โหลดข้อมูลห้องเรียนไม่สำเร็จ: ${cause.message}`);
+      if (cause.sessionExpired) setSessionExpired(true);
+      else setError(cause.message || String(cause));
     } finally {
       setLoadingCourse(false);
     }
@@ -595,6 +687,9 @@ function App() {
       readingLoading: true,
       videoLoading: true,
       chatbotLoading: true,
+      readingError: null,
+      videoError: null,
+      chatbotError: null,
       reading: null,
       video: null,
       chatbot: null,
@@ -619,11 +714,21 @@ function App() {
       });
     } catch (cause) {
       if (studentRequestRef.current !== requestId) return;
+      API.manager.reportIssue("Student detail orchestration", cause, {
+        url: "client://student-details/orchestration",
+        context: {
+          studentId: item?.id || "",
+          courseId: selected?.courseId || ""
+        }
+      });
       setStudentDetail({
         loading: false,
         readingLoading: false,
         videoLoading: false,
         chatbotLoading: false,
+        readingError: cause.message,
+        videoError: cause.message,
+        chatbotError: cause.message,
         errors: [cause.message]
       });
     }
@@ -635,7 +740,7 @@ function App() {
     return React.createElement(React.Fragment, null, React.createElement("div", {
       className: "flex h-dvh items-center justify-center bg-slate-100"
     }, React.createElement(Spinner, {
-      label: "กำลังเตรียม Teacher Dashboard..."
+      label: t("auth.preparingDashboard", {}, "กำลังเตรียม Teacher Dashboard...")
     })), API.debug && React.createElement(ApiDebugPanel, {
       authed: authed,
       teacher: teacher,
@@ -714,7 +819,7 @@ function App() {
     detail: studentDetail,
     activities: dataset?.activities || [],
     onClose: closeStudent
-  })), loadingCourse && React.createElement(LoadingOverlay, null), error && React.createElement(ErrorToast, {
+  })), loadingCourse && React.createElement(LoadingOverlay, null), error && React.createElement(GlobalErrorNotice, {
     message: error,
     onClose: () => setError("")
   }), sessionExpired && React.createElement(SessionExpired, null), API.debug && React.createElement(ApiDebugPanel, {
@@ -739,6 +844,10 @@ function Header({
   onEditProfile
 }) {
   const initials = API.initials(teacher.name);
+  const {
+    localeInfo,
+    t
+  } = window.TeacherI18n.useI18n();
   return React.createElement("header", {
     className: "glass fixed inset-x-0 top-0 z-[1000] flex h-[60px] items-center justify-between border-b border-black/5 px-3 shadow-sm sm:px-[22px]"
   }, React.createElement("div", {
@@ -746,7 +855,7 @@ function Header({
   }, !selected ? React.createElement(React.Fragment, null, React.createElement("button", {
     onClick: onHome,
     className: "rounded-lg p-1 transition hover:bg-slate-100",
-    title: "หน้าแรก"
+    title: t("header.home", {}, "หน้าแรก")
   }, React.createElement("img", {
     src: "https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-adap-green-untext.1c98bf032947.png",
     alt: "MECA",
@@ -765,7 +874,7 @@ function Header({
     size: 22
   }), " ", React.createElement("span", {
     className: "hidden sm:inline"
-  }, "หน้าแรก")), React.createElement("span", {
+  }, t("header.home", {}, "หน้าแรก"))), React.createElement("span", {
     className: "h-7 w-px bg-slate-200"
   }), React.createElement("span", {
     className: "max-w-[44vw] truncate text-sm font-bold text-slate-800"
@@ -788,7 +897,7 @@ function Header({
   }, React.createElement("button", {
     onClick: () => setNoticeOpen(!noticeOpen),
     className: "flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition hover:bg-slate-200",
-    title: "การแจ้งเตือน"
+    title: t("header.notifications", {}, "การแจ้งเตือน")
   }, React.createElement(Icon, {
     name: "bell",
     size: 23
@@ -801,7 +910,7 @@ function Header({
     className: "relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-brand-600 text-sm font-bold text-white"
   }, initials, React.createElement("span", {
     className: "absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border border-white bg-white text-[10px]"
-  }, "🇹🇭")), React.createElement(Icon, {
+  }, localeInfo?.flag || "🇹🇭")), React.createElement(Icon, {
     name: "chevron",
     size: 16,
     className: "text-slate-400"
@@ -809,13 +918,15 @@ function Header({
     teacher: teacher,
     fontSize: fontSize,
     setFontSize: setFontSize,
-    onEdit: onEditProfile
+    onEdit: onEditProfile,
+    onLanguageChanged: () => setProfileOpen(false)
   }))));
 }
 function LeadoPanel({
   onClose
 }) {
   const [message, setMessage] = useState("");
+  const { t } = window.TeacherI18n.useI18n();
   return React.createElement("div", {
     className: "animate-fade-up absolute right-0 top-[54px] z-50 w-[min(308px,calc(100vw-24px))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-float"
   }, React.createElement("div", {
@@ -830,8 +941,9 @@ function LeadoPanel({
     className: "text-sm font-extrabold"
   }, "Leado"), React.createElement("div", {
     className: "text-[10px] text-teal-100"
-  }, "ผู้ช่วย AI")), React.createElement("button", {
+  }, t("leado.assistant", {}, "ผู้ช่วย AI"))), React.createElement("button", {
     onClick: onClose,
+    "aria-label": t("common.close", {}, "ปิด"),
     className: "rounded-lg bg-white/15 p-1.5"
   }, React.createElement(Icon, {
     name: "close",
@@ -840,12 +952,12 @@ function LeadoPanel({
     className: "bg-teal-50/70 p-4"
   }, React.createElement("div", {
     className: "rounded-2xl rounded-tl bg-white p-3 text-[13px] leading-6 text-slate-700 shadow-sm"
-  }, "Leado พร้อมให้บริการ ถามข้อมูลได้ที่นี่นะครับ")), React.createElement("div", {
+  }, t("leado.readyMessage", {}, "Leado พร้อมให้บริการ ถามข้อมูลได้ที่นี่นะครับ"))), React.createElement("div", {
     className: "flex gap-2 border-t border-slate-100 p-3"
   }, React.createElement("input", {
     value: message,
     onChange: event => setMessage(event.target.value),
-    placeholder: "พิมพ์คำถามของคุณ...",
+    placeholder: t("leado.placeholder", {}, "พิมพ์คำถามของคุณ..."),
     className: "field min-w-0 flex-1 rounded-[10px] border border-slate-200 px-3 py-2 text-[13px]"
   }), React.createElement("button", {
     className: "flex w-10 items-center justify-center rounded-[10px] bg-brand-600 text-white hover:bg-brand-700"
@@ -855,11 +967,12 @@ function LeadoPanel({
   }))));
 }
 function NoticePanel() {
+  const { t } = window.TeacherI18n.useI18n();
   return React.createElement("div", {
     className: "animate-fade-up absolute right-0 top-[54px] z-50 w-[min(320px,calc(100vw-24px))] overflow-hidden rounded-[14px] border border-slate-200 bg-white shadow-float"
   }, React.createElement("div", {
     className: "border-b border-slate-100 px-4 py-3.5 text-sm font-bold"
-  }, "การแจ้งเตือน"), React.createElement("div", {
+  }, t("notifications.title", {}, "การแจ้งเตือน")), React.createElement("div", {
     className: "px-5 py-8 text-center"
   }, React.createElement("span", {
     className: "mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-300"
@@ -868,16 +981,49 @@ function NoticePanel() {
     size: 22
   })), React.createElement("div", {
     className: "mt-3 text-[13px] font-bold text-slate-600"
-  }, "ยังไม่มีการแจ้งเตือน"), React.createElement("div", {
+  }, t("notifications.emptyTitle", {}, "ยังไม่มีการแจ้งเตือน")), React.createElement("div", {
     className: "mt-1 text-[11px] text-slate-400"
-  }, "เราจะแจ้งเตือนคุณเมื่อมีความเคลื่อนไหว")));
+  }, t("notifications.emptyDescription", {}, "เราจะแจ้งเตือนคุณเมื่อมีความเคลื่อนไหว"))));
 }
 function ProfileMenu({
   teacher,
   fontSize,
   setFontSize,
-  onEdit
+  onEdit,
+  onLanguageChanged
 }) {
+  const {
+    locale,
+    supportedLocales,
+    changeLocale,
+    loading: languageLoading,
+    error: languageError,
+    t
+  } = window.TeacherI18n.useI18n();
+  const reportedLanguageError = useRef("");
+  useEffect(() => {
+    if (!languageError || reportedLanguageError.current === languageError) return;
+    reportedLanguageError.current = languageError;
+    API.manager.reportIssue("Language dictionary", languageError, {
+      url: "client://localization/dictionary",
+      context: {
+        locale
+      }
+    });
+  }, [languageError, locale]);
+  const languageKeys = {
+    th: "thai",
+    en: "english"
+  };
+  const selectLanguage = async code => {
+    if (languageLoading) return;
+    if (code === locale) {
+      onLanguageChanged?.();
+      return;
+    }
+    const changed = await changeLocale(code);
+    if (changed) onLanguageChanged?.();
+  };
   return React.createElement("div", {
     className: "animate-fade-up absolute right-0 top-[54px] z-50 w-[236px] overflow-hidden rounded-[13px] border border-slate-200 bg-white shadow-float"
   }, React.createElement("div", {
@@ -894,15 +1040,29 @@ function ProfileMenu({
     className: "px-4 pb-3 pt-2.5"
   }, React.createElement("div", {
     className: "mb-1.5 text-[11px] font-bold text-slate-400"
-  }, "ภาษา"), React.createElement("div", {
+  }, t("language.label", {}, "ภาษา")), React.createElement("div", {
     className: "grid grid-cols-2 gap-1.5"
-  }, React.createElement("button", {
-    className: "rounded-lg border border-brand-600 bg-brand-50 py-2 text-xs font-semibold text-brand-700"
-  }, "🇹🇭 ไทย"), React.createElement("button", {
-    className: "rounded-lg border border-slate-200 py-2 text-xs font-semibold text-slate-500"
-  }, "🇬🇧 English")), React.createElement("div", {
+  }, Object.values(supportedLocales).map(item => React.createElement("button", {
+    key: item.code,
+    type: "button",
+    onClick: () => selectLanguage(item.code),
+    disabled: languageLoading,
+    "aria-pressed": locale === item.code,
+    className: cx("rounded-lg border py-2 text-xs font-semibold transition disabled:cursor-wait disabled:opacity-60", locale === item.code ? "border-brand-600 bg-brand-50 text-brand-700" : "border-slate-200 text-slate-500 hover:bg-slate-50")
+  }, item.flag, " ", t(`language.${languageKeys[item.code]}`, {}, item.label)))), languageLoading && React.createElement("div", {
+    className: "mt-2 flex items-center gap-1.5 text-[10px] font-semibold text-slate-400"
+  }, React.createElement("span", {
+    className: "spinner inline-block h-3 w-3 rounded-full border-2 border-slate-200 border-t-brand-600"
+  }), t("common.loading", {}, "กำลังโหลด...")), languageError && React.createElement("div", {
+    className: "mt-2 flex items-center gap-2 text-[10px] font-semibold text-red-600"
+  }, React.createElement(ErrorStateIcon, {
+    message: languageError,
+    label: t("language.loadError", {}, "ไม่สามารถโหลดภาษาได้"),
+    compact: true,
+    align: "left"
+  }), t("language.loadError", {}, "ไม่สามารถโหลดภาษาได้")), React.createElement("div", {
     className: "mb-1.5 mt-3 text-[11px] font-bold text-slate-400"
-  }, "ขนาดตัวอักษร"), React.createElement("div", {
+  }, t("profile.fontSize", {}, "ขนาดตัวอักษร")), React.createElement("div", {
     className: "grid grid-cols-3 gap-1.5"
   }, [["sm", "text-xs"], ["md", "text-sm"], ["lg", "text-base"]].map(([key, size]) => React.createElement("button", {
     key: key,
@@ -914,13 +1074,13 @@ function ProfileMenu({
   }, React.createElement(Icon, {
     name: "edit",
     size: 17
-  }), "แก้ไขข้อมูลผู้ใช้"), React.createElement("button", {
+  }), t("profile.edit", {}, "แก้ไขข้อมูลผู้ใช้")), React.createElement("button", {
     onClick: API.logout,
     className: "flex w-full items-center gap-3 border-t border-slate-100 px-4 py-3 text-left text-[13px] font-semibold text-red-600 hover:bg-red-50"
   }, React.createElement(Icon, {
     name: "logout",
     size: 17
-  }), "ออกจากระบบ"));
+  }), t("profile.logout", {}, "ออกจากระบบ")));
 }
 function Landing({
   authed,
@@ -933,18 +1093,30 @@ function Landing({
   onAdd,
   onRemove
 }) {
+  const {
+    t,
+    formatDate
+  } = window.TeacherI18n.useI18n();
+  const greeting = t(`landing.greeting.${greetingPeriod()}`, {}, "สวัสดี");
+  const today = formatDate(new Date(), {
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  });
   return React.createElement("div", {
     className: "scrolly flex h-full flex-col bg-[#eef1f4]"
   }, authed && React.createElement("div", {
     className: "shrink-0 px-4 pb-0 pt-4 sm:px-[22px] sm:pt-[22px]"
   }, React.createElement("h1", {
     className: "text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl"
-  }, greeting(), teacher.name ? `, ${teacher.name}` : ""), React.createElement("div", {
+  }, greeting, teacher.name ? `, ${teacher.name}` : ""), React.createElement("div", {
     className: "mt-1.5 flex items-center gap-2 text-xs font-medium text-slate-400"
   }, React.createElement(Icon, {
     name: "calendar",
     size: 14
-  }), " วันนี้ ", todayThai())), React.createElement("div", {
+  }), t("landing.today", {
+    date: today
+  }, `วันนี้ ${today}`))), React.createElement("div", {
     className: "grid min-w-0 flex-none grid-cols-1 gap-3.5 p-3.5 sm:gap-[18px] sm:p-[22px] lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1.35fr)_minmax(380px,1fr)]"
   }, React.createElement(UsageMap, {
     overview: overview
@@ -959,26 +1131,27 @@ function Landing({
     className: "flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-200 bg-slate-50 px-5 py-3 text-[11px] text-slate-400 sm:px-8"
   }, React.createElement("strong", {
     className: "text-xs text-slate-700"
-  }, "ศูนย์เทคโนโลยีอิเล็กทรอนิกส์และคอมพิวเตอร์แห่งชาติ"), React.createElement("span", {
+  }, t("landing.footer.primaryName", {}, "ศูนย์เทคโนโลยีอิเล็กทรอนิกส์และคอมพิวเตอร์แห่งชาติ")), React.createElement("span", {
     className: "font-inter"
-  }, "National Electronics and Computer Technology Center: NECTEC"), React.createElement("span", null, "\xB7 112 ถนนพหลโยธิน ต.คลองหนึ่ง อ.คลองหลวง จ.ปทุมธานี 12120, Thailand"), React.createElement("span", {
+  }, t("landing.footer.secondaryName", {}, "National Electronics and Computer Technology Center: NECTEC")), React.createElement("span", null, "· ", t("landing.footer.address", {}, "112 ถนนพหลโยธิน ต.คลองหนึ่ง อ.คลองหลวง จ.ปทุมธานี 12120 ประเทศไทย")), React.createElement("span", {
     className: "font-inter text-brand-700"
-  }, "\xB7 info@nectec.or.th")));
+  }, "· ", t("landing.footer.email", {}, "info@nectec.or.th"))));
 }
 function SignInCard() {
+  const { t } = window.TeacherI18n.useI18n();
   return React.createElement("section", {
     className: "flex min-h-[520px] min-w-0 items-center overflow-hidden rounded-[18px] border border-slate-200 bg-white p-6 shadow-panel sm:p-11"
   }, React.createElement("div", {
     className: "mx-auto w-full max-w-[340px]"
   }, React.createElement("h1", {
     className: "mb-7 text-[26px] font-extrabold text-slate-900"
-  }, "เข้าสู่ระบบผู้สอน"), React.createElement("button", {
+  }, t("auth.teacherSignIn", {}, "เข้าสู่ระบบผู้สอน")), React.createElement("button", {
     onClick: API.startLogin,
     className: "flex w-full items-center justify-center gap-3 rounded-full bg-gradient-to-r from-teal-500 to-brand-600 px-5 py-4 text-[15px] font-bold text-white shadow-lg shadow-teal-600/25 transition hover:brightness-105"
   }, React.createElement(Icon, {
     name: "id",
     size: 22
-  }), " เข้าสู่ระบบด้วย MECA ID ", React.createElement("span", {
+  }), t("auth.signInWithMecaId", {}, "เข้าสู่ระบบด้วย MECA ID"), " ", React.createElement("span", {
     className: "font-inter text-lg"
   }, "→")), React.createElement("div", {
     className: "mt-4 flex items-center gap-2.5 rounded-xl border border-slate-100 bg-slate-50 px-3.5 py-2.5 text-[11px] leading-5 text-slate-500"
@@ -986,27 +1159,31 @@ function SignInCard() {
     name: "lock",
     size: 16,
     className: "shrink-0 text-slate-400"
-  }), "การเข้าสู่ระบบดำเนินการผ่าน MECA ID อย่างปลอดภัย ระบบไม่เก็บรหัสผ่านของท่าน"), React.createElement("div", {
+  }), t("auth.secureDescription", {}, "การเข้าสู่ระบบดำเนินการผ่าน MECA ID อย่างปลอดภัย ระบบไม่เก็บรหัสผ่านของท่าน")), React.createElement("div", {
     className: "my-6 flex items-center gap-3 text-xs text-slate-300"
   }, React.createElement("span", {
     className: "h-px flex-1 bg-slate-100"
-  }), "หรือ", React.createElement("span", {
+  }), t("common.or", {}, "หรือ"), React.createElement("span", {
     className: "h-px flex-1 bg-slate-100"
   })), React.createElement("div", {
     className: "text-center text-[13px] text-slate-500"
-  }, "ยังไม่มีบัญชี MECA ID? ", React.createElement("span", {
+  }, t("auth.noAccount", {}, "ยังไม่มีบัญชี MECA ID?"), " ", React.createElement("span", {
     className: "font-bold text-brand-700"
-  }, "ลงทะเบียนที่นี่")), React.createElement("p", {
+  }, t("auth.registerHere", {}, "ลงทะเบียนที่นี่"))), React.createElement("p", {
     className: "mt-7 text-center text-[11px] leading-5 text-slate-300"
-  }, "การเข้าใช้งานถือว่าท่านยอมรับ ", React.createElement("span", {
+  }, t("auth.acceptancePrefix", {}, "การเข้าใช้งานถือว่าท่านยอมรับ"), " ", React.createElement("span", {
     className: "text-slate-500"
-  }, "เงื่อนไขการใช้บริการ"), " และ ", React.createElement("span", {
+  }, t("auth.terms", {}, "เงื่อนไขการใช้บริการ")), " ", t("common.and", {}, "และ"), " ", React.createElement("span", {
     className: "text-slate-500"
-  }, "นโยบายความเป็นส่วนตัว"))));
+  }, t("auth.privacy", {}, "นโยบายความเป็นส่วนตัว")))));
 }
 function UsageMap({
   overview
 }) {
+  const {
+    t,
+    formatNumber
+  } = window.TeacherI18n.useI18n();
   const mapElement = useRef(null);
   const mapInstance = useRef(null);
   const [slide, setSlide] = useState(0);
@@ -1064,6 +1241,13 @@ function UsageMap({
     return () => clearInterval(timer);
   }, [slides.length]);
   const current = slides[slide];
+  const currentKey = current ? OVERVIEW_SLIDE_KEYS[current.label] : "";
+  const currentPrefix = currentKey ? `landing.map.slides.${currentKey}` : "";
+  const currentNumericValue = current ? Number(String(current.big).replace(/,/g, "")) : NaN;
+  const currentValue = Number.isFinite(currentNumericValue) ? formatNumber(currentNumericValue) : current?.big;
+  const currentLabel = currentPrefix ? t(`${currentPrefix}.label`, {}, current.label) : current?.label;
+  const currentUnit = current?.unit && currentPrefix ? t(`${currentPrefix}.unit`, {}, current.unit) : current?.unit;
+  const currentDescription = currentPrefix ? t(`${currentPrefix}.description`, {}, current.desc) : current?.desc;
   const trend = overview.trend || [];
   const trendValues = trend.map(item => Number(item.users)).filter(Number.isFinite);
   const change = trendValues.length > 1 && trendValues.at(-2) ? Math.round((trendValues.at(-1) - trendValues.at(-2)) / trendValues.at(-2) * 100) : null;
@@ -1080,7 +1264,7 @@ function UsageMap({
     className: "absolute left-3.5 right-3.5 top-3.5 z-[500] overflow-hidden rounded-2xl border border-white/70 bg-white/95 p-4 shadow-float backdrop-blur sm:left-5 sm:right-auto sm:top-5 sm:w-[290px] sm:p-5"
   }, overview.loading ? React.createElement("div", {
     className: "flex min-h-[126px] items-center justify-center text-xs font-semibold text-slate-500"
-  }, "กำลังโหลดข้อมูลภาพรวม…") : current ? React.createElement("div", {
+  }, t("landing.map.loading", {}, "กำลังโหลดข้อมูลภาพรวม…")) : current ? React.createElement("div", {
     className: "min-h-[126px]"
   }, React.createElement("div", {
     className: "flex items-center gap-2.5"
@@ -1091,19 +1275,25 @@ function UsageMap({
     }
   }), React.createElement("span", {
     className: "text-xs font-bold text-slate-600"
-  }, current.label)), React.createElement("div", {
+  }, currentLabel)), React.createElement("div", {
     className: "mt-2.5 font-inter text-[29px] font-extrabold leading-tight text-slate-900"
-  }, current.big, " ", React.createElement("span", {
+  }, currentValue, " ", React.createElement("span", {
     className: "font-sans text-sm font-bold text-slate-400"
-  }, current.unit)), React.createElement("p", {
+  }, currentUnit)), React.createElement("p", {
     className: "mt-1.5 text-xs leading-5 text-slate-400"
-  }, current.desc)) : React.createElement("div", {
+  }, currentDescription)) : React.createElement("div", {
     className: "min-h-[126px] py-5"
   }, React.createElement("div", {
     className: "text-[13px] font-bold text-slate-700"
-  }, "ไม่มีข้อมูลภาพรวมให้แสดง"), React.createElement("p", {
+  }, overview.error ? React.createElement(ErrorStateIcon, {
+    message: overview.error,
+    label: t("common.error", {}, "เกิดข้อผิดพลาด"),
+    align: "left"
+  }) : t("landing.map.emptyTitle", {}, "ไม่มีข้อมูลภาพรวมให้แสดง")), React.createElement("p", {
     className: "mt-1 text-xs leading-5 text-slate-400"
-  }, overview.error || "ไม่พบข้อมูล")), slides.length > 1 && React.createElement("div", {
+  }, overview.error
+    ? t("dashboard.studentDrawer.errorHint", {}, "วางเมาส์หรือโฟกัสที่เครื่องหมายตกใจเพื่อดูสาเหตุ")
+    : t("landing.map.noData", {}, "ไม่พบข้อมูล"))), slides.length > 1 && React.createElement("div", {
     className: "mt-2 flex gap-1.5"
   }, slides.map((_, index) => React.createElement("button", {
     key: index,
@@ -1113,19 +1303,20 @@ function UsageMap({
     className: "mt-3 flex items-end justify-between border-t border-slate-100 pt-2"
   }, React.createElement("div", null, React.createElement("div", {
     className: "text-[10px] font-semibold text-slate-400"
-  }, "แนวโน้ม 6 เดือน"), React.createElement(Sparkline, {
+  }, t("landing.map.sixMonthTrend", {}, "แนวโน้ม 6 เดือน")), React.createElement(Sparkline, {
     values: trendValues
   })), change != null && React.createElement("span", {
     className: cx("font-inter text-xs font-bold", change >= 0 ? "text-green-600" : "text-red-600")
   }, change >= 0 ? "▲" : "▼", " ", Math.abs(change), "%"))), React.createElement("button", {
     className: "absolute bottom-5 right-5 z-[500] flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-brand-700 shadow-lg"
-  }, "ดูรายละเอียดแผนที่เต็ม ", React.createElement("span", {
+  }, t("landing.map.viewFullMap", {}, "ดูรายละเอียดแผนที่เต็ม"), " ", React.createElement("span", {
     className: "font-inter"
   }, "↗")));
 }
 function Sparkline({
   values
 }) {
+  const { t } = window.TeacherI18n.useI18n();
   const option = useMemo(() => ({
     animationDuration: 450,
     grid: {
@@ -1175,7 +1366,7 @@ function Sparkline({
   return React.createElement(EChart, {
     option,
     className: "h-7 w-[140px]",
-    ariaLabel: "กราฟแนวโน้มผู้ใช้งานหกเดือน"
+    ariaLabel: t("landing.map.trendAria", {}, "กราฟแนวโน้มผู้ใช้งานหกเดือน")
   });
 }
 function CourseList({
@@ -1186,7 +1377,8 @@ function CourseList({
   onAdd,
   onRemove
 }) {
-  const tabs = [["all", "ทั้งหมด"], ["active", "กำลังสอน"], ["pending", "รอเริ่ม"], ["done", "สิ้นสุดแล้ว"]];
+  const { t } = window.TeacherI18n.useI18n();
+  const tabs = ["all", "active", "pending", "done"];
   const counts = {
     all: classrooms.length,
     active: 0,
@@ -1205,19 +1397,19 @@ function CourseList({
     className: "mb-3.5 flex items-center justify-between gap-2"
   }, React.createElement("h2", {
     className: "text-lg font-extrabold sm:text-[19px]"
-  }, "ห้องเรียนของฉัน"), React.createElement("button", {
+  }, t("landing.classrooms.title", {}, "ห้องเรียนของฉัน")), React.createElement("button", {
     onClick: onAdd,
     className: "flex items-center gap-1.5 rounded-full bg-brand-600 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-teal-600/20 hover:bg-brand-700"
   }, React.createElement(Icon, {
     name: "plus",
     size: 14
-  }), " เพิ่มห้องเรียน")), React.createElement("div", {
+  }), " ", t("landing.classrooms.add", {}, "เพิ่มห้องเรียน"))), React.createElement("div", {
     className: "flex flex-wrap gap-1.5 border-b border-slate-100 pb-3"
-  }, tabs.map(([key, label]) => React.createElement("button", {
+  }, tabs.map(key => React.createElement("button", {
     key: key,
     onClick: () => setCourseTab(key),
     className: cx("flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold", courseTab === key ? "border-brand-600 bg-brand-50 text-brand-700" : "border-slate-200 bg-white text-slate-500")
-  }, label, React.createElement("span", {
+  }, t(`landing.classrooms.tabs.${key}`, {}, key), React.createElement("span", {
     className: cx("rounded-full px-1.5 font-inter text-[10px]", courseTab === key ? "bg-teal-100" : "bg-slate-100 text-slate-400")
   }, counts[key]))))), React.createElement("div", {
     className: "scrolly flex min-h-0 flex-1 flex-col gap-3 p-4 sm:px-[22px]"
@@ -1228,18 +1420,23 @@ function CourseList({
     onRemove: () => onRemove(course)
   })) : React.createElement("div", {
     className: "rounded-[14px] border border-dashed border-slate-200 p-9 text-center text-[13px] font-semibold text-slate-400"
-  }, "ยังไม่มีห้องเรียนในสถานะนี้")));
+  }, t("landing.classrooms.empty", {}, "ยังไม่มีห้องเรียนในสถานะนี้"))));
 }
 function CourseCard({
   course,
   onOpen,
   onRemove
 }) {
+  const {
+    t,
+    formatNumber,
+    formatRelativeTime
+  } = window.TeacherI18n.useI18n();
   const [menu, setMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState(null);
   const menuButtonRef = useRef(null);
   const status = classroomStatus(course);
-  const started = relativeTime(course.startDate);
+  const started = course.startDate ? formatRelativeTime(course.startDate) : "";
   const toggleMenu = () => {
     if (menu) {
       setMenu(false);
@@ -1275,7 +1472,9 @@ function CourseCard({
     style: {
       background: `linear-gradient(${course.color},${course.color}cc)`
     },
-    "aria-label": "เปิดห้องเรียน"
+    "aria-label": t("landing.classrooms.openAria", {
+      name: course.title
+    }, `เปิดห้องเรียน ${course.title}`)
   }), React.createElement("div", {
     className: "flex min-w-0 flex-1 items-center gap-3.5 p-3.5 pl-4"
   }, React.createElement("button", {
@@ -1290,12 +1489,17 @@ function CourseCard({
   }, React.createElement(Icon, {
     name: "users",
     size: 14
-  }), course.students == null ? "—" : course.students, " คน"), started && React.createElement("span", {
+  }), course.students == null ? "—" : t("landing.classrooms.studentCount", {
+    count: Number(course.students),
+    formattedCount: formatNumber(course.students)
+  }, `${formatNumber(course.students)} คน`)), started && React.createElement("span", {
     className: "flex items-center gap-1"
   }, React.createElement(Icon, {
     name: "calendar",
     size: 12
-  }), "เริ่มสอนเมื่อ ", started)), React.createElement("div", {
+  }), t("landing.classrooms.started", {
+    time: started
+  }, `เริ่มสอนเมื่อ ${started}`))), React.createElement("div", {
     className: "mt-2 flex items-center gap-2.5"
   }, React.createElement("span", {
     className: "h-2 flex-1 overflow-hidden rounded-full bg-slate-100"
@@ -1319,13 +1523,16 @@ function CourseCard({
       background: course.color,
       color: "white"
     }
-  }, status === "pending" ? "เริ่มใช้งาน" : "เปิดห้องเรียน"), React.createElement("button", {
+  }, status === "pending" ? t("landing.classrooms.start", {}, "เริ่มใช้งาน") : t("landing.classrooms.open", {}, "เปิดห้องเรียน")), React.createElement("button", {
     ref: menuButtonRef,
     onClick: toggleMenu,
+    "aria-label": t("landing.classrooms.options", {
+      name: course.title
+    }, `ตัวเลือกห้องเรียน ${course.title}`),
     className: "rounded-md px-2 font-inter text-lg font-bold leading-none text-slate-300 hover:bg-slate-100 hover:text-slate-500"
   }, "⋮"), menu && menuPosition && ReactDOM.createPortal(React.createElement(React.Fragment, null, React.createElement("button", {
     type: "button",
-    "aria-label": "ปิดเมนู",
+    "aria-label": t("landing.classrooms.closeMenu", {}, "ปิดเมนู"),
     onClick: toggleMenu,
     className: "fixed inset-0 z-[1090] cursor-default"
   }), React.createElement("div", {
@@ -1345,7 +1552,7 @@ function CourseCard({
   }, React.createElement(Icon, {
     name: "trash",
     size: 17
-  }), "นำออกจากรายการ"))), document.body))));
+  }), t("landing.classrooms.remove", {}, "นำออกจากรายการ")))), document.body))));
 }
 function Dashboard({
   page,
@@ -1354,14 +1561,15 @@ function Dashboard({
   dataset,
   onOpenStudent
 }) {
-  const nav = [["overview", "chart", "ภาพรวมทั้งห้อง"], ["students", "users", "รายชื่อนักเรียน"], ["tools", "tools", "การใช้งานเครื่องมือ"]];
+  const { t } = window.TeacherI18n.useI18n();
+  const nav = [["overview", "chart"], ["students", "users"], ["tools", "tools"]];
   return React.createElement("div", {
     className: "flex h-full min-h-0"
   }, React.createElement("aside", {
     className: "hidden w-[220px] shrink-0 flex-col gap-1 border-r border-slate-200 bg-white p-3.5 shadow-sm md:flex xl:w-[236px] xl:p-[18px]"
   }, React.createElement("div", {
     className: "px-3 pb-2 pt-0.5 text-[11px] font-bold text-slate-400"
-  }, "เมนูห้องเรียน"), nav.map(([key, icon, label]) => React.createElement("button", {
+  }, t("dashboard.navigation.menu", {}, "เมนูห้องเรียน")), nav.map(([key, icon]) => React.createElement("button", {
     key: key,
     onClick: () => setPage(key),
     className: cx("flex items-center gap-2.5 rounded-[10px] px-3 py-3 text-left text-sm font-semibold transition", page === key ? "bg-brand-50 font-bold text-brand-700" : "text-slate-600 hover:bg-slate-50")
@@ -1370,15 +1578,15 @@ function Dashboard({
   }), React.createElement(Icon, {
     name: icon,
     size: 18
-  }), " ", label))), React.createElement("div", {
+  }), " ", t(`dashboard.navigation.${key}`, {}, key)))), React.createElement("div", {
     className: "flex min-w-0 flex-1 flex-col"
   }, React.createElement("nav", {
     className: "flex shrink-0 overflow-x-auto border-b border-slate-200 bg-white px-3 md:hidden"
-  }, nav.map(([key,, label]) => React.createElement("button", {
+  }, nav.map(([key]) => React.createElement("button", {
     key: key,
     onClick: () => setPage(key),
     className: cx("whitespace-nowrap border-b-[3px] px-3 py-3.5 text-sm font-bold", page === key ? "border-brand-600 text-brand-700" : "border-transparent text-slate-400")
-  }, label))), React.createElement("main", {
+  }, t(`dashboard.navigation.${key}`, {}, key)))), React.createElement("main", {
     className: "scrolly min-h-0 flex-1 p-3.5 pb-14 sm:p-6 lg:p-[26px_34px_60px]"
   }, React.createElement("div", {
     className: "mx-auto max-w-[1180px]"
@@ -1399,8 +1607,17 @@ function CourseHero({
   selected,
   title
 }) {
+  const { t } = window.TeacherI18n.useI18n();
   const school = selected.school ? `${selected.school}${selected.province ? ` (${selected.province})` : ""}` : "—";
-  const chips = [`โรงเรียน: ${school}`, `ระดับชั้น: ${gradeText(selected)}`, `ห้อง: ${roomText(selected)}`];
+  const grade = gradeText(selected, t);
+  const room = roomText(selected, t);
+  const chips = [t("dashboard.hero.school", {
+    value: school
+  }, `โรงเรียน: ${school}`), t("dashboard.hero.grade", {
+    value: grade
+  }, `ระดับชั้น: ${grade}`), t("dashboard.hero.room", {
+    value: room
+  }, `ห้อง: ${room}`)];
   return React.createElement("section", {
     className: "mb-4 rounded-2xl bg-gradient-to-r from-brand-700 via-brand-600 to-teal-500 p-[18px] text-white shadow-lg shadow-teal-800/10 sm:p-6"
   }, React.createElement("h1", {
@@ -1418,10 +1635,15 @@ function OverviewPage({
   onOpenStudent
 }) {
   const {
+    t,
+    formatNumber
+  } = window.TeacherI18n.useI18n();
+  const {
     students,
     metrics
   } = dataset;
   const total = students.length;
+  const attentionCount = students.filter(item => item.status.key === "followup").length;
   const attention = [...students].filter(item => item.status.key === "followup").sort((a, b) => a.progress - b.progress).slice(0, 4);
   const progressBuckets = [{
     label: "100%",
@@ -1449,35 +1671,46 @@ function OverviewPage({
     title: dataset.title
   }), React.createElement("h2", {
     className: "mb-4 text-lg font-extrabold text-slate-900"
-  }, "ภาพรวมของทั้งห้องเรียน"), React.createElement("div", {
+  }, t("dashboard.overview.title", {}, "ภาพรวมของทั้งห้องเรียน")), React.createElement("div", {
     className: "mb-4 grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-4"
   }, React.createElement(MetricCard, {
     color: "#12a594",
-    label: "ผู้เรียนทั้งหมด",
-    value: fmtNumber(total),
-    suffix: "คน",
+    label: t("dashboard.overview.metrics.totalLearners", {}, "ผู้เรียนทั้งหมด"),
+    value: formatNumber(total),
+    suffix: t("dashboard.overview.metrics.learnerUnit", {
+      count: total
+    }, "คน"),
     badge: React.createElement(Icon, {
       name: "users",
       size: 18
     })
   }), React.createElement(MetricCard, {
     color: "#22c55e",
-    label: "ความคืบหน้าเฉลี่ย",
-    value: fmtNumber(metrics.avgProgress, 1),
+    label: t("dashboard.overview.metrics.averageProgress", {}, "ความคืบหน้าเฉลี่ย"),
+    value: formatNumber(metrics.avgProgress, {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1
+    }),
     suffix: "%",
-    badge: "เฉลี่ยทั้งห้อง"
+    badge: t("dashboard.overview.metrics.wholeClassAverage", {}, "เฉลี่ยทั้งห้อง")
   }), React.createElement(MetricCard, {
     color: "#6366f1",
-    label: "เรียนครบแล้ว",
-    value: fmtNumber(metrics.completed),
-    suffix: `/ ${total}`,
+    label: t("dashboard.overview.metrics.completed", {}, "เรียนครบแล้ว"),
+    value: formatNumber(metrics.completed),
+    suffix: `/ ${formatNumber(total)}`,
     badge: `${total ? Math.round(metrics.completed / total * 100) : 0}%`
   }), React.createElement(MetricCard, {
     color: "#f97316",
-    label: "คะแนน Quiz เฉลี่ย",
-    value: metrics.avgRate == null ? "—" : fmtNumber(metrics.avgRate, 1),
+    label: t("dashboard.overview.metrics.averageQuiz", {}, "คะแนน Quiz เฉลี่ย"),
+    value: metrics.avgRate == null ? "—" : formatNumber(metrics.avgRate, {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1
+    }),
     suffix: metrics.avgRate == null ? "" : "%",
-    badge: `${metrics.records} records`
+    badge: t("dashboard.overview.metrics.recordCount", {
+      count: metrics.records,
+      formattedCount: formatNumber(metrics.records)
+    }, `${formatNumber(metrics.records)} รายการ`)
   })), React.createElement("div", {
     className: "mb-4 grid gap-4 lg:grid-cols-[1.15fr_1fr]"
   }, React.createElement(QuizDistributionChart, {
@@ -1491,11 +1724,14 @@ function OverviewPage({
     className: "flex items-center justify-between border-b border-slate-100 px-5 py-4"
   }, React.createElement("div", null, React.createElement("h3", {
     className: "text-[15px] font-bold"
-  }, "ผู้เรียนที่ควรติดตาม"), React.createElement("p", {
+  }, t("dashboard.overview.attention.title", {}, "ผู้เรียนที่ควรติดตาม")), React.createElement("p", {
     className: "mt-0.5 text-[11px] text-slate-400"
-  }, "เรียงจากความคืบหน้าน้อยที่สุด")), React.createElement("span", {
+  }, t("dashboard.overview.attention.subtitle", {}, "เรียงจากความคืบหน้าน้อยที่สุด"))), React.createElement("span", {
     className: "rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-bold text-orange-700"
-  }, students.filter(item => item.status.key === "followup").length, " คน")), attention.length ? React.createElement("div", {
+  }, t("dashboard.overview.attention.count", {
+    count: attentionCount,
+    formattedCount: formatNumber(attentionCount)
+  }, `${formatNumber(attentionCount)} คน`))), attention.length ? React.createElement("div", {
     className: "divide-y divide-slate-100"
   }, attention.map(item => React.createElement("button", {
     key: item.id,
@@ -1520,9 +1756,9 @@ function OverviewPage({
     }
   })), React.createElement("span", {
     className: "w-10 text-right font-inter text-xs font-bold text-orange-600"
-  }, item.progress, "%"))))) : React.createElement("div", {
+  }, formatNumber(item.progress), "%"))))) : React.createElement("div", {
     className: "p-8 text-center text-sm font-semibold text-slate-400"
-  }, "ไม่มีผู้เรียนที่ต้องติดตาม")));
+  }, t("dashboard.overview.attention.empty", {}, "ไม่มีผู้เรียนที่ต้องติดตาม"))));
 }
 function MetricCard({
   color,
@@ -1554,44 +1790,19 @@ function MetricCard({
 function QuizDistributionChart({
   students
 }) {
+  const {
+    t,
+    formatNumber
+  } = window.TeacherI18n.useI18n();
   const [gradeMode, setGradeMode] = useState("numeric");
+  const noScoreLabel = t("dashboard.overview.charts.quiz.noScore", {}, "ไม่มีคะแนน");
   const data = useMemo(() => {
     const scales = gradeMode === "letter" ? [{
-      label: "F",
-      range: "0–49%",
-      min: 0,
-      max: 49.999,
-      color: "#ef4444"
-    }, {
-      label: "D",
-      range: "50–54%",
-      min: 50,
-      max: 54.999,
-      color: "#f97316"
-    }, {
-      label: "D+",
-      range: "55–59%",
-      min: 55,
-      max: 59.999,
-      color: "#fb923c"
-    }, {
-      label: "C",
-      range: "60–64%",
-      min: 60,
-      max: 64.999,
-      color: "#f59e0b"
-    }, {
-      label: "C+",
-      range: "65–69%",
-      min: 65,
-      max: 69.999,
-      color: "#eab308"
-    }, {
-      label: "B",
-      range: "70–74%",
-      min: 70,
-      max: 74.999,
-      color: "#14b8a6"
+      label: "A",
+      range: "80–100%",
+      min: 80,
+      max: 100,
+      color: "#22c55e"
     }, {
       label: "B+",
       range: "75–79%",
@@ -1599,29 +1810,47 @@ function QuizDistributionChart({
       max: 79.999,
       color: "#0d9488"
     }, {
-      label: "A",
-      range: "80–100%",
-      min: 80,
-      max: 100,
-      color: "#22c55e"
-    }] : [{
-      label: "0",
+      label: "B",
+      range: "70–74%",
+      min: 70,
+      max: 74.999,
+      color: "#14b8a6"
+    }, {
+      label: "C+",
+      range: "65–69%",
+      min: 65,
+      max: 69.999,
+      color: "#eab308"
+    }, {
+      label: "C",
+      range: "60–64%",
+      min: 60,
+      max: 64.999,
+      color: "#f59e0b"
+    }, {
+      label: "D+",
+      range: "55–59%",
+      min: 55,
+      max: 59.999,
+      color: "#fb923c"
+    }, {
+      label: "D",
+      range: "50–54%",
+      min: 50,
+      max: 54.999,
+      color: "#f97316"
+    }, {
+      label: "F",
       range: "0–49%",
       min: 0,
       max: 49.999,
       color: "#ef4444"
-    }, {
-      label: "1",
-      range: "50–59%",
-      min: 50,
-      max: 59.999,
-      color: "#f97316"
-    }, {
-      label: "2",
-      range: "60–69%",
-      min: 60,
-      max: 69.999,
-      color: "#f59e0b"
+    }] : [{
+      label: "4",
+      range: "80–100%",
+      min: 80,
+      max: 100,
+      color: "#22c55e"
     }, {
       label: "3",
       range: "70–79%",
@@ -1629,11 +1858,23 @@ function QuizDistributionChart({
       max: 79.999,
       color: "#14b8a6"
     }, {
-      label: "4",
-      range: "80–100%",
-      min: 80,
-      max: 100,
-      color: "#22c55e"
+      label: "2",
+      range: "60–69%",
+      min: 60,
+      max: 69.999,
+      color: "#f59e0b"
+    }, {
+      label: "1",
+      range: "50–59%",
+      min: 50,
+      max: 59.999,
+      color: "#f97316"
+    }, {
+      label: "0",
+      range: "0–49%",
+      min: 0,
+      max: 49.999,
+      color: "#ef4444"
     }];
     const buckets = scales.map(scale => ({
       ...scale,
@@ -1651,22 +1892,20 @@ function QuizDistributionChart({
     });
     const total = students.length || 1;
     return [...buckets, {
-      label: "ไม่มีคะแนน",
-      range: "ยังไม่มีผลคะแนน",
+      label: noScoreLabel,
+      range: t("dashboard.overview.charts.quiz.noScoreRange", {}, "ยังไม่มีผลคะแนน"),
       count: noScore,
-      color: "#94a3b8"
+      color: "#94a3b8",
+      isNoScore: true
     }].map(item => ({
       ...item,
       percent: Math.round(item.count / total * 1000) / 10
     }));
-  }, [students, gradeMode]);
+  }, [students, gradeMode, noScoreLabel, t]);
   const option = useMemo(() => ({
     animationDuration: 550,
     aria: {
-      enabled: true,
-      decal: {
-        show: false
-      }
+      enabled: false
     },
     tooltip: {
       trigger: "axis",
@@ -1687,10 +1926,18 @@ function QuizDistributionChart({
       formatter: params => {
         const item = params?.[0];
         const row = data[item?.dataIndex] || {};
-        const value = Number(item?.value) || 0;
+        const value = Number(row.percent) || 0;
         const percent = Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1);
-        const title = row.label === "ไม่มีคะแนน" ? row.label : `เกรด ${row.label} (${row.range})`;
-        return `${title}<br/><b>${percent}%</b><br/>${row.count || 0} คน`;
+        const title = row.isNoScore ? row.label : t("dashboard.overview.charts.quiz.gradeTitle", {
+          grade: row.label,
+          range: row.range
+        }, `เกรด ${row.label} (${row.range})`);
+        const count = Number(row.count) || 0;
+        const learners = t("dashboard.overview.charts.quiz.learnerCount", {
+          count,
+          formattedCount: formatNumber(count)
+        }, `${formatNumber(count)} คน`);
+        return `${title}<br/><b>${percent}%</b><br/>${learners}`;
       }
     },
     grid: {
@@ -1718,21 +1965,20 @@ function QuizDistributionChart({
         fontWeight: 600,
         fontStyle: "normal",
         interval: 0,
-        formatter: value => value === "ไม่มีคะแนน" ? "ไม่มี\nคะแนน" : value
+        formatter: value => value === noScoreLabel ? t("dashboard.overview.charts.quiz.noScoreAxis", {}, "ไม่มี\nคะแนน") : value
       }
     },
     yAxis: {
       type: "value",
       min: 0,
-      max: 100,
-      interval: 25,
+      minInterval: 1,
       axisLabel: {
         show: true,
         color: "#98a2b3",
         fontFamily: "Inter, sans-serif",
         fontSize: 12,
         fontStyle: "normal",
-        formatter: value => `${value}%`
+        formatter: value => String(value)
       },
       axisLine: {
         show: false
@@ -1747,11 +1993,11 @@ function QuizDistributionChart({
       }
     },
     series: [{
-      name: "ผู้เรียน",
+      name: t("dashboard.overview.charts.quiz.learnerSeries", {}, "ผู้เรียน"),
       type: "bar",
       barMaxWidth: 40,
       data: data.map(item => ({
-        value: item.percent,
+        value: item.count,
         itemStyle: {
           color: item.color,
           borderRadius: [6, 6, 0, 0]
@@ -1765,10 +2011,7 @@ function QuizDistributionChart({
         fontSize: 14,
         fontWeight: 700,
         fontStyle: "normal",
-        formatter: params => {
-          const value = Number(params.value) || 0;
-          return `${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1)}%`;
-        }
+        formatter: params => formatNumber(data[params.dataIndex]?.count ?? 0)
       },
       emphasis: {
         itemStyle: {
@@ -1777,41 +2020,42 @@ function QuizDistributionChart({
         }
       }
     }]
-  }), [data]);
+  }), [data, formatNumber, noScoreLabel, t]);
   return React.createElement("section", {
     className: "rounded-2xl border border-slate-200 bg-white p-5 shadow-panel"
   }, React.createElement("div", {
     className: "mb-1 flex items-start justify-between gap-3"
   }, React.createElement("div", null, React.createElement("h3", {
     className: "text-[15px] font-bold"
-  }, "การกระจายคะแนน Quiz"), React.createElement("p", {
+  }, t("dashboard.overview.charts.quiz.title", {}, "การกระจายคะแนน Quiz")), React.createElement("p", {
     className: "mt-0.5 text-[13px] font-medium text-slate-400"
-  }, "เปอร์เซ็นต์ผู้เรียนทั้งห้องในแต่ละระดับเกรด")), React.createElement("select", {
+  }, t("dashboard.overview.charts.quiz.subtitle", {}, "จำนวนผู้เรียนทั้งห้องในแต่ละระดับเกรด"))), React.createElement("select", {
     value: gradeMode,
     onChange: event => setGradeMode(event.target.value),
-    "aria-label": "เลือกรูปแบบเกรด",
+    "aria-label": t("dashboard.overview.charts.quiz.gradeModeAria", {}, "เลือกรูปแบบเกรด"),
     className: "field shrink-0 rounded-[9px] border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600"
   }, React.createElement("option", {
     value: "numeric"
-  }, "เกรด 0–4"), React.createElement("option", {
+  }, t("dashboard.overview.charts.quiz.numericMode", {}, "เกรด 4,3,2,1")), React.createElement("option", {
     value: "letter"
-  }, "เกรด F–A"))), React.createElement(EChart, {
+  }, t("dashboard.overview.charts.quiz.letterMode", {}, "เกรด A,B,C,D")))), React.createElement(EChart, {
     option,
     className: "h-[214px] w-full",
-    ariaLabel: `กราฟแท่งแสดงการกระจายคะแนน Quiz แบบ${gradeMode === "letter" ? "เกรดตัวอักษร" : "เกรด 0 ถึง 4"}`
+    ariaLabel: gradeMode === "letter" ? t("dashboard.overview.charts.quiz.ariaLetter", {}, "กราฟแท่งแสดงการกระจายคะแนน Quiz แบบเกรดตัวอักษร A ถึง F") : t("dashboard.overview.charts.quiz.ariaNumeric", {}, "กราฟแท่งแสดงการกระจายคะแนน Quiz แบบเกรด 4 ถึง 0")
   }));
 }
 function ProgressOverviewChart({
   data,
   total
 }) {
+  const {
+    t,
+    formatNumber
+  } = window.TeacherI18n.useI18n();
   const option = useMemo(() => ({
     animationDuration: 600,
     aria: {
-      enabled: true,
-      decal: {
-        show: false
-      }
+      enabled: false
     },
     tooltip: {
       trigger: "item",
@@ -1823,7 +2067,14 @@ function ProgressOverviewChart({
         fontSize: 14,
         fontStyle: "normal"
       },
-      formatter: params => `${params.marker}${params.name}<br/><b>${params.value} คน (${params.percent}%)</b>`
+      formatter: params => {
+        const count = Number(params.value) || 0;
+        const learners = t("dashboard.overview.charts.quiz.learnerCount", {
+          count,
+          formattedCount: formatNumber(count)
+        }, `${formatNumber(count)} คน`);
+        return `${params.marker}${params.name}<br/><b>${learners} (${params.percent}%)</b>`;
+      }
     },
     legend: {
       orient: "vertical",
@@ -1836,7 +2087,7 @@ function ProgressOverviewChart({
       data: data.map(item => item.label),
       formatter: name => {
         const item = data.find(row => row.label === name);
-        return `{label|${name}}  {value|${item?.count ?? 0}}`;
+        return `{label|${name}}  {value|${formatNumber(item?.count ?? 0)}}`;
       },
       textStyle: {
         rich: {
@@ -1860,37 +2111,8 @@ function ProgressOverviewChart({
         }
       }
     },
-    graphic: [{
-      type: "group",
-      left: "30%",
-      top: "center",
-      silent: true,
-      children: [{
-        type: "text",
-        style: {
-          x: 0,
-          y: -10,
-          text: String(total),
-          textAlign: "center",
-          textVerticalAlign: "middle",
-          fill: "#101828",
-          font: "normal 800 30px Inter"
-        }
-      }, {
-        type: "text",
-        style: {
-          x: 0,
-          y: 13,
-          text: "ผู้เรียน",
-          textAlign: "center",
-          textVerticalAlign: "middle",
-          fill: "#98a2b3",
-          font: "normal 600 13px Noto Sans Thai"
-        }
-      }]
-    }],
     series: [{
-      name: "ความคืบหน้าทั้งห้อง",
+      name: t("dashboard.overview.charts.progress.series", {}, "ความคืบหน้าทั้งห้อง"),
       type: "pie",
       center: ["30%", "50%"],
       radius: ["48%", "72%"],
@@ -1916,18 +2138,63 @@ function ProgressOverviewChart({
           color: item.color
         }
       }))
+    }, {
+      name: t("dashboard.overview.charts.progress.learnerSeries", {}, "จำนวนผู้เรียน"),
+      type: "pie",
+      center: ["30%", "50%"],
+      radius: [0, "1%"],
+      silent: true,
+      animation: false,
+      tooltip: {
+        show: false
+      },
+      labelLine: {
+        show: false
+      },
+      label: {
+        show: true,
+        position: "center",
+        formatter: `{total|${formatNumber(total)}}\n{caption|${t("dashboard.overview.charts.progress.learnerCaption", {}, "ผู้เรียน")}}`,
+        rich: {
+          total: {
+            color: "#101828",
+            fontFamily: "Inter, sans-serif",
+            fontSize: 30,
+            fontWeight: 800,
+            fontStyle: "normal",
+            lineHeight: 34,
+            align: "center"
+          },
+          caption: {
+            color: "#98a2b3",
+            fontFamily: "Noto Sans Thai, Inter, sans-serif",
+            fontSize: 13,
+            fontWeight: 600,
+            fontStyle: "normal",
+            lineHeight: 18,
+            align: "center"
+          }
+        }
+      },
+      itemStyle: {
+        color: "transparent"
+      },
+      data: [{
+        value: 1,
+        name: ""
+      }]
     }]
-  }), [data, total]);
+  }), [data, total, formatNumber, t]);
   return React.createElement("section", {
     className: "rounded-2xl border border-slate-200 bg-white p-5 shadow-panel"
   }, React.createElement("div", null, React.createElement("h3", {
     className: "text-[15px] font-bold"
-  }, "ภาพรวมความคืบหน้า"), React.createElement("p", {
+  }, t("dashboard.overview.charts.progress.title", {}, "ภาพรวมความคืบหน้า")), React.createElement("p", {
     className: "mt-0.5 text-[13px] font-medium text-slate-400"
-  }, "สัดส่วนความคืบหน้าของผู้เรียนทั้งห้อง")), React.createElement(EChart, {
+  }, t("dashboard.overview.charts.progress.subtitle", {}, "สัดส่วนความคืบหน้าของผู้เรียนทั้งห้อง"))), React.createElement(EChart, {
     option,
     className: "h-[214px] w-full",
-    ariaLabel: "กราฟวงกลมแสดงสัดส่วนความคืบหน้าของผู้เรียนทั้งห้อง"
+    ariaLabel: t("dashboard.overview.charts.progress.aria", {}, "กราฟวงกลมแสดงสัดส่วนความคืบหน้าของผู้เรียนทั้งห้อง")
   }));
 }
 function Avatar({
@@ -1943,9 +2210,26 @@ function StudentsPage({
   dataset,
   onOpenStudent
 }) {
+  const {
+    t,
+    formatNumber,
+    formatDate,
+    compare
+  } = window.TeacherI18n.useI18n();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [sort, setSort] = useState("name");
+  const statusLabel = status => {
+    const key = status?.key || "unknown";
+    return t(`dashboard.students.status.${key}`, {}, status?.label || t("dashboard.students.status.unknown", {}, "ไม่ทราบสถานะ"));
+  };
+  const updatedText = item => item.lastUpdate ? formatDate(item.lastUpdate, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  }) : item.updated || "—";
   const rows = useMemo(() => {
     const rank = {
       followup: 0,
@@ -1954,31 +2238,31 @@ function StudentsPage({
     };
     let output = dataset.students.filter(item => {
       const query = search.trim().toLowerCase();
-      return !query || item.name.toLowerCase().includes(query) || item.email.toLowerCase().includes(query) || item.province.toLowerCase().includes(query);
+      return !query || String(item.name || "").toLowerCase().includes(query) || String(item.email || "").toLowerCase().includes(query) || String(item.province || "").toLowerCase().includes(query);
     });
     if (filter !== "all") output = output.filter(item => item.status.key === filter);
     return [...output].sort((a, b) => {
       if (sort === "progress") return b.progress - a.progress;
       if (sort === "quiz") return (b.rate ?? -1) - (a.rate ?? -1);
       if (sort === "name") {
-        return String(a.name || "").localeCompare(String(b.name || ""), "th", {
+        return compare(a.name, b.name, {
           sensitivity: "base",
           numeric: true
         });
       }
       return rank[a.status.key] - rank[b.status.key] || a.progress - b.progress;
     });
-  }, [dataset.students, search, filter, sort]);
+  }, [dataset.students, search, filter, sort, compare]);
   const exportCsv = () => {
-    const header = ["ชื่อ", "อีเมล", "กลุ่ม", "ความคืบหน้า(%)", "คะแนน", "อัปเดตล่าสุด", "สถานะ"];
-    const body = rows.map(item => [item.name, item.email, item.room, item.progress, item.quizText, item.updated, item.status.label]);
+    const header = ["name", "email", "group", "progress", "score", "updated", "status"].map(key => t(`dashboard.students.csv.headers.${key}`, {}, key));
+    const body = rows.map(item => [item.name, item.email, item.room, item.progress, item.quizText, updatedText(item), statusLabel(item.status)]);
     const csv = [header, ...body].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob(["\ufeff" + csv], {
       type: "text/csv;charset=utf-8"
     }));
     const link = document.createElement("a");
     link.href = url;
-    link.download = "students.csv";
+    link.download = t("dashboard.students.csv.fileName", {}, "students.csv");
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
@@ -1993,9 +2277,12 @@ function StudentsPage({
     className: "flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
   }, React.createElement("div", null, React.createElement("h2", {
     className: "text-lg font-extrabold"
-  }, "รายชื่อนักเรียน"), React.createElement("p", {
+  }, t("dashboard.students.title", {}, "รายชื่อนักเรียน")), React.createElement("p", {
     className: "mt-0.5 text-xs text-slate-400"
-  }, "ทั้งหมด ", dataset.students.length, " คน \xB7 แสดง ", rows.length, " คน")), React.createElement("div", {
+  }, t("dashboard.students.summary", {
+    total: formatNumber(dataset.students.length),
+    shown: formatNumber(rows.length)
+  }, `ทั้งหมด ${formatNumber(dataset.students.length)} คน · แสดง ${formatNumber(rows.length)} คน`))), React.createElement("div", {
     className: "flex flex-wrap gap-2"
   }, React.createElement("label", {
     className: "field flex min-w-[210px] flex-1 items-center gap-2 rounded-[10px] border border-slate-200 px-3 py-2 text-slate-400 lg:flex-none"
@@ -2005,33 +2292,35 @@ function StudentsPage({
   }), React.createElement("input", {
     value: search,
     onChange: event => setSearch(event.target.value),
-    placeholder: "ค้นหาชื่อหรืออีเมล...",
+    placeholder: t("dashboard.students.searchPlaceholder", {}, "ค้นหาชื่อ อีเมล หรือจังหวัด..."),
     className: "min-w-0 flex-1 border-0 bg-transparent text-[13px] text-slate-700 outline-none"
   })), React.createElement("select", {
     value: sort,
     onChange: event => setSort(event.target.value),
+    "aria-label": t("dashboard.students.sortAria", {}, "เรียงรายชื่อนักเรียน"),
     className: "field rounded-[10px] border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600"
   }, React.createElement("option", {
     value: "followup"
-  }, "เรียง: ควรติดตามก่อน"), React.createElement("option", {
+  }, t("dashboard.students.sort.followup", {}, "เรียง: ควรติดตามก่อน")), React.createElement("option", {
     value: "progress"
-  }, "ความคืบหน้าสูงสุด"), React.createElement("option", {
+  }, t("dashboard.students.sort.progress", {}, "ความคืบหน้าสูงสุด")), React.createElement("option", {
     value: "quiz"
-  }, "คะแนนสูงสุด"), React.createElement("option", {
+  }, t("dashboard.students.sort.quiz", {}, "คะแนนสูงสุด")), React.createElement("option", {
     value: "name"
-  }, "ชื่อ ก–ฮ")), React.createElement("button", {
+  }, t("dashboard.students.sort.name", {}, "ชื่อ ก–ฮ"))), React.createElement("button", {
     onClick: exportCsv,
     className: "flex items-center gap-2 rounded-[10px] border border-slate-200 px-3 py-2 text-xs font-bold text-brand-700 hover:bg-brand-50"
   }, React.createElement(Icon, {
     name: "download",
     size: 16
-  }), "CSV"))), React.createElement("div", {
+  }), t("dashboard.students.csv.button", {}, "CSV")))), React.createElement("div", {
     className: "mt-3 flex flex-wrap gap-1.5"
-  }, [["all", "ทั้งหมด"], ["followup", "ต้องติดตาม"], ["learning", "กำลังเรียน"], ["done", "เรียนจบ"]].map(([key, label]) => React.createElement("button", {
+  }, ["all", "followup", "learning", "done"].map(key => React.createElement("button", {
     key: key,
     onClick: () => setFilter(key),
+    "aria-pressed": filter === key,
     className: cx("rounded-full border px-3 py-1.5 text-[11px] font-bold", filter === key ? "border-brand-600 bg-brand-50 text-brand-700" : "border-slate-200 text-slate-500")
-  }, label)))), React.createElement("div", {
+  }, t(`dashboard.students.filters.${key}`, {}, key))))), React.createElement("div", {
     className: "table-scroll-x"
   }, React.createElement("table", {
     className: "w-full min-w-[780px] border-collapse text-left"
@@ -2039,17 +2328,17 @@ function StudentsPage({
     className: "sticky top-0 z-10 bg-slate-50 text-[11px] font-bold text-slate-400"
   }, React.createElement("tr", null, React.createElement("th", {
     className: "px-5 py-3"
-  }, "ผู้เรียน"), React.createElement("th", {
+  }, t("dashboard.students.table.learner", {}, "ผู้เรียน")), React.createElement("th", {
     className: "px-4 py-3"
-  }, "กลุ่ม"), React.createElement("th", {
+  }, t("dashboard.students.table.group", {}, "กลุ่ม")), React.createElement("th", {
     className: "px-4 py-3"
-  }, "ความคืบหน้า"), React.createElement("th", {
+  }, t("dashboard.students.table.progress", {}, "ความคืบหน้า")), React.createElement("th", {
     className: "px-4 py-3"
-  }, "คะแนน Quiz"), React.createElement("th", {
+  }, t("dashboard.students.table.quiz", {}, "คะแนน Quiz")), React.createElement("th", {
     className: "px-4 py-3"
-  }, "อัปเดตล่าสุด"), React.createElement("th", {
+  }, t("dashboard.students.table.updated", {}, "อัปเดตล่าสุด")), React.createElement("th", {
     className: "px-4 py-3"
-  }, "สถานะ"))), React.createElement("tbody", {
+  }, t("dashboard.students.table.status", {}, "สถานะ")))), React.createElement("tbody", {
     className: "divide-y divide-slate-100"
   }, rows.map(item => React.createElement("tr", {
     key: item.id,
@@ -2083,37 +2372,41 @@ function StudentsPage({
     }
   })), React.createElement("b", {
     className: "w-9 font-inter text-xs"
-  }, item.progress, "%"))), React.createElement("td", {
+  }, formatNumber(item.progress), "%"))), React.createElement("td", {
     className: "px-4 py-3"
   }, React.createElement("b", {
     className: "font-inter"
   }, item.quizText), item.rate != null && React.createElement("span", {
     className: "ml-1 text-[10px] text-slate-400"
-  }, "(", Math.round(item.rate), "%)")), React.createElement("td", {
+  }, "(", formatNumber(Math.round(item.rate)), "%)")), React.createElement("td", {
     className: "px-4 py-3 text-xs text-slate-400"
-  }, item.updated), React.createElement("td", {
+  }, updatedText(item)), React.createElement("td", {
     className: "px-4 py-3"
   }, React.createElement(StatusBadge, {
     status: item.status
   })))))), !rows.length && React.createElement("div", {
     className: "p-12 text-center text-sm font-semibold text-slate-400"
-  }, "ไม่พบผู้เรียนตามเงื่อนไข"))));
+  }, t("dashboard.students.empty", {}, "ไม่พบผู้เรียนตามเงื่อนไข")))));
 }
 function StatusBadge({
   status
 }) {
+  const { t } = window.TeacherI18n.useI18n();
   const safeStatus = status && typeof status === "object" ? status : {
-    label: "ไม่ทราบสถานะ",
+    key: "unknown",
+    label: "",
     text: "#667085",
     bg: "#f2f4f7"
   };
+  const key = safeStatus.key || "unknown";
+  const label = t(`dashboard.students.status.${key}`, {}, safeStatus.label || t("dashboard.students.status.unknown", {}, "ไม่ทราบสถานะ"));
   return React.createElement("span", {
     className: "inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold",
     style: {
       color: safeStatus.text || "#667085",
       background: safeStatus.bg || "#f2f4f7"
     }
-  }, safeStatus.label || "ไม่ทราบสถานะ");
+  }, label);
 }
 const TOOL_COLORS = {
   Video: {
@@ -2133,10 +2426,24 @@ const TOOL_COLORS = {
     light: "#f0fdfa"
   }
 };
+const localizedToolLabel = (label, t) => {
+  const key = String(label || "").trim().toLowerCase();
+  const known = {
+    video: "video",
+    bookroll: "bookroll",
+    quiz: "quiz",
+    profile: "profile"
+  }[key];
+  return known ? t(`dashboard.tools.labels.${known}`, {}, label) : label || t("dashboard.tools.labels.unknown", {}, "เครื่องมือ");
+};
 function ToolsPage({
   selected,
   dataset
 }) {
+  const {
+    t,
+    formatNumber
+  } = window.TeacherI18n.useI18n();
   return React.createElement(React.Fragment, null, React.createElement(CourseHero, {
     selected: selected,
     title: dataset.title
@@ -2155,20 +2462,23 @@ function ToolsPage({
       style: {
         background: colors.bg
       }
-    }, label), React.createElement("div", {
+    }, localizedToolLabel(label, t)), React.createElement("div", {
       className: "mt-2 font-inter text-3xl font-extrabold"
-    }, count), React.createElement("div", {
+    }, formatNumber(count)), React.createElement("div", {
       className: "text-[11px] text-slate-400"
-    }, "กิจกรรม"));
+    }, t("dashboard.tools.activityCount", {
+      count,
+      formattedCount: formatNumber(count)
+    }, `${formatNumber(count)} กิจกรรม`)));
   })), React.createElement("section", {
     className: "overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-panel"
   }, React.createElement("div", {
     className: "border-b border-slate-100 p-5"
   }, React.createElement("h2", {
     className: "text-lg font-extrabold"
-  }, "การใช้งานเครื่องมือ"), React.createElement("p", {
+  }, t("dashboard.tools.title", {}, "การใช้งานเครื่องมือ")), React.createElement("p", {
     className: "mt-0.5 text-xs text-slate-400"
-  }, "เครื่องมือที่ใช้ในแต่ละบทเรียนและจำนวนผู้เรียนที่เข้าถึง")), React.createElement("div", {
+  }, t("dashboard.tools.subtitle", {}, "เครื่องมือที่ใช้ในแต่ละบทเรียนและจำนวนผู้เรียนที่เข้าถึง"))), React.createElement("div", {
     className: "table-scroll-x"
   }, React.createElement("table", {
     className: "w-full min-w-[680px]"
@@ -2176,13 +2486,13 @@ function ToolsPage({
     className: "bg-slate-50 text-left text-[11px] font-bold text-slate-400"
   }, React.createElement("tr", null, React.createElement("th", {
     className: "px-5 py-3"
-  }, "บทเรียน"), React.createElement("th", {
+  }, t("dashboard.tools.table.lesson", {}, "บทเรียน")), React.createElement("th", {
     className: "px-4 py-3"
-  }, "รหัส"), React.createElement("th", {
+  }, t("dashboard.tools.table.code", {}, "รหัส")), React.createElement("th", {
     className: "px-4 py-3"
-  }, "เครื่องมือ"), React.createElement("th", {
+  }, t("dashboard.tools.table.tools", {}, "เครื่องมือ")), React.createElement("th", {
     className: "px-5 py-3 text-right"
-  }, "ผู้เรียนที่เข้าถึง"))), React.createElement("tbody", {
+  }, t("dashboard.tools.table.reached", {}, "ผู้เรียนที่เข้าถึง")))), React.createElement("tbody", {
     className: "divide-y divide-slate-100"
   }, dataset.activities.map(activity => React.createElement("tr", {
     key: activity.id,
@@ -2200,13 +2510,14 @@ function ToolsPage({
     label: tool.label
   })))), React.createElement("td", {
     className: "px-5 py-4 text-right font-inter font-bold text-slate-700"
-  }, activity.reach == null ? "—" : activity.reach))))), !dataset.activities.length && React.createElement("div", {
+  }, activity.reach == null ? "—" : formatNumber(activity.reach)))))), !dataset.activities.length && React.createElement("div", {
     className: "p-12 text-center text-sm font-semibold text-slate-400"
-  }, "ไม่พบเครื่องมือในรายวิชานี้"))));
+  }, t("dashboard.tools.empty", {}, "ไม่พบเครื่องมือในรายวิชานี้")))));
 }
 function ToolBadge({
   label
 }) {
+  const { t } = window.TeacherI18n.useI18n();
   const colors = TOOL_COLORS[label] || {
     bg: "#94a3b8"
   };
@@ -2215,11 +2526,15 @@ function ToolBadge({
     style: {
       background: colors.bg
     }
-  }, label);
+  }, localizedToolLabel(label, t));
 }
 function ProgressToolBadge({
   tool
 }) {
+  const {
+    t,
+    formatNumber
+  } = window.TeacherI18n.useI18n();
   if (!tool || typeof tool !== "object") return null;
   if (!tool.showProgress) return React.createElement(ToolBadge, {
     label: tool.label
@@ -2242,20 +2557,24 @@ function ProgressToolBadge({
       background: "#ffedd5"
     };
   }
-  const label = tool.progress == null ? "—" : `${Math.round(tool.progress)}%`;
+  const label = tool.progress == null ? "—" : `${formatNumber(Math.round(tool.progress))}%`;
   return React.createElement("span", {
-    className: "inline-flex overflow-hidden rounded-md whitespace-nowrap"
+    className: "inline-flex whitespace-nowrap"
   }, React.createElement("span", {
-    className: "px-2 py-1 text-[10px] font-bold text-white",
+    className: "rounded-l-md px-2 py-1 text-[10px] font-bold text-white",
     style: {
       background: colors.bg
     }
-  }, tool.label), React.createElement("span", {
-    className: "flex min-w-10 items-center justify-center px-2 py-1 font-inter text-[10px] font-bold",
+  }, localizedToolLabel(tool.label, t)), React.createElement("span", {
+    className: "flex min-w-10 items-center justify-center rounded-r-md px-2 py-1 font-inter text-[10px] font-bold",
     style: progressStyle
   }, tool.loading ? React.createElement("span", {
     className: "spinner h-3 w-3 rounded-full border-2 border-slate-300 border-t-brand-600",
-    title: "กำลังโหลด"
+    title: t("common.loading", {}, "กำลังโหลด...")
+  }) : tool.error ? React.createElement(ErrorStateIcon, {
+    message: tool.error,
+    label: t("dashboard.studentDrawer.errorStatus", {}, "โหลดข้อมูลไม่สำเร็จ"),
+    compact: true
   }) : label));
 }
 function summarizeChapterTools(chapters, toolLabel, fallback = {}) {
@@ -2276,6 +2595,10 @@ function StudentDrawer({
   activities,
   onClose
 }) {
+  const {
+    t,
+    formatNumber
+  } = window.TeacherI18n.useI18n();
   const safeStudent = student && typeof student === "object" ? student : {};
   const safeActivities = Array.isArray(activities)
     ? activities.filter(activity => activity && typeof activity === "object")
@@ -2285,6 +2608,9 @@ function StudentDrawer({
   const readingLoading = detail?.readingLoading ?? !!detail?.loading;
   const videoLoading = detail?.videoLoading ?? !!detail?.loading;
   const chatbotLoading = detail?.chatbotLoading ?? !!detail?.loading;
+  const readingError = detail?.readingError || "";
+  const videoError = detail?.videoError || "";
+  const chatbotError = detail?.chatbotError || "";
   const chapters = safeActivities.map((activity, activityIndex) => {
     const sourceTools = Array.isArray(activity.tools)
       ? activity.tools.filter(tool => tool && typeof tool === "object")
@@ -2307,6 +2633,7 @@ function StudentDrawer({
         ...tool,
         showProgress: true,
         loading: isReading ? readingLoading : isVideo ? videoLoading : chatbotLoading,
+        error: isReading ? readingError : isVideo ? videoError : chatbotError,
         progress: Number.isFinite(entry?.progress) ? API.clamp(Math.round(entry.progress)) : null
       };
     });
@@ -2318,7 +2645,9 @@ function StudentDrawer({
     return {
       ...activity,
       id: activity.id || activity.code || `chapter-${activityIndex}`,
-      name: activity.name || activity.title || `บทที่ ${activityIndex + 1}`,
+      name: activity.name || activity.title || t("dashboard.studentDrawer.chapters.defaultName", {
+        number: formatNumber(activityIndex + 1)
+      }, `บทที่ ${formatNumber(activityIndex + 1)}`),
       tools,
       dot
     };
@@ -2329,7 +2658,7 @@ function StudentDrawer({
     className: "fixed inset-0 z-[1200]"
   }, React.createElement("button", {
     onClick: onClose,
-    "aria-label": "ปิด",
+    "aria-label": t("common.close", {}, "ปิด"),
     className: "absolute inset-0 bg-slate-900/40 backdrop-blur-[1px]"
   }), React.createElement("aside", {
     className: "animate-fade-up scrolly absolute bottom-0 right-0 top-0 w-full max-w-[620px] bg-[#f7f8fa] shadow-2xl"
@@ -2339,8 +2668,9 @@ function StudentDrawer({
     className: "mb-4 flex items-center justify-between"
   }, React.createElement("span", {
     className: "text-sm font-bold"
-  }, "รายละเอียดผู้เรียน"), React.createElement("button", {
+  }, t("dashboard.studentDrawer.title", {}, "รายละเอียดผู้เรียน")), React.createElement("button", {
     onClick: onClose,
+    "aria-label": t("common.close", {}, "ปิด"),
     className: "rounded-lg bg-white/15 p-2"
   }, React.createElement(Icon, {
     name: "close",
@@ -2354,7 +2684,7 @@ function StudentDrawer({
     className: "min-w-0"
   }, React.createElement("h2", {
     className: "truncate text-xl font-extrabold"
-  }, safeStudent.name || "ไม่ระบุชื่อ"), React.createElement("div", {
+  }, safeStudent.name || t("dashboard.studentDrawer.unnamed", {}, "ไม่ระบุชื่อ")), React.createElement("div", {
     className: "truncate font-inter text-xs text-teal-100"
   }, safeStudent.email || "—"), React.createElement("div", {
     className: "mt-2 flex gap-2"
@@ -2374,37 +2704,51 @@ function StudentDrawer({
     className: "font-inter text-xl font-extrabold"
   }, safeStudent.quizText || "—"), React.createElement("div", {
     className: "mt-1 text-[10px] font-semibold text-slate-400"
-  }, "คะแนน Quiz")), React.createElement("div", {
+  }, t("dashboard.studentDrawer.quizScore", {}, "คะแนน Quiz"))), React.createElement("div", {
     className: "text-center"
   }, React.createElement("div", {
     className: "text-sm font-extrabold"
   }, chatbotLoading ? React.createElement("span", {
     role: "status",
-    "aria-label": "กำลังโหลดเวลาทำแบบฝึกหัด",
+    "aria-label": t("dashboard.studentDrawer.exerciseTimeLoading", {}, "กำลังโหลดเวลาทำแบบฝึกหัด"),
     className: "spinner inline-block h-4 w-4 rounded-full border-2 border-slate-200 border-t-brand-600 align-middle"
-  }) : formatDuration(detail?.chatbotSeconds)), React.createElement("div", {
+  }) : chatbotError ? React.createElement(ErrorStateIcon, {
+    message: chatbotError,
+    label: t("dashboard.studentDrawer.errorStatus", {}, "โหลดข้อมูลไม่สำเร็จ"),
+    align: "center"
+  }) : formatDuration(detail?.chatbotSeconds, t, formatNumber)), React.createElement("div", {
     className: "mt-1 text-[10px] font-semibold text-slate-400"
-  }, "เวลาทำแบบฝึกหัด"))), React.createElement("div", {
+  }, t("dashboard.studentDrawer.exerciseTime", {}, "เวลาทำแบบฝึกหัด")))), React.createElement("div", {
     className: "grid grid-cols-1 gap-3 sm:grid-cols-2"
   }, React.createElement(ProgressSummary, {
-    label: "ความคืบหน้าการอ่าน",
+    label: t("dashboard.studentDrawer.reading.title", {}, "ความคืบหน้าการอ่าน"),
     color: "#5ab877",
     summary: readingSummary,
     loading: readingLoading,
-    verbs: ["อ่านจบ", "กำลังอ่าน", "ยังไม่ได้อ่าน"]
+    error: readingError,
+    verbs: [
+      t("dashboard.studentDrawer.reading.done", {}, "อ่านจบ"),
+      t("dashboard.studentDrawer.reading.doing", {}, "กำลังอ่าน"),
+      t("dashboard.studentDrawer.reading.todo", {}, "ยังไม่ได้อ่าน")
+    ]
   }), React.createElement(ProgressSummary, {
-    label: "ความคืบหน้าวิดีโอ",
+    label: t("dashboard.studentDrawer.video.title", {}, "ความคืบหน้าวิดีโอ"),
     color: "#7b83eb",
     summary: videoSummary,
     loading: videoLoading,
-    verbs: ["ดูจบ", "กำลังดู", "ยังไม่ได้ดู"]
+    error: videoError,
+    verbs: [
+      t("dashboard.studentDrawer.video.done", {}, "ดูจบ"),
+      t("dashboard.studentDrawer.video.doing", {}, "กำลังดู"),
+      t("dashboard.studentDrawer.video.todo", {}, "ยังไม่ได้ดู")
+    ]
   })), React.createElement("div", {
     className: "rounded-[14px] border border-slate-200 bg-white p-4"
   }, React.createElement("h3", {
     className: "text-sm font-bold"
-  }, "หัวข้อการเรียนรู้รายบท"), React.createElement("p", {
+  }, t("dashboard.studentDrawer.chapters.title", {}, "หัวข้อการเรียนรู้รายบท")), React.createElement("p", {
     className: "mt-0.5 text-[11px] text-slate-400"
-  }, "สถานะการเรียนและเครื่องมือที่ใช้ในแต่ละบท"), React.createElement("div", {
+  }, t("dashboard.studentDrawer.chapters.subtitle", {}, "สถานะการเรียนและเครื่องมือที่ใช้ในแต่ละบท")), React.createElement("div", {
     className: "mt-3 divide-y divide-slate-100"
   }, chapters.map(activity => React.createElement("div", {
     key: activity.id,
@@ -2425,32 +2769,43 @@ function StudentDrawer({
   }, activity.tools.map(tool => React.createElement(ProgressToolBadge, {
     key: `${activity.id}-${tool.id || tool.label}`,
     tool: tool
-  }))))))), API.debug && detail?.errors?.length > 0 && React.createElement("div", {
-    className: "rounded-[14px] border border-red-200 bg-white p-4 text-[11px] text-red-700"
-  }, React.createElement("b", null, "ปัญหาการดึงข้อมูล"), detail.errors.map(message => React.createElement("div", {
-    key: message,
-    className: "mt-1 break-all font-mono"
-  }, message))))));
+  })))))), !chapters.length && React.createElement("div", {
+    className: "py-6 text-center text-xs font-semibold text-slate-400"
+  }, t("dashboard.studentDrawer.chapters.empty", {}, "ยังไม่มีหัวข้อการเรียนรู้"))))));
 }
 function ProgressRing({
   value
 }) {
+  const {
+    t,
+    formatNumber
+  } = window.TeacherI18n.useI18n();
+  const progress = API.clamp(value);
   return React.createElement("div", {
     className: "relative mx-auto h-[78px] w-[78px] rounded-full",
+    role: "img",
+    "aria-label": t("dashboard.studentDrawer.progressAria", {
+      value: formatNumber(Math.round(progress))
+    }, `ความคืบหน้า ${formatNumber(Math.round(progress))}%`),
     style: {
-      background: `conic-gradient(#14b8a6 ${value * 3.6}deg,#e5e7eb 0deg)`
+      background: `conic-gradient(#14b8a6 ${progress * 3.6}deg,#e5e7eb 0deg)`
     }
   }, React.createElement("span", {
     className: "absolute inset-[10px] flex items-center justify-center rounded-full bg-white font-inter text-lg font-extrabold text-brand-700"
-  }, Math.round(value), "%"));
+  }, formatNumber(Math.round(progress)), "%"));
 }
 function ProgressSummary({
   label,
   color,
   summary,
   loading = false,
+  error = "",
   verbs
 }) {
+  const {
+    t,
+    formatNumber
+  } = window.TeacherI18n.useI18n();
   const rows = [[verbs[0], summary.done, "#22c55e"], [verbs[1], summary.doing, "#f97316"], [verbs[2], summary.todo, "#d0d5dd"]];
   return React.createElement("div", {
     className: "rounded-[14px] border border-slate-200 bg-white p-4"
@@ -2479,21 +2834,26 @@ function ProgressSummary({
     className: "font-inter text-slate-700"
   }, loading ? React.createElement("span", {
     role: "status",
-    "aria-label": "กำลังโหลด",
+    "aria-label": t("common.loading", {}, "กำลังโหลด..."),
     className: "spinner inline-block h-3.5 w-3.5 rounded-full border-2 border-slate-200 border-t-brand-600 align-middle"
-  }) : value ?? "—")))));
+  }) : error ? React.createElement(ErrorStateIcon, {
+    message: error,
+    label: t("dashboard.studentDrawer.errorStatus", {}, "โหลดข้อมูลไม่สำเร็จ"),
+    compact: true
+  }) : value == null ? "—" : formatNumber(value))))));
 }
 function ModalShell({
   children,
   onClose,
   wide = false
 }) {
+  const { t } = window.TeacherI18n.useI18n();
   return React.createElement("div", {
     className: "fixed inset-0 z-[1300] flex items-center justify-center p-0 sm:p-6"
   }, React.createElement("button", {
     onClick: onClose,
     className: "absolute inset-0 bg-slate-900/50",
-    "aria-label": "ปิด"
+    "aria-label": t("common.close", {}, "ปิด")
   }), React.createElement("div", {
     className: cx("animate-fade-up relative flex max-h-full w-full flex-col overflow-hidden bg-white shadow-2xl sm:max-h-[88dvh] sm:rounded-[18px]", wide ? "sm:max-w-[820px]" : "sm:max-w-[420px]")
   }, children));
@@ -2554,6 +2914,7 @@ function AddClassroomModal({
   onClose,
   onAdded
 }) {
+  const { t } = window.TeacherI18n.useI18n();
   const isStaff = ["staff", "admin"].includes(teacher.role);
   const [filters, setFilters] = useState({
     instituteId: teacher.instituteId || "",
@@ -2569,15 +2930,17 @@ function AddClassroomModal({
   const [selectedCourse, setSelectedCourse] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [saveError, setSaveError] = useState("");
   const searchTimer = useRef(null);
   const loadCourses = useCallback(async nextFilters => {
     if (!nextFilters.instituteId) {
       setCourses([]);
+      setLoadError("");
       return;
     }
     setLoading(true);
-    setError("");
+    setLoadError("");
     try {
       const query = {
         instituteId: nextFilters.instituteId,
@@ -2601,8 +2964,8 @@ function AddClassroomModal({
         enrolls: Array.isArray(course.enrolls) ? course.enrolls : []
       })));
     } catch (cause) {
-      setError(`โหลดรายวิชาไม่สำเร็จ: ${cause.message}`);
       setCourses([]);
+      setLoadError(cause.message || String(cause));
     } finally {
       setLoading(false);
     }
@@ -2637,8 +3000,9 @@ function AddClassroomModal({
           id: item.instituteId || item.institute_id || "",
           label: `${item.instituteName || item.name || ""}${item.district ? ` (${item.district}${item.province ? `, ${item.province}` : ""})` : ""}`
         })));
-      } catch (_) {
+      } catch (cause) {
         setInstitutes([]);
+        setLoadError(cause.message || String(cause));
       }
     }, 450);
   };
@@ -2655,7 +3019,7 @@ function AddClassroomModal({
   const save = async () => {
     if (!selectedCourse || saving) return;
     setSaving(true);
-    setError("");
+    setSaveError("");
     try {
       await API.endpoints.createAssignment({
         userId: teacher.sub,
@@ -2671,7 +3035,7 @@ function AddClassroomModal({
       await onAdded();
       onClose();
     } catch (cause) {
-      setError(`เพิ่มห้องเรียนไม่สำเร็จ: ${cause.message}`);
+      setSaveError(cause.message || String(cause));
     } finally {
       setSaving(false);
     }
@@ -2745,9 +3109,13 @@ function AddClassroomModal({
     className: "scrolly flex min-h-[280px] flex-1 flex-col gap-2.5 px-6 py-3"
   }, loading ? React.createElement(Spinner, {
     label: "กำลังโหลดรายวิชา..."
-  }) : error ? React.createElement("div", {
-    className: "p-10 text-center text-sm font-semibold text-red-600"
-  }, error) : courses.length ? courses.map(course => React.createElement("button", {
+  }) : loadError ? React.createElement("div", {
+    className: "flex flex-1 flex-col items-center justify-center gap-2 p-10 text-center text-sm font-semibold text-red-600"
+  }, React.createElement(ErrorStateIcon, {
+    message: loadError,
+    label: t("common.error", {}, "เกิดข้อผิดพลาด"),
+    align: "center"
+  }), React.createElement("span", null, t("dashboard.studentDrawer.errorHint", {}, "วางเมาส์หรือโฟกัสที่เครื่องหมายตกใจเพื่อดูสาเหตุ"))) : courses.length ? courses.map(course => React.createElement("button", {
     key: course.courseId,
     onClick: () => setSelectedCourse(selectedCourse === course.courseId ? "" : course.courseId),
     className: cx("card-lift flex items-center gap-3 rounded-[13px] border p-4 text-left", selectedCourse === course.courseId ? "border-brand-600 bg-brand-50" : "border-slate-200 bg-white")
@@ -2763,7 +3131,14 @@ function AddClassroomModal({
     className: "p-10 text-center text-sm font-semibold text-slate-400"
   }, isStaff && !filters.instituteId ? "เลือกโรงเรียนเพื่อดูรายวิชา" : "ไม่พบรายวิชาตามเงื่อนไข")), React.createElement("div", {
     className: "flex shrink-0 items-center justify-end gap-2.5 border-t border-slate-100 px-6 py-4"
-  }, selectedCourse && React.createElement("span", {
+  }, saveError ? React.createElement("span", {
+    className: "mr-auto flex items-center gap-2 text-xs font-semibold text-red-600"
+  }, React.createElement(ErrorStateIcon, {
+    message: saveError,
+    label: t("common.error", {}, "เกิดข้อผิดพลาด"),
+    compact: true,
+    align: "left"
+  }), t("common.error", {}, "เกิดข้อผิดพลาด")) : selectedCourse && React.createElement("span", {
     className: "mr-auto text-xs font-semibold text-brand-700"
   }, "เลือกแล้ว 1 รายวิชา"), React.createElement("button", {
     onClick: onClose,
@@ -2797,11 +3172,22 @@ function RemoveModal({
   onClose,
   onRemoved
 }) {
+  const { t } = window.TeacherI18n.useI18n();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const remove = async () => {
     if (!course.assignId || saving) {
-      if (!course.assignId) setError("ห้องเรียนนี้ไม่มี assignId จึงนำออกไม่ได้");
+      if (!course.assignId) {
+        const message = "ห้องเรียนนี้ไม่มี assignId จึงนำออกไม่ได้";
+        API.manager.reportIssue("Remove classroom input", "ห้องเรียนนี้ไม่มี assignId จึงนำออกไม่ได้", {
+          url: "client://classroom/remove",
+          context: {
+            classroomId: course?.id || "",
+            classroomTitle: course?.title || ""
+          }
+        });
+        setError(message);
+      }
       return;
     }
     setSaving(true);
@@ -2811,7 +3197,7 @@ function RemoveModal({
       await onRemoved();
       onClose();
     } catch (cause) {
-      setError(`นำห้องเรียนออกไม่สำเร็จ: ${cause.message}`);
+      setError(cause.message || String(cause));
     } finally {
       setSaving(false);
     }
@@ -2832,8 +3218,13 @@ function RemoveModal({
   }, "ห้องเรียน ", React.createElement("b", {
     className: "text-slate-700"
   }, course.title), " จะถูกนำออกจากรายการของคุณ"))), error && React.createElement("div", {
-    className: "mx-6 mb-3 rounded-[10px] border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-600"
-  }, error), React.createElement("div", {
+    className: "mx-6 mb-3 flex items-center gap-2 rounded-[10px] border border-red-100 bg-red-50 p-3 text-xs font-semibold text-red-600"
+  }, React.createElement(ErrorStateIcon, {
+    message: error,
+    label: t("common.error", {}, "เกิดข้อผิดพลาด"),
+    compact: true,
+    align: "left"
+  }), t("common.error", {}, "เกิดข้อผิดพลาด")), React.createElement("div", {
     className: "flex justify-end gap-2.5 border-t border-slate-100 px-6 py-4"
   }, React.createElement("button", {
     onClick: onClose,
@@ -2846,31 +3237,39 @@ function RemoveModal({
   }, saving ? "กำลังนำออก..." : "นำออก")));
 }
 function LoadingOverlay() {
+  const { t } = window.TeacherI18n.useI18n();
   return React.createElement("div", {
     className: "fixed inset-0 z-[1400] flex items-center justify-center bg-slate-100/70 backdrop-blur-sm"
   }, React.createElement("div", {
     className: "rounded-2xl border border-slate-200 bg-white px-9 py-6 shadow-float"
   }, React.createElement(Spinner, {
-    label: "กำลังโหลดข้อมูลห้องเรียน..."
+    label: t("loading.classroom", {}, "กำลังโหลดข้อมูลห้องเรียน...")
   })));
 }
-function ErrorToast({
+function GlobalErrorNotice({
   message,
   onClose
 }) {
+  const { t } = window.TeacherI18n.useI18n();
   return React.createElement("div", {
-    className: "fixed left-1/2 top-[70px] z-[1500] flex w-[min(520px,calc(100vw-24px))] -translate-x-1/2 items-center gap-3 rounded-xl border border-red-200 border-l-4 border-l-red-500 bg-white px-4 py-3 shadow-float"
-  }, React.createElement("span", null, "⚠️"), React.createElement("span", {
-    className: "flex-1 text-xs font-semibold leading-5 text-red-700"
-  }, message), React.createElement("button", {
+    className: "fixed left-1/2 top-[70px] z-[1500] flex w-[min(460px,calc(100vw-24px))] -translate-x-1/2 items-center gap-3 rounded-xl border border-red-100 bg-white px-4 py-3 shadow-float"
+  }, React.createElement(ErrorStateIcon, {
+    message,
+    label: t("common.error", {}, "เกิดข้อผิดพลาด"),
+    align: "left"
+  }), React.createElement("span", {
+    className: "flex-1 text-xs font-semibold text-slate-600"
+  }, t("dashboard.studentDrawer.errorHint", {}, "วางเมาส์หรือโฟกัสที่เครื่องหมายตกใจเพื่อดูสาเหตุ")), React.createElement("button", {
     onClick: onClose,
-    className: "rounded-lg bg-red-50 p-1.5 text-red-700"
+    "aria-label": t("common.close", {}, "ปิด"),
+    className: "rounded-lg bg-slate-100 p-1.5 text-slate-500"
   }, React.createElement(Icon, {
     name: "close",
     size: 13
   })));
 }
 function SessionExpired() {
+  const { t } = window.TeacherI18n.useI18n();
   return React.createElement("div", {
     className: "fixed inset-0 z-[1600] flex items-center justify-center bg-slate-900/60 p-5 backdrop-blur-sm"
   }, React.createElement("div", {
@@ -2879,11 +3278,13 @@ function SessionExpired() {
     className: "mx-auto flex h-[52px] w-[52px] items-center justify-center rounded-full bg-orange-50 text-2xl font-extrabold text-orange-700"
   }, "!"), React.createElement("h2", {
     className: "mt-4 text-xl font-extrabold"
-  }, "เซสชันหมดอายุ"), React.createElement("p", {
+  }, t("auth.sessionExpiredTitle", {}, "เซสชันหมดอายุ")), React.createElement("p", {
     className: "mt-2 text-[13px] leading-6 text-slate-500"
-  }, "เพื่อความปลอดภัย ระบบได้ออกจากระบบแล้ว กรุณาเข้าสู่ระบบอีกครั้งเพื่อโหลดข้อมูลต่อ"), React.createElement("button", {
+  }, t("auth.sessionExpiredDescription", {}, "เพื่อความปลอดภัย ระบบได้ออกจากระบบแล้ว กรุณาเข้าสู่ระบบอีกครั้งเพื่อโหลดข้อมูลต่อ")), React.createElement("button", {
     onClick: API.startLogin,
     className: "mt-5 w-full rounded-full bg-gradient-to-r from-teal-500 to-brand-600 px-5 py-3 text-sm font-bold text-white"
-  }, "เข้าสู่ระบบอีกครั้ง")));
+  }, t("auth.signInAgain", {}, "เข้าสู่ระบบอีกครั้ง"))));
 }
-ReactDOM.createRoot(document.getElementById("app")).render(React.createElement(App, null));
+ReactDOM.createRoot(document.getElementById("app")).render(
+  React.createElement(window.TeacherI18n.Provider, null, React.createElement(App, null))
+);

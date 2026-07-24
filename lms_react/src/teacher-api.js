@@ -130,6 +130,26 @@
       });
       notify();
     };
+    const reportIssue = (label, error, details = {}) => {
+      const startedAt = Date.now();
+      const message = error?.message || String(error || "Unknown issue");
+      return addEntry({
+        id: ++sequence,
+        label: label || "Client issue",
+        url: String(details.url || "client://teacher-dashboard"),
+        method: String(details.method || "LOCAL").toUpperCase(),
+        auth: false,
+        authSent: false,
+        at: new Date(startedAt).toLocaleTimeString("th-TH"),
+        startedAt,
+        completedAt: startedAt,
+        durationMs: 0,
+        state: "error",
+        ok: false,
+        error: message,
+        sample: debug && details.context !== undefined ? sanitize(details.context) : undefined
+      });
+    };
 
     async function request(url, options = {}) {
       const method = String(options.method || "GET").toUpperCase();
@@ -250,6 +270,7 @@
     return {
       entries,
       request,
+      reportIssue,
       subscribe(listener) {
         listeners.add(listener);
         return () => listeners.delete(listener);
@@ -776,6 +797,9 @@
       readingLoading: true,
       videoLoading: true,
       chatbotLoading: true,
+      readingError: null,
+      videoError: null,
+      chatbotError: null,
       reading: null,
       video: null,
       readingEntries: [],
@@ -798,62 +822,105 @@
     const courseId = safeClassroom.courseId;
     const email = String(safeStudent.email || "").trim();
     if (!courseId || !email) {
-      errors.push("ไม่พบ courseId หรืออีเมลนักเรียน");
+      const message = "ไม่พบ courseId หรืออีเมลนักเรียน";
+      errors.push(message);
+      apiManager.reportIssue("Student detail input", message, {
+        url: "client://student-details/input",
+        context: {
+          studentId: safeStudent.id || "",
+          hasEmail: Boolean(email),
+          hasCourseId: Boolean(courseId)
+        }
+      });
       publish({
         loading: false,
         readingLoading: false,
         videoLoading: false,
-        chatbotLoading: false
+        chatbotLoading: false,
+        readingError: message,
+        videoError: message,
+        chatbotError: message
       });
       return result;
     }
 
     const readingTask = (async () => {
       let readings = [];
+      let readingError = null;
       try {
         readings = readingEntries(await endpoints.bookroll(email, courseId), courseId);
-        if (!readings.length) errors.push("BookRoll: ตอบกลับสำเร็จแต่อ่านค่าความคืบหน้าไม่ได้");
+        if (expectedReading > 0 && !readings.length) {
+          const message = "BookRoll: ตอบกลับสำเร็จแต่อ่านค่าความคืบหน้าไม่ได้";
+          readingError = message;
+          errors.push(message);
+          apiManager.reportIssue("BookRoll data normalization", message, {
+            url: "client://student-details/bookroll",
+            context: { courseId, email }
+          });
+        }
       } catch (error) {
-        errors.push(`BookRoll: ${error.message}`);
+        readingError = `BookRoll: ${error.message}`;
+        errors.push(readingError);
       }
       publish({
         reading: summarize(readings.map((entry) => entry.progress), expectedReading),
         readingEntries: readings,
-        readingLoading: false
+        readingLoading: false,
+        readingError
       });
     })();
     const videoTask = (async () => {
       let videos = [];
+      let videoError = null;
       try {
         videos = videoEntries(await endpoints.video(email, courseId));
-        if (!videos.length) errors.push("Video: ตอบกลับสำเร็จแต่อ่านค่าความคืบหน้าไม่ได้");
+        if (expectedVideo > 0 && !videos.length) {
+          const message = "Video: ตอบกลับสำเร็จแต่อ่านค่าความคืบหน้าไม่ได้";
+          videoError = message;
+          errors.push(message);
+          apiManager.reportIssue("Video data normalization", message, {
+            url: "client://student-details/video",
+            context: { courseId, email }
+          });
+        }
       } catch (error) {
-        errors.push(`Video: ${error.message}`);
+        videoError = `Video: ${error.message}`;
+        errors.push(videoError);
       }
       publish({
         video: summarize(videos.map((entry) => entry.progress), expectedVideo),
         videoEntries: videos,
-        videoLoading: false
+        videoLoading: false,
+        videoError
       });
     })();
     const chatbotTask = (async () => {
       let seconds = null;
       let chatbots = [];
+      let chatbotError = null;
       try {
         const payload = await endpoints.chatbot(email, courseId);
         chatbots = chatbotEntries(payload, courseId);
         seconds = payload ? chatbotSeconds(payload) : null;
-        if (!chatbots.length && !Number.isFinite(seconds)) {
-          errors.push("Chatbot: ตอบกลับสำเร็จแต่อ่านข้อมูล Quiz ไม่ได้");
+        if (expectedChatbot > 0 && !chatbots.length && !Number.isFinite(seconds)) {
+          const message = "Chatbot: ตอบกลับสำเร็จแต่อ่านข้อมูล Quiz ไม่ได้";
+          chatbotError = message;
+          errors.push(message);
+          apiManager.reportIssue("Chatbot data normalization", message, {
+            url: "client://student-details/chatbot",
+            context: { courseId, email }
+          });
         }
       } catch (error) {
-        errors.push(`Chatbot: ${error.message}`);
+        chatbotError = `Chatbot: ${error.message}`;
+        errors.push(chatbotError);
       }
       publish({
         chatbot: summarize(chatbots.map((entry) => entry.progress), expectedChatbot),
         chatbotEntries: chatbots,
         chatbotSeconds: seconds,
-        chatbotLoading: false
+        chatbotLoading: false,
+        chatbotError
       });
     })();
 
