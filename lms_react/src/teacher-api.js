@@ -14,6 +14,7 @@
     baseUrl: runtime.baseUrl || "https://adaptive-profile-bn.ae.app.meca.in.th",
     bookrollBaseUrl: runtime.bookrollBaseUrl || "https://adaptive-profile-bn.ae.app.meca.in.th",
     sbsUrl: runtime.sbsUrl || "https://sbs-backend.mooc.meca.in.th",
+    overviewUrl: runtime.overviewUrl || "https://api.lead.in.th/stats/overview",
     clientId: runtime.clientId || "dashboard"
   };
   const oidc = {
@@ -292,7 +293,7 @@
 
   async function startLogin() {
     if (global.location.protocol === "file:") {
-      global.alert("หน้า Preview เปิดสำเร็จแล้ว แต่การเข้าสู่ระบบและ API ต้องเปิดผ่าน HTTP/HTTPS กรุณารัน: python3 -m http.server 3000");
+      global.alert("ไม่สามารถเข้าสู่ระบบได้ กรุณาเข้าใช้งานผ่านเว็บไซต์ของระบบ");
       return;
     }
     const verifier = base64Url(crypto.getRandomValues(new Uint8Array(32)));
@@ -460,7 +461,7 @@
         name,
         initials: initials(name),
         province: row.province || "-",
-        room: (/\d/.test(row.levelOfEducation || "") ? String(row.levelOfEducation).trim() : "") || row.province || "-",
+        room: String(row.levelOfEducation || "").trim() || "-",
         progress,
         updated: formatDate(row.lastUpdate),
         lastUpdate: row.lastUpdate || null,
@@ -685,6 +686,23 @@
         progress
       });
     };
+    // Chatbot API v2: one response contains collections, quizzes, and attempt history.
+    const collections = Array.isArray(payload?.collections) ? payload.collections : [];
+    collections.forEach((collection) => {
+      const quizzes = Array.isArray(collection?.quizzes) ? collection.quizzes : [];
+      quizzes.forEach((quiz) => {
+        push(
+          quiz?.title,
+          quiz?.best_correct_count,
+          quiz?.best_total_count ?? quiz?.max_questions,
+          quiz?.best_score_pct ?? quiz?.latest_score_pct ?? quiz?.avg_score_pct,
+          quiz?.quiz_id || quiz?.share_code || collection?.collection_id
+            || collection?.collection_code || collection?.lead_label
+        );
+      });
+    });
+    if (output.length) return output;
+
     const option = chartOption(payload);
     const axes = [option.yAxis, option.xAxis].flat();
     const labels = axes.find((axis) => Array.isArray(axis?.data))?.data || [];
@@ -707,14 +725,17 @@
       if (!value || typeof value !== "object") return;
       const nextUsageId = value.usageId || value.usage_id || value.usageKey || value.usage_key
         || value.moduleId || value.module_id || value.blockId || value.block_id
-        || value.courseId || value.course_id || value.id || inheritedUsageId;
+        || value.courseId || value.course_id || value.quiz_id || value.collection_id
+        || value.id || inheritedUsageId;
       const directProgress = Number(value.progress ?? value.progressRate ?? value.quizProgress
-        ?? value.quiz_progress ?? value.rate ?? value.percent ?? value.percentage);
+        ?? value.quiz_progress ?? value.rate ?? value.percent ?? value.percentage
+        ?? value.best_score_pct ?? value.latest_score_pct ?? value.avg_score_pct);
       const scoreValue = value.score ?? value.chatbotScore ?? value.chatbot_score
         ?? value.correct ?? value.correctCount ?? value.correct_count
-        ?? value.earned ?? value.points ?? value.result?.score;
+        ?? value.best_correct_count ?? value.earned ?? value.points ?? value.result?.score;
       const totalValue = value.total ?? value.chatbotTotal ?? value.chatbot_total
         ?? value.max ?? value.maxScore ?? value.max_score
+        ?? value.best_total_count ?? value.total_count
         ?? value.questions ?? value.questionCount ?? value.question_count
         ?? value.totalQuestions ?? value.total_questions ?? value.result?.total;
       const ratio = typeof scoreValue === "string"
@@ -744,6 +765,23 @@
     return output;
   }
   function chatbotSeconds(payload) {
+    const collections = Array.isArray(payload?.collections) ? payload.collections : [];
+    const apiV2Times = collections.flatMap((collection) => {
+      const quizzes = Array.isArray(collection?.quizzes) ? collection.quizzes : [];
+      return quizzes.flatMap((quiz) => {
+        const attempts = Array.isArray(quiz?.attempt_history) ? quiz.attempt_history : [];
+        const attemptTimes = attempts
+          .map((attempt) => Number(attempt?.total_time_seconds))
+          .filter(Number.isFinite);
+        if (attemptTimes.length) return attemptTimes;
+        const averageTime = Number(quiz?.avg_time_seconds);
+        return Number.isFinite(averageTime) ? [averageTime] : [];
+      });
+    });
+    if (apiV2Times.length) {
+      return apiV2Times.reduce((sum, value) => sum + Math.max(0, value), 0);
+    }
+
     const series = chartOption(payload)?.series || [];
     const timeSeries = series.find((item) => /time|speed|duration|elapsed|เวลา/i.test(String(item?.name || "")));
     const chartValues = (Array.isArray(timeSeries?.data) ? timeSeries.data : []).map(chartNumber).filter(Number.isFinite);
@@ -764,6 +802,7 @@
       "totalSeconds", "total_seconds",
       "durationSeconds", "duration_seconds", "elapsedSeconds", "elapsed_seconds",
       "timeSpent", "time_spent", "totalTime", "total_time",
+      "avg_time_seconds", "total_time_seconds",
       "duration", "elapsed", "seconds", "time"
     ];
     const collect = (value) => {
@@ -936,15 +975,19 @@
 
   async function overview() {
     if (global.location.protocol === "file:") {
-      throw new Error("โหมด Preview — เปิดผ่าน HTTP เพื่อโหลดข้อมูลภาพรวมจริง");
+      throw new Error("ไม่สามารถโหลดข้อมูลภาพรวมได้");
     }
-    const url = new URL("./References/overview.json", global.location.href);
+    const url = new URL(config.overviewUrl, global.location.href);
     url.searchParams.set("v", Date.now());
-    return request(url, {
+    const payload = await request(url, {
       auth: false,
       cache: "no-store",
-      label: "ข้อมูลภาพรวม Dashboard"
+      label: "ข้อมูลภาพรวม Dashboard (Realtime)"
     });
+    if (!payload || !Array.isArray(payload.slides) || !payload.slides.length || !Array.isArray(payload.points)) {
+      throw new Error("ข้อมูลภาพรวม Dashboard (Realtime) มี schema ไม่ถูกต้อง");
+    }
+    return payload;
   }
 
   global.TeacherAPI = {

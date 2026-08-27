@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <title>Recommended Unified API — Student Learning Tools</title>
+  <style>
+    @page { size: A4; margin: 18mm 17mm; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: #203044;
+      background: #fff;
+      font-family: "Noto Sans Thai", "Thonburi", "Tahoma", sans-serif;
+      font-size: 10.3pt;
+      line-height: 1.5;
+    }
+    h1, h2, h3, h4 {
+      margin-top: 0;
+      color: #123b66;
+      font-family: "Noto Sans Thai", "Thonburi", "Tahoma", sans-serif;
+      line-height: 1.25;
+    }
+    h1 { margin-bottom: 8pt; font-size: 27pt; }
+    h2 {
+      margin: 21pt 0 9pt;
+      padding-bottom: 5pt;
+      border-bottom: 2px solid #d7e6f2;
+      font-size: 17pt;
+    }
+    h3 { margin: 15pt 0 6pt; color: #1c638f; font-size: 13pt; }
+    h4 { margin: 11pt 0 5pt; color: #294d68; font-size: 11pt; }
+    p { margin: 0 0 7pt; }
+    ul, ol { margin: 4pt 0 9pt 18pt; padding-left: 6pt; }
+    li { margin-bottom: 3pt; }
+    code {
+      color: #174d74;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 8.7pt;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .cover { padding-top: 23mm; }
+    .eyebrow {
+      margin-bottom: 12pt;
+      color: #247aa9;
+      font-size: 10pt;
+      font-weight: 700;
+      letter-spacing: 1.5pt;
+      text-transform: uppercase;
+    }
+    .subtitle {
+      max-width: 155mm;
+      margin-bottom: 22pt;
+      color: #526a7d;
+      font-size: 15pt;
+      line-height: 1.45;
+    }
+    .meta { width: 100%; margin-bottom: 26pt; border-collapse: collapse; }
+    .meta td { padding: 5pt 8pt; border-bottom: 1px solid #dbe5ec; vertical-align: top; }
+    .meta td:first-child { width: 34mm; color: #60798c; font-weight: 700; }
+    .cover-box { width: 100%; margin-top: 27mm; border-collapse: collapse; }
+    .cover-box td {
+      padding: 12pt 14pt;
+      color: #526a7d;
+      border: 1px solid #cfe1ee;
+      border-left: 4px solid #2c82b5;
+      background: #f2f8fc;
+    }
+    .page-break {
+      margin: 0; padding: 0; font-size: 0; line-height: 0;
+      page-break-before: always;
+    }
+    .lead { color: #405b70; font-size: 12pt; line-height: 1.58; }
+    .callout {
+      margin: 9pt 0 12pt;
+      padding: 10pt 12pt;
+      border: 1px solid #cfe1ee;
+      border-left: 5px solid #2c82b5;
+      background: #f5f9fc;
+    }
+    .callout strong { color: #123b66; }
+    .callout.success { border-color: #bfdfd2; border-left-color: #2b8b68; background: #f1faf6; }
+    .callout.warning { border-color: #f1ddae; border-left-color: #d69a21; background: #fff9eb; }
+    .callout.danger { border-color: #efc8c5; border-left-color: #cf5148; background: #fff5f4; }
+    table.data {
+      width: 100%; margin: 7pt 0 14pt;
+      border-collapse: collapse; table-layout: fixed;
+      font-size: 8.6pt; line-height: 1.4;
+    }
+    table.data th {
+      padding: 7pt 6pt;
+      color: #fff; background: #1d6493;
+      border: 1px solid #174f78;
+      text-align: left; vertical-align: top;
+    }
+    table.data td {
+      padding: 6pt;
+      border: 1px solid #d5e0e8;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    table.data tr:nth-child(even) td { background: #f7fafc; }
+    table.data tr { page-break-inside: avoid; }
+    table.arch {
+      width: 100%; margin: 8pt 0 15pt;
+      border-collapse: separate; border-spacing: 5pt;
+      table-layout: fixed;
+    }
+    table.arch td {
+      padding: 9pt;
+      text-align: center; vertical-align: middle;
+      border: 1px solid #cfe0ec;
+      background: #f7fbfe;
+    }
+    table.arch .primary { color: #fff; background: #1d6493; border-color: #1d6493; font-weight: 700; }
+    table.arch .gateway { color: #123b66; background: #eaf4fa; border: 2px solid #2c82b5; font-weight: 700; }
+    table.arch .arrow { width: 12mm; color: #2c82b5; background: #fff; border: 0; font-size: 16pt; font-weight: 700; }
+    .json {
+      margin: 6pt 0 10pt;
+      padding: 9pt 10pt;
+      color: #173b53;
+      border: 1px solid #d6e2ea;
+      background: #f5f8fa;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 8.1pt;
+      line-height: 1.42;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .method { color: #1d6493; font-weight: 700; }
+    .tag {
+      display: inline-block;
+      margin: 0 3pt 2pt 0;
+      padding: 1pt 5pt;
+      color: #1a5d87;
+      border: 1px solid #bed8e8;
+      background: #edf6fb;
+      font-size: 8pt;
+      font-weight: 700;
+    }
+    .small { color: #62798a; font-size: 8.7pt; }
+    .compact p, .compact li { margin-bottom: 2pt; }
+    .footer-note {
+      margin-top: 20pt; padding-top: 8pt;
+      color: #718797; border-top: 1px solid #dbe5ec;
+      font-size: 8.4pt;
+    }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <div class="eyebrow">Target API Design</div>
+    <h1>Recommended Unified API</h1>
+    <p class="subtitle">แนวทางออกแบบ API กลางสำหรับ Student Learning Tools ให้ BookRoll, Video, Chatbot, VK และ Adaptive Quiz ไปในทิศทางเดียวกัน</p>
+    <table class="meta">
+      <tr><td>สำหรับ</td><td>Product, API Platform, Backend, Frontend และ QA</td></tr>
+      <tr><td>ขอบเขต</td><td>Student Dashboard v2 และ adapter ของเครื่องมือการเรียน</td></tr>
+      <tr><td>สถานะ</td><td>ข้อเสนอสำหรับหารือและจัดทำ OpenAPI contract ต่อ</td></tr>
+      <tr><td>วันที่จัดทำ</td><td>14 สิงหาคม 2026</td></tr>
+    </table>
+    <table class="cover-box">
+      <tr><td><strong>แนวคิดหลัก</strong><br>Browser เรียก API Gateway เพียงระบบเดียวด้วย OIDC Bearer token ส่วน Gateway รับผิดชอบการแปลง identifier, จัดการ secret, เรียก upstream และ normalize response ของทุกเครื่องมือให้อยู่ใน schema เดียวกัน</td></tr>
+    </table>
+  </section>
+
+  <p class="page-break">&nbsp;</p>
+  <h2>1. Recommendation summary</h2>
+  <p class="lead">ปัญหาปัจจุบันไม่ใช่เพียงชื่อ endpoint ต่างกัน แต่รวมถึง identifier, authentication, response shape, ความหมายของ missing data และวิธีจัดการ error ที่ไม่เหมือนกัน ข้อเสนอคือเพิ่ม <strong>Learning Data Gateway</strong> เป็น contract กลาง โดยยังคง upstream เดิมไว้หลัง adapter ในช่วง migration</p>
+
+  <div class="callout success">
+    <strong>Target state:</strong> Frontend ส่งเพียง Bearer token และ <code>course_id</code> จากนั้นใช้ endpoint pattern และ JSON schema เดียวกันทุกเครื่องมือ ไม่ส่ง email, UUID หรือ API key ไปยัง tool service โดยตรง
+  </div>
+
+  <ol>
+    <li>ใช้ OIDC <code>sub</code> เป็น learner identity หลัก และ resolve email ภายใน Gateway</li>
+    <li>ใช้ stable course/activity ID จาก course structure เป็น canonical ID</li>
+    <li>ใช้ path pattern เดียวกัน: <code>/api/v1/me/courses/{course_id}/tools/{tool_type}/...</code></li>
+    <li>ทุก response ใช้ common envelope, summary, activity และ error schema เดียวกัน</li>
+    <li>ข้อมูลเฉพาะเครื่องมืออยู่ใน <code>metrics</code> โดยไม่ทำให้ field กลางเปลี่ยนความหมาย</li>
+    <li>Gateway จัดการ upstream API key, CORS, timeout, retry, cache และ observability</li>
+    <li>Overall progress คำนวณฝั่ง Backend พร้อมส่งสูตร, weights และ missing-data policy กลับมาอย่างโปร่งใส</li>
+    <li>รองรับ partial response เพื่อให้ dashboard แสดงข้อมูลส่วนที่สำเร็จได้</li>
+  </ol>
+
+  <h2>2. Target architecture</h2>
+
+  <table class="arch">
+    <tr>
+      <td class="primary">Student Web<br><small>Bearer token + course_id</small></td>
+      <td class="arrow">→</td>
+      <td class="gateway">Learning Data Gateway<br><small>Auth • ID mapping • normalization</small></td>
+    </tr>
+  </table>
+  <table class="arch">
+    <tr>
+      <td>Course Adapter<br><small>SBS</small></td>
+      <td>Reading Adapter<br><small>BookRoll</small></td>
+      <td>Video Adapter<br><small>Viola</small></td>
+    </tr>
+    <tr>
+      <td>Quiz Adapter<br><small>Chatbot / Adaptive</small></td>
+      <td>VK Adapter<br><small>VK Analysis</small></td>
+      <td>Policy + Cache<br><small>Progress / timeout</small></td>
+    </tr>
+  </table>
+
+  <h3>หน้าที่ของ Gateway</h3>
+  <table class="data">
+    <colgroup><col style="width:27%"><col style="width:73%"></colgroup>
+    <thead><tr><th>ความรับผิดชอบ</th><th>แนวทาง</th></tr></thead>
+    <tbody>
+      <tr><td>Authentication</td><td>ตรวจ OIDC Bearer token และ resolve <code>learner_id = sub</code></td></tr>
+      <tr><td>Identity mapping</td><td>Map <code>sub ↔ email ↔ upstream user key</code> ภายในระบบ ไม่ให้ frontend เดา identifier</td></tr>
+      <tr><td>Secret management</td><td>เก็บ API key/credential ใน server-side secret store และไม่ส่งให้ browser</td></tr>
+      <tr><td>Normalization</td><td>แปลง response ของทุก tool เป็น common schema และหน่วยมาตรฐาน</td></tr>
+      <tr><td>Reliability</td><td>กำหนด timeout, retry เฉพาะ safe request, circuit breaker และ concurrency limit</td></tr>
+      <tr><td>Aggregation</td><td>เรียก adapter แบบขนานและส่ง partial result พร้อมสถานะราย tool</td></tr>
+      <tr><td>Observability</td><td>สร้าง request ID, latency, upstream status และ structured logs</td></tr>
+    </tbody>
+  </table>
+
+  <h2>3. API conventions กลาง</h2>
+
+  <table class="data">
+    <colgroup><col style="width:24%"><col style="width:76%"></colgroup>
+    <thead><tr><th>หัวข้อ</th><th>ข้อกำหนดแนะนำ</th></tr></thead>
+    <tbody>
+      <tr><td>Base URL</td><td><code>https://learning-api.meca.in.th/api/v1</code> หรือ same-origin <code>/api/v1</code></td></tr>
+      <tr><td>Student identity</td><td>ใช้ <code>/me</code>; Gateway resolve learner จาก token ห้ามรับ email/sub จาก query เพื่อเปลี่ยนผู้เรียน</td></tr>
+      <tr><td>Teacher identity</td><td>ใช้ endpoint แยก <code>/learners/{learner_id}</code> และตรวจ scope/assignment</td></tr>
+      <tr><td>JSON naming</td><td><code>snake_case</code> ทั้ง request และ response</td></tr>
+      <tr><td>Time</td><td>Timestamp เป็น ISO 8601 UTC; duration เป็นจำนวนวินาทีและลงท้าย <code>_seconds</code></td></tr>
+      <tr><td>Percent</td><td>จำนวน 0–100 และลงท้าย <code>_percent</code>; ไม่ใช้ค่า 0–1 ปะปน</td></tr>
+      <tr><td>IDs</td><td>ถือเป็น opaque string; stable และไม่ผูกกับลำดับหน้า</td></tr>
+      <tr><td>Null vs zero</td><td><code>0</code> = ทราบว่ายังไม่เริ่ม, <code>null</code> = คำนวณไม่ได้/ไม่มีข้อมูลที่เชื่อถือได้</td></tr>
+      <tr><td>Pagination</td><td><code>cursor</code> + <code>limit</code>; response ส่ง <code>next_cursor</code></td></tr>
+      <tr><td>Versioning</td><td>Major version ใน URL; additive fields ไม่เปลี่ยน version, breaking change ไป <code>v2</code></td></tr>
+      <tr><td>Idempotency</td><td>GET ต้องไม่มี side effect; write API ในอนาคตใช้ <code>Idempotency-Key</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Tool type enum</h3>
+  <p><code>bookroll</code>, <code>video</code>, <code>chatbot</code>, <code>vk</code>, <code>adaptive_quiz</code></p>
+
+  <h3>Activity state enum</h3>
+  <p><code>not_started</code>, <code>in_progress</code>, <code>completed</code>, <code>unavailable</code></p>
+
+  <h3>Tool availability enum</h3>
+  <p><code>available</code>, <code>not_configured</code>, <code>upstream_unavailable</code>, <code>mapping_error</code></p>
+
+  <div class="page-break"></div>
+  <h2>4. Recommended endpoints</h2>
+
+  <table class="data">
+    <colgroup><col style="width:17%"><col style="width:48%"><col style="width:35%"></colgroup>
+    <thead><tr><th>Method</th><th>Endpoint</th><th>วัตถุประสงค์</th></tr></thead>
+    <tbody>
+      <tr><td><span class="method">GET</span></td><td><code>/api/v1/me/courses/{course_id}/dashboard</code></td><td>Aggregate response สำหรับหน้า Student Dashboard</td></tr>
+      <tr><td><span class="method">GET</span></td><td><code>/api/v1/me/courses/{course_id}/structure</code></td><td>Course structure และ tool inventory</td></tr>
+      <tr><td><span class="method">GET</span></td><td><code>/api/v1/me/courses/{course_id}/tools</code></td><td>สถานะและ summary ของทุก tool</td></tr>
+      <tr><td><span class="method">GET</span></td><td><code>/api/v1/me/courses/{course_id}/tools/{tool_type}/progress</code></td><td>Summary + activities ของ tool เดียว</td></tr>
+      <tr><td><span class="method">GET</span></td><td><code>/api/v1/me/courses/{course_id}/tools/{tool_type}/activities/{activity_id}</code></td><td>รายละเอียดกิจกรรมหนึ่งรายการ</td></tr>
+      <tr><td><span class="method">GET</span></td><td><code>/api/v1/learners/{learner_id}/courses/{course_id}/...</code></td><td>Teacher/Admin; ใช้ contract เดียวกันแต่ตรวจ authorization เพิ่ม</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Query parameters กลาง</h3>
+  <table class="data">
+    <colgroup><col style="width:25%"><col style="width:75%"></colgroup>
+    <thead><tr><th>Parameter</th><th>ความหมาย</th></tr></thead>
+    <tbody>
+      <tr><td><code>include</code></td><td>เลือกข้อมูลเสริม เช่น <code>structure,activities,timeline,peer_comparison</code></td></tr>
+      <tr><td><code>chapter_id</code></td><td>กรองตาม stable chapter ID</td></tr>
+      <tr><td><code>updated_after</code></td><td>โหลดเฉพาะข้อมูลที่เปลี่ยนหลัง timestamp สำหรับ incremental refresh</td></tr>
+      <tr><td><code>cursor</code>, <code>limit</code></td><td>แบ่งหน้า activities; limit ปริยาย 50 และกำหนดค่าสูงสุด</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Request headers</h3>
+  <pre class="json">Authorization: Bearer {access_token}
+Accept: application/json
+X-Request-ID: {optional_client_request_id}
+If-None-Match: {etag}</pre>
+
+  <h2>5. Common response contract</h2>
+
+  <h3>Tool progress response</h3>
+  <pre class="json">{
+  "api_version": "1.0",
+  "request_id": "req_01H...",
+  "generated_at": "2026-08-18T02:00:00Z",
+  "data": {
+    "learner_id": "oidc-sub",
+    "course_id": "course-v1:ORG+COURSE+RUN",
+    "tool": {
+      "type": "video",
+      "availability": "available"
+    },
+    "summary": {
+      "state": "in_progress",
+      "progress_percent": 62,
+      "total_items": 5,
+      "completed_items": 2,
+      "in_progress_items": 2,
+      "not_started_items": 1,
+      "last_activity_at": "2026-08-17T09:10:00Z"
+    },
+    "activities": [
+      {
+        "activity_id": "block-v1:...type@vertical...",
+        "title": "วิดีโอแนะนำบทเรียน",
+        "chapter": { "id": "chapter-01", "index": 1, "title": "บทที่ 1" },
+        "order": 1,
+        "state": "completed",
+        "progress_percent": 100,
+        "started_at": "2026-08-16T08:00:00Z",
+        "last_activity_at": "2026-08-16T08:12:00Z",
+        "completed_at": "2026-08-16T08:12:00Z",
+        "metrics": {}
+      }
+    ]
+  },
+  "meta": {
+    "partial": false,
+    "warnings": [],
+    "next_cursor": null
+  }
+}</pre>
+
+  <h3>กติกาของ common fields</h3>
+  <ul>
+    <li><code>summary</code> ใช้ field เดียวกันทุก tool และต้องสอดคล้องกับ activities</li>
+    <li><code>activity_id</code> มาจาก course structure และต้อง stable แม้เปลี่ยนชื่อหัวข้อ</li>
+    <li><code>metrics</code> เก็บข้อมูลเฉพาะ tool แต่ห้ามใช้แทน field กลาง</li>
+    <li><code>partial=true</code> หมายถึง response ใช้งานได้บางส่วนและต้องอ่าน warnings/status ราย tool</li>
+    <li>Gateway ไม่ส่ง raw upstream payload เป็นค่า default; debug payload ต้องอยู่ใน environment/permission ที่จำกัด</li>
+  </ul>
+
+  <h3>Error response</h3>
+  <pre class="json">{
+  "type": "https://learning-api.meca.in.th/problems/upstream-timeout",
+  "title": "Upstream service timeout",
+  "status": 504,
+  "code": "VIDEO_UPSTREAM_TIMEOUT",
+  "detail": "Video progress could not be loaded within the configured timeout.",
+  "request_id": "req_01H...",
+  "retryable": true
+}</pre>
+
+  <table class="data">
+    <colgroup><col style="width:18%"><col style="width:82%"></colgroup>
+    <thead><tr><th>Status</th><th>ใช้เมื่อ</th></tr></thead>
+    <tbody>
+      <tr><td>400</td><td>Query/path format ไม่ถูกต้อง</td></tr>
+      <tr><td>401 / 403</td><td>Token ไม่ถูกต้อง / ไม่มีสิทธิ์เข้าถึงผู้เรียนหรือรายวิชา</td></tr>
+      <tr><td>404</td><td>ไม่พบ course/activity ที่ canonical registry</td></tr>
+      <tr><td>409 / 422</td><td>Identity mapping ขัดแย้ง / request ถูกต้องเชิง syntax แต่ประมวลผลไม่ได้</td></tr>
+      <tr><td>429</td><td>Rate limit</td></tr>
+      <tr><td>502 / 503 / 504</td><td>Upstream error / service unavailable / timeout</td></tr>
+    </tbody>
+  </table>
+
+  <div class="page-break"></div>
+  <h2>6. Recommended API รายเครื่องมือ</h2>
+
+  <h3>6.1 BookRoll</h3>
+  <p><strong>Common progress</strong> &nbsp;•&nbsp; Page metrics &nbsp;•&nbsp; Stable activity ID</p>
+  <pre class="json">GET /api/v1/me/courses/{course_id}/tools/bookroll/progress</pre>
+  <p>Gateway ใช้ token หา learner identity แล้วเรียก BookRoll adapter โดยไม่ให้ browser ส่ง <code>userID</code> หรือ timestamp cache-busting เอง</p>
+  <pre class="json">"metrics": {
+  "pages_read": 7,
+  "pages_total": 10,
+  "reading_sessions": 3,
+  "active_seconds": 820
+}</pre>
+  <ul>
+    <li><code>progress_percent</code> คำนวณจาก pages_read/pages_total ที่ Gateway</li>
+    <li>ถ้ารู้ว่าเอกสารมี 10 หน้าและผู้เรียนยังไม่อ่าน ให้ส่ง 0 ไม่ใช่ null</li>
+    <li>ห้าม dedupe ด้วยชื่อ; mapping ต้องใช้ canonical activity ID</li>
+  </ul>
+
+  <h3>6.2 Video</h3>
+  <p><strong>Common progress</strong> &nbsp;•&nbsp; Timeline optional &nbsp;•&nbsp; Seconds</p>
+  <pre class="json">GET /api/v1/me/courses/{course_id}/tools/video/progress?include=timeline</pre>
+  <pre class="json">"metrics": {
+  "watched_seconds": 510,
+  "duration_seconds": 600,
+  "watch_sessions": 4,
+  "timeline": [
+    { "start_seconds": 0, "end_seconds": 120, "view_count": 2 },
+    { "start_seconds": 120, "end_seconds": 240, "view_count": 1 }
+  ]
+}</pre>
+  <ul>
+    <li>รวม bar และ heatmap ให้อยู่ใน activity เดียว ไม่บังคับ frontend join response</li>
+    <li>Timeline เป็น optional include เพื่อลด payload</li>
+    <li>ใช้วินาทีแทน label เวลาเพื่อให้คำนวณและวาดผลได้สม่ำเสมอ</li>
+  </ul>
+
+  <h3>6.3 Chatbot</h3>
+  <p><strong>Quiz schema</strong> &nbsp;•&nbsp; Attempts &nbsp;•&nbsp; Peer comparison optional</p>
+  <pre class="json">GET /api/v1/me/courses/{course_id}/tools/chatbot/progress?include=peer_comparison</pre>
+  <pre class="json">"metrics": {
+  "quiz_role": "posttest",
+  "attempts": 2,
+  "best_score": { "correct": 8, "total": 10, "percent": 80 },
+  "latest_score": { "correct": 7, "total": 10, "percent": 70 },
+  "average_attempt_seconds": 185,
+  "peer_comparison": {
+    "cohort_average_percent": 64,
+    "learner_percentile": 78,
+    "learners_attempted": 120
+  }
+}</pre>
+  <ul>
+    <li>Gateway ซ่อนการ fallback ระหว่าง Profile API และ SBS legacy</li>
+    <li>Response บอก <code>source_quality</code> ใน meta ได้ เช่น <code>primary</code> หรือ <code>legacy_fallback</code></li>
+    <li>ใช้ Quiz schema เดียวกับ Adaptive Quiz เพื่อลด logic ใน frontend</li>
+  </ul>
+
+  <h3>6.4 VK</h3>
+  <p><strong>Activity metrics</strong> &nbsp;•&nbsp; Normalized units &nbsp;•&nbsp; No N+1 for client</p>
+  <pre class="json">GET /api/v1/me/courses/{course_id}/tools/vk/progress?chapter_id={chapter_id}</pre>
+  <pre class="json">"metrics": {
+  "active_seconds": 940,
+  "coding_score_percent": 75,
+  "solution_score_percent": 80,
+  "coding_seconds": 520,
+  "capture_seconds": 80,
+  "annotate_seconds": 120,
+  "training_seconds": 220,
+  "objects_used": 5,
+  "images_used": 12,
+  "snap_count": 4,
+  "switch_count": 3,
+  "skill_result": "developing"
+}</pre>
+  <ul>
+    <li>แปลงชื่อ metric ที่มี space/case ต่างกันเป็น snake_case ที่ stable</li>
+    <li>แปลงเวลาเป็นวินาทีและคะแนนเป็น 0–100 ก่อนส่ง client</li>
+    <li>Gateway จัดการ course/chapter fan-out, cache และ concurrency; browser เรียกครั้งเดียว</li>
+  </ul>
+
+  <h3>6.5 Adaptive Quiz</h3>
+  <p><strong>Quiz schema</strong> &nbsp;•&nbsp; Server-side key &nbsp;•&nbsp; Collection metadata</p>
+  <pre class="json">GET /api/v1/me/courses/{course_id}/tools/adaptive_quiz/progress?include=peer_comparison</pre>
+  <pre class="json">"metrics": {
+  "collection_id": "collection-01",
+  "collection_title": "แบบฝึกหัดบทที่ 1",
+  "quiz_role": "practice",
+  "attempts": 3,
+  "best_score": { "correct": 9, "total": 10, "percent": 90 },
+  "latest_score": { "correct": 8, "total": 10, "percent": 80 },
+  "completion_percent": 100
+}</pre>
+  <ul>
+    <li>API key อยู่ที่ Gateway เท่านั้น</li>
+    <li><code>ref_code</code> และ <code>lead_label</code> resolve จาก canonical course/activity mapping</li>
+    <li>ใช้ common Quiz schema เดียวกับ Chatbot</li>
+  </ul>
+
+  <div class="page-break"></div>
+  <h2>7. Aggregate Dashboard API</h2>
+  <pre class="json">GET /api/v1/me/courses/{course_id}/dashboard
+  ?include=structure,activities,timeline,peer_comparison</pre>
+
+  <p>Endpoint นี้เหมาะกับ Student Dashboard เพราะลดจำนวน browser requests และทำให้ Gateway กำหนด timeout/partial response ได้จากจุดเดียว</p>
+
+  <pre class="json">{
+  "api_version": "1.0",
+  "request_id": "req_01H...",
+  "generated_at": "2026-08-18T02:00:00Z",
+  "data": {
+    "learner": { "id": "oidc-sub", "display_name": "ผู้เรียน" },
+    "course": { "id": "course-v1:ORG+COURSE+RUN", "title": "ชื่อวิชา" },
+    "overall": {
+      "progress_percent": 58,
+      "state": "in_progress",
+      "calculation": {
+        "method": "weighted_mean",
+        "included_tools": ["bookroll", "video", "chatbot", "vk", "adaptive_quiz"],
+        "missing_data_policy": "include_not_started_exclude_unavailable",
+        "weights_source": "course_configuration"
+      }
+    },
+    "tools": {
+      "bookroll": { "availability": "available", "summary": {}, "activities": [] },
+      "video": { "availability": "available", "summary": {}, "activities": [] },
+      "chatbot": { "availability": "available", "summary": {}, "activities": [] },
+      "vk": { "availability": "upstream_unavailable", "summary": null, "activities": [] },
+      "adaptive_quiz": { "availability": "not_configured", "summary": null, "activities": [] }
+    }
+  },
+  "meta": {
+    "partial": true,
+    "warnings": [
+      { "tool": "vk", "code": "UPSTREAM_TIMEOUT", "retryable": true }
+    ]
+  }
+}</pre>
+
+  <h3>Partial response policy</h3>
+  <ul>
+    <li>Auth, invalid course หรือ permission failure: ตอบ 4xx และไม่มี dashboard data</li>
+    <li>Tool ใดล้มเหลว: ตอบ 200 พร้อม <code>meta.partial=true</code>, availability และ warning ราย tool</li>
+    <li>ทุก tool ล้มเหลว: ตอบ 503 พร้อม error envelope</li>
+    <li>Frontend แสดงข้อมูลที่สำเร็จและปุ่ม retry โดยส่ง request เดิมหรือเรียก tool endpoint เฉพาะตัว</li>
+  </ul>
+
+  <h2>8. Overall progress policy</h2>
+  <div class="callout warning">
+    <strong>ไม่ควรซ่อนสูตรไว้ใน frontend:</strong> Backend ควรส่งทั้งค่าที่คำนวณแล้วและ metadata ของสูตร เพื่อให้ Product, QA และ Analytics ตีความตรงกัน
+  </div>
+
+  <table class="data">
+    <colgroup><col style="width:31%"><col style="width:69%"></colgroup>
+    <thead><tr><th>กรณี</th><th>นโยบายแนะนำ</th></tr></thead>
+    <tbody>
+      <tr><td>Activity อยู่ใน course แต่ผู้เรียนยังไม่เริ่ม</td><td>นับ progress = 0</td></tr>
+      <tr><td>Tool ไม่ได้ configure ใน course</td><td>ไม่รวมในตัวหาร และระบุ <code>not_configured</code></td></tr>
+      <tr><td>Upstream ล่ม/timeout</td><td>ห้ามตีความเป็น 0; ให้ค่า null, partial=true และ exclude ชั่วคราว</td></tr>
+      <tr><td>Tool ไม่มี metric ที่แปลงเป็น progress ได้</td><td>กำหนด scoring rule ใน course configuration หรือไม่รวมพร้อม reason</td></tr>
+      <tr><td>Weights</td><td>อ่านจาก versioned course configuration; ถ้าไม่มีให้ใช้ค่า default ที่ประกาศชัดเจน</td></tr>
+    </tbody>
+  </table>
+
+  <p><strong>แนวทาง migration:</strong> ระยะแรกคงสูตร BookRoll + Video เพื่อไม่ให้ตัวเลขเปลี่ยนทันที แต่ย้ายสูตรไป Backend และส่ง calculation metadata จากนั้นจึงทดลองรวม Chatbot, VK และ Adaptive Quiz ผ่าน versioned policy</p>
+
+  <h2>9. Security และ reliability baseline</h2>
+  <table class="data">
+    <colgroup><col style="width:28%"><col style="width:72%"></colgroup>
+    <thead><tr><th>หัวข้อ</th><th>ข้อกำหนดขั้นต่ำ</th></tr></thead>
+    <tbody>
+      <tr><td>Secrets</td><td>เก็บ upstream key ใน secret manager; ห้ามฝังใน JS, HTML หรือ mobile bundle</td></tr>
+      <tr><td>Authorization</td><td><code>/me</code> ใช้ token subject; teacher route ตรวจ role, assignment และ course scope</td></tr>
+      <tr><td>PII</td><td>ไม่ log token/email เต็ม; mask identifier และกำหนด retention</td></tr>
+      <tr><td>Timeout</td><td>กำหนดต่อ adapter เช่น connect/read/total timeout และคืน retryable status</td></tr>
+      <tr><td>Retry</td><td>Retry เฉพาะ GET ที่ safe พร้อม exponential backoff + jitter และจำกัดจำนวนครั้ง</td></tr>
+      <tr><td>Cache</td><td>Course structure cache นานกว่า learner progress; รองรับ ETag และ short TTL</td></tr>
+      <tr><td>Rate limit</td><td>จำกัดตาม learner/client และป้องกัน fan-out amplification</td></tr>
+      <tr><td>Observability</td><td>Request ID เดียวตลอด gateway → adapter → upstream พร้อม latency/status ราย tool</td></tr>
+      <tr><td>Contract tests</td><td>JSON Schema/OpenAPI tests สำหรับ common fields และ fixture ต่อ adapter</td></tr>
+    </tbody>
+  </table>
+
+  <div class="page-break"></div>
+  <h2>10. Current → Target mapping</h2>
+
+  <table class="data">
+    <colgroup><col style="width:22%"><col style="width:36%"><col style="width:42%"></colgroup>
+    <thead><tr><th>ระบบ</th><th>ปัจจุบัน</th><th>Target</th></tr></thead>
+    <tbody>
+      <tr><td>BookRoll</td><td>Browser ส่ง userID + courseId และ parse หลาย shape</td><td>Gateway resolve identity, normalize pages และ activity ID</td></tr>
+      <tr><td>Video</td><td>Browser เรียก bar + heatmap แล้ว join เองด้วยชื่อ/ลำดับ</td><td>Adapter รวม progress + timeline ด้วย stable ID</td></tr>
+      <tr><td>Chatbot</td><td>Browser จัดการ primary/fallback และ ECharts shape</td><td>Gateway เลือก source และคืน common Quiz schema</td></tr>
+      <tr><td>VK</td><td>Browser เรียก course + chapter N ครั้งและแปลง metric</td><td>Gateway fan-out/cache และคืน activity metrics ที่ normalize แล้ว</td></tr>
+      <tr><td>Adaptive Quiz</td><td>API key และ ref resolution อยู่ใน browser</td><td>Secret + mapping อยู่ server-side และใช้ Quiz schema ร่วม</td></tr>
+      <tr><td>Overall</td><td>Frontend เฉลี่ยเฉพาะ vertical ที่มีค่า</td><td>Backend ใช้ versioned policy และส่ง calculation metadata</td></tr>
+    </tbody>
+  </table>
+
+  <h2>11. Migration plan</h2>
+  <div class="compact">
+    <p><strong>Phase 0 — Contract decisions</strong><br>ยืนยัน canonical IDs, progress policy, tool enums และ error model</p>
+    <p><strong>Phase 1 — Gateway skeleton</strong><br>OIDC validation, request ID, common envelope, Course adapter และ OpenAPI</p>
+    <p><strong>Phase 2 — Read adapters</strong><br>BookRoll + Video ก่อน เพราะใช้คำนวณ overall ปัจจุบัน พร้อม contract tests</p>
+    <p><strong>Phase 3 — Quiz adapters</strong><br>Chatbot primary/legacy และ Adaptive Quiz บน common Quiz schema พร้อมย้าย secret</p>
+    <p><strong>Phase 4 — VK adapter</strong><br>Server-side fan-out, cache, normalized metrics และ concurrency control</p>
+    <p><strong>Phase 5 — Aggregate endpoint</strong><br>Dashboard partial response, timeout policy และ ETag</p>
+    <p><strong>Phase 6 — Frontend cutover</strong><br>เปิด feature flag, compare old/new payload, shadow traffic และ rollback path</p>
+    <p><strong>Phase 7 — Policy evolution</strong><br>ทดลอง overall weights ใหม่ด้วย versioned configuration และ analytics validation</p>
+  </div>
+
+  <h3>Definition of done</h3>
+  <div class="compact">
+    <p>☐ มี OpenAPI 3.x และ JSON Schema ของ common response/error</p>
+    <p>☐ ทุก adapter ผ่าน contract fixtures ทั้ง success, no activity, missing mapping, timeout และ malformed upstream</p>
+    <p>☐ Browser ไม่มี upstream API key และไม่เรียก third-party learning service โดยตรง</p>
+    <p>☐ Stable activity ID จับคู่ course structure ได้ทุก tool</p>
+    <p>☐ Dashboard แยก not_started, not_configured และ upstream_unavailable ได้ชัดเจน</p>
+    <p>☐ Overall progress ส่ง method, included tools, weights source และ missing-data policy</p>
+    <p>☐ มี request tracing และ dashboard latency/error rate ราย adapter</p>
+    <p>☐ มี feature flag, payload comparison และ rollback plan ก่อน cutover</p>
+  </div>
+
+  <h2>12. Decisions ที่ต้องยืนยันก่อนเขียน OpenAPI</h2>
+  <ol>
+    <li>Canonical activity ID จะใช้ Open edX block ID โดยตรง หรือสร้าง Learning Activity Registry ID</li>
+    <li>Default overall progress policy และ weights ของแต่ละ tool</li>
+    <li>ข้อมูล peer comparison ใดอนุญาตให้ Student เห็นได้</li>
+    <li>Teacher API ใช้ learner ID แบบใด และตรวจ scope ผ่าน assignment ใด</li>
+    <li>Latency budget ของ aggregate endpoint และ timeout ต่อ adapter</li>
+    <li>Retention/caching policy ของ learner progress และ raw upstream data</li>
+  </ol>
+
+  <div class="callout">
+    <strong>Next recommended deliverable:</strong> หลังยืนยัน 6 decisions ข้างต้น ให้จัดทำ OpenAPI YAML, JSON Schema, example fixtures และ adapter contract test matrix โดยยึดเอกสารนี้เป็น target design
+  </div>
+
+  <p class="footer-note">Recommended Unified API for Student Learning Tools — จัดทำจากการวิเคราะห์ implementation ของ Student Dashboard v2 ณ วันที่ 18 สิงหาคม 2026</p>
+</body>
+</html>

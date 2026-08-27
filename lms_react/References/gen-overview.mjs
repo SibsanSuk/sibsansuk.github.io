@@ -7,6 +7,61 @@ const START_DATE = "2020-01-01";
 const TODAY = new Date().toISOString().slice(0, 10);
 const RANGE = `${START_DATE},${TODAY}`;
 
+const REGION_DEFINITIONS = [
+  {
+    key: "north",
+    label: "ภาคเหนือ",
+    view: { lat: 17.7, lng: 99.8, zoom: 6.2 },
+    provinces: ["เชียงใหม่", "เชียงราย", "ลำปาง", "ลำพูน", "แม่ฮ่องสอน", "น่าน", "พะเยา", "แพร่", "อุตรดิตถ์", "ตาก", "สุโขทัย", "พิษณุโลก", "พิจิตร", "กำแพงเพชร", "เพชรบูรณ์", "นครสวรรค์", "อุทัยธานี"],
+  },
+  {
+    key: "northeast",
+    label: "ภาคตะวันออกเฉียงเหนือ",
+    view: { lat: 16.1, lng: 103.1, zoom: 6.2 },
+    provinces: ["กาฬสินธุ์", "ขอนแก่น", "ชัยภูมิ", "นครพนม", "นครราชสีมา", "บึงกาฬ", "บุรีรัมย์", "มหาสารคาม", "มุกดาหาร", "ยโสธร", "ร้อยเอ็ด", "เลย", "ศรีสะเกษ", "สกลนคร", "สุรินทร์", "หนองคาย", "หนองบัวลำภู", "อำนาจเจริญ", "อุดรธานี", "อุบลราชธานี"],
+  },
+  {
+    key: "central",
+    label: "ภาคกลาง",
+    view: { lat: 14.1, lng: 100.5, zoom: 7 },
+    provinces: ["กรุงเทพมหานคร", "อ่างทอง", "พระนครศรีอยุธยา", "ชัยนาท", "ลพบุรี", "นครนายก", "นครปฐม", "นนทบุรี", "ปทุมธานี", "สมุทรปราการ", "สมุทรสาคร", "สมุทรสงคราม", "สระบุรี", "สิงห์บุรี", "สุพรรณบุรี"],
+  },
+  {
+    key: "east",
+    label: "ภาคตะวันออก",
+    view: { lat: 13.25, lng: 101.5, zoom: 7 },
+    provinces: ["ฉะเชิงเทรา", "ชลบุรี", "ระยอง", "จันทบุรี", "ตราด", "ปราจีนบุรี", "สระแก้ว"],
+  },
+  {
+    key: "west",
+    label: "ภาคตะวันตก",
+    view: { lat: 13.8, lng: 99.35, zoom: 7 },
+    provinces: ["กาญจนบุรี", "ราชบุรี", "เพชรบุรี", "ประจวบคีรีขันธ์"],
+  },
+  {
+    key: "south",
+    label: "ภาคใต้",
+    view: { lat: 8.6, lng: 99.5, zoom: 6.1 },
+    provinces: ["กระบี่", "ชุมพร", "ตรัง", "นครศรีธรรมราช", "นราธิวาส", "ปัตตานี", "พังงา", "พัทลุง", "ภูเก็ต", "ระนอง", "สตูล", "สงขลา", "สุราษฎร์ธานี", "ยะลา"],
+  },
+];
+
+const normalizeProvince = (value) => {
+  const normalized = String(value || "").trim().replace(/^จังหวัด/, "").replace(/\s+/g, "");
+  return normalized === "กรุงเทพฯ" ? "กรุงเทพมหานคร" : normalized;
+};
+const provinceToRegion = new Map();
+for (const region of REGION_DEFINITIONS) {
+  for (const province of region.provinces) provinceToRegion.set(normalizeProvince(province), region.key);
+}
+const regionTotals = new Map(REGION_DEFINITIONS.map((region) => [region.key, {
+  ...region,
+  users: 0,
+  institutes: 0,
+  activeProvinces: new Set(),
+}]));
+const unassignedRegion = { users: 0, institutes: 0, provinceValues: new Set() };
+
 const fetchEnrollmentRange = async (range) => {
   const url = new URL("/api/kidbright/enroll/query", API_BASE);
   url.searchParams.set("createAt", range);
@@ -39,6 +94,19 @@ for (const item of data) {
   const userCount = Number(item.instituteUserCount) || 0;
   totalUsers += userCount;
 
+  const provinceName = normalizeProvince(item.instituteProvince) || "-";
+  const regionKey = provinceToRegion.get(provinceName);
+  if (regionKey) {
+    const region = regionTotals.get(regionKey);
+    region.users += userCount;
+    region.institutes += 1;
+    region.activeProvinces.add(provinceName);
+  } else {
+    unassignedRegion.users += userCount;
+    unassignedRegion.institutes += 1;
+    unassignedRegion.provinceValues.add(provinceName);
+  }
+
   for (const course of item.courses || []) {
     const key = course.courseId || course.courseName;
     if (!key) continue;
@@ -52,7 +120,6 @@ for (const item of data) {
   const lng = Number(coordinates.long);
   if (!inThailand(lat, lng)) continue;
 
-  const provinceName = item.instituteProvince || "-";
   const current = provinces.get(provinceName) || {
     name: provinceName,
     users: 0,
@@ -116,6 +183,26 @@ const activeProvinceCount = provinceRanking.filter((item) => item.users >= 500).
 const topProvince = provinceRanking[0];
 const topCourse = courseRows[0];
 const thailandView = { lat: 13.6, lng: 101.2, zoom: 5.3 };
+const regionRows = REGION_DEFINITIONS.map(({ key }) => {
+  const region = regionTotals.get(key);
+  return {
+    key: region.key,
+    label: region.label,
+    users: region.users,
+    institutes: region.institutes,
+    provinces: region.activeProvinces.size,
+    view: region.view,
+  };
+});
+const regionSlides = regionRows.map((region, index) => ({
+  bg: ["#eaf7ff", "#f0edff", "#e9fbf4", "#fff1e6", "#fdf4ff", "#ecfeff"][index],
+  label: `ผู้ใช้งาน${region.label}`,
+  big: formatNumber(region.users),
+  unit: "คน",
+  desc: `${region.provinces} จังหวัด · ${formatNumber(region.institutes)} สถาบัน`,
+  view: region.view,
+  region: region.key,
+}));
 
 const slides = [
   { bg: "#e9fbf4", label: "ผู้ใช้งานทั่วประเทศ", big: formatNumber(totalUsers), unit: "คน", desc: `ครู นักเรียน และบุคลากรทางการศึกษาใช้งานระบบใน ${provinces.size} จังหวัดทั่วประเทศ`, view: thailandView },
@@ -128,6 +215,7 @@ const slides = [
   { bg: "#f7fee7", label: "การลงทะเบียนเรียนสะสม", big: formatNumber(totalEnrollment), unit: "ครั้ง", desc: "รวมการลงทะเบียนเรียนทุกวิชาในระบบ", view: { lat: 14.2, lng: 101, zoom: 5.8 } },
   { bg: "#ecfeff", label: "ค่าเฉลี่ยผู้ใช้ต่อสถาบัน", big: formatNumber(averagePerInstitute), unit: "คน/แห่ง", desc: `เฉลี่ยจาก ${formatNumber(data.length)} สถาบัน`, view: { lat: 16.5, lng: 100.5, zoom: 5.7 } },
   { bg: "#fff7ed", label: "จังหวัดที่ใช้งานเข้มข้น", big: formatNumber(activeProvinceCount), unit: "จังหวัด", desc: `มีผู้ใช้ตั้งแต่ 500 คนขึ้นไป จากทั้งหมด ${provinces.size} จังหวัด`, view: { lat: 14, lng: 100.6, zoom: 6.2 } },
+  ...regionSlides,
 ];
 
 const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
@@ -159,6 +247,12 @@ const output = {
     institutes: data.length,
     averagePerInstitute,
   },
+  regions: regionRows,
+  unassignedRegion: {
+    users: unassignedRegion.users,
+    institutes: unassignedRegion.institutes,
+    provinceValues: [...unassignedRegion.provinceValues],
+  },
   trend,
   slides,
   points,
@@ -170,3 +264,6 @@ const temporary = path.join(scriptDirectory, ".overview.json.tmp");
 fs.writeFileSync(temporary, `${JSON.stringify(output, null, 2)}\n`, "utf8");
 fs.renameSync(temporary, destination);
 console.log(`Wrote ${destination}: ${slides.length} slides, ${points.length} map points`);
+if (unassignedRegion.institutes) {
+  console.warn(`Unassigned region: ${unassignedRegion.institutes} institutes, ${unassignedRegion.users} users (${[...unassignedRegion.provinceValues].join(", ")})`);
+}

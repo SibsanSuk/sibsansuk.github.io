@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <title>Project API Test</title>
+</head>
+<body>
+  <h1>Project API Test</h1>
+  <p>แก้ค่าทดสอบในตัวแปร TEST ด้านบนของ script ก่อนใช้งาน</p>
+  <button id="login">Login</button>
+  <button id="clearAuth">Clear token</button>
+  <p id="user"></p>
+  <h2>Chatbot API ใหม่</h2>
+  <p>
+    <label>
+      Course ID
+      <input id="chatbotCourseId" type="text" size="65">
+    </label>
+  </p>
+  <p>
+    <label>
+      Email
+      <input id="chatbotEmail" type="email" size="40">
+    </label>
+  </p>
+  <div id="buttons"></div>
+
+  <h2>Request</h2>
+  <pre id="request"></pre>
+  <h2>Status</h2>
+  <pre id="status"></pre>
+  <h2>Response</h2>
+  <pre id="result"></pre>
+
+  <script>
+    const TEST = {
+      courseId: "course-v1:NECTEC+AILOWERSECONDARY01+NECTEC_000008",
+      email: "natthaniskhotsikaew@gmail.com",
+      learnerUserId: "", // Keycloak sub/UUID ของนักเรียน; ว่าง = ใช้ sub ของผู้ที่ Login
+      instituteId: "",
+      assignId: "",
+      instituteName: "NECTEC",
+      grade: "secondary",
+      level: "1",
+      classRoom: "",
+      createDate: "2020-01-01,2026-07-30",
+      adaptiveRefCode: "",
+      adaptiveApiKey: ""
+    };
+
+    const CHATBOT_COLLECTION_CHECK = {
+      courseId: "course-v1:NECTEC+AIUPPERSECONDARY04+NECTEC_000011",
+      email: "sibsan.suk@gmail.com"
+    };
+
+    const CHATBOT_AILOWER_CHECK = {
+      courseId: "course-v1:NECTEC+AILOWERSECONDARY01+NECTEC_000008",
+      email: "natthaniskhotsikaew@gmail.com"
+    };
+
+    const PROFILE = "https://adaptive-profile-bn.ae.app.meca.in.th";
+    const SBS = "https://sbs-backend.mooc.meca.in.th";
+    const BOOKROLL = "https://bookroll.thaidlt.com";
+    const VIDEO = "https://viola.thaidlt.com";
+    const ADAPTIVE = "https://edubot.abdul.in.th";
+    const OIDC = {
+      authorizationEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/auth",
+      tokenEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/token",
+      userinfoEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/userinfo",
+      clientId: "dashboard",
+      redirectUri: location.origin + location.pathname,
+      scope: "openid profile email"
+    };
+
+    const DEBUG = new URLSearchParams(location.search).get("debug") === "1";
+    const API_LOG = [];
+    const readAuth = () => {
+      try { return JSON.parse(sessionStorage.getItem("oidc_auth") || "null"); }
+      catch (_) { return null; }
+    };
+    const authHeader = () => {
+      const token = readAuth()?.token?.access_token;
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    };
+
+    const apiGet = async (url, { auth = true, headers = {} } = {}) => {
+      const entry = { url, auth, at: new Date().toLocaleTimeString("th-TH") };
+      API_LOG.push(entry);
+      try {
+        const res = await fetch(url, {
+          headers: { ...(auth ? authHeader() : {}), ...headers }
+        });
+        entry.status = res.status;
+        if (!res.ok) {
+          const raw = await res.text();
+          try { entry.response = raw ? JSON.parse(raw) : null; }
+          catch (_) { entry.response = raw; }
+          entry.ok = false;
+          entry.error = `${res.status} ${res.statusText}`;
+          throw new Error(entry.error);
+        }
+        const json = await res.json();
+        entry.ok = true;
+        entry.count = Array.isArray(json)
+          ? json.length
+          : (Array.isArray(json?.data) ? json.data.length : undefined);
+        if (DEBUG) entry.sample = json;
+        return json;
+      } catch (e) {
+        entry.ok = false;
+        entry.error = entry.error || e.message;
+        throw e;
+      }
+    };
+
+    const decodeJwt = token => {
+      try {
+        const part = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+        return JSON.parse(atob(part.padEnd(Math.ceil(part.length / 4) * 4, "=")));
+      } catch (_) {
+        return null;
+      }
+    };
+    const claims = () => {
+      const token = readAuth()?.token;
+      return decodeJwt(token?.access_token || token?.id_token || "") || {};
+    };
+    const loginSub = () => claims().sub || "";
+    const learnerUserId = () => TEST.learnerUserId || loginSub();
+    const leadLabel = () => TEST.courseId.replace(/^course-v1:/, "");
+    const chatbotCheckCourseId = () =>
+      document.querySelector("#chatbotCourseId").value.trim();
+    const chatbotCheckEmail = () =>
+      document.querySelector("#chatbotEmail").value.trim();
+    const required = (name, value) => {
+      if (!value) throw new Error(`กรุณากำหนด TEST.${name} ใน code ก่อน`);
+      return value;
+    };
+    const requiredInput = (name, value) => {
+      if (!value) throw new Error(`กรุณากรอก ${name}`);
+      return value;
+    };
+
+    const b64url = buffer => {
+      let value = "";
+      new Uint8Array(buffer).forEach(byte => value += String.fromCharCode(byte));
+      return btoa(value).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    };
+
+    async function login() {
+      const verifier = b64url(crypto.getRandomValues(new Uint8Array(32)));
+      const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
+      sessionStorage.setItem("pkce_verifier", verifier);
+      const params = new URLSearchParams({
+        client_id: OIDC.clientId,
+        redirect_uri: OIDC.redirectUri,
+        response_type: "code",
+        scope: OIDC.scope,
+        code_challenge: b64url(digest),
+        code_challenge_method: "S256"
+      });
+      location.href = `${OIDC.authorizationEndpoint}?${params}`;
+    }
+
+    async function finishLogin(code) {
+      const body = new URLSearchParams({
+        grant_type: "authorization_code",
+        client_id: OIDC.clientId,
+        redirect_uri: OIDC.redirectUri,
+        code,
+        code_verifier: sessionStorage.getItem("pkce_verifier")
+      });
+      const res = await fetch(OIDC.tokenEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body
+      });
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      sessionStorage.setItem("oidc_auth", JSON.stringify({ token: await res.json() }));
+      history.replaceState({}, "", OIDC.redirectUri);
+    }
+
+    const courseSearchUrl = () => {
+      const params = new URLSearchParams();
+      ["grade", "level", "classRoom", "instituteId", "createDate"].forEach(key => {
+        if (TEST[key]) params.set(key, TEST[key]);
+      });
+      return `${PROFILE}/api/kidbright/course?${params}`;
+    };
+
+    const API_TESTS = [
+      {
+        group: "OIDC",
+        label: "UserInfo",
+        auth: true,
+        url: () => OIDC.userinfoEndpoint
+      },
+      {
+        group: "Teacher / Profile",
+        label: "User by sub",
+        auth: true,
+        url: () => `${PROFILE}/api/kidbright/user/${encodeURIComponent(required("login sub", loginSub()))}`
+      },
+      {
+        group: "Teacher / Profile",
+        label: "User query by email",
+        auth: true,
+        url: () => `${PROFILE}/api/kidbright/user/query?email=${encodeURIComponent(TEST.email)}`
+      },
+      {
+        group: "Teacher / Profile",
+        label: "Teacher by sub",
+        auth: true,
+        url: () => `${PROFILE}/api/kidbright/teacher/${encodeURIComponent(required("login sub", loginSub()))}`
+      },
+      {
+        group: "Teacher / Profile",
+        label: "Teacher classrooms",
+        auth: true,
+        url: () => {
+          const base = `${PROFILE}/api/kidbright/course/teacher/${encodeURIComponent(required("login sub", loginSub()))}`;
+          return TEST.instituteId
+            ? `${base}?instituteId=${encodeURIComponent(TEST.instituteId)}`
+            : base;
+        }
+      },
+      {
+        group: "Teacher / Course",
+        label: "Course search",
+        auth: true,
+        url: courseSearchUrl
+      },
+      {
+        group: "Teacher / Course",
+        label: "Institute search",
+        auth: true,
+        url: () => `${PROFILE}/api/kidbright/institute?instituteName=${encodeURIComponent(TEST.instituteName)}`
+      },
+      {
+        group: "Teacher / Assignment",
+        label: "Assignment",
+        auth: true,
+        url: () => `${PROFILE}/api/kidbright/assign/${encodeURIComponent(required("assignId", TEST.assignId))}`
+      },
+      {
+        group: "Teacher / Assignment",
+        label: "Assignment progress",
+        auth: true,
+        url: () => `${PROFILE}/api/kidbright/assign/${encodeURIComponent(required("assignId", TEST.assignId))}/progress`
+      },
+      {
+        group: "Teacher / Assignment",
+        label: "Assignment grades",
+        auth: true,
+        url: () => `${PROFILE}/api/kidbright/assign/${encodeURIComponent(required("assignId", TEST.assignId))}/grades`
+      },
+      {
+        group: "Course / Overview",
+        label: "Course tree",
+        auth: false,
+        url: () => `${SBS}/lms/${encodeURIComponent(TEST.courseId)}`
+      },
+      {
+        group: "Course / Overview",
+        label: "Enrollment aggregate",
+        auth: false,
+        url: () => `${PROFILE}/api/kidbright/enroll/query?createAt=${encodeURIComponent(TEST.createDate)}`
+      },
+      {
+        group: "Course / Overview",
+        label: "Local overview.json",
+        auth: false,
+        url: () => new URL("./overview.json", location.href).toString()
+      },
+      {
+        group: "Student Detail / Current",
+        label: "Profile BookRoll",
+        auth: true,
+        url: () => `${PROFILE}/api/kidbright/course/${encodeURIComponent(TEST.courseId)}/data/bookroll?email=${encodeURIComponent(TEST.email)}`
+      },
+      {
+        group: "Student Detail / Current",
+        label: "Profile Chatbot (ใหม่)",
+        auth: true,
+        url: () => `${PROFILE}/api/kidbright/course/${encodeURIComponent(TEST.courseId)}/data/chatbot?email=${encodeURIComponent(TEST.email)}`
+      },
+      {
+        group: "Student Detail / Current",
+        label: "เช็ค Chatbot (ส่ง course-v1: เต็ม)",
+        auth: true,
+        url: () => `${PROFILE}/api/kidbright/course/${encodeURIComponent(requiredInput("Course ID", chatbotCheckCourseId()))}/data/chatbot?email=${encodeURIComponent(requiredInput("Email", chatbotCheckEmail()))}`
+      },
+      {
+        group: "Student Detail / Current",
+        label: "เช็ค Chatbot AILOWERSECONDARY01",
+        auth: true,
+        url: () => `${PROFILE}/api/kidbright/course/${encodeURIComponent(CHATBOT_AILOWER_CHECK.courseId)}/data/chatbot?email=${encodeURIComponent(CHATBOT_AILOWER_CHECK.email)}`
+      },
+      {
+        group: "Student Detail / External",
+        label: "BookRoll readingData",
+        auth: false,
+        url: () => `${BOOKROLL}/meca/student/readingData?userID=${encodeURIComponent(required("learnerUserId", learnerUserId()))}&usageId=${encodeURIComponent(TEST.courseId)}&view=student&ts=${Date.now()}`
+      },
+      {
+        group: "Student Detail / External",
+        label: "Video bar",
+        auth: false,
+        url: () => `${VIDEO}/meca/chart/bar/?userName=${encodeURIComponent(TEST.email)}&usageId=${encodeURIComponent(TEST.courseId)}`
+      },
+      {
+        group: "Student Detail / External",
+        label: "Video heatmapTime",
+        auth: false,
+        url: () => `${VIDEO}/meca/chart/heatmapTime/?userName=${encodeURIComponent(TEST.email)}&usageId=${encodeURIComponent(TEST.courseId)}`
+      },
+      {
+        group: "Chatbot / SBS",
+        label: "Chatbot speed",
+        auth: false,
+        url: () => `${SBS}/stats/echart/chatbotSpeed/${encodeURIComponent(TEST.courseId)}/${encodeURIComponent(required("learnerUserId", learnerUserId()))}`
+      },
+      {
+        group: "Chatbot / SBS",
+        label: "Chatbot performance",
+        auth: false,
+        url: () => `${SBS}/stats/echart/chatbotPerformance/${encodeURIComponent(TEST.courseId)}/${encodeURIComponent(required("learnerUserId", learnerUserId()))}`
+      },
+      {
+        group: "Chatbot / SBS",
+        label: "Chatbot score V2",
+        auth: true,
+        url: () => `${SBS}/me/data/chatbot/${encodeURIComponent(TEST.courseId)}`
+      },
+      {
+        group: "Adaptive Quiz",
+        label: "Shared learner dashboard",
+        auth: false,
+        headers: () => ({
+          "x-api-key": required("adaptiveApiKey", TEST.adaptiveApiKey)
+        }),
+        url: () => `${ADAPTIVE}/adaptive-quiz/api/v1/shared-dashboard/learner/${encodeURIComponent(TEST.email)}/by-lead-label/${encodeURIComponent(leadLabel())}?ref_code=${encodeURIComponent(required("adaptiveRefCode", TEST.adaptiveRefCode))}`
+      },
+      {
+        group: "Local files",
+        label: "Locale TH",
+        auth: false,
+        url: () => new URL("./locales/th.json", location.href).toString()
+      },
+      {
+        group: "Local files",
+        label: "Locale EN",
+        auth: false,
+        url: () => new URL("./locales/en.json", location.href).toString()
+      }
+    ];
+
+    function maskedHeaders(auth, headers) {
+      const token = readAuth()?.token?.access_token || "";
+      return {
+        ...(auth ? {
+          Authorization: token
+            ? `Bearer ${token.slice(0, 16)}...${token.slice(-8)}`
+            : "ไม่มี access token"
+        } : {}),
+        ...Object.fromEntries(Object.keys(headers).map(key => [
+          key,
+          key.toLowerCase() === "x-api-key" ? "[configured]" : headers[key]
+        ]))
+      };
+    }
+
+    async function runApi(test) {
+      try {
+        const url = test.url();
+        const headers = test.headers ? test.headers() : {};
+        document.querySelector("#request").textContent = JSON.stringify({
+          label: test.label,
+          method: "GET",
+          url,
+          auth: test.auth,
+          headers: maskedHeaders(test.auth, headers)
+        }, null, 2);
+        document.querySelector("#status").textContent = "Loading...";
+        document.querySelector("#result").textContent = "";
+
+        const data = await apiGet(url, { auth: test.auth, headers });
+        const entry = API_LOG[API_LOG.length - 1];
+        document.querySelector("#status").textContent =
+          `Success — HTTP ${entry.status}${entry.count == null ? "" : ` — ${entry.count} rows`}`;
+        document.querySelector("#result").textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        const entry = API_LOG[API_LOG.length - 1];
+        document.querySelector("#status").textContent =
+          entry?.status ? `Error — HTTP ${entry.status} — ${error.message}` : error.message;
+        document.querySelector("#result").textContent =
+          entry?.response == null
+            ? ""
+            : (typeof entry.response === "string"
+              ? entry.response
+              : JSON.stringify(entry.response, null, 2));
+      }
+    }
+
+    function renderButtons() {
+      const root = document.querySelector("#buttons");
+      root.replaceChildren();
+      let currentGroup = "";
+      API_TESTS.forEach(test => {
+        if (test.group !== currentGroup) {
+          currentGroup = test.group;
+          root.append(document.createElement("hr"));
+          const heading = document.createElement("h2");
+          heading.textContent = currentGroup;
+          root.append(heading);
+        }
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = test.label;
+        button.onclick = () => runApi(test);
+        root.append(button, document.createTextNode(" "));
+      });
+    }
+
+    function renderUser() {
+      const user = claims();
+      document.querySelector("#user").textContent = user.sub
+        ? `Login: ${user.email || user.preferred_username || user.sub} | sub: ${user.sub}`
+        : "ยังไม่ได้ Login";
+    }
+
+    document.querySelector("#login").onclick = login;
+    document.querySelector("#clearAuth").onclick = () => {
+      sessionStorage.removeItem("oidc_auth");
+      renderUser();
+    };
+
+    document.querySelector("#chatbotCourseId").value = CHATBOT_COLLECTION_CHECK.courseId;
+    document.querySelector("#chatbotEmail").value = CHATBOT_COLLECTION_CHECK.email;
+    renderButtons();
+    const code = new URLSearchParams(location.search).get("code");
+    if (code) {
+      finishLogin(code)
+        .then(renderUser)
+        .catch(error => document.querySelector("#status").textContent = error.message);
+    } else {
+      renderUser();
+    }
+  </script>
+</body>
+</html>

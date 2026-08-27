@@ -2,7 +2,7 @@
   "_meta": {
     "locale": "th",
     "language": "ไทย",
-    "version": 7
+    "version": 9
   },
   "app": {
     "title": "MECA Teacher Dashboard"
@@ -126,6 +126,61 @@
           "unit": "จังหวัด",
           "description": "จังหวัดที่มีจำนวนผู้ใช้งานระบบในระดับสูง"
         }
+      }
+    },
+    "teacherSummary": {
+      "journeyTitle": "เส้นทางการสอนของฉัน",
+      "currentLevel": "ระดับปัจจุบัน",
+      "maxLevel": "ระดับสูงสุด",
+      "progressCount": "{{current}} / {{target}} คน",
+      "nextLevel": "อีก {{formattedCount}} คน เพื่อปลดล็อก Level {{level}}",
+      "highestLevel": "คุณปลดล็อกระดับสูงสุดแล้ว ยอดเยี่ยมมาก!",
+      "noStudentData": "เพิ่มข้อมูลผู้เรียนเพื่อเริ่มสะสมความสำเร็จ",
+      "criteriaProgress": "ผ่าน {{passed}} / {{total}} เกณฑ์",
+      "nextRequirements": "สู่ Level {{level}}: {{requirements}}",
+      "achievementUnlocked": "ปลดล็อก Level {{level}} · {{name}}",
+      "viewCertificate": "ดูประกาศนียบัตร",
+      "viewCriteria": "ดูเกณฑ์ Level 1",
+      "tenure": "สอนมาแล้ว",
+      "tenureUnknown": "ยังไม่มีข้อมูล",
+      "tenureToday": "เริ่มต้นวันนี้",
+      "tenureDays": "{{formattedCount}} วัน",
+      "tenureMonths": "{{formattedCount}} เดือน",
+      "tenureYearsMonths": "{{formattedYears}} ปี {{formattedMonths}} เดือน",
+      "studentsTaught": "นักเรียนที่ดูแล",
+      "classroomsManaged": "ห้องเรียนที่ดูแล",
+      "subjectsCreated": "รายวิชาที่นำไปสอน",
+      "subjectUnit": "วิชา",
+      "classroomUnit": "ห้อง",
+      "studentUnit": "คน",
+      "latestAchievement": "ความสำเร็จที่ปลดล็อก",
+      "levels": {
+        "gettingStarted": "กำลังเริ่มต้น",
+        "beginner": "เริ่มต้นเส้นทาง",
+        "creator": "ผู้สร้างการเรียนรู้",
+        "developer": "ครูนักพัฒนา",
+        "leader": "ผู้นำการเรียนรู้",
+        "inspirer": "ผู้สร้างแรงบันดาลใจ"
+      },
+      "criteria": {
+        "subjects": "หลักสูตรที่นำไปสอน",
+        "classrooms": "ห้องเรียนที่ดูแล",
+        "students": "นักเรียนที่สอน"
+      },
+      "criteriaRemaining": {
+        "subjects": "อีก {{formattedCount}} หลักสูตร",
+        "classrooms": "อีก {{formattedCount}} ห้อง",
+        "students": "อีก {{formattedCount}} คน"
+      },
+      "achievements": {
+        "getStarted": "สร้างห้องเรียนแรกเพื่อเริ่มต้นเส้นทาง",
+        "firstClassroom": "เปิดห้องเรียนแรกสำเร็จ",
+        "students25": "ดูแลผู้เรียนกลุ่มแรกครบ 25 คน",
+        "classrooms5": "สร้างพื้นที่การเรียนรู้ครบ 5 ห้องเรียน",
+        "students50": "ส่งต่อการเรียนรู้ให้ผู้เรียนครบ 50 คน",
+        "students100": "ส่งต่อการเรียนรู้ให้ผู้เรียนครบ 100 คน",
+        "students250": "ส่งต่อการเรียนรู้ให้ผู้เรียนครบ 250 คน",
+        "students500": "ส่งต่อการเรียนรู้ให้ผู้เรียนครบ 500 คน"
       }
     },
     "classrooms": {
@@ -296,7 +351,6 @@
       "exerciseTime": "เวลาทำแบบฝึกหัด",
       "exerciseTimeLoading": "กำลังโหลดเวลาทำแบบฝึกหัด",
       "errorStatus": "โหลดข้อมูลไม่สำเร็จ",
-      "errorHint": "วางเมาส์หรือโฟกัสที่เครื่องหมายตกใจเพื่อดูสาเหตุ",
       "renderErrorTitle": "แสดงรายละเอียดผู้เรียนไม่สำเร็จ",
       "renderErrorDescription": "หน้าต่างนี้ยังเปิดอยู่เพื่อให้คุณตรวจสอบและรายงานปัญหาได้",
       "durationMinutes": "{{value}} นาที",

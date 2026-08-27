@@ -7,7 +7,7 @@
   const React = global.React;
   if (!React) throw new Error("TeacherI18n ต้องโหลดหลัง React");
 
-  const VERSION = "20260724-30";
+  const VERSION = "20260825-3";
   const DEFAULT_LOCALE = "th";
   const STORAGE_KEY = "teacher_dashboard_locale";
   const SUPPORTED_LOCALES = Object.freeze({

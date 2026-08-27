@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <title>Student Dashboard v2 — API Summary</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 18mm 17mm 18mm 17mm;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: #203044;
+      font-family: "Noto Sans Thai", "Thonburi", "Tahoma", sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.52;
+      background: #ffffff;
+    }
+
+    h1, h2, h3, h4, p { margin-top: 0; }
+
+    h1, h2, h3, h4 {
+      font-family: "Noto Sans Thai", "Thonburi", "Tahoma", sans-serif;
+    }
+
+    h1 {
+      margin-bottom: 8pt;
+      color: #123b66;
+      font-size: 28pt;
+      line-height: 1.18;
+      letter-spacing: -0.3pt;
+    }
+
+    h2 {
+      margin: 22pt 0 9pt;
+      padding-bottom: 5pt;
+      color: #123b66;
+      border-bottom: 2px solid #d8e7f5;
+      font-size: 17pt;
+      line-height: 1.25;
+    }
+
+    h3 {
+      margin: 16pt 0 6pt;
+      color: #1c5d8f;
+      font-size: 13pt;
+      line-height: 1.3;
+    }
+
+    h4 {
+      margin: 11pt 0 4pt;
+      color: #294862;
+      font-size: 10.8pt;
+    }
+
+    p { margin-bottom: 7pt; }
+
+    ul, ol {
+      margin: 4pt 0 9pt 18pt;
+      padding-left: 6pt;
+    }
+
+    li { margin-bottom: 3pt; }
+
+    code {
+      color: #174d74;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 8.8pt;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .cover {
+      padding-top: 24mm;
+      page-break-after: always;
+    }
+
+    .eyebrow {
+      margin-bottom: 12pt;
+      color: #247aa9;
+      font-size: 10pt;
+      font-weight: 700;
+      letter-spacing: 1.6pt;
+      text-transform: uppercase;
+    }
+
+    .subtitle {
+      max-width: 150mm;
+      margin-bottom: 22pt;
+      color: #526a7d;
+      font-size: 15pt;
+      line-height: 1.45;
+    }
+
+    .meta {
+      width: 100%;
+      margin: 0 0 26pt;
+      border-collapse: collapse;
+    }
+
+    .meta td {
+      padding: 5pt 8pt;
+      border-bottom: 1px solid #dbe5ec;
+      vertical-align: top;
+    }
+
+    .meta td:first-child {
+      width: 31mm;
+      color: #60798c;
+      font-weight: 700;
+    }
+
+    .cover-box {
+      width: 100%;
+      margin-top: 30mm;
+      border-collapse: collapse;
+    }
+
+    .cover-box td {
+      padding: 12pt 14pt;
+      color: #526a7d;
+      border: 1px solid #cfe1ee;
+      border-left: 4px solid #2c82b5;
+      background: #f2f8fc;
+    }
+
+    .lead {
+      color: #405b70;
+      font-size: 12pt;
+      line-height: 1.58;
+    }
+
+    .callout {
+      margin: 10pt 0 13pt;
+      padding: 10pt 12pt;
+      border: 1px solid #cfe1ee;
+      border-left: 5px solid #2c82b5;
+      background: #f5f9fc;
+    }
+
+    .callout strong { color: #123b66; }
+
+    .callout.warning {
+      border-color: #f1ddae;
+      border-left-color: #d69a21;
+      background: #fff9eb;
+    }
+
+    .callout.danger {
+      border-color: #efc8c5;
+      border-left-color: #cf5148;
+      background: #fff5f4;
+    }
+
+    .callout.success {
+      border-color: #bfdfd2;
+      border-left-color: #2b8b68;
+      background: #f1faf6;
+    }
+
+    .flow {
+      width: 100%;
+      margin: 9pt 0 15pt;
+      border-collapse: separate;
+      border-spacing: 5pt;
+      table-layout: fixed;
+    }
+
+    .flow td {
+      padding: 9pt;
+      text-align: center;
+      vertical-align: middle;
+      border: 1px solid #cfe0ec;
+      border-radius: 5px;
+      background: #f7fbfe;
+    }
+
+    .flow .primary {
+      color: #ffffff;
+      border-color: #1d6493;
+      background: #1d6493;
+      font-weight: 700;
+    }
+
+    .flow .gate {
+      color: #123b66;
+      border: 2px solid #2c82b5;
+      background: #eaf4fa;
+      font-weight: 700;
+    }
+
+    .flow .arrow {
+      width: 13mm;
+      border: 0;
+      background: #ffffff;
+      color: #2c82b5;
+      font-size: 17pt;
+      font-weight: 700;
+    }
+
+    table.data {
+      width: 100%;
+      margin: 7pt 0 14pt;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 8.7pt;
+      line-height: 1.4;
+    }
+
+    table.data th {
+      padding: 7pt 6pt;
+      color: #ffffff;
+      border: 1px solid #174f78;
+      background: #1d6493;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    table.data td {
+      padding: 6pt;
+      border: 1px solid #d5e0e8;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    table.data tr:nth-child(even) td { background: #f7fafc; }
+
+    .label {
+      display: inline-block;
+      margin: 0 3pt 2pt 0;
+      padding: 1pt 5pt;
+      color: #1a5d87;
+      border: 1px solid #bed8e8;
+      border-radius: 8px;
+      background: #edf6fb;
+      font-size: 8pt;
+      font-weight: 700;
+    }
+
+    .mono-block {
+      margin: 5pt 0 9pt;
+      padding: 8pt 10pt;
+      color: #193d55;
+      border: 1px solid #d6e2ea;
+      background: #f5f8fa;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 8.4pt;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .page-break {
+      margin: 0;
+      padding: 0;
+      font-size: 0;
+      line-height: 0;
+      page-break-before: always;
+    }
+
+    .compact p, .compact li {
+      margin-bottom: 1pt;
+      font-size: 9.2pt;
+      line-height: 1.28;
+    }
+
+    .risk-table { font-size: 8.1pt !important; }
+
+    .footer-note {
+      margin-top: 20pt;
+      padding-top: 8pt;
+      color: #718797;
+      border-top: 1px solid #dbe5ec;
+      font-size: 8.5pt;
+    }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <div class="eyebrow">Technical Summary</div>
+    <h1>Student Dashboard v2</h1>
+    <p class="subtitle">สรุป API, ลำดับการโหลดข้อมูล และกติกาการคำนวณสำหรับหน้า <strong>/studentv2</strong></p>
+
+    <table class="meta">
+      <tr><td>สำหรับ</td><td>Product, Frontend, Backend และ QA</td></tr>
+      <tr><td>แหล่งอ้างอิง</td><td><code>studentv2/student.html</code> และ <code>studentv2/student.js</code></td></tr>
+      <tr><td>วันที่ตรวจโค้ด</td><td>14 สิงหาคม 2026</td></tr>
+      <tr><td>สถานะเอกสาร</td><td>อธิบายพฤติกรรมของ frontend ปัจจุบัน ไม่ใช่ OpenAPI specification</td></tr>
+    </table>
+
+    <table class="cover-box">
+      <tr><td><strong>เป้าหมายของเอกสาร</strong><br>ทำให้ทีมเห็นภาพเดียวกันว่า dashboard ใช้ข้อมูลจากระบบใด, แต่ละระบบต้องการ identifier อะไร, ข้อมูลส่วนใดถูกนำไปคำนวณ progress และมีประเด็นใดที่ต้องตัดสินใจก่อน production</td></tr>
+    </table>
+  </section>
+
+  <p class="page-break">&nbsp;</p>
+  <h2>1. Executive summary</h2>
+  <p class="lead">Student Dashboard ใช้ <code>courseid</code> จาก URL และข้อมูลผู้เรียนจาก OIDC เพื่อเชื่อมข้อมูลจาก SBS, BookRoll, Video, Chatbot, VK และ Adaptive Quiz โดย <strong>Course Tree เป็น gatekeeper</strong> ของการโหลดข้อมูลทั้งหมด</p>
+
+  <div class="callout">
+    <strong>สาระสำคัญที่สุด:</strong> ค่า Overall progress ปัจจุบันคำนวณจาก BookRoll และ Video เท่านั้น ส่วนคะแนน Chatbot และข้อมูล VK แสดงผลประกอบ แต่ยังไม่ถูกรวมในเปอร์เซ็นต์ความคืบหน้ารวม
+  </div>
+
+  <ol>
+    <li>ระบบต้อง login ด้วย OIDC Authorization Code + PKCE เพื่อได้ profile, email และ access token</li>
+    <li>Frontend เรียก SBS Course Tree ก่อน เพื่อทราบโครงสร้างรายวิชาและชนิดเครื่องมือที่มี</li>
+    <li>เมื่อ Course Tree สำเร็จ งาน BookRoll, Video, Chatbot, VK และ Adaptive Quiz จึงเริ่มทำงานแบบขนาน</li>
+    <li>BookRoll, VK และ Chatbot API เดิมใช้ user ID ที่คาดหวังให้เป็น Keycloak <code>sub</code></li>
+    <li>Video, Chatbot API ใหม่ และ Adaptive Quiz ใช้อีเมลจาก OIDC profile</li>
+    <li>Chatbot ใช้ API ใหม่ก่อน แล้ว fallback ไป API เดิมของ SBS เมื่อไม่มีข้อมูลหรือ API ใหม่มีปัญหา ยกเว้นกรณี <code>401</code></li>
+    <li>VK เรียก course overview หนึ่งครั้ง แล้วเรียก chapter overview เพิ่มตามจำนวนบท</li>
+    <li>Adaptive Quiz shared dashboard ถูกโหลดและเก็บเป็น raw data แต่ยังไม่เชื่อมเข้ากราฟหลัก</li>
+  </ol>
+
+  <h2>2. Data flow</h2>
+
+  <table class="flow">
+    <tr>
+      <td class="primary">OIDC Login<br><small>sub + email + access token</small></td>
+      <td class="arrow">→</td>
+      <td class="gate">SBS Course Tree<br><small>/lms/{courseId}</small></td>
+    </tr>
+  </table>
+
+  <div class="callout warning">
+    <strong>Gate condition:</strong> ถ้า Course Tree โหลดไม่สำเร็จ ระบบจะข้าม API ข้อมูลการเรียนทั้งหมดในรอบนั้น และแสดงสถานะ error/skipped ให้ผู้ใช้ retry
+  </div>
+
+  <table class="flow">
+    <tr>
+      <td><strong>BookRoll</strong><br><small>Reading progress</small></td>
+      <td><strong>Video</strong><br><small>Progress + heatmap</small></td>
+      <td><strong>Chatbot</strong><br><small>Score + time</small></td>
+    </tr>
+    <tr>
+      <td><strong>VK</strong><br><small>Activity + skill result</small></td>
+      <td><strong>Adaptive Quiz</strong><br><small>Shared dashboard</small></td>
+      <td><strong>Debug only</strong><br><small>/me/data/chatbot</small></td>
+    </tr>
+  </table>
+
+  <p>หลัง Course Tree สำเร็จ ระบบใช้ <code>Promise.allSettled()</code> เพื่อให้ failure ของ service หนึ่งไม่หยุด service อื่น โดย BookRoll, Video, Chatbot และ VK จะถูกเรียกเฉพาะเมื่อ tool inventory ของ course tree พบเครื่องมือนั้น ส่วน Adaptive Quiz ถูกตรวจทุกครั้งและจะเรียกจริงเมื่อมีข้อมูล prerequisite ครบ</p>
+
+  <h2>3. Identifier ที่ต้องใช้ให้ถูกต้อง</h2>
+
+  <table class="data">
+    <colgroup><col style="width:20%"><col style="width:35%"><col style="width:45%"></colgroup>
+    <thead><tr><th>Identifier</th><th>ที่มา</th><th>ระบบที่ใช้</th></tr></thead>
+    <tbody>
+      <tr><td><code>courseId</code></td><td>Query string <code>courseid</code>; ต้องมี <code>course-v1:</code> และรักษาเครื่องหมาย <code>+</code></td><td>Course, BookRoll, Video, Chatbot, VK และ Adaptive Quiz</td></tr>
+      <tr><td><code>userId</code></td><td>เลือกจาก <code>userinfo.sub</code> ก่อน แล้วจึง fallback ไป username/email หรือ ID token claims</td><td>BookRoll, VK และ Chatbot API เดิม</td></tr>
+      <tr><td><code>learnerEmail</code></td><td>ใช้เฉพาะ <code>auth.profile.email</code> และไม่ fallback เป็น user ID</td><td>Video, Chatbot API ใหม่ และ Adaptive Quiz</td></tr>
+      <tr><td>Access token</td><td>OIDC token endpoint; เก็บใน <code>sessionStorage.oidc_auth</code></td><td>OIDC userinfo, Chatbot API ใหม่ และ debug endpoint</td></tr>
+      <tr><td><code>refCode</code></td><td>Runtime config → query string → Adaptive Quiz block ใน course tree</td><td>Adaptive Quiz shared dashboard</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warning">
+    <strong>Data contract ที่ต้องยืนยัน:</strong> OIDC <code>userinfo.sub</code> ควรมีค่าเสมอ เพราะ fallback เป็น username หรือ email อาจไม่ตรง identifier ที่ BookRoll, VK และ SBS Chatbot คาดหวัง
+  </div>
+
+  <p class="page-break">&nbsp;</p>
+  <h2>4. API at a glance</h2>
+
+  <table class="data">
+    <colgroup>
+      <col style="width:15%"><col style="width:40%"><col style="width:20%"><col style="width:25%">
+    </colgroup>
+    <thead>
+      <tr><th width="15%">ระบบ</th><th width="40%">Request</th><th width="20%">Auth / ID</th><th width="25%">ผลลัพธ์ที่ใช้</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>OIDC Auth</td><td><strong>GET</strong><br><code>id.meca.in.th/.../<br>openid-connect/auth</code></td><td>PKCE</td><td>เริ่ม login</td></tr>
+      <tr><td>OIDC Token</td><td><strong>POST</strong><br><code>id.meca.in.th/.../<br>openid-connect/token</code></td><td>Code + verifier</td><td>Access/ID token</td></tr>
+      <tr><td>OIDC Userinfo</td><td><strong>GET</strong><br><code>id.meca.in.th/.../<br>openid-connect/userinfo</code></td><td>Bearer</td><td>sub, email, profile</td></tr>
+      <tr><td>OIDC Logout</td><td><strong>GET</strong><br><code>id.meca.in.th/.../<br>openid-connect/logout</code></td><td>ID token hint</td><td>จบ session</td></tr>
+      <tr><td>Course</td><td><strong>GET</strong><br><code>sbs-backend.mooc.meca.in.th/<br>lms/{courseId}</code></td><td>courseId</td><td>ชื่อ, tree, tool inventory</td></tr>
+      <tr><td>BookRoll</td><td><strong>GET</strong><br><code>bookroll.thaidlt.com/meca/<br>student/readingData</code></td><td>sub + courseId</td><td>หน้าที่อ่านและ Reading %</td></tr>
+      <tr><td>Video</td><td><strong>GET</strong><br><code>viola.thaidlt.com/meca/<br>chart/bar/</code></td><td>email + courseId</td><td>Watch progress %</td></tr>
+      <tr><td>Video</td><td><strong>GET</strong><br><code>viola.thaidlt.com/meca/<br>chart/heatmapTime/</code></td><td>email + courseId</td><td>กิจกรรมตามช่วงเวลา</td></tr>
+      <tr><td>VK Course</td><td><strong>GET</strong><br><code>{VK_BASE}/analysis/overview/<br>{userId}/course/{courseId}</code></td><td>sub + courseId</td><td>ภาพรวมและเลขบท</td></tr>
+      <tr><td>VK Chapter</td><td><strong>GET × N</strong><br><code>{VK_BASE}/analysis/overview/<br>{userId}/course/{courseId}/<br>chapter/{chapterNo}</code></td><td>sub + chapter</td><td>Metric รายกิจกรรม</td></tr>
+      <tr><td>Chatbot ใหม่</td><td><strong>GET</strong><br><code>{PROFILE_BASE}/api/kidbright/<br>course/{courseId}/data/chatbot<br>?email={email}</code></td><td>Bearer + email</td><td>Score, time, attempts</td></tr>
+      <tr><td>Chatbot เดิม</td><td><strong>GET</strong><br><code>SBS /stats/echart/<br>chatbotSpeed/{courseId}/{userId}</code></td><td>sub + courseId</td><td>เวลาทำ Quiz</td></tr>
+      <tr><td>Chatbot เดิม</td><td><strong>GET</strong><br><code>SBS /stats/echart/<br>chatbotPerformance/{courseId}/{userId}</code></td><td>sub + courseId</td><td>คะแนน Quiz</td></tr>
+      <tr><td>Chatbot Debug</td><td><strong>GET</strong><br><code>SBS /me/data/chatbot/<br>{courseId}</code></td><td>Bearer</td><td>Raw response สำหรับ debug</td></tr>
+      <tr><td>Adaptive Quiz</td><td><strong>GET</strong><br><code>edubot.abdul.in.th/.../<br>shared-dashboard/learner/{email}/<br>by-lead-label/{leadLabel}<br>?ref_code={refCode}</code></td><td>x-api-key</td><td>Shared quiz data</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5. รายละเอียดตามระบบ</h2>
+
+  <h3>5.1 OIDC — Login, profile และ session</h3>
+  <p><strong>Client ID:</strong> <code>dashboard</code> &nbsp;•&nbsp; <strong>Scope:</strong> <code>openid profile email</code> &nbsp;•&nbsp; <strong>Flow:</strong> PKCE S256</p>
+  <p>Redirect URI คือ URL หน้าปัจจุบันหลังตัด query string และ hash ออก ระบบเก็บ PKCE verifier และ auth payload ใน <code>sessionStorage</code> หลังแลก code แล้วจะเรียก userinfo เพื่อหา profile และ user ID</p>
+  <div class="mono-block">GET  /openid-connect/auth<br>POST /openid-connect/token<br>GET  /openid-connect/userinfo<br>GET  /openid-connect/logout</div>
+  <p>ถ้า access token หมดอายุตาม JWT <code>exp</code> หรือ API ที่ตรวจ session ตอบ <code>401</code> ระบบจะล้าง auth และแสดง session-expired overlay</p>
+
+  <h3>5.2 SBS Course Tree — Dependency หลัก</h3>
+  <div class="mono-block">GET https://sbs-backend.mooc.meca.in.th/lms/{urlEncodedCourseId}</div>
+  <p>Frontend ใช้ <code>courseTitle/title</code>, <code>courseKey/course_key</code> และ tree <code>chapter → sequential → vertical → children</code> เพื่อสร้างหัวข้อการเรียน, จำแนก AE Tool และหา Adaptive Quiz refCode</p>
+  <p>ผลลัพธ์ถูกเก็บใน <code>window.courseDetailData</code> และสร้าง <code>window.courseToolInventory</code> สำหรับ BookRoll, Video, Chatbot และ VK</p>
+
+  <h3>5.3 BookRoll — Reading progress</h3>
+  <div class="mono-block">GET https://bookroll.thaidlt.com/meca/student/readingData<br>?userID={userId}&amp;usageId={courseId}&amp;view=student&amp;ts={timestamp}</div>
+  <ul>
+    <li>เรียกหนึ่งครั้งต่อรอบโหลด dashboard ไม่ fan-out ราย block</li>
+    <li><code>ts</code> ใช้ cache busting</li>
+    <li>รองรับ response แบบ array, object map และค่า <code>read:total</code> เช่น <code>7:10</code></li>
+    <li>Frontend normalize เป็น title, usageId, read, total และ progress 0–100</li>
+    <li>จับคู่กับ course tree ด้วยชื่อก่อน แล้วจึงลอง usage/block ID</li>
+  </ul>
+
+  <h3>5.4 Video — Progress และ Heatmap</h3>
+  <div class="mono-block">GET https://viola.thaidlt.com/meca/chart/bar/?userName={email}&amp;usageId={courseId}<br>GET https://viola.thaidlt.com/meca/chart/heatmapTime/?userName={email}&amp;usageId={courseId}</div>
+  <ul>
+    <li><code>bar</code> เป็นข้อมูลหลัก: category จาก <code>yAxis.data</code> และ progress จาก <code>series[0].data</code></li>
+    <li><code>heatmapTime</code> เป็นข้อมูลเสริม: ช่วงเวลาจาก <code>xAxis.data</code> และ event จาก <code>[xIndex,yIndex,count]</code></li>
+    <li>ถ้า bar ล้มเหลว task Video เป็น error; ถ้า heatmap ล้มเหลวแต่ bar สำเร็จ task ยังถือว่าสำเร็จ</li>
+    <li>จับคู่ item ด้วยชื่อ และมี fallback ตามลำดับวิดีโอใน course tree</li>
+  </ul>
+
+  <h3>5.5 Chatbot — API ใหม่และ fallback</h3>
+  <div class="callout success">
+    <strong>Source priority:</strong> Profile API ใหม่ → ถ้ามี Quiz ที่เคยทำให้ใช้ทันที → ถ้าไม่มีข้อมูลหรือเกิด error ให้ fallback ไป SBS speed + performance → ถ้าตอบ 401 ให้จบ task และแสดง session expired โดยไม่ fallback
+  </div>
+
+  <h4>API ใหม่</h4>
+  <div class="mono-block">GET {PROFILE_BASE}/api/kidbright/course/{courseId}/data/chatbot?email={learnerEmail}<br>Authorization: Bearer {accessToken}</div>
+  <p>Base URL ปริยายคือ <code>https://adaptive-profile-bn.ae.app.meca.in.th</code> และเปลี่ยนได้ผ่าน <code>STUDENT_DASHBOARD_CONFIG.baseUrl</code></p>
+  <p>Frontend ใช้เฉพาะ Quiz ที่เคยเริ่มทำ โดยดูจากจำนวน attempt, attempt history หรือ first/last attempt timestamp ข้อมูลที่ใช้ประกอบด้วยคะแนนผู้เรียน, คะแนนเฉลี่ยของกลุ่ม, เวลา, attempts, percentile และ completion</p>
+
+  <h4>API เดิมจาก SBS</h4>
+  <div class="mono-block">GET SBS /stats/echart/chatbotSpeed/{courseId}/{userId}<br>GET SBS /stats/echart/chatbotPerformance/{courseId}/{userId}</div>
+  <p>สอง endpoint ถูกเรียกพร้อมกันและเป็นอิสระต่อกัน หากอย่างน้อยหนึ่ง endpoint สำเร็จ task Chatbot ยังถือว่าสำเร็จ Response รองรับ ECharts config ที่ root หรืออยู่ใต้ <code>chart</code></p>
+
+  <h4>Debug endpoint</h4>
+  <div class="mono-block">GET SBS /me/data/chatbot/{courseId}<br>Authorization: Bearer {accessToken}</div>
+  <p>เรียกเฉพาะเมื่อ URL มี <code>debug=1</code> และรายวิชามี Chatbot ข้อมูลแสดงใน debug card เท่านั้น ไม่ถูกนำไปคำนวณ dashboard หลัก</p>
+
+  <h3>5.6 VK Analysis — Course overview + Chapter fan-out</h3>
+  <div class="mono-block">GET {VK_BASE}/analysis/overview/{userId}/course/{courseId}<br>GET {VK_BASE}/analysis/overview/{userId}/course/{courseId}/chapter/{chapterNo}</div>
+  <ol>
+    <li>เรียก course overview และอ่านเลขบทจาก <code>Params.x_data</code></li>
+    <li>ตัดค่าซ้ำและใช้เฉพาะเลขที่มากกว่า 0</li>
+    <li>เรียก chapter overview ทุกบทพร้อมกัน</li>
+    <li>หากบางบทล้มเหลว บทอื่นยังใช้ได้และ task โดยรวมยังถือว่าสำเร็จ</li>
+  </ol>
+  <p>Frontend ใช้ <code>Params.x_data</code>, <code>Params.series</code>, <code>x_locate</code>, <code>x_title</code> และ <code>VK skill.series.Result</code> เพื่อแสดง activity, metric และ skill result</p>
+
+  <h3>5.7 Adaptive Quiz Shared Dashboard</h3>
+  <div class="mono-block">GET edubot.abdul.in.th/adaptive-quiz/api/v1/shared-dashboard/learner/{email}/by-lead-label/{leadLabel}?ref_code={refCode}<br>x-api-key: {readOnlyApiKey}</div>
+  <p><code>leadLabel</code> คือ Course ID หลังตัด <code>course-v1:</code> ส่วน <code>refCode</code> มาจาก runtime config, query string หรือ Adaptive Quiz block ใน course tree</p>
+  <p>Response ถูกเก็บใน <code>window.adaptiveQuizSharedDashboardRaw</code> และใช้สรุปจำนวน collection/quiz ใน debug status แต่ยังไม่เชื่อมเข้ากราฟหลัก</p>
+
+  <div class="callout danger">
+    <strong>Security:</strong> โค้ดปัจจุบันฝัง Adaptive Quiz read-only API key ใน browser bundle ผู้ใช้จึงสามารถดูคีย์ได้ ควร rotate คีย์เดิมและย้าย request ผ่าน backend หรือ serverless proxy ที่ตรวจสิทธิ์
+  </div>
+
+  <h2>6. กติกาการคำนวณ Dashboard</h2>
+
+  <table class="data">
+    <colgroup><col style="width:25%"><col style="width:20%"><col style="width:55%"></colgroup>
+    <thead><tr><th>เครื่องมือ</th><th>รวมใน progress</th><th>ข้อมูลที่แสดง</th></tr></thead>
+    <tbody>
+      <tr><td>BookRoll</td><td><strong>รวม</strong></td><td>เปอร์เซ็นต์หน้าที่อ่าน</td></tr>
+      <tr><td>Video</td><td><strong>รวม</strong></td><td>เปอร์เซ็นต์การดูและ heatmap</td></tr>
+      <tr><td>Chatbot</td><td>ยังไม่รวม</td><td>คะแนน, คะแนนเฉลี่ย, เวลา, attempts</td></tr>
+      <tr><td>VK</td><td>ยังไม่รวม</td><td>Activity, metrics และ skill result</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <strong>สูตรรายบท:</strong> ค่าเฉลี่ยเลขคณิตของ progress ทุก vertical ที่มีค่าภายในบท<br>
+    <strong>สูตรรวม:</strong> ค่าเฉลี่ยเลขคณิตของ progress ทุก vertical ที่มีค่าในทุกบท
+  </div>
+
+  <ul>
+    <li>Vertical ที่มีหลาย subtool จะเฉลี่ยเฉพาะ subtool ที่มี progress เป็นตัวเลขก่อน</li>
+    <li>ทุก vertical มีน้ำหนักเท่ากัน ไม่ถ่วงตามจำนวนหน้า ระยะเวลาวิดีโอ จำนวน Quiz หรือจำนวนบท</li>
+    <li>รายการที่ไม่มีข้อมูลถูกตัดออกจากตัวหาร ไม่ได้นับเป็น 0</li>
+    <li>กิจกรรมลงทะเบียนหรือ profile AE Tool ให้ progress เป็น <code>null</code></li>
+    <li>สถานะ: 100% = เสร็จ, มากกว่า 0 = กำลังทำ, 0 = ยังไม่เริ่ม, ไม่มีตัวเลข = ไม่มีข้อมูล</li>
+  </ul>
+
+  <h2>7. Error, Retry และ Debug behavior</h2>
+  <ul>
+    <li>แต่ละ task มีสถานะ <code>pending</code>, <code>requesting</code>, <code>success</code>, <code>error</code> หรือ <code>skipped</code></li>
+    <li>ไม่มี automatic retry; ผู้ใช้ retry เฉพาะ task หรือ retry รายการที่ล้มเหลวทั้งหมดได้</li>
+    <li>Retry Course จะเริ่มรอบโหลด dashboard ใหม่ทั้งชุด</li>
+    <li>ไม่มี request timeout หรือ AbortController; request ที่ค้างอาจทำให้ loading อยู่ในสถานะ requesting นาน</li>
+    <li>เปิด debug card ด้วย <code>debug=1</code></li>
+    <li>เปิดปุ่ม Login/Logout ด้วย <code>loginbtn=true</code>; ค่า default ซ่อนปุ่มและ redirect ไป login อัตโนมัติเมื่อไม่มี session</li>
+  </ul>
+
+  <h2>8. ประเด็นที่ทีมควรตัดสินใจ</h2>
+
+  <table class="data risk-table">
+    <colgroup><col style="width:13%"><col style="width:25%"><col style="width:62%"></colgroup>
+    <thead><tr><th>Priority</th><th>เรื่อง</th><th>ข้อเสนอ</th></tr></thead>
+    <tbody>
+      <tr><td><strong>P0</strong></td><td>Adaptive Quiz API key</td><td>Rotate คีย์เดิมและย้ายการเรียกผ่าน backend/serverless proxy; ห้ามเก็บ secret ใน browser bundle</td></tr>
+      <tr><td><strong>P0</strong></td><td>Debug raw data</td><td>จำกัด <code>debug=1</code> สำหรับทีมพัฒนา และพิจารณาปิดใน production build</td></tr>
+      <tr><td><strong>P1</strong></td><td>OIDC user ID contract</td><td>ยืนยันว่า <code>userinfo.sub</code> มีเสมอและตรงกับ identifier ของ BookRoll, VK และ SBS</td></tr>
+      <tr><td><strong>P1</strong></td><td>Overall progress</td><td>ยืนยันว่า Product ต้องการนับเฉพาะ BookRoll + Video และต้องการตัด missing data ออกจากตัวหารจริงหรือไม่</td></tr>
+      <tr><td><strong>P1</strong></td><td>VK chapter number</td><td>ยืนยันว่า <code>Params.x_data</code> เป็นเลขบทที่ stable และเหมาะสำหรับประกอบ URL</td></tr>
+      <tr><td><strong>P1</strong></td><td>Quiz mapping</td><td>เพิ่ม stable ID mapping เพราะบางกรณี frontend จับคู่ Quiz กับ course tree ตามลำดับ</td></tr>
+      <tr><td><strong>P2</strong></td><td>VK N+1 requests</td><td>พิจารณา endpoint รวม, cache หรือ concurrency limit เมื่อรายวิชามีหลายบท</td></tr>
+      <tr><td><strong>P2</strong></td><td>Reliability</td><td>เพิ่ม request timeout, cancelation และ retry/backoff ที่เหมาะสม</td></tr>
+    </tbody>
+  </table>
+
+  <h2>9. Checklist สำหรับทดสอบร่วมกัน</h2>
+  <div class="compact">
+    <p>☐ Login ใหม่และกลับมาพร้อม <code>courseid</code> ที่รักษาเครื่องหมาย <code>+</code> ครบ</p>
+    <p>☐ Session เดิมที่ยังไม่หมดอายุโหลด dashboard ได้โดยไม่ login ซ้ำ</p>
+    <p>☐ Token หมดอายุแสดง session-expired overlay และ login ใหม่ได้</p>
+    <p>☐ วิชาที่มีเฉพาะ BookRoll เรียก BookRoll หนึ่งครั้ง และไม่เรียก Video/Chatbot/VK</p>
+    <p>☐ Video heatmap ล้มเหลวแล้วยังแสดง progress จาก bar ได้</p>
+    <p>☐ Chatbot API ใหม่มีข้อมูลแล้วไม่เรียก SBS legacy</p>
+    <p>☐ Chatbot API ใหม่ไม่มี attempt แล้ว fallback ไป speed/performance</p>
+    <p>☐ Chatbot API ใหม่ตอบ 401 แล้วไม่ fallback และแสดง session expired</p>
+    <p>☐ VK บางบทล้มเหลวแล้วบทอื่นยังแสดงได้</p>
+    <p>☐ Adaptive Quiz ไม่มี refCode แล้วถูกข้ามโดยไม่ทำให้ task อื่นล้มเหลว</p>
+    <p>☐ Course API ล้มเหลวแล้ว task อื่นถูกข้าม และ retry Course เริ่มโหลดใหม่ทั้งชุด</p>
+    <p>☐ จำกัด <code>debug=1</code> ไม่ให้ผู้ใช้ทั่วไปเปิดใน production</p>
+  </div>
+
+  <p class="footer-note">เอกสารฉบับย่อจาก <code>studentv2/STUDENT_DASHBOARD_API.md</code> — ตรวจจาก implementation ณ วันที่ 18 สิงหาคม 2026</p>
+</body>
+</html>

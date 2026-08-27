@@ -1,0 +1,371 @@
+{
+  "Params": {
+    "series": [
+      {
+        "name": "Time used",
+        "data": [258],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#EE6666" }
+      },
+      {
+        "name": "Coding mark",
+        "data": [0.75],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#5470C6" }
+      },
+      {
+        "name": "Coding time",
+        "data": [22],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#20ACA1" }
+      },
+      {
+        "name": "Solution mark",
+        "data": [0.8],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#91CC75" }
+      },
+      {
+        "name": "Scene used",
+        "data": [0.5],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#EE6666" }
+      },
+      {
+        "name": "Scene unused",
+        "data": [0],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#20ACA1" }
+      },
+      {
+        "name": "Object used",
+        "data": [1],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#F1B26B" }
+      },
+      {
+        "name": "Object unused",
+        "data": [0],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#9FCA7F" }
+      },
+      {
+        "name": "Image used",
+        "data": [3],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#EE6666" }
+      },
+      {
+        "name": "Image unused",
+        "data": [1],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#20ACA1" }
+      },
+      {
+        "name": "Snap count",
+        "data": [4],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#FAC858" }
+      },
+      {
+        "name": "Snap delete count",
+        "data": [1],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#FC8452" }
+      },
+      {
+        "name": "Label used",
+        "data": [2],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#EE6666" }
+      },
+      {
+        "name": "Label unused",
+        "data": [1],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#20ACA1" }
+      },
+      {
+        "name": "AIBlock time",
+        "data": [32],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#F1B26B" }
+      },
+      {
+        "name": "AIBlock used",
+        "data": [2],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#20ACA1" }
+      },
+      {
+        "name": "AIBlock unused",
+        "data": [1],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#F1B26B" }
+      },
+      {
+        "name": "AIBlock set",
+        "data": [2],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#5470C6" }
+      },
+      {
+        "name": "Capture time",
+        "data": [45],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#9FCA7F" }
+      },
+      {
+        "name": "Annotate time",
+        "data": [61],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#5B70C6" }
+      },
+      {
+        "name": "VK time",
+        "data": [6],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#CCA0FF" }
+      },
+      {
+        "name": "Switch count",
+        "data": [1],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#5B70C6" }
+      },
+      {
+        "name": "Train time",
+        "data": [92],
+        "type": "bar",
+        "showBackground": true,
+        "backgroundStyle": { "color": "rgba(180, 180, 180, 0.2)" },
+        "itemStyle": { "color": "#EE9999" }
+      }
+    ],
+    "x_data": ["Item 1"]
+  },
+  "Coding skill": {
+    "series": [
+      {
+        "name": "Coding marks",
+        "data": ["ทำโจทย์ Coding ได้ดี และควรทบทวนส่วนที่ยังผิดพลาด"]
+      },
+      {
+        "name": "Coding time",
+        "data": ["ควบคุมเวลาได้ดี และควรฝึกฝนเพื่อเพิ่มความสม่ำเสมอ"]
+      },
+      {
+        "name": "No. Switching",
+        "data": ["ใช้งาน IDE และ VK ได้คล่องตัว"]
+      },
+      {
+        "name": "Result",
+        "data": ["OK"]
+      }
+    ],
+    "x_data": ["Overall"]
+  },
+  "AI skill": {
+    "series": [
+      {
+        "name": "Solution mark",
+        "data": ["แก้ปัญหาด้วย AI ได้ดี และควรฝึกโจทย์ที่ซับซ้อนขึ้น"]
+      },
+      {
+        "name": "Total time",
+        "data": ["ควบคุมเวลาได้ดี"]
+      },
+      {
+        "name": "Result",
+        "data": ["OK"]
+      }
+    ],
+    "x_data": ["Overall"]
+  },
+  "AI setup skill": {
+    "series": [
+      {
+        "name": "Capture time",
+        "data": ["เตรียมรูปภาพได้เหมาะสม"]
+      },
+      {
+        "name": "Annotate time",
+        "data": ["ตั้งชื่อและกำกับข้อมูลได้ดี"]
+      },
+      {
+        "name": "Train time",
+        "data": ["พัฒนา AI Model ได้ตามเวลาที่เหมาะสม"]
+      },
+      {
+        "name": "Image",
+        "data": ["จำนวนรูปภาพเพียงพอสำหรับตัวอย่างนี้"]
+      },
+      {
+        "name": "Label",
+        "data": ["การจัดกลุ่มข้อมูลมีความชัดเจน"]
+      },
+      {
+        "name": "AIBlock",
+        "data": ["เลือกใช้ AIBlock ได้เหมาะสม"]
+      },
+      {
+        "name": "Result",
+        "data": ["OK"]
+      }
+    ],
+    "x_data": ["Overall"]
+  },
+  "Capture skill": {
+    "series": [
+      {
+        "name": "Capture time",
+        "data": ["ควบคุมเวลาในการเตรียมรูปภาพได้ดี"]
+      },
+      {
+        "name": "Image",
+        "data": ["ควรเพิ่มความหลากหลายของรูปภาพ"]
+      },
+      {
+        "name": "Result",
+        "data": ["OK"]
+      }
+    ],
+    "x_data": ["Overall"]
+  },
+  "Annotate skill": {
+    "series": [
+      {
+        "name": "Annotate time",
+        "data": ["ควบคุมเวลาในการตั้งชื่อได้ดี"]
+      },
+      {
+        "name": "Label",
+        "data": ["ควรตรวจสอบความถูกต้องของ Label เพิ่มเติม"]
+      },
+      {
+        "name": "Result",
+        "data": ["OK"]
+      }
+    ],
+    "x_data": ["Overall"]
+  },
+  "AI training skill": {
+    "series": [
+      {
+        "name": "Train time",
+        "data": ["ควบคุมเวลาในการพัฒนา AI Model ได้ดี"]
+      },
+      {
+        "name": "AIBlock",
+        "data": ["เลือกใช้ AIBlock ได้เหมาะสม"]
+      },
+      {
+        "name": "Result",
+        "data": ["OK"]
+      }
+    ],
+    "x_data": ["Overall"]
+  },
+  "AI building skill": {
+    "series": [
+      {
+        "name": "AIBlock",
+        "data": ["ควรฝึกเลือกใช้ AIBlock ให้เหมาะกับงานมากขึ้น"]
+      },
+      {
+        "name": "Result",
+        "data": ["Revise"]
+      }
+    ],
+    "x_data": ["Overall"]
+  },
+  "VK skill": {
+    "series": [
+      {
+        "name": "Scene used/unused",
+        "data": ["เลือกใช้ Scene ได้เหมาะสม"]
+      },
+      {
+        "name": "Objects used/unused",
+        "data": ["เลือกใช้ Object ได้ดี"]
+      },
+      {
+        "name": "VK time",
+        "data": ["ใช้เวลาใน VK ได้เหมาะสม"]
+      },
+      {
+        "name": "No. Switching",
+        "data": ["สลับใช้งาน IDE และ VK ได้คล่องตัว"]
+      },
+      {
+        "name": "Result",
+        "data": ["Good"]
+      }
+    ],
+    "x_data": ["Overall"]
+  },
+  "QID used": {
+    "series": [
+      {
+        "name": "QID used",
+        "data": ["QID-DEMO-001"]
+      }
+    ],
+    "x_data": ["Item 1"]
+  },
+  "done": {
+    "max": 1,
+    "value": 1
+  },
+  "name": "demo.student@example.com",
+  "x_locate": [
+    [2, 1, 1, 1]
+  ],
+  "x_title": [
+    "ตัวอย่างกิจกรรม AI"
+  ]
+}

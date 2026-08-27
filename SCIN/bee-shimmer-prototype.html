@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bee Shimmer — Risk-Aware UI Prototype</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f6f3eb;
+      --muted: #8e918d;
+      --line: rgba(255, 255, 255, .085);
+      --surface: rgba(21, 22, 20, .84);
+      --surface-2: #1b1d1a;
+      --honey: #ffc94a;
+      --honey-soft: #ffe59b;
+      --risk: 0;
+      --wave-x: 50vw;
+      --wave-y: 50vh;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { background: #0d0e0c; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      overflow-x: hidden;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 15% 0%, rgba(255, 201, 74, .04), transparent 24rem),
+        #0d0e0c;
+      font: 15px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button, textarea { font: inherit; }
+    button { color: inherit; }
+
+    .ambient-wave {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      pointer-events: none;
+      opacity: calc(var(--risk) * .78);
+      background:
+        repeating-radial-gradient(
+          circle at var(--wave-x) var(--wave-y),
+          transparent 0 48px,
+          rgba(255, 215, 112, .10) 62px,
+          rgba(255, 201, 74, .24) 65px,
+          transparent 82px 116px
+        );
+      mix-blend-mode: screen;
+      transform: scale(calc(.92 + var(--risk) * .08));
+      filter: blur(.2px);
+      transition: opacity 160ms ease, transform 300ms cubic-bezier(.2,.8,.2,1);
+      animation: breathe 2.8s ease-in-out infinite;
+    }
+
+    .ambient-glow {
+      position: fixed;
+      inset: 0;
+      z-index: 19;
+      pointer-events: none;
+      opacity: calc(var(--risk) * .65);
+      background: radial-gradient(
+        circle 260px at var(--wave-x) var(--wave-y),
+        rgba(255, 219, 126, .20),
+        rgba(255, 190, 45, .055) 40%,
+        transparent 72%
+      );
+      transition: opacity 150ms ease;
+    }
+
+    @keyframes breathe {
+      50% { filter: brightness(1.2) blur(.45px); }
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      height: 68px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(13, 14, 12, .78);
+      backdrop-filter: blur(18px);
+    }
+
+    .topbar-inner {
+      width: min(1160px, calc(100% - 32px));
+      height: 100%;
+      margin: auto;
+      display: grid;
+      grid-template-columns: 220px minmax(280px, 1fr) 220px;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--ink);
+      font-weight: 760;
+      letter-spacing: -.02em;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 30px;
+      height: 30px;
+      place-items: center;
+      border: 1px solid rgba(255, 201, 74, .55);
+      border-radius: 9px;
+      color: var(--honey);
+      background: rgba(255, 201, 74, .08);
+      font-size: 16px;
+    }
+
+    .search-pill {
+      width: min(440px, 100%);
+      height: 38px;
+      margin: auto;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,.035);
+    }
+
+    .top-actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .icon-dot, .avatar {
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      background: #252722;
+    }
+    .icon-dot { width: 34px; height: 34px; }
+    .avatar { width: 42px; height: 42px; }
+    .avatar.small { width: 34px; height: 34px; }
+
+    .layout {
+      width: min(1160px, calc(100% - 32px));
+      margin: 28px auto 80px;
+      display: grid;
+      grid-template-columns: 220px minmax(420px, 620px) 280px;
+      align-items: start;
+      gap: 20px;
+    }
+
+    .panel, .composer, .feed-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--surface);
+      box-shadow: 0 18px 50px rgba(0,0,0,.15);
+    }
+
+    .panel { padding: 16px; }
+
+    .side-nav {
+      position: sticky;
+      top: 96px;
+    }
+
+    .nav-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      height: 44px;
+      padding: 0 10px;
+      border-radius: 11px;
+      color: #b8bbb5;
+    }
+
+    .nav-row.active {
+      color: var(--ink);
+      background: rgba(255,255,255,.05);
+    }
+
+    .nav-icon {
+      width: 18px;
+      height: 18px;
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 6px;
+      background: rgba(255,255,255,.06);
+    }
+
+    .composer { padding: 18px; }
+
+    .composer-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .identity { flex: 1; }
+    .identity strong { display: block; font-size: 14px; }
+    .identity span { color: var(--muted); font-size: 12px; }
+
+    textarea {
+      display: block;
+      width: 100%;
+      min-height: 118px;
+      resize: vertical;
+      border: 0;
+      outline: 0;
+      color: var(--ink);
+      background: transparent;
+      font-size: clamp(17px, 2vw, 20px);
+      line-height: 1.55;
+    }
+
+    textarea::placeholder { color: #666963; }
+
+    .composer-footer {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .tool-button {
+      width: 34px;
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(255,255,255,.035);
+    }
+
+    .status-copy {
+      min-width: 0;
+      margin-left: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      transition: color 180ms ease;
+    }
+
+    .post-button {
+      position: relative;
+      min-width: 92px;
+      height: 42px;
+      margin-left: auto;
+      overflow: hidden;
+      border: 0;
+      border-radius: 12px;
+      color: #1a1405;
+      background: var(--honey);
+      font-weight: 760;
+      cursor: pointer;
+      box-shadow: 0 0 calc(var(--risk) * 34px) rgba(255, 201, 74, calc(var(--risk) * .55));
+      transform: scale(calc(1 + var(--risk) * .035));
+      transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+    }
+
+    .post-button::after {
+      content: "";
+      position: absolute;
+      inset: -100% -50%;
+      background: linear-gradient(110deg, transparent 38%, rgba(255,255,255,.75) 50%, transparent 62%);
+      transform: translateX(calc(-70% + var(--risk) * 95%));
+    }
+
+    .post-button:hover { background: #ffd66d; }
+    .post-button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+    .post-button:disabled { cursor: wait; }
+
+    .notice {
+      display: grid;
+      grid-template-rows: 0fr;
+      opacity: 0;
+      transition: grid-template-rows 240ms ease, opacity 180ms ease, margin 240ms ease;
+    }
+
+    .notice > div { overflow: hidden; }
+
+    .notice-inner {
+      display: flex;
+      gap: 10px;
+      padding: 0 12px;
+      border: 1px solid rgba(255, 201, 74, .22);
+      border-radius: 12px;
+      color: #dfd2ae;
+      background: rgba(255, 201, 74, .065);
+      font-size: 13px;
+    }
+
+    .notice.visible {
+      grid-template-rows: 1fr;
+      margin: 0 0 14px;
+      opacity: 1;
+    }
+
+    .notice.visible .notice-inner { padding-top: 10px; padding-bottom: 10px; }
+
+    .notice-symbol { color: var(--honey); }
+
+    .feed-card {
+      margin-top: 16px;
+      padding: 18px;
+    }
+
+    .feed-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .lines { flex: 1; }
+    .skel {
+      height: 10px;
+      border-radius: 99px;
+      background: #292b27;
+    }
+    .skel + .skel { margin-top: 8px; }
+    .w-35 { width: 35%; }
+    .w-48 { width: 48%; }
+    .w-62 { width: 62%; }
+    .w-78 { width: 78%; }
+    .w-92 { width: 92%; }
+
+    .media-skeleton {
+      aspect-ratio: 16 / 8;
+      margin-top: 18px;
+      border: 1px solid rgba(255,255,255,.04);
+      border-radius: 14px;
+      background:
+        radial-gradient(circle at 70% 35%, #30332d 0 7%, transparent 7.5%),
+        linear-gradient(145deg, transparent 50%, #292b27 50.5%);
+    }
+
+    .reaction-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .reaction-row .skel { width: 70px; height: 28px; }
+
+    .right-column {
+      position: sticky;
+      top: 96px;
+    }
+
+    .panel-label {
+      margin: 2px 0 16px;
+      color: #c8cbc4;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .trend { padding: 12px 0; border-top: 1px solid var(--line); }
+    .trend:first-of-type { border-top: 0; }
+
+    /* Every marked surface receives the same traveling highlight. Its phase is
+       offset per element in JS, making the interface feel like a participating field. */
+    .shimmer-node {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .shimmer-node::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+      border-radius: inherit;
+      opacity: calc(var(--risk) * .9);
+      background: linear-gradient(
+        112deg,
+        transparent 24%,
+        rgba(255, 201, 74, .025) 39%,
+        rgba(255, 231, 167, .26) 49%,
+        rgba(255, 201, 74, .06) 57%,
+        transparent 73%
+      );
+      background-size: 230% 100%;
+      animation: node-shimmer 1.45s linear infinite;
+      animation-delay: var(--phase, 0ms);
+    }
+
+    @keyframes node-shimmer {
+      from { background-position: 180% 0; }
+      to { background-position: -120% 0; }
+    }
+
+    body[data-state="aware"] .status-copy { color: var(--honey-soft); }
+
+    body[data-state="reflect"] .ambient-wave {
+      opacity: .95;
+      animation: reflect-pulse 700ms ease-out both;
+    }
+
+    @keyframes reflect-pulse {
+      from { transform: scale(.3); }
+      to { transform: scale(1.35); opacity: 0; }
+    }
+
+    .toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 30;
+      max-width: min(360px, calc(100% - 44px));
+      padding: 12px 15px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 12px;
+      background: #242620;
+      box-shadow: 0 18px 50px rgba(0,0,0,.4);
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      transition: 200ms ease;
+    }
+
+    .toast.visible { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 940px) {
+      .topbar-inner { grid-template-columns: 1fr 1.3fr auto; }
+      .layout { grid-template-columns: minmax(0, 1fr) 260px; }
+      .side-nav { display: none; }
+    }
+
+    @media (max-width: 700px) {
+      .topbar-inner { grid-template-columns: 1fr auto; }
+      .search-pill { display: none; }
+      .layout { grid-template-columns: 1fr; margin-top: 16px; }
+      .right-column { display: none; }
+      .composer { border-radius: 15px; }
+      .status-copy { display: none; }
+      .ambient-wave { background-size: 130% 130%; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+      }
+      .ambient-wave {
+        background: radial-gradient(circle 150px at var(--wave-x) var(--wave-y), rgba(255,201,74,.22), transparent 74%);
+      }
+      .shimmer-node::before { background: rgba(255, 201, 74, .08); }
+    }
+  </style>
+</head>
+<body data-state="idle">
+  <div class="ambient-glow" aria-hidden="true"></div>
+  <div class="ambient-wave" aria-hidden="true"></div>
+
+  <header class="topbar shimmer-node">
+    <div class="topbar-inner">
+      <div class="brand"><span class="brand-mark">◈</span> Hive</div>
+      <div class="search-pill shimmer-node" aria-hidden="true"></div>
+      <div class="top-actions" aria-hidden="true">
+        <span class="icon-dot shimmer-node"></span>
+        <span class="icon-dot shimmer-node"></span>
+        <span class="avatar small shimmer-node"></span>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="panel side-nav shimmer-node" aria-label="เมนูจำลอง">
+      <div class="nav-row active"><span class="nav-icon shimmer-node"></span> Home</div>
+      <div class="nav-row"><span class="nav-icon shimmer-node"></span> Explore</div>
+      <div class="nav-row"><span class="nav-icon shimmer-node"></span> Messages</div>
+      <div class="nav-row"><span class="nav-icon shimmer-node"></span> Saved</div>
+      <div class="nav-row"><span class="nav-icon shimmer-node"></span> Profile</div>
+    </aside>
+
+    <section aria-label="ฟีดจำลอง">
+      <article class="composer shimmer-node">
+        <div class="composer-title">
+          <span class="avatar shimmer-node" aria-hidden="true"></span>
+          <div class="identity">
+            <strong>Your update</strong>
+            <span>Public · Anyone can see this</span>
+          </div>
+        </div>
+
+        <label for="postText" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">เขียนโพสต์</label>
+        <textarea id="postText" maxlength="280" placeholder="What’s happening?"></textarea>
+
+        <div class="notice" id="riskNotice" role="status" aria-live="polite">
+          <div>
+            <div class="notice-inner">
+              <span class="notice-symbol">✦</span>
+              <span><strong>Pause for context.</strong> Take a moment to review who can see this post.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="composer-footer">
+          <button class="tool-button shimmer-node" type="button" aria-label="เพิ่มรูปภาพ">＋</button>
+          <button class="tool-button shimmer-node" type="button" aria-label="เพิ่มความรู้สึก">◌</button>
+          <span class="status-copy" id="statusCopy">Move toward Post to preview the warning</span>
+          <button class="post-button" id="postButton" type="button">Post</button>
+        </div>
+      </article>
+
+      <article class="feed-card shimmer-node" aria-label="โพสต์จำลอง">
+        <div class="feed-head">
+          <span class="avatar shimmer-node"></span>
+          <div class="lines"><div class="skel w-35 shimmer-node"></div><div class="skel w-48 shimmer-node"></div></div>
+        </div>
+        <div class="skel w-92 shimmer-node"></div><div class="skel w-78 shimmer-node"></div><div class="skel w-62 shimmer-node"></div>
+        <div class="media-skeleton shimmer-node"></div>
+        <div class="reaction-row"><div class="skel shimmer-node"></div><div class="skel shimmer-node"></div><div class="skel shimmer-node"></div></div>
+      </article>
+
+      <article class="feed-card shimmer-node" aria-label="โพสต์จำลอง">
+        <div class="feed-head">
+          <span class="avatar shimmer-node"></span>
+          <div class="lines"><div class="skel w-48 shimmer-node"></div><div class="skel w-35 shimmer-node"></div></div>
+        </div>
+        <div class="skel w-78 shimmer-node"></div><div class="skel w-92 shimmer-node"></div><div class="skel w-48 shimmer-node"></div>
+        <div class="reaction-row"><div class="skel shimmer-node"></div><div class="skel shimmer-node"></div></div>
+      </article>
+    </section>
+
+    <aside class="right-column">
+      <div class="panel shimmer-node">
+        <h2 class="panel-label">Trending around you</h2>
+        <div class="trend"><div class="skel w-35 shimmer-node"></div><div class="skel w-78 shimmer-node"></div></div>
+        <div class="trend"><div class="skel w-48 shimmer-node"></div><div class="skel w-92 shimmer-node"></div></div>
+        <div class="trend"><div class="skel w-35 shimmer-node"></div><div class="skel w-62 shimmer-node"></div></div>
+      </div>
+      <div class="panel shimmer-node" style="margin-top:16px">
+        <h2 class="panel-label">People to follow</h2>
+        <div class="feed-head"><span class="avatar small shimmer-node"></span><div class="lines"><div class="skel w-62 shimmer-node"></div><div class="skel w-48 shimmer-node"></div></div></div>
+        <div class="feed-head"><span class="avatar small shimmer-node"></span><div class="lines"><div class="skel w-78 shimmer-node"></div><div class="skel w-35 shimmer-node"></div></div></div>
+      </div>
+    </aside>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite">Prototype complete — the post was not sent anywhere.</div>
+
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const body = document.body;
+      const button = document.querySelector('#postButton');
+      const textarea = document.querySelector('#postText');
+      const notice = document.querySelector('#riskNotice');
+      const statusCopy = document.querySelector('#statusCopy');
+      const toast = document.querySelector('#toast');
+      const nodes = [...document.querySelectorAll('.shimmer-node')];
+      const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const activationRadius = 360;
+      let risk = 0;
+      let targetRisk = 0;
+      let frame = 0;
+      let toastTimer;
+      let reflecting = false;
+
+      function buttonCenter() {
+        const rect = button.getBoundingClientRect();
+        return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      }
+
+      function setOrigin() {
+        const center = buttonCenter();
+        root.style.setProperty('--wave-x', `${center.x}px`);
+        root.style.setProperty('--wave-y', `${center.y}px`);
+
+        nodes.forEach((node) => {
+          const rect = node.getBoundingClientRect();
+          const x = rect.left + rect.width / 2;
+          const y = rect.top + rect.height / 2;
+          const distance = Math.hypot(x - center.x, y - center.y);
+          node.style.setProperty('--phase', `${Math.round(-distance * 1.15)}ms`);
+        });
+      }
+
+      function animateRisk() {
+        risk += (targetRisk - risk) * (reducedMotion ? .4 : .13);
+        if (Math.abs(targetRisk - risk) < .002) risk = targetRisk;
+        root.style.setProperty('--risk', risk.toFixed(3));
+
+        const isAware = risk > .22;
+        if (!reflecting) body.dataset.state = isAware ? 'aware' : 'idle';
+        notice.classList.toggle('visible', risk > .68);
+        statusCopy.textContent = risk > .68
+          ? 'The whole interface is signaling risk'
+          : risk > .22
+            ? 'Context is beginning to respond'
+            : 'Move toward Post to preview the warning';
+
+        if (risk !== targetRisk) frame = requestAnimationFrame(animateRisk);
+        else frame = 0;
+      }
+
+      function aimAt(value) {
+        targetRisk = Math.max(0, Math.min(1, value));
+        if (!frame) frame = requestAnimationFrame(animateRisk);
+      }
+
+      document.addEventListener('pointermove', (event) => {
+        if (event.pointerType === 'touch') return;
+        const center = buttonCenter();
+        const distance = Math.hypot(event.clientX - center.x, event.clientY - center.y);
+        const proximity = 1 - Math.min(distance / activationRadius, 1);
+        // Smoothstep prevents the warning from snapping on at the radius boundary.
+        aimAt(proximity * proximity * (3 - 2 * proximity));
+      }, { passive: true });
+
+      document.addEventListener('pointerleave', () => aimAt(0));
+      button.addEventListener('focus', () => aimAt(1));
+      button.addEventListener('blur', () => aimAt(0));
+      button.addEventListener('pointerdown', () => aimAt(1));
+
+      button.addEventListener('click', () => {
+        reflecting = true;
+        body.dataset.state = 'reflect';
+        button.disabled = true;
+        button.textContent = 'Reviewing…';
+        notice.classList.add('visible');
+
+        setTimeout(() => {
+          reflecting = false;
+          body.dataset.state = 'idle';
+          button.disabled = false;
+          button.textContent = 'Post';
+          textarea.value = '';
+          aimAt(0);
+          toast.classList.add('visible');
+          clearTimeout(toastTimer);
+          toastTimer = setTimeout(() => toast.classList.remove('visible'), 3200);
+        }, 850);
+      });
+
+      addEventListener('resize', setOrigin, { passive: true });
+      addEventListener('scroll', setOrigin, { passive: true });
+      setOrigin();
+    })();
+  </script>
+</body>
+</html>

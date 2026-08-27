@@ -24,18 +24,6 @@ const gradeText = (course, t) => {
   return [grade, course?.level].filter(value => value !== "" && value != null).join(" ").trim() || t("common.all", {}, "ทั้งหมด");
 };
 const roomText = (course, t) => course?.classRoom === "" || course?.classRoom == null ? t("common.all", {}, "ทั้งหมด") : course.classRoom;
-const OVERVIEW_SLIDE_KEYS = Object.freeze({
-  "ผู้ใช้งานทั่วประเทศ": "nationwideUsers",
-  "สถาบันที่ร่วมโครงการ": "institutes",
-  "วิชาที่เปิดสอนทั้งหมด": "courses",
-  "จังหวัดที่ครอบคลุม": "provinceCoverage",
-  "วิชายอดนิยม": "popularCourse",
-  "จังหวัดที่ใช้งานสูงสุด": "topProvince",
-  "สถาบันที่ใช้งานสูงสุด": "topInstitute",
-  "การลงทะเบียนเรียนสะสม": "enrollments",
-  "ค่าเฉลี่ยผู้ใช้ต่อสถาบัน": "averageUsers",
-  "จังหวัดที่ใช้งานเข้มข้น": "activeProvinces"
-});
 const formatDuration = (seconds, t, formatNumber) => {
   if (!Number.isFinite(Number(seconds))) return "—";
   const minutes = Math.floor(Number(seconds) / 60);
@@ -71,6 +59,9 @@ const ICONS = {
   close: ["M6 6l12 12", "M18 6 6 18"],
   menu: ["M4 7h16", "M4 12h16", "M4 17h16"],
   chart: ["M4 19V9", "M10 19V5", "M16 19v-7", "M22 19H2"],
+  clock: ["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20", "M12 6v6l4 2"],
+  star: ["m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.2L5.8 21 7 14.2 2 9.3l6.9-1z"],
+  trophy: ["M8 4h8v5a4 4 0 0 1-8 0z", "M10 13v4", "M14 13v4", "M7 21h10", "M8 6H4v1a4 4 0 0 0 4 4", "M16 6h4v1a4 4 0 0 1-4 4"],
   tools: ["M14.7 6.3a4 4 0 0 0-5-5l2.1 2.1-2.8 2.8-2.1-2.1a4 4 0 0 0 5 5L17 20a2.1 2.1 0 0 0 3-3z"],
   send: ["m22 2-7 20-4-9-9-4z", "M22 2 11 13"],
   school: ["M3 10 12 5l9 5-9 5z", "M6 12v7", "M18 12v7", "M3 21h18"],
@@ -263,9 +254,7 @@ function DrawerRenderFailure({
     className: "mt-3 text-base font-extrabold text-slate-800"
   }, t("dashboard.studentDrawer.renderErrorTitle", {}, "แสดงรายละเอียดผู้เรียนไม่สำเร็จ")), React.createElement("p", {
     className: "mt-2 text-xs leading-5 text-slate-500"
-  }, t("dashboard.studentDrawer.renderErrorDescription", {}, "หน้าต่างนี้ยังเปิดอยู่เพื่อให้คุณตรวจสอบและรายงานปัญหาได้")), React.createElement("p", {
-    className: "mt-2 text-[11px] font-semibold text-slate-400"
-  }, t("dashboard.studentDrawer.errorHint", {}, "วางเมาส์หรือโฟกัสที่เครื่องหมายตกใจเพื่อดูสาเหตุ"))))));
+  }, t("dashboard.studentDrawer.renderErrorDescription", {}, "หน้าต่างนี้ยังเปิดอยู่เพื่อให้คุณตรวจสอบและรายงานปัญหาได้"))))));
 }
 const readDebugUi = () => {
   try { return JSON.parse(localStorage.getItem("td_debug_ui")) || {}; }
@@ -527,13 +516,6 @@ function App() {
   const [dataset, setDataset] = useState(null);
   const [page, setPage] = useState("overview");
   const [loadingCourse, setLoadingCourse] = useState(false);
-  const [overview, setOverview] = useState({
-    loading: true,
-    slides: [],
-    points: [],
-    trend: [],
-    error: ""
-  });
   const [error, setError] = useState("");
   const [courseTab, setCourseTab] = useState("all");
   const [profileOpen, setProfileOpen] = useState(false);
@@ -541,6 +523,8 @@ function App() {
   const [leadoOpen, setLeadoOpen] = useState(false);
   const [fontSize, setFontSize] = useState("md");
   const [addOpen, setAddOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [inviteInfo, setInviteInfo] = useState(null);
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [removeTarget, setRemoveTarget] = useState(null);
   const [student, setStudent] = useState(null);
@@ -552,31 +536,11 @@ function App() {
     setNoticeOpen(false);
     setLeadoOpen(false);
   };
-  const refreshClassrooms = useCallback(async (sub, instituteId) => {
-    const payload = await API.endpoints.classrooms(sub, instituteId);
+  const refreshClassrooms = useCallback(async () => {
+    const payload = await API.endpoints.classrooms();
     const mapped = API.flattenClassrooms(payload);
     setClassrooms(mapped);
     return mapped;
-  }, []);
-  useEffect(() => {
-    let live = true;
-    API.overview().then(payload => live && setOverview({
-      loading: false,
-      slides: Array.isArray(payload.slides) ? payload.slides : [],
-      points: Array.isArray(payload.points) ? payload.points : [],
-      trend: Array.isArray(payload.trend) ? payload.trend : [],
-      totals: payload.totals || {},
-      error: ""
-    })).catch(cause => live && setOverview({
-      loading: false,
-      slides: [],
-      points: [],
-      trend: [],
-      error: cause.message
-    }));
-    return () => {
-      live = false;
-    };
   }, []);
   useEffect(() => {
     let live = true;
@@ -584,11 +548,18 @@ function App() {
       try {
         const params = new URLSearchParams(location.search);
         if (params.get("code")) await API.finishLogin(params.get("code"));
-        const auth = API.readAuth();
-        const sub = API.authSub(auth);
-        if (auth && API.isExpired(auth)) {
-          API.clearAuth();
-          if (live) setSessionExpired(true);
+        let auth = API.readAuth();
+        let sub = API.authSub(auth);
+        if (auth && (API.isExpired(auth) || API.needsRefresh?.(auth))) {
+          try {
+            auth = await API.ensureFreshAuth();
+            sub = API.authSub(auth);
+          } catch (cause) {
+            if (cause?.sessionExpired || API.isExpired(API.readAuth())) {
+              API.clearAuth();
+              if (live) setSessionExpired(true);
+            }
+          }
         }
         if (!auth || !sub || API.isExpired(auth)) {
           if (live) {
@@ -598,6 +569,7 @@ function App() {
           return;
         }
         if (live) setAuthed(true);
+        API.startSessionKeepAlive?.();
         const claims = API.decodeJwt(auth.token?.id_token || auth.token?.access_token || "") || {};
         let user = null;
         let teacherPayload = null;
@@ -619,10 +591,11 @@ function App() {
         };
         if (!live) return;
         setTeacher(nextTeacher);
-        const mapped = await refreshClassrooms(sub, instituteId);
+        const mapped = await refreshClassrooms();
         if (!live) return;
-        if (API.config.assignId) {
-          const match = mapped.find(course => String(course.assignId) === String(API.config.assignId));
+        const deepLinkId = API.config.classroomId || API.config.assignId;
+        if (deepLinkId) {
+          const match = mapped.find(course => String(course.id) === String(deepLinkId) || String(course.classroomId) === String(deepLinkId));
           if (match) setTimeout(() => openCourse(match), 0);
         }
       } catch (cause) {
@@ -652,8 +625,32 @@ function App() {
     setError("");
     closeHeaderMenus();
     try {
-      const [tree, progress, grades] = await Promise.all([API.endpoints.courseTree(course.courseId), API.endpoints.progress(course.assignId), API.endpoints.grades(course.assignId)]);
+      const classroomId = course.classroomId || course.id;
+      const [tree, progress, grades, inviteResult] = await Promise.all([
+        API.endpoints.courseTree(course.courseId),
+        API.endpoints.progress(classroomId),
+        API.endpoints.grades(classroomId),
+        API.endpoints.ensureClassroomInvitation(classroomId, {}).catch(error => ({ __error: error }))
+      ]);
       setDataset(API.buildDataset(tree, progress, grades, course.title, course.courseId));
+      const invitation = inviteResult && !inviteResult.__error ? inviteResult : null;
+      let inviteList = invitation ? [invitation] : [];
+      if (!invitation) {
+        try {
+          const listed = await API.endpoints.classroomInvitations(classroomId);
+          inviteList = API.list(listed);
+        } catch (_) {
+          inviteList = [];
+        }
+      }
+      setInviteInfo({
+        classroomId,
+        courseId: course.courseId,
+        joinCode: course.joinCode || "",
+        invitations: inviteList,
+        active: inviteList.find(item => item.canAccept) || inviteList[0] || null,
+        error: inviteResult?.__error?.message || ""
+      });
       setSelectedId(course.id);
       setPage("overview");
     } catch (cause) {
@@ -669,6 +666,7 @@ function App() {
     setDataset(null);
     setStudent(null);
     setStudentDetail(null);
+    setInviteInfo(null);
     setPage("overview");
     closeHeaderMenus();
   };
@@ -734,7 +732,7 @@ function App() {
     }
   };
   const afterClassroomChange = async () => {
-    await refreshClassrooms(teacher.sub, teacher.instituteId);
+    await refreshClassrooms();
   };
   if (!ready) {
     return React.createElement(React.Fragment, null, React.createElement("div", {
@@ -780,7 +778,6 @@ function App() {
   }, !selected ? React.createElement(Landing, {
     authed: authed,
     teacher: teacher,
-    overview: overview,
     classrooms: classrooms,
     courseTab: courseTab,
     setCourseTab: setCourseTab,
@@ -792,11 +789,22 @@ function App() {
     setPage: setPage,
     selected: selected,
     dataset: dataset,
-    onOpenStudent: openStudent
+    inviteInfo: inviteInfo,
+    onInviteInfoChange: setInviteInfo,
+    onOpenStudent: openStudent,
+    onImport: () => setImportOpen(true)
   })), addOpen && React.createElement(AddClassroomModal, {
     teacher: teacher,
     onClose: () => setAddOpen(false),
     onAdded: afterClassroomChange
+  }), importOpen && selected && React.createElement(ImportStudentsModal, {
+    classroom: selected,
+    onClose: () => setImportOpen(false),
+    onImported: async () => {
+      setImportOpen(false);
+      await refreshClassrooms();
+      await openCourse(selected);
+    }
   }), editProfileOpen && React.createElement(EditProfileModal, {
     teacher: teacher,
     onClose: () => setEditProfileOpen(false),
@@ -1085,7 +1093,6 @@ function ProfileMenu({
 function Landing({
   authed,
   teacher,
-  overview,
   classrooms,
   courseTab,
   setCourseTab,
@@ -1118,8 +1125,9 @@ function Landing({
     date: today
   }, `วันนี้ ${today}`))), React.createElement("div", {
     className: "grid min-w-0 flex-none grid-cols-1 gap-3.5 p-3.5 sm:gap-[18px] sm:p-[22px] lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1.35fr)_minmax(380px,1fr)]"
-  }, React.createElement(UsageMap, {
-    overview: overview
+  }, React.createElement(TeacherSummary, {
+    teacher: teacher,
+    classrooms: classrooms
   }), authed ? React.createElement(CourseList, {
     classrooms: classrooms,
     courseTab: courseTab,
@@ -1177,197 +1185,297 @@ function SignInCard() {
     className: "text-slate-500"
   }, t("auth.privacy", {}, "นโยบายความเป็นส่วนตัว")))));
 }
-function UsageMap({
-  overview
+function TeacherSummary({
+  teacher,
+  classrooms
 }) {
   const {
     t,
-    formatNumber
+    formatNumber,
+    locale
   } = window.TeacherI18n.useI18n();
-  const mapElement = useRef(null);
-  const mapInstance = useRef(null);
-  const [slide, setSlide] = useState(0);
-  const slides = overview.slides || [];
-  useEffect(() => {
-    if (!mapElement.current || mapInstance.current || !window.L) return;
-    const map = L.map(mapElement.current, {
-      zoomControl: false,
-      scrollWheelZoom: false,
-      attributionControl: false
-    }).setView([14.4, 101.2], 5.5);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      minZoom: 4,
-      maxZoom: 12
-    }).addTo(map);
-    L.control.zoom({
-      position: "bottomright"
-    }).addTo(map);
-    mapInstance.current = map;
-    const resizeObserver = window.ResizeObserver ? new ResizeObserver(() => map.invalidateSize({
-      pan: false
-    })) : null;
-    resizeObserver?.observe(mapElement.current);
-    setTimeout(() => map.invalidateSize(), 150);
-    return () => {
-      resizeObserver?.disconnect();
-      map.remove();
-      mapInstance.current = null;
-    };
-  }, []);
-  useEffect(() => {
-    const map = mapInstance.current;
-    if (!map) return;
-    const layer = L.layerGroup().addTo(map);
-    (overview.points || []).forEach(point => {
-      const value = point.n >= 1000 ? `${(point.n / 1000).toFixed(point.n < 10000 ? 1 : 0).replace(".0", "")}k` : point.n;
-      const color = point.pin ? "#ef4444" : point.n >= 2000 ? "#ef4444" : point.n >= 1000 ? "#f97316" : point.n >= 500 ? "#f59e0b" : "#14b8a6";
-      const size = point.size || 36;
-      const html = `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;color:#fff;font:700 ${point.big ? 14 : 11}px Inter;border:2px solid rgba(255,255,255,.9);box-shadow:0 0 0 ${point.big ? 10 : 6}px ${color}22,0 3px 8px rgba(0,0,0,.2)">${value}</div>`;
-      L.marker([point.lat, point.lng], {
-        icon: L.divIcon({
-          html,
-          className: "",
-          iconSize: [size, size],
-          iconAnchor: [size / 2, size / 2]
-        }),
-        interactive: false
-      }).addTo(layer);
+  const h = React.createElement;
+  const safeClassrooms = Array.isArray(classrooms) ? classrooms : [];
+  const hasNumericValue = value => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+  const subjectCount = useMemo(() => {
+    const subjects = new Set();
+    safeClassrooms.forEach((course, index) => {
+      subjects.add(String(course?.courseId || course?.title || `course-${index}`).trim());
     });
-    return () => layer.remove();
-  }, [overview.points]);
-  useEffect(() => {
-    if (slides.length < 2) return;
-    const timer = setInterval(() => setSlide(current => (current + 1) % slides.length), 5000);
-    return () => clearInterval(timer);
-  }, [slides.length]);
-  const current = slides[slide];
-  const currentKey = current ? OVERVIEW_SLIDE_KEYS[current.label] : "";
-  const currentPrefix = currentKey ? `landing.map.slides.${currentKey}` : "";
-  const currentNumericValue = current ? Number(String(current.big).replace(/,/g, "")) : NaN;
-  const currentValue = Number.isFinite(currentNumericValue) ? formatNumber(currentNumericValue) : current?.big;
-  const currentLabel = currentPrefix ? t(`${currentPrefix}.label`, {}, current.label) : current?.label;
-  const currentUnit = current?.unit && currentPrefix ? t(`${currentPrefix}.unit`, {}, current.unit) : current?.unit;
-  const currentDescription = currentPrefix ? t(`${currentPrefix}.description`, {}, current.desc) : current?.desc;
-  const trend = overview.trend || [];
-  const trendValues = trend.map(item => Number(item.users)).filter(Number.isFinite);
-  const change = trendValues.length > 1 && trendValues.at(-2) ? Math.round((trendValues.at(-1) - trendValues.at(-2)) / trendValues.at(-2) * 100) : null;
-  return React.createElement("section", {
-    className: "relative min-h-[480px] min-w-0 overflow-hidden rounded-[18px] border border-slate-200 bg-[#dfe7ea] shadow-panel"
-  }, React.createElement("div", {
-    ref: mapElement,
-    className: "absolute inset-0",
+    return subjects.size;
+  }, [classrooms]);
+  const studentCounts = safeClassrooms
+    .filter(course => hasNumericValue(course?.students))
+    .map(course => Number(course.students));
+  const totalStudents = studentCounts.reduce((sum, value) => sum + value, 0);
+  const hasStudentData = studentCounts.length > 0 || safeClassrooms.length === 0;
+  const startTimes = safeClassrooms
+    .map(course => course?.startDate ? new Date(course.startDate).getTime() : NaN)
+    .filter(value => Number.isFinite(value) && value <= Date.now());
+  const firstTeachingTime = startTimes.length ? Math.min(...startTimes) : null;
+  const tenureDays = firstTeachingTime == null ? null : Math.max(0, Math.floor((Date.now() - firstTeachingTime) / 86400000));
+  const tenureText = tenureDays == null
+    ? t("landing.teacherSummary.tenureUnknown", {}, "ยังไม่มีข้อมูล")
+    : tenureDays < 1
+      ? t("landing.teacherSummary.tenureToday", {}, "เริ่มต้นวันนี้")
+      : tenureDays < 30
+        ? t("landing.teacherSummary.tenureDays", {
+          count: tenureDays,
+          formattedCount: formatNumber(tenureDays)
+        }, `${formatNumber(tenureDays)} วัน`)
+        : tenureDays < 365
+          ? t("landing.teacherSummary.tenureMonths", {
+            count: Math.floor(tenureDays / 30),
+            formattedCount: formatNumber(Math.floor(tenureDays / 30))
+          }, `${formatNumber(Math.floor(tenureDays / 30))} เดือน`)
+          : t("landing.teacherSummary.tenureYearsMonths", {
+            years: Math.floor(tenureDays / 365),
+            months: Math.floor(tenureDays % 365 / 30),
+            formattedYears: formatNumber(Math.floor(tenureDays / 365)),
+            formattedMonths: formatNumber(Math.floor(tenureDays % 365 / 30))
+          }, `${formatNumber(Math.floor(tenureDays / 365))} ปี ${formatNumber(Math.floor(tenureDays % 365 / 30))} เดือน`);
+  const teachingTotals = {
+    students: totalStudents,
+    classrooms: safeClassrooms.length,
+    subjects: subjectCount
+  };
+  const levels = [{
+    level: 1,
+    name: t("landing.teacherSummary.levels.beginner", {}, "เริ่มต้นเส้นทาง"),
+    requirements: { students: 0, classrooms: 1, subjects: 1 }
+  }, {
+    level: 2,
+    name: t("landing.teacherSummary.levels.creator", {}, "ผู้สร้างการเรียนรู้"),
+    requirements: { students: 25, classrooms: 2, subjects: 1 }
+  }, {
+    level: 3,
+    name: t("landing.teacherSummary.levels.developer", {}, "ครูนักพัฒนา"),
+    requirements: { students: 100, classrooms: 5, subjects: 2 }
+  }, {
+    level: 4,
+    name: t("landing.teacherSummary.levels.leader", {}, "ผู้นำการเรียนรู้"),
+    requirements: { students: 250, classrooms: 10, subjects: 3 }
+  }, {
+    level: 5,
+    name: t("landing.teacherSummary.levels.inspirer", {}, "ผู้สร้างแรงบันดาลใจ"),
+    requirements: { students: 500, classrooms: 20, subjects: 5 }
+  }];
+  const meetsLevel = level => Object.entries(level.requirements).every(([key, target]) => teachingTotals[key] >= target);
+  const unlockedLevels = levels.filter(meetsLevel);
+  const currentLevel = unlockedLevels.at(-1) || null;
+  const displayLevel = currentLevel || {
+    level: 0,
+    name: t("landing.teacherSummary.levels.gettingStarted", {}, "กำลังเริ่มต้น"),
+    requirements: { students: 0, classrooms: 0, subjects: 0 }
+  };
+  const nextLevel = levels.find(level => level.level > displayLevel.level) || null;
+  const criteriaFor = level => level ? [{
+    key: "subjects",
+    label: t("landing.teacherSummary.criteria.subjects", {}, "หลักสูตรที่นำไปสอน"),
+    current: teachingTotals.subjects,
+    target: level.requirements.subjects,
+    unit: t("landing.teacherSummary.subjectUnit", {}, "วิชา")
+  }, {
+    key: "classrooms",
+    label: t("landing.teacherSummary.criteria.classrooms", {}, "ห้องเรียนที่ดูแล"),
+    current: teachingTotals.classrooms,
+    target: level.requirements.classrooms,
+    unit: t("landing.teacherSummary.classroomUnit", {}, "ห้อง")
+  }, {
+    key: "students",
+    label: t("landing.teacherSummary.criteria.students", {}, "นักเรียนที่สอน"),
+    current: teachingTotals.students,
+    target: level.requirements.students,
+    unit: t("landing.teacherSummary.studentUnit", {}, "คน")
+  }].filter(criterion => criterion.target > 0).map(criterion => ({
+    ...criterion,
+    met: criterion.current >= criterion.target
+  })) : [];
+  const nextCriteria = criteriaFor(nextLevel);
+  const passedCriteria = nextCriteria.filter(criterion => criterion.met).length;
+  const levelProgress = nextLevel && nextCriteria.length
+    ? nextCriteria.reduce((sum, criterion) => sum + Math.min(1, criterion.current / criterion.target), 0) / nextCriteria.length * 100
+    : 100;
+  const progressCaption = nextLevel
+    ? t("landing.teacherSummary.criteriaProgress", {
+      passed: formatNumber(passedCriteria),
+      total: formatNumber(nextCriteria.length)
+    }, `ผ่าน ${formatNumber(passedCriteria)} / ${formatNumber(nextCriteria.length)} เกณฑ์`)
+    : t("landing.teacherSummary.maxLevel", {}, "ระดับสูงสุด");
+  const missingCriteria = nextCriteria.filter(criterion => !criterion.met).map(criterion => t(
+    `landing.teacherSummary.criteriaRemaining.${criterion.key}`,
+    { count: criterion.target - criterion.current, formattedCount: formatNumber(criterion.target - criterion.current) },
+    `อีก ${formatNumber(criterion.target - criterion.current)} ${criterion.unit}`
+  ));
+  const encouragement = nextLevel
+    ? t("landing.teacherSummary.nextRequirements", {
+      level: nextLevel.level,
+      requirements: missingCriteria.join(" • ")
+    }, `สู่ Level ${nextLevel.level}: ${missingCriteria.join(" • ")}`)
+    : t("landing.teacherSummary.highestLevel", {}, "คุณปลดล็อกระดับสูงสุดแล้ว ยอดเยี่ยมมาก!");
+  const achievement = currentLevel
+    ? t("landing.teacherSummary.achievementUnlocked", {
+      level: currentLevel.level,
+      name: currentLevel.name
+    }, `ปลดล็อก Level ${currentLevel.level} · ${currentLevel.name}`)
+    : t("landing.teacherSummary.achievements.getStarted", {}, "สร้างห้องเรียนแรกเพื่อเริ่มต้นเส้นทาง");
+  const openCertificate = () => {
+    const payload = {
+      version: 1,
+      locale,
+      teacherName: teacher?.name || "",
+      school: teacher?.school || "",
+      issuedAt: new Date().toISOString(),
+      totals: teachingTotals,
+      tenureText,
+      currentLevel: currentLevel ? {
+        level: currentLevel.level,
+        name: currentLevel.name,
+        criteria: criteriaFor(currentLevel)
+      } : null,
+      nextLevel: nextLevel ? {
+        level: nextLevel.level,
+        name: nextLevel.name,
+        criteria: nextCriteria
+      } : null,
+      roadmap: levels.map(level => ({
+        level: level.level,
+        name: level.name,
+        unlocked: meetsLevel(level),
+        criteria: criteriaFor(level)
+      }))
+    };
+    try {
+      localStorage.setItem("teacher_dashboard_certificate", JSON.stringify(payload));
+    } catch (_) {}
+    const certificateWindow = window.open("./teacher-certificate.html?v=20260825-2", "_blank");
+    if (certificateWindow) certificateWindow.opener = null;
+    else window.location.href = "./teacher-certificate.html?v=20260825-2";
+  };
+  const journeyStats = [{
+    label: t("landing.teacherSummary.tenure", {}, "สอนมาแล้ว"),
+    value: tenureText,
+    icon: "clock",
+    tone: "bg-violet-50 text-violet-600"
+  }, {
+    label: t("landing.teacherSummary.studentsTaught", {}, "นักเรียนที่ดูแล"),
+    value: hasStudentData ? `${formatNumber(totalStudents)} ${t("landing.teacherSummary.studentUnit", {}, "คน")}` : "—",
+    icon: "users",
+    tone: "bg-sky-50 text-sky-600"
+  }, {
+    label: t("landing.teacherSummary.classroomsManaged", {}, "ห้องเรียนที่ดูแล"),
+    value: `${formatNumber(safeClassrooms.length)} ${t("landing.teacherSummary.classroomUnit", {}, "ห้อง")}`,
+    icon: "school",
+    tone: "bg-teal-50 text-teal-600"
+  }, {
+    label: t("landing.teacherSummary.subjectsCreated", {}, "รายวิชาที่นำไปสอน"),
+    value: `${formatNumber(subjectCount)} ${t("landing.teacherSummary.subjectUnit", {}, "วิชา")}`,
+    icon: "tools",
+    tone: "bg-amber-50 text-amber-600"
+  }];
+  return h("section", {
+    className: "flex min-h-[480px] min-w-0 flex-col overflow-hidden rounded-[18px] border border-slate-200 bg-white shadow-panel"
+  }, h("div", {
+    className: "relative overflow-hidden bg-gradient-to-br from-brand-700 via-teal-600 to-cyan-500 px-5 pb-5 pt-5 text-white sm:px-6"
+  }, h("img", {
+    src: "https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-adap-green-untext.1c98bf032947.png",
+    alt: "",
+    "aria-hidden": "true",
+    className: "pointer-events-none absolute -right-8 -top-9 h-44 w-44 object-contain opacity-[.14] brightness-0 invert"
+  }), h("span", {
+    className: "pointer-events-none absolute -bottom-16 left-1/3 h-32 w-32 rounded-full bg-white/5"
+  }), h("div", {
+    className: "relative flex items-start justify-between gap-3"
+  }, h("div", {
+    className: "min-w-0"
+  }, h("div", {
+    className: "flex items-center gap-2"
+  }, h(Icon, {
+    name: "trophy",
+    size: 19,
+    className: "text-amber-200"
+  }), h("h2", {
+    className: "text-lg font-extrabold sm:text-[20px]"
+  }, t("landing.teacherSummary.journeyTitle", {}, "เส้นทางการสอนของฉัน"))), h("div", {
+    className: "mt-1 truncate text-[11px] font-semibold text-teal-100"
+  }, teacher?.school || "-")), h("span", {
+    className: "shrink-0 rounded-full border border-white/20 bg-white/15 px-3 py-1.5 font-inter text-xs font-extrabold shadow-sm backdrop-blur"
+  }, displayLevel.level ? `LEVEL ${displayLevel.level}` : "START")), h("div", {
+    className: "relative mt-5 flex items-center gap-4"
+  }, h("div", {
+    className: "flex h-[74px] w-[74px] shrink-0 items-center justify-center rounded-[24px] border border-white/25 bg-white/15 shadow-lg shadow-teal-900/10 backdrop-blur"
+  }, h(Icon, {
+    name: "trophy",
+    size: 38,
+    strokeWidth: 1.7,
+    className: "text-amber-200"
+  })), h("div", {
+    className: "min-w-0 flex-1"
+  }, h("div", {
+    className: "text-[11px] font-bold uppercase tracking-[.16em] text-teal-100"
+  }, t("landing.teacherSummary.currentLevel", {}, "ระดับปัจจุบัน")), h("div", {
+    className: "mt-0.5 truncate text-xl font-extrabold sm:text-[23px]"
+  }, displayLevel.name), h("div", {
+    className: "mt-3 flex items-center justify-between gap-3 text-[10px] font-bold text-teal-50"
+  }, h("span", null, progressCaption), h("span", {
+    className: "truncate text-right",
+    title: encouragement
+  }, encouragement)), h("div", {
+    className: "mt-1.5 h-2.5 overflow-hidden rounded-full bg-teal-950/25",
+    role: "progressbar",
+    "aria-valuemin": 0,
+    "aria-valuemax": 100,
+    "aria-valuenow": Math.round(levelProgress),
+    "aria-label": encouragement
+  }, h("span", {
+    className: "block h-full rounded-full bg-gradient-to-r from-amber-300 to-yellow-200 shadow-[0_0_12px_rgba(253,224,71,.45)] transition-all",
     style: {
-      position: "absolute",
-      inset: 0
+      width: `${levelProgress}%`
     }
-  }), React.createElement("div", {
-    className: "absolute left-3.5 right-3.5 top-3.5 z-[500] overflow-hidden rounded-2xl border border-white/70 bg-white/95 p-4 shadow-float backdrop-blur sm:left-5 sm:right-auto sm:top-5 sm:w-[290px] sm:p-5"
-  }, overview.loading ? React.createElement("div", {
-    className: "flex min-h-[126px] items-center justify-center text-xs font-semibold text-slate-500"
-  }, t("landing.map.loading", {}, "กำลังโหลดข้อมูลภาพรวม…")) : current ? React.createElement("div", {
-    className: "min-h-[126px]"
-  }, React.createElement("div", {
-    className: "flex items-center gap-2.5"
-  }, React.createElement("span", {
-    className: "h-5 w-1.5 rounded-full",
-    style: {
-      background: current.bg
-    }
-  }), React.createElement("span", {
-    className: "text-xs font-bold text-slate-600"
-  }, currentLabel)), React.createElement("div", {
-    className: "mt-2.5 font-inter text-[29px] font-extrabold leading-tight text-slate-900"
-  }, currentValue, " ", React.createElement("span", {
-    className: "font-sans text-sm font-bold text-slate-400"
-  }, currentUnit)), React.createElement("p", {
-    className: "mt-1.5 text-xs leading-5 text-slate-400"
-  }, currentDescription)) : React.createElement("div", {
-    className: "min-h-[126px] py-5"
-  }, React.createElement("div", {
-    className: "text-[13px] font-bold text-slate-700"
-  }, overview.error ? React.createElement(ErrorStateIcon, {
-    message: overview.error,
-    label: t("common.error", {}, "เกิดข้อผิดพลาด"),
-    align: "left"
-  }) : t("landing.map.emptyTitle", {}, "ไม่มีข้อมูลภาพรวมให้แสดง")), React.createElement("p", {
-    className: "mt-1 text-xs leading-5 text-slate-400"
-  }, overview.error
-    ? t("dashboard.studentDrawer.errorHint", {}, "วางเมาส์หรือโฟกัสที่เครื่องหมายตกใจเพื่อดูสาเหตุ")
-    : t("landing.map.noData", {}, "ไม่พบข้อมูล"))), slides.length > 1 && React.createElement("div", {
-    className: "mt-2 flex gap-1.5"
-  }, slides.map((_, index) => React.createElement("button", {
-    key: index,
-    onClick: () => setSlide(index),
-    className: cx("h-1.5 flex-1 rounded-full", index === slide ? "bg-brand-600" : "bg-slate-200")
-  }))), trendValues.length > 1 && React.createElement("div", {
-    className: "mt-3 flex items-end justify-between border-t border-slate-100 pt-2"
-  }, React.createElement("div", null, React.createElement("div", {
-    className: "text-[10px] font-semibold text-slate-400"
-  }, t("landing.map.sixMonthTrend", {}, "แนวโน้ม 6 เดือน")), React.createElement(Sparkline, {
-    values: trendValues
-  })), change != null && React.createElement("span", {
-    className: cx("font-inter text-xs font-bold", change >= 0 ? "text-green-600" : "text-red-600")
-  }, change >= 0 ? "▲" : "▼", " ", Math.abs(change), "%"))), React.createElement("button", {
-    className: "absolute bottom-5 right-5 z-[500] flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-brand-700 shadow-lg"
-  }, t("landing.map.viewFullMap", {}, "ดูรายละเอียดแผนที่เต็ม"), " ", React.createElement("span", {
-    className: "font-inter"
-  }, "↗")));
-}
-function Sparkline({
-  values
-}) {
-  const { t } = window.TeacherI18n.useI18n();
-  const option = useMemo(() => ({
-    animationDuration: 450,
-    grid: {
-      left: 2,
-      right: 2,
-      top: 3,
-      bottom: 3
-    },
-    xAxis: {
-      type: "category",
-      show: false,
-      boundaryGap: false,
-      data: values.map((_, index) => index)
-    },
-    yAxis: {
-      type: "value",
-      show: false,
-      scale: true
-    },
-    series: [{
-      type: "line",
-      data: values,
-      smooth: 0.35,
-      symbol: "none",
-      lineStyle: {
-        color: "#0d9488",
-        width: 2
-      },
-      areaStyle: {
-        color: {
-          type: "linear",
-          x: 0,
-          y: 0,
-          x2: 0,
-          y2: 1,
-          colorStops: [{
-            offset: 0,
-            color: "rgba(13,148,136,.18)"
-          }, {
-            offset: 1,
-            color: "rgba(13,148,136,0)"
-          }]
-        }
-      }
-    }]
-  }), [values]);
-  return React.createElement(EChart, {
-    option,
-    className: "h-7 w-[140px]",
-    ariaLabel: t("landing.map.trendAria", {}, "กราฟแนวโน้มผู้ใช้งานหกเดือน")
-  });
+  }))))), h("div", {
+    className: "grid grid-cols-2 gap-px border-b border-slate-100 bg-slate-100 sm:grid-cols-4"
+  }, journeyStats.map(stat => h("div", {
+    key: stat.label,
+    className: "bg-white px-4 py-4"
+  }, h("div", {
+    className: "flex items-center gap-2"
+  }, h("span", {
+    className: cx("flex h-8 w-8 shrink-0 items-center justify-center rounded-xl", stat.tone)
+  }, h(Icon, {
+    name: stat.icon,
+    size: 16
+  })), h("span", {
+    className: "text-[10px] font-bold leading-4 text-slate-400"
+  }, stat.label)), h("div", {
+    className: "mt-2 truncate text-[15px] font-extrabold text-slate-800",
+    title: stat.value
+  }, stat.value)))), h("div", {
+    className: "flex flex-1 items-center px-4 py-4 sm:px-5"
+  }, h("div", {
+    className: "flex w-full flex-wrap items-center gap-3 rounded-2xl border border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3"
+  }, h("span", {
+    className: "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-400 text-white shadow-md shadow-amber-200"
+  }, h(Icon, {
+    name: "star",
+    size: 20,
+    strokeWidth: 1.8
+  })), h("div", {
+    className: "min-w-[160px] flex-1"
+  }, h("div", {
+    className: "text-[10px] font-extrabold uppercase tracking-[.12em] text-amber-700"
+  }, t("landing.teacherSummary.latestAchievement", {}, "ความสำเร็จที่ปลดล็อก")), h("div", {
+    className: "mt-0.5 truncate text-[13px] font-extrabold text-slate-800",
+    title: achievement
+  }, achievement)), h("button", {
+    type: "button",
+    onClick: openCertificate,
+    className: "ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-amber-400 px-3.5 py-2 text-[11px] font-extrabold text-amber-950 shadow-sm transition hover:bg-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+  }, h(Icon, {
+    name: currentLevel ? "trophy" : "lock",
+    size: 14
+  }), currentLevel
+    ? t("landing.teacherSummary.viewCertificate", {}, "ดูใบประกาศ")
+    : t("landing.teacherSummary.viewCriteria", {}, "ดูเกณฑ์ Level 1")))));
 }
 function CourseList({
   classrooms,
@@ -1492,7 +1600,9 @@ function CourseCard({
   }), course.students == null ? "—" : t("landing.classrooms.studentCount", {
     count: Number(course.students),
     formattedCount: formatNumber(course.students)
-  }, `${formatNumber(course.students)} คน`)), started && React.createElement("span", {
+  }, `${formatNumber(course.students)} คน`)), course.joinCode && React.createElement("span", {
+    className: "flex items-center gap-1 font-inter tracking-wide"
+  }, "รหัส ", course.joinCode), started && React.createElement("span", {
     className: "flex items-center gap-1"
   }, React.createElement(Icon, {
     name: "calendar",
@@ -1559,7 +1669,10 @@ function Dashboard({
   setPage,
   selected,
   dataset,
-  onOpenStudent
+  inviteInfo,
+  onInviteInfoChange,
+  onOpenStudent,
+  onImport
 }) {
   const { t } = window.TeacherI18n.useI18n();
   const nav = [["overview", "chart"], ["students", "users"], ["tools", "tools"]];
@@ -1593,11 +1706,15 @@ function Dashboard({
   }, page === "overview" && React.createElement(OverviewPage, {
     selected: selected,
     dataset: dataset,
-    onOpenStudent: onOpenStudent
+    inviteInfo: inviteInfo,
+    onInviteInfoChange: onInviteInfoChange,
+    onOpenStudent: onOpenStudent,
+    onImport: onImport
   }), page === "students" && React.createElement(StudentsPage, {
     selected: selected,
     dataset: dataset,
-    onOpenStudent: onOpenStudent
+    onOpenStudent: onOpenStudent,
+    onImport: onImport
   }), page === "tools" && React.createElement(ToolsPage, {
     selected: selected,
     dataset: dataset
@@ -1629,10 +1746,185 @@ function CourseHero({
     className: "rounded-lg bg-white/15 px-2.5 py-1.5 text-[11px] font-semibold"
   }, chip))));
 }
+function copyText(value) {
+  const text = String(value || "");
+  if (!text) return Promise.reject(new Error("empty"));
+  if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(text);
+  return new Promise((resolve, reject) => {
+    try {
+      const area = document.createElement("textarea");
+      area.value = text;
+      area.setAttribute("readonly", "");
+      area.style.position = "fixed";
+      area.style.left = "-9999px";
+      document.body.appendChild(area);
+      area.select();
+      document.execCommand("copy");
+      document.body.removeChild(area);
+      resolve();
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+function ClassroomInviteCard({
+  selected,
+  inviteInfo,
+  onInviteInfoChange
+}) {
+  const {
+    t,
+    formatNumber,
+    formatDate
+  } = window.TeacherI18n.useI18n();
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState("");
+  const [error, setError] = useState("");
+  const invitation = inviteInfo?.active || null;
+  const joinCode = inviteInfo?.joinCode || selected?.joinCode || "";
+  const inviteLink = invitation?.id ? API.invitationUrl(invitation.id) : "";
+  const joinLink = joinCode && (inviteInfo?.courseId || selected?.courseId)
+    ? API.joinCodeUrl(inviteInfo?.courseId || selected.courseId, joinCode)
+    : "";
+  const seatsLabel = invitation
+    ? invitation.maxNumbers == null
+      ? "ไม่จำกัดจำนวน"
+      : `${formatNumber(invitation.usedCount || 0)} / ${formatNumber(invitation.maxNumbers)}`
+    : "—";
+  const statusLabel = !invitation
+    ? "ยังไม่มีลิงก์เชิญ"
+    : invitation.canAccept
+      ? "พร้อมใช้งาน"
+      : invitation.expired
+        ? "หมดอายุ"
+        : "เต็มแล้ว";
+  const markCopied = key => {
+    setCopied(key);
+    setTimeout(() => setCopied(current => current === key ? "" : current), 1600);
+  };
+  const handleCopy = async (key, value) => {
+    try {
+      await copyText(value);
+      markCopied(key);
+      setError("");
+    } catch (_) {
+      setError("คัดลอกไม่สำเร็จ");
+    }
+  };
+  const refreshInvite = async createNew => {
+    const classroomId = inviteInfo?.classroomId || selected?.classroomId || selected?.id;
+    if (!classroomId || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const invitationNext = createNew
+        ? await API.endpoints.createClassroomInvitation(classroomId, {})
+        : await API.endpoints.ensureClassroomInvitation(classroomId, {});
+      const listed = await API.endpoints.classroomInvitations(classroomId).catch(() => [invitationNext]);
+      const invitations = API.list(listed);
+      if (invitationNext && !invitations.some(item => item.id === invitationNext.id)) {
+        invitations.unshift(invitationNext);
+      }
+      onInviteInfoChange?.({
+        classroomId,
+        courseId: inviteInfo?.courseId || selected?.courseId || "",
+        joinCode: inviteInfo?.joinCode || selected?.joinCode || "",
+        invitations,
+        active: invitations.find(item => item.canAccept) || invitationNext || invitations[0] || null,
+        error: ""
+      });
+    } catch (cause) {
+      setError(cause.message || String(cause));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return React.createElement("section", {
+    className: "mb-4 overflow-hidden rounded-2xl border border-teal-100 bg-gradient-to-br from-teal-50 via-white to-white shadow-panel"
+  }, React.createElement("div", {
+    className: "flex flex-col gap-3 border-b border-teal-100/80 px-5 py-4 sm:flex-row sm:items-start sm:justify-between"
+  }, React.createElement("div", null, React.createElement("h3", {
+    className: "text-[15px] font-bold text-slate-900"
+  }, "ลิงก์เชิญเข้าห้องเรียน"), React.createElement("p", {
+    className: "mt-0.5 text-[11px] text-slate-500"
+  }, "แชร์ลิงก์หรือรหัสเข้าร่วมให้นักเรียนสมัครเข้าห้องนี้")), React.createElement("div", {
+    className: "flex flex-wrap gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    disabled: busy,
+    onClick: () => refreshInvite(false),
+    className: "rounded-full border border-teal-200 bg-white px-3 py-1.5 text-[11px] font-bold text-teal-700 disabled:opacity-50"
+  }, busy ? "กำลังโหลด..." : "รีเฟรช"), React.createElement("button", {
+    type: "button",
+    disabled: busy,
+    onClick: () => refreshInvite(true),
+    className: "rounded-full bg-brand-600 px-3 py-1.5 text-[11px] font-bold text-white disabled:opacity-50"
+  }, "สร้างลิงก์ใหม่"))), error && React.createElement("div", {
+    className: "mx-5 mt-3 rounded-[10px] border border-red-100 bg-red-50 px-3 py-2 text-xs font-semibold text-red-600"
+  }, error), React.createElement("div", {
+    className: "grid gap-3 p-5 md:grid-cols-2"
+  }, React.createElement("div", {
+    className: "rounded-[14px] border border-slate-200 bg-white p-4"
+  }, React.createElement("div", {
+    className: "text-[11px] font-bold uppercase tracking-wide text-slate-400"
+  }, "รหัสเข้าร่วม (joinCode)"), React.createElement("div", {
+    className: "mt-2 font-inter text-2xl font-extrabold tracking-[0.2em] text-slate-900"
+  }, joinCode || "—"), React.createElement("div", {
+    className: "mt-3 flex flex-wrap gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    disabled: !joinCode,
+    onClick: () => handleCopy("code", joinCode),
+    className: "rounded-full border border-slate-200 px-3 py-1.5 text-[11px] font-bold text-slate-700 disabled:opacity-40"
+  }, copied === "code" ? "คัดลอกแล้ว" : "คัดลอกรหัส"), joinLink && React.createElement("button", {
+    type: "button",
+    onClick: () => handleCopy("joinLink", joinLink),
+    className: "rounded-full border border-slate-200 px-3 py-1.5 text-[11px] font-bold text-brand-700"
+  }, copied === "joinLink" ? "คัดลอกแล้ว" : "คัดลอกลิงก์รหัส"))), React.createElement("div", {
+    className: "rounded-[14px] border border-slate-200 bg-white p-4"
+  }, React.createElement("div", {
+    className: "flex items-center justify-between gap-2"
+  }, React.createElement("div", {
+    className: "text-[11px] font-bold uppercase tracking-wide text-slate-400"
+  }, "ลิงก์เชิญ (invitation)"), React.createElement("span", {
+    className: cx("rounded-full px-2 py-0.5 text-[10px] font-bold", invitation?.canAccept ? "bg-teal-50 text-teal-700" : "bg-slate-100 text-slate-500")
+  }, statusLabel)), React.createElement("div", {
+    className: "mt-2 break-all text-[12px] font-semibold text-slate-700"
+  }, inviteLink || "ยังไม่มีลิงก์ — กดสร้างลิงก์ใหม่"), React.createElement("div", {
+    className: "mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-500"
+  }, React.createElement("div", null, React.createElement("div", {
+    className: "font-bold text-slate-400"
+  }, "หมดอายุ"), React.createElement("div", {
+    className: "mt-0.5 font-semibold text-slate-700"
+  }, invitation?.expiredAt ? formatDate(invitation.expiredAt, {
+    year: "numeric",
+    month: "short",
+    day: "numeric"
+  }) : "—")), React.createElement("div", null, React.createElement("div", {
+    className: "font-bold text-slate-400"
+  }, "การใช้งาน"), React.createElement("div", {
+    className: "mt-0.5 font-semibold text-slate-700"
+  }, seatsLabel))), React.createElement("div", {
+    className: "mt-3 flex flex-wrap gap-2"
+  }, React.createElement("button", {
+    type: "button",
+    disabled: !inviteLink,
+    onClick: () => handleCopy("invite", inviteLink),
+    className: "rounded-full border border-slate-200 px-3 py-1.5 text-[11px] font-bold text-slate-700 disabled:opacity-40"
+  }, copied === "invite" ? "คัดลอกแล้ว" : "คัดลอกลิงก์"), inviteLink && React.createElement("a", {
+    href: inviteLink,
+    target: "_blank",
+    rel: "noreferrer",
+    className: "rounded-full bg-slate-900 px-3 py-1.5 text-[11px] font-bold text-white"
+  }, "เปิดลิงก์")))));
+}
 function OverviewPage({
   selected,
   dataset,
-  onOpenStudent
+  inviteInfo,
+  onInviteInfoChange,
+  onOpenStudent,
+  onImport
 }) {
   const {
     t,
@@ -1669,9 +1961,22 @@ function OverviewPage({
   return React.createElement(React.Fragment, null, React.createElement(CourseHero, {
     selected: selected,
     title: dataset.title
-  }), React.createElement("h2", {
-    className: "mb-4 text-lg font-extrabold text-slate-900"
-  }, t("dashboard.overview.title", {}, "ภาพรวมของทั้งห้องเรียน")), React.createElement("div", {
+  }), React.createElement(ClassroomInviteCard, {
+    selected: selected,
+    inviteInfo: inviteInfo,
+    onInviteInfoChange: onInviteInfoChange
+  }), React.createElement("div", {
+    className: "mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+  }, React.createElement("h2", {
+    className: "text-lg font-extrabold text-slate-900"
+  }, t("dashboard.overview.title", {}, "ภาพรวมของทั้งห้องเรียน")), React.createElement("button", {
+    type: "button",
+    onClick: onImport,
+    className: "inline-flex items-center justify-center gap-2 rounded-full bg-brand-600 px-4 py-2.5 text-[13px] font-bold text-white hover:bg-brand-700"
+  }, React.createElement(Icon, {
+    name: "plus",
+    size: 16
+  }), t("dashboard.overview.import", {}, "นำเข้าผู้เรียน"))), React.createElement("div", {
     className: "mb-4 grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-4"
   }, React.createElement(MetricCard, {
     color: "#12a594",
@@ -1743,9 +2048,7 @@ function OverviewPage({
     className: "min-w-0"
   }, React.createElement("div", {
     className: "truncate text-[13px] font-bold text-slate-800"
-  }, item.name), React.createElement("div", {
-    className: "truncate font-inter text-[11px] text-slate-400"
-  }, item.email)), React.createElement("div", {
+  }, item.name)), React.createElement("div", {
     className: "flex items-center gap-3"
   }, React.createElement("span", {
     className: "hidden h-2 w-28 overflow-hidden rounded-full bg-slate-100 sm:block"
@@ -2208,7 +2511,8 @@ function Avatar({
 function StudentsPage({
   selected,
   dataset,
-  onOpenStudent
+  onOpenStudent,
+  onImport
 }) {
   const {
     t,
@@ -2238,7 +2542,7 @@ function StudentsPage({
     };
     let output = dataset.students.filter(item => {
       const query = search.trim().toLowerCase();
-      return !query || String(item.name || "").toLowerCase().includes(query) || String(item.email || "").toLowerCase().includes(query) || String(item.province || "").toLowerCase().includes(query);
+      return !query || String(item.name || "").toLowerCase().includes(query) || String(/*item.email*/ "" || "").toLowerCase().includes(query) || String(item.province || "").toLowerCase().includes(query);
     });
     if (filter !== "all") output = output.filter(item => item.status.key === filter);
     return [...output].sort((a, b) => {
@@ -2308,6 +2612,13 @@ function StudentsPage({
   }, t("dashboard.students.sort.quiz", {}, "คะแนนสูงสุด")), React.createElement("option", {
     value: "name"
   }, t("dashboard.students.sort.name", {}, "ชื่อ ก–ฮ"))), React.createElement("button", {
+    type: "button",
+    onClick: onImport,
+    className: "flex items-center gap-2 rounded-[10px] bg-brand-600 px-3 py-2 text-xs font-bold text-white hover:bg-brand-700"
+  }, React.createElement(Icon, {
+    name: "plus",
+    size: 16
+  }), t("dashboard.students.import", {}, "นำเข้า")), React.createElement("button", {
     onClick: exportCsv,
     className: "flex items-center gap-2 rounded-[10px] border border-slate-200 px-3 py-2 text-xs font-bold text-brand-700 hover:bg-brand-50"
   }, React.createElement(Icon, {
@@ -2354,9 +2665,7 @@ function StudentsPage({
     className: "min-w-0"
   }, React.createElement("div", {
     className: "font-bold text-slate-800"
-  }, item.name), React.createElement("div", {
-    className: "font-inter text-[11px] text-slate-400"
-  }, item.email)))), React.createElement("td", {
+  }, item.name)))), React.createElement("td", {
     className: "px-4 py-3 text-slate-500"
   }, item.room), React.createElement("td", {
     className: "px-4 py-3"
@@ -2685,8 +2994,6 @@ function StudentDrawer({
   }, React.createElement("h2", {
     className: "truncate text-xl font-extrabold"
   }, safeStudent.name || t("dashboard.studentDrawer.unnamed", {}, "ไม่ระบุชื่อ")), React.createElement("div", {
-    className: "truncate font-inter text-xs text-teal-100"
-  }, safeStudent.email || "—"), React.createElement("div", {
     className: "mt-2 flex gap-2"
   }, React.createElement("span", {
     className: "rounded-md bg-white/15 px-2 py-1 text-[10px] font-semibold"
@@ -2909,6 +3216,265 @@ function EditProfileModal({
     className: "rounded-full bg-brand-600 px-6 py-2.5 text-[13px] font-bold text-white"
   }, "บันทึก")));
 }
+function parseEmailList(value) {
+  return [...new Set(String(value || "").split(/[\s,;]+/).map(item => item.trim().toLowerCase()).filter(Boolean))];
+}
+function ImportStudentsModal({
+  classroom,
+  onClose,
+  onImported
+}) {
+  const {
+    t,
+    formatNumber
+  } = window.TeacherI18n.useI18n();
+  const classroomId = classroom.classroomId || classroom.id;
+  const [tab, setTab] = useState("list");
+  const [filters, setFilters] = useState({
+    classRoom: "",
+    grade: "",
+    level: ""
+  });
+  const [emailText, setEmailText] = useState("");
+  const [candidates, setCandidates] = useState([]);
+  const [selected, setSelected] = useState(() => new Set());
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState(null);
+  const [search, setSearch] = useState("");
+  const filteredCandidates = (() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return candidates;
+    return candidates.filter(item =>
+      String(item.name || "").toLowerCase().includes(query)
+      || String(item.email || "").toLowerCase().includes(query)
+      || String(item.levelOfEducation || "").toLowerCase().includes(query)
+    );
+  })();
+  const selectable = filteredCandidates.filter(item => item.inProfile);
+  const selectedCount = [...selected].filter(email => candidates.some(item => item.email === email && item.inProfile)).length;
+  const allSelected = selectable.length > 0 && selectable.every(item => selected.has(item.email));
+  const loadCandidates = async mode => {
+    if (!classroomId || loading) return;
+    setLoading(true);
+    setError("");
+    setResult(null);
+    try {
+      const query = { excludeMembers: true };
+      if (classroom.instituteId) query.instituteId = classroom.instituteId;
+      if (mode === "emails") {
+        const emails = parseEmailList(emailText);
+        if (!emails.length) {
+          setError("กรุณาวางรายการอีเมลอย่างน้อย 1 อีเมล");
+          setCandidates([]);
+          setSelected(new Set());
+          setLoading(false);
+          return;
+        }
+        query.emails = emails;
+      } else {
+        if (filters.classRoom) query.classRoom = filters.classRoom;
+        if (filters.grade) query.grade = filters.grade;
+        if (filters.level) query.level = Number(filters.level);
+      }
+      const payload = await API.endpoints.importCandidates(classroomId, query);
+      const rows = API.list(payload?.candidates || payload).map(row => {
+        const email = String(row.email || "").trim().toLowerCase();
+        const name = `${row.firstName || ""} ${row.lastName || ""}`.replace(/\s+/g, " ").trim() || email;
+        return {
+          email,
+          name,
+          progress: Number.isFinite(Number(row.progress)) ? Number(row.progress) : null,
+          levelOfEducation: row.levelOfEducation || "",
+          inProfile: Boolean(row.inProfile),
+          userId: row.userId || null,
+          enrollId: row.enrollId || null,
+          alreadyMember: Boolean(row.alreadyMember)
+        };
+      }).filter(row => row.email);
+      setCandidates(rows);
+      setSearch("");
+      setSelected(new Set(rows.filter(row => row.inProfile).map(row => row.email)));
+    } catch (cause) {
+      setCandidates([]);
+      setSelected(new Set());
+      setError(cause.message || String(cause));
+    } finally {
+      setLoading(false);
+    }
+  };
+  const toggleEmail = email => {
+    setSelected(current => {
+      const next = new Set(current);
+      if (next.has(email)) next.delete(email);
+      else next.add(email);
+      return next;
+    });
+  };
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelected(new Set());
+      return;
+    }
+    setSelected(new Set(selectable.map(item => item.email)));
+  };
+  const importSelected = async () => {
+    const emails = [...selected].filter(email => candidates.some(item => item.email === email && item.inProfile));
+    if (!emails.length || saving) return;
+    setSaving(true);
+    setError("");
+    setResult(null);
+    try {
+      const body = { emails };
+      if (filters.classRoom) body.classRoom = filters.classRoom;
+      if (filters.grade) body.grade = filters.grade;
+      if (filters.level) body.level = Number(filters.level);
+      const payload = await API.endpoints.importMembers(classroomId, body);
+      setResult(payload);
+      if ((payload?.imported || 0) > 0) {
+        await onImported(payload);
+      }
+    } catch (cause) {
+      setError(cause.message || String(cause));
+    } finally {
+      setSaving(false);
+    }
+  };
+  return React.createElement(ModalShell, {
+    onClose: onClose,
+    wide: true
+  }, React.createElement("div", {
+    className: "flex shrink-0 items-center justify-between border-b border-slate-100 px-6 py-5"
+  }, React.createElement("div", null, React.createElement("h2", {
+    className: "text-xl font-extrabold"
+  }, "นำเข้าผู้เรียน"), React.createElement("p", {
+    className: "mt-0.5 text-xs text-slate-400"
+  }, "ดึงรายชื่อจาก LMS (SBS) ที่ยังไม่ได้อยู่ในห้องนี้")), React.createElement("button", {
+    onClick: onClose,
+    className: "rounded-lg bg-slate-100 p-2 text-slate-500"
+  }, React.createElement(Icon, {
+    name: "close",
+    size: 15
+  }))), React.createElement("div", {
+    className: "flex shrink-0 gap-2 border-b border-slate-100 px-6 pt-3"
+  }, [["list", "จากรายชื่อ LMS"], ["emails", "วางรายการอีเมล"]].map(([key, label]) => React.createElement("button", {
+    key: key,
+    type: "button",
+    onClick: () => {
+      setTab(key);
+      setError("");
+      setResult(null);
+    },
+    className: cx("border-b-2 px-3 pb-3 text-[13px] font-bold", tab === key ? "border-brand-600 text-brand-700" : "border-transparent text-slate-400")
+  }, label))), React.createElement("div", {
+    className: "shrink-0 space-y-3 border-b border-slate-100 px-6 py-4"
+  }, tab === "list" ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "grid grid-cols-1 gap-2 sm:grid-cols-3"
+  }, React.createElement("input", {
+    value: filters.classRoom,
+    onChange: event => setFilters(current => ({ ...current, classRoom: event.target.value })),
+    placeholder: "ห้อง (mailing_address)",
+    className: "field rounded-[10px] border border-slate-200 px-3 py-2.5 text-[13px]"
+  }), React.createElement("select", {
+    value: filters.grade,
+    onChange: event => setFilters(current => ({ ...current, grade: event.target.value })),
+    className: "field rounded-[10px] border border-slate-200 bg-white px-3 py-2.5 text-[13px]"
+  }, React.createElement("option", { value: "" }, "ทุกระดับชั้น"), Object.entries(API.gradeLabels).map(([value, label]) => React.createElement("option", {
+    key: value,
+    value: value
+  }, label))), React.createElement("input", {
+    value: filters.level,
+    onChange: event => setFilters(current => ({ ...current, level: event.target.value })),
+    placeholder: "ชั้นปี (เช่น 4)",
+    className: "field rounded-[10px] border border-slate-200 px-3 py-2.5 text-[13px]"
+  })), React.createElement("button", {
+    type: "button",
+    onClick: () => loadCandidates("list"),
+    disabled: loading,
+    className: "rounded-full bg-brand-600 px-5 py-2.5 text-[13px] font-bold text-white disabled:bg-teal-200"
+  }, loading ? "กำลังโหลด..." : "ค้นหารายชื่อจาก LMS")) : React.createElement(React.Fragment, null, React.createElement("textarea", {
+    value: emailText,
+    onChange: event => setEmailText(event.target.value),
+    rows: 5,
+    placeholder: "วางอีเมล คั่นด้วยขึ้นบรรทัดใหม่ คอมมา หรือช่องว่าง",
+    className: "field w-full rounded-[10px] border border-slate-200 px-3 py-2.5 text-[13px]"
+  }), React.createElement("button", {
+    type: "button",
+    onClick: () => loadCandidates("emails"),
+    disabled: loading,
+    className: "rounded-full bg-brand-600 px-5 py-2.5 text-[13px] font-bold text-white disabled:bg-teal-200"
+  }, loading ? "กำลังค้นหา..." : "ดึงข้อมูลจาก LMS ตามอีเมล"))), React.createElement("div", {
+    className: "flex min-h-0 flex-1 flex-col px-6 py-3"
+  }, error && React.createElement("div", {
+    className: "mb-3 shrink-0 rounded-[10px] border border-red-100 bg-red-50 px-3 py-2 text-xs font-semibold text-red-600"
+  }, error), result && React.createElement("div", {
+    className: "mb-3 shrink-0 rounded-[10px] border border-teal-100 bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-800"
+  }, `นำเข้าแล้ว ${formatNumber(result.imported || 0)} คน`, result.skipped ? ` · ข้าม ${formatNumber(result.skipped)} คน` : ""), loading ? React.createElement(Spinner, {
+    label: "กำลังโหลดรายชื่อจาก LMS..."
+  }) : candidates.length ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "mb-2 flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+  }, React.createElement("label", {
+    className: "field flex min-w-0 flex-1 items-center gap-2 rounded-[10px] border border-slate-200 px-3 py-2 text-slate-400"
+  }, React.createElement(Icon, {
+    name: "search",
+    size: 17
+  }), React.createElement("input", {
+    value: search,
+    onChange: event => setSearch(event.target.value),
+    placeholder: "ค้นหาชื่อ อีเมล หรือระดับชั้น...",
+    className: "min-w-0 flex-1 border-0 bg-transparent text-[13px] text-slate-700 outline-none"
+  })), React.createElement("div", {
+    className: "flex shrink-0 items-center justify-between gap-3 sm:justify-end"
+  }, React.createElement("label", {
+    className: "flex items-center gap-2 text-[13px] font-bold text-slate-700"
+  }, React.createElement("input", {
+    type: "checkbox",
+    checked: allSelected,
+    onChange: toggleAll
+  }), "เลือกทั้งหมด (", formatNumber(selectable.length), ")"), React.createElement("span", {
+    className: "text-[11px] font-semibold text-slate-400"
+  }, "เลือกแล้ว ", formatNumber(selectedCount), " / ", formatNumber(filteredCandidates.length), filteredCandidates.length !== candidates.length ? ` (จาก ${formatNumber(candidates.length)})` : ""))), filteredCandidates.length ? React.createElement("div", {
+    className: "scrolly min-h-0 flex-1 overflow-y-auto rounded-[12px] border border-slate-200"
+  }, React.createElement("div", {
+    className: "divide-y divide-slate-100"
+  }, filteredCandidates.map(item => React.createElement("label", {
+    key: item.email,
+    className: cx("flex cursor-pointer items-center gap-3 px-3 py-3 text-left", !item.inProfile && "bg-slate-50 opacity-70")
+  }, React.createElement("input", {
+    type: "checkbox",
+    checked: selected.has(item.email),
+    disabled: !item.inProfile,
+    onChange: () => toggleEmail(item.email)
+  }), React.createElement("div", {
+    className: "min-w-0 flex-1"
+  }, React.createElement("div", {
+    className: "truncate text-[13px] font-bold text-slate-800"
+  }, item.name), React.createElement("div", {
+    className: "truncate text-[11px] text-slate-400"
+  }, item.email), React.createElement("div", {
+    className: "mt-0.5 flex flex-wrap gap-1.5 text-[10px] font-semibold"
+  }, item.levelOfEducation && React.createElement("span", {
+    className: "rounded bg-slate-100 px-1.5 py-0.5 text-slate-500"
+  }, item.levelOfEducation), item.progress != null && React.createElement("span", {
+    className: "rounded bg-teal-50 px-1.5 py-0.5 text-teal-700"
+  }, formatNumber(item.progress), "%"), !item.inProfile && React.createElement("span", {
+    className: "rounded bg-amber-50 px-1.5 py-0.5 text-amber-700"
+  }, "ยังไม่มีโปรไฟล์ — นำเข้าไม่ได้"))))))) : React.createElement("div", {
+    className: "flex min-h-[160px] flex-1 items-center justify-center rounded-[12px] border border-dashed border-slate-200 p-8 text-center text-sm font-semibold text-slate-400"
+  }, "ไม่พบผู้เรียนตามคำค้นหา")) : React.createElement("div", {
+    className: "flex flex-1 items-center justify-center p-10 text-center text-sm font-semibold text-slate-400"
+  }, tab === "emails" ? "วางอีเมลแล้วกดดึงข้อมูลจาก LMS" : "กดค้นหาเพื่อโหลดรายชื่อผู้เรียนนอกห้องเรียน")), React.createElement("div", {
+    className: "flex shrink-0 items-center justify-end gap-2.5 border-t border-slate-100 px-6 py-4"
+  }, React.createElement("button", {
+    onClick: onClose,
+    className: "rounded-full border border-slate-200 px-5 py-2.5 text-[13px] font-bold text-slate-600"
+  }, "ปิด"), React.createElement("button", {
+    onClick: importSelected,
+    disabled: !selectedCount || saving,
+    className: "rounded-full bg-brand-600 px-6 py-2.5 text-[13px] font-bold text-white disabled:cursor-not-allowed disabled:bg-teal-200"
+  }, saving ? "กำลังนำเข้า..." : `นำเข้า ${formatNumber(selectedCount)} คน`)));
+}
 function AddClassroomModal({
   teacher,
   onClose,
@@ -3021,16 +3587,10 @@ function AddClassroomModal({
     setSaving(true);
     setSaveError("");
     try {
-      await API.endpoints.createAssignment({
-        userId: teacher.sub,
-        teacherId: teacher.sub,
+      await API.endpoints.createClassroom({
         courseId: selectedCourse,
         instituteId: filters.instituteId || teacher.instituteId,
-        grade: filters.grade || undefined,
-        level: filters.level ? Number(filters.level) : undefined,
-        classRoom: filters.classRoom || undefined,
-        startDate: filters.from || undefined,
-        endDate: filters.to || undefined
+        label: filters.classRoom || undefined
       });
       await onAdded();
       onClose();
@@ -3115,7 +3675,7 @@ function AddClassroomModal({
     message: loadError,
     label: t("common.error", {}, "เกิดข้อผิดพลาด"),
     align: "center"
-  }), React.createElement("span", null, t("dashboard.studentDrawer.errorHint", {}, "วางเมาส์หรือโฟกัสที่เครื่องหมายตกใจเพื่อดูสาเหตุ"))) : courses.length ? courses.map(course => React.createElement("button", {
+  })) : courses.length ? courses.map(course => React.createElement("button", {
     key: course.courseId,
     onClick: () => setSelectedCourse(selectedCourse === course.courseId ? "" : course.courseId),
     className: cx("card-lift flex items-center gap-3 rounded-[13px] border p-4 text-left", selectedCourse === course.courseId ? "border-brand-600 bg-brand-50" : "border-slate-200 bg-white")
@@ -3176,10 +3736,11 @@ function RemoveModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const remove = async () => {
-    if (!course.assignId || saving) {
-      if (!course.assignId) {
-        const message = "ห้องเรียนนี้ไม่มี assignId จึงนำออกไม่ได้";
-        API.manager.reportIssue("Remove classroom input", "ห้องเรียนนี้ไม่มี assignId จึงนำออกไม่ได้", {
+    const classroomId = course.classroomId || course.id;
+    if (!classroomId || saving) {
+      if (!classroomId) {
+        const message = "ห้องเรียนนี้ไม่มี classroomId จึงนำออกไม่ได้";
+        API.manager.reportIssue("Remove classroom input", "ห้องเรียนนี้ไม่มี classroomId จึงนำออกไม่ได้", {
           url: "client://classroom/remove",
           context: {
             classroomId: course?.id || "",
@@ -3193,7 +3754,7 @@ function RemoveModal({
     setSaving(true);
     setError("");
     try {
-      await API.endpoints.deleteAssignment(course.assignId);
+      await API.endpoints.deleteClassroom(classroomId);
       await onRemoved();
       onClose();
     } catch (cause) {
@@ -3252,14 +3813,12 @@ function GlobalErrorNotice({
 }) {
   const { t } = window.TeacherI18n.useI18n();
   return React.createElement("div", {
-    className: "fixed left-1/2 top-[70px] z-[1500] flex w-[min(460px,calc(100vw-24px))] -translate-x-1/2 items-center gap-3 rounded-xl border border-red-100 bg-white px-4 py-3 shadow-float"
+    className: "fixed left-1/2 top-[70px] z-[1500] flex -translate-x-1/2 items-center gap-2 rounded-xl border border-red-100 bg-white px-3 py-2.5 shadow-float"
   }, React.createElement(ErrorStateIcon, {
     message,
     label: t("common.error", {}, "เกิดข้อผิดพลาด"),
     align: "left"
-  }), React.createElement("span", {
-    className: "flex-1 text-xs font-semibold text-slate-600"
-  }, t("dashboard.studentDrawer.errorHint", {}, "วางเมาส์หรือโฟกัสที่เครื่องหมายตกใจเพื่อดูสาเหตุ")), React.createElement("button", {
+  }), React.createElement("button", {
     onClick: onClose,
     "aria-label": t("common.close", {}, "ปิด"),
     className: "rounded-lg bg-slate-100 p-1.5 text-slate-500"

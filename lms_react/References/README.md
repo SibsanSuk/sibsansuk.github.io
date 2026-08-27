@@ -294,6 +294,8 @@ Schema หลัก:
   "range": "YYYY-MM-DD,YYYY-MM-DD",
   "source": "production enrollment endpoint",
   "totals": {},
+  "regions": [],
+  "unassignedRegion": {},
   "trend": [],
   "slides": [],
   "points": []
@@ -311,6 +313,7 @@ Generator:
 - เรียก `https://adaptive-profile-bn.ae.app.meca.in.th/api/kidbright/enroll/query`
 - ใช้ production host เป็น default
 - สรุปเฉพาะ aggregate ไม่บันทึกอีเมลหรือรายชื่อนักเรียน
+- แยกยอดผู้ใช้เป็น 6 ภาค และรายงานข้อมูลจังหวัดที่จัดเข้าภาคไม่ได้ใน `unassignedRegion`
 - เขียน `.overview.json.tmp` แล้ว rename เป็น `overview.json` เพื่อป้องกันไฟล์ครึ่งเดียว
 - หาก API ล้มเหลวหรือ schema ไม่ถูกต้อง จะไม่เขียนทับไฟล์เดิม
 
@@ -379,4 +382,3 @@ API ทุก host ต้องอนุญาต CORS สำหรับ origin
 - [ ] ยืนยัน Network ว่า Teacher/Student BookRoll เรียกครั้งเดียวต่อรอบ
 - [ ] ทดสอบ Student อย่างน้อยหนึ่งวิชาที่มี BookRoll, Video และ Chatbot
 - [ ] ทดสอบสถานะ 401, 404, API timeout และไฟล์ `overview.json` หาย
-

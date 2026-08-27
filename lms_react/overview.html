@@ -1,0 +1,841 @@
+
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>ข้อมูลการใช้งาน</title>
+</head>
+<body>
+  <!-- ===== START COPY TO LMS ===== -->
+  <div class="kv-overview" data-overview-url="https://api.lead.in.th/stats/overview" data-autoplay-ms="6500">
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap");
+
+      .kv-overview,
+      .kv-overview * { box-sizing: border-box; }
+      .kv-overview {
+        --kv-ink: #123330;
+        --kv-muted: #587570;
+        --kv-teal: #0ea895;
+        --kv-deep: #087f73;
+        --kv-line: #dcebe7;
+        position: relative;
+        isolation: isolate;
+        width: 100%;
+        max-width: 1440px;
+        height: clamp(500px, 52vw, 620px);
+        min-height: 500px;
+        margin-inline: auto;
+        overflow: hidden;
+        border-radius: clamp(18px, 2.2vw, 32px);
+        border: 1px solid #d8e8e4;
+        background: #f6fbfa;
+        color: var(--kv-ink);
+        box-shadow: 0 22px 60px rgba(25, 82, 75, .12);
+        font-family: "Noto Sans Thai", "Inter", system-ui, sans-serif;
+      }
+      .kv-overview button { font: inherit; }
+      .kv-overview__noise {
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        opacity: .05;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.26'/%3E%3C/svg%3E");
+      }
+      .kv-overview__topbar {
+        position: absolute;
+        z-index: 700;
+        inset: 0 0 auto 0;
+        height: 70px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 0 clamp(20px, 3.5vw, 52px);
+        border-bottom: 1px solid var(--kv-line);
+        background: rgba(255,255,255,.92);
+        color: #163d39;
+        backdrop-filter: blur(14px);
+      }
+      .kv-overview__brand,
+      .kv-overview__live,
+      .kv-overview__metric,
+      .kv-overview__controls,
+      .kv-overview__map-badge { display: flex; align-items: center; }
+      .kv-overview__brand { gap: 10px; font-size: 13px; font-weight: 800; letter-spacing: .01em; }
+      .kv-overview__brand-mark {
+        width: 34px;
+        height: 34px;
+        display: grid;
+        place-items: center;
+        border: 1px solid #cde7e2;
+        border-radius: 11px;
+        background: #e7f8f5;
+        color: #078a7c;
+      }
+      .kv-overview__live { gap: 8px; color: var(--kv-muted); font-size: 10px; font-weight: 700; }
+      .kv-overview__live-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #18b879;
+        box-shadow: 0 0 0 5px rgba(24,184,121,.12);
+      }
+      .kv-overview__stage { position: absolute; inset: 0; }
+      .kv-overview__stage::before {
+        position: absolute;
+        z-index: 690;
+        inset: 0 58% 0 0;
+        pointer-events: none;
+        background: url("https://lead.in.th/static/sbs-themes/images/logo-adap-green-untext.1c98bf032947.png") right -110px top -75px / 430px auto no-repeat;
+        content: "";
+        opacity: .065;
+      }
+      .kv-overview__stage::after {
+        position: absolute;
+        z-index: 690;
+        bottom: -72px;
+        left: -62px;
+        width: 170px;
+        height: 170px;
+        pointer-events: none;
+        background: url("https://lead.in.th/static/sbs-themes/images/logo-adap-green-untext.1c98bf032947.png") center / contain no-repeat;
+        content: "";
+        opacity: .045;
+        transform: rotate(13deg);
+      }
+      .kv-overview__map-wrap {
+        position: absolute;
+        z-index: 0;
+        inset: 70px 0 100px 42%;
+        overflow: hidden;
+        background: #d9eeeb;
+      }
+      .kv-overview__map { position: absolute; inset: 0; z-index: 0; filter: saturate(.9) contrast(.96) brightness(1.04); }
+      .kv-overview__map::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 500;
+        pointer-events: none;
+        background: linear-gradient(90deg, rgba(255,255,255,.2), transparent 18%);
+      }
+      .kv-overview__map-badge {
+        position: absolute;
+        z-index: 600;
+        right: clamp(16px, 2.4vw, 34px);
+        top: 52px;
+        gap: 9px;
+        padding: 9px 13px;
+        border: 1px solid rgba(255,255,255,.5);
+        border-radius: 999px;
+        background: rgba(255,255,255,.9);
+        color: #12645d;
+        box-shadow: 0 12px 30px rgba(3,38,36,.15);
+        backdrop-filter: blur(12px);
+        font-size: 10px;
+        font-weight: 800;
+      }
+      .kv-overview__map-badge svg { flex: none; }
+      .kv-overview__data-status {
+        position: absolute;
+        z-index: 730;
+        top: 20px;
+        right: 20px;
+        width: 11px;
+        height: 11px;
+        border: 2px solid #fff;
+        border-radius: 50%;
+        background: #f59e0b;
+        box-shadow: 0 0 0 5px rgba(245,158,11,.16), 0 2px 8px rgba(40,72,66,.18);
+      }
+      .kv-overview__data-status.is-success {
+        background: #22b573;
+        box-shadow: 0 0 0 5px rgba(34,181,115,.14), 0 2px 8px rgba(40,72,66,.18);
+      }
+      .kv-overview__loader {
+        position: absolute;
+        z-index: 720;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        pointer-events: none;
+        background: rgba(246,251,250,.68);
+        backdrop-filter: blur(4px);
+        transition: opacity .25s ease, visibility .25s ease;
+      }
+      .kv-overview__loader.is-hidden { visibility: hidden; opacity: 0; }
+      .kv-overview__loader-card {
+        display: inline-flex;
+        align-items: center;
+        gap: 11px;
+        padding: 11px 16px;
+        border: 1px solid rgba(14,168,149,.2);
+        border-radius: 999px;
+        background: rgba(255,255,255,.94);
+        color: #356963;
+        box-shadow: 0 12px 32px rgba(25,82,75,.12);
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .kv-overview__spinner {
+        width: 18px;
+        height: 18px;
+        flex: none;
+        border: 2px solid #ccece7;
+        border-top-color: var(--kv-teal);
+        border-radius: 50%;
+        animation: kv-spin .75s linear infinite;
+      }
+      @keyframes kv-spin { to { transform: rotate(360deg); } }
+      .kv-overview__brand-intro {
+        position: absolute;
+        z-index: 680;
+        inset: 0 58% 60% 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        overflow: hidden;
+        padding: 18px clamp(24px, 3.6vw, 52px) 10px;
+        border-right: 1px solid #dcebe7;
+        background: linear-gradient(145deg, #fff 22%, var(--kv-slide-soft, #e9f8f5) 145%);
+        transition: background .55s ease;
+      }
+      .kv-overview__brand-title {
+        position: relative;
+        z-index: 1;
+        margin: 0;
+        color: #09aa9e;
+        font: 800 clamp(29px, 2.7vw, 44px)/1.06 "Inter", "Noto Sans Thai", sans-serif;
+        letter-spacing: .005em;
+        text-shadow: 0 2px 0 #fff, 0 0 1px #087f73, 0 6px 16px rgba(7,127,115,.16);
+      }
+      .kv-overview__brand-title span { display: block; }
+      .kv-overview__brand-title strong { color: #08b9ab; font-weight: 800; }
+      .kv-overview__brand-description {
+        position: relative;
+        z-index: 1;
+        max-width: 540px;
+        margin: clamp(10px, 1.1vw, 15px) 0 0;
+        color: #278e85;
+        font-size: clamp(15px, 1.3vw, 21px);
+        font-weight: 800;
+        line-height: 1.4;
+        text-shadow: 0 1px 0 #fff;
+      }
+      .kv-overview__content {
+        position: absolute;
+        z-index: 650;
+        inset: 70px auto 100px 0;
+        width: 42%;
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+        padding: 28px clamp(24px, 3.6vw, 52px);
+        border-right: 1px solid #dcebe7;
+        background: linear-gradient(145deg, #fff 22%, var(--kv-slide-soft, #e9f8f5) 145%);
+        box-shadow: 20px 0 44px rgba(42, 100, 92, .08);
+        transition: background .55s ease;
+      }
+      .kv-overview__content::before,
+      .kv-overview__content::after {
+        content: "";
+        position: absolute;
+        pointer-events: none;
+        border-radius: 50%;
+      }
+      .kv-overview__content::before {
+        width: 440px;
+        height: 440px;
+        right: -210px;
+        top: -150px;
+        border-radius: 0;
+        background: url("https://lead.in.th/static/sbs-themes/images/logo-adap-green-untext.1c98bf032947.png") center / contain no-repeat;
+        opacity: .075;
+        filter: saturate(.85);
+        transform: rotate(-8deg);
+      }
+      .kv-overview__content::after {
+        display: block;
+        width: 190px;
+        height: 190px;
+        left: -82px;
+        bottom: -92px;
+        border-radius: 0;
+        background: url("https://lead.in.th/static/sbs-themes/images/logo-adap-green-untext.1c98bf032947.png") center / contain no-repeat;
+        opacity: .045;
+        filter: saturate(.75);
+        transform: rotate(13deg);
+      }
+      .kv-overview__content::before,
+      .kv-overview__content::after { display: none; }
+      .kv-overview__slide { position: relative; z-index: 1; display: none; max-width: 590px; }
+      .kv-overview__slide.is-active { display: block; animation: kv-rise .6s cubic-bezier(.2,.7,.2,1) both; }
+      @keyframes kv-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+      .kv-overview__topic {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 24px;
+        padding: 10px 17px 10px 11px;
+        border: 1px solid color-mix(in srgb, var(--kv-slide-accent, #0ea895) 24%, white);
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--kv-slide-soft, #e9f8f5) 72%, white);
+        color: var(--kv-slide-deep, #087f73);
+        font-size: clamp(13px, 1.15vw, 17px);
+        font-weight: 800;
+        letter-spacing: .01em;
+      }
+      .kv-overview__topic::before {
+        content: "";
+        width: 9px;
+        height: 9px;
+        flex: none;
+        border-radius: 3px;
+        background: var(--kv-slide-accent, #0ea895);
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--kv-slide-accent, #0ea895) 14%, transparent);
+        transform: rotate(12deg);
+      }
+      .kv-overview__title {
+        max-width: 620px;
+        margin: 0;
+        color: var(--kv-slide-deep, #133c38);
+        background: linear-gradient(110deg, var(--kv-slide-deep, #133c38) 15%, var(--kv-slide-accent, #0ea895));
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-family: "Noto Sans Thai", "Inter", sans-serif;
+        font-size: clamp(32px, 3.8vw, 58px);
+        font-weight: 800;
+        line-height: 1.12;
+        letter-spacing: -.035em;
+      }
+      .kv-overview__title.is-number { font-family: "Inter", "Noto Sans Thai", sans-serif; letter-spacing: -.055em; }
+      .kv-overview__title .kv-overview__unit {
+        margin-left: .22em;
+        color: var(--kv-slide-deep, #43847c);
+        font-family: "Noto Sans Thai", sans-serif;
+        font-size: .44em;
+        font-weight: 800;
+        letter-spacing: -.01em;
+        -webkit-text-fill-color: currentColor;
+      }
+      .kv-overview__desc {
+        max-width: 530px;
+        margin: 24px 0 0;
+        color: #536f6b;
+        font-size: clamp(18px, 1.55vw, 23px);
+        font-weight: 600;
+        line-height: 1.58;
+        letter-spacing: -.012em;
+      }
+      .kv-overview__desc strong {
+        margin-inline: .05em;
+        color: var(--kv-slide-accent, #0ea895);
+        font: 800 1.08em/1.2 "Inter", "Noto Sans Thai", sans-serif;
+      }
+      .kv-overview__rail {
+        position: absolute;
+        z-index: 700;
+        inset: auto 0 0;
+        min-height: 100px;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0,1fr));
+        align-items: stretch;
+        border-top: 1px solid var(--kv-line);
+        background: rgba(255,255,255,.96);
+        backdrop-filter: blur(18px);
+      }
+      .kv-overview__metric { gap: 12px; min-width: 0; padding: 18px clamp(14px, 2.1vw, 30px); border-right: 1px solid var(--kv-line); }
+      .kv-overview__metric-icon {
+        width: 34px;
+        height: 34px;
+        flex: none;
+        display: grid;
+        place-items: center;
+        border-radius: 10px;
+        background: #e7f8f5;
+        color: #079283;
+      }
+      .kv-overview__metric-copy { min-width: 0; }
+      .kv-overview__metric-value { display: block; color: #173f3b; font: 800 clamp(17px, 1.7vw, 25px)/1.1 "Inter", sans-serif; white-space: nowrap; }
+      .kv-overview__metric-label { display: block; margin-top: 5px; overflow: hidden; color: #708d88; font-size: 9px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+      .kv-overview__metric:nth-child(2) .kv-overview__metric-icon { background: #edf3ff; color: #4e72c6; }
+      .kv-overview__metric:nth-child(3) .kv-overview__metric-icon { background: #fff3df; color: #c47713; }
+      .kv-overview__metric:nth-child(4) .kv-overview__metric-icon { background: #f1edff; color: #7656c6; }
+      .kv-overview__pagination {
+        position: absolute;
+        z-index: 720;
+        left: 50%;
+        bottom: 116px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 7px 10px;
+        border: 1px solid #d9e9e5;
+        border-radius: 999px;
+        background: rgba(255,255,255,.94);
+        box-shadow: 0 10px 28px rgba(30,85,78,.14);
+        backdrop-filter: blur(14px);
+        transform: translateX(-50%);
+      }
+      .kv-overview__controls { display: flex; align-items: center; gap: 7px; }
+      .kv-overview__arrow {
+        width: 38px;
+        height: 38px;
+        display: grid;
+        place-items: center;
+        border: 1px solid #cfe3df;
+        border-radius: 50%;
+        background: #f5fbfa;
+        color: #087f73;
+        cursor: pointer;
+        transition: background .2s, transform .2s;
+      }
+      .kv-overview__arrow:hover { background: #e7f8f5; transform: translateY(-1px); }
+      .kv-overview__arrow:focus-visible,
+      .kv-overview__dot:focus-visible { outline: 2px solid #6ee7d5; outline-offset: 3px; }
+      .kv-overview__dots { display: flex; align-items: center; gap: 7px; }
+      .kv-overview__dot { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 99px; background: #c7dad6; cursor: pointer; transition: width .25s, background .25s; }
+      .kv-overview__dot.is-active { width: 28px; background: var(--kv-teal); }
+      .kv-overview__counter { min-width: 34px; color: #698680; font: 700 10px/1 "Inter", sans-serif; text-align: center; }
+      .kv-overview .leaflet-control-container { display: none; }
+      .kv-overview .leaflet-marker-icon { transition: none; }
+      .kv-overview__error { color: #ffc7bc; }
+
+      /* Slideshow-only layout: no page header or summary rail. */
+      .kv-overview { height: clamp(460px, 46vw, 560px); min-height: 460px; }
+      .kv-overview__map-wrap { inset: 0 0 0 42%; }
+      .kv-overview__content { inset: 40% auto 0 0; padding-top: 18px; padding-bottom: 88px; }
+      .kv-overview__map-badge { top: 52px; }
+      .kv-overview__pagination { bottom: 20px; }
+
+      @media (max-width: 900px) {
+        .kv-overview { height: 560px; }
+        .kv-overview__map-wrap { left: 44%; }
+        .kv-overview__content { width: 44%; }
+        .kv-overview__brand-intro { right: 56%; }
+        .kv-overview__stage::before { right: 56%; }
+        .kv-overview__metric { padding-inline: 14px; }
+        .kv-overview__metric-icon { display: none; }
+      }
+      @media (max-width: 680px) {
+        .kv-overview { height: clamp(460px, 82vw, 560px); min-height: 460px; border-radius: 20px; }
+        .kv-overview__map-wrap { inset: 0 0 0 44%; width: auto; height: auto; }
+        .kv-overview__stage::before {
+          inset: 0 56% 0 0;
+          background-position: right -70px top -45px;
+          background-size: 320px auto;
+        }
+        .kv-overview__stage::after {
+          bottom: -54px;
+          left: -46px;
+          width: 125px;
+          height: 125px;
+        }
+        .kv-overview__data-status { top: 14px; right: 14px; }
+        .kv-overview__brand-intro {
+          inset: 0 56% 60% 0;
+          height: auto;
+          padding: 14px clamp(12px, 3.2vw, 20px) 10px;
+          border-right: 1px solid #dcebe7;
+        }
+        .kv-overview__brand-title { font-size: clamp(17px, 4vw, 24px); }
+        .kv-overview__brand-title span { display: block; }
+        .kv-overview__brand-title span + span::before { content: none; }
+        .kv-overview__brand-description { max-width: 100%; margin-top: 7px; font-size: clamp(9px, 2.25vw, 13px); line-height: 1.35; }
+        .kv-overview__map-badge { top: 44px; right: 14px; }
+        .kv-overview__content { inset: 40% auto 0 0; width: 44%; align-items: center; padding: 12px clamp(12px, 3.2vw, 20px) 70px; border-top: 1px solid #dcebe7; border-right: 1px solid #dcebe7; }
+        .kv-overview__content::after { width: 140px; height: 140px; left: -62px; bottom: -68px; }
+        .kv-overview__topic { max-width: 100%; margin-bottom: 14px; padding: 7px 10px 7px 8px; font-size: clamp(9px, 2.25vw, 12px); line-height: 1.3; }
+        .kv-overview__title { margin: 0; font-size: clamp(27px, 7.5vw, 42px); line-height: 1.06; }
+        .kv-overview__desc { margin-top: 12px; font-size: clamp(11px, 2.8vw, 16px); line-height: 1.45; }
+        .kv-overview__pagination { bottom: 18px; gap: 7px; padding: 6px 8px; }
+        .kv-overview__dots { gap: 5px; }
+        .kv-overview__dot { width: 6px; height: 6px; }
+        .kv-overview__dot.is-active { width: 22px; }
+        .kv-overview__counter { min-width: 30px; }
+        .kv-overview__arrow { width: 32px; height: 32px; }
+      }
+      @media (max-width: 390px) {
+        .kv-overview { height: 460px; min-height: 460px; }
+        .kv-overview__brand-intro { padding-inline: 10px; }
+        .kv-overview__content { padding-inline: 10px; }
+        .kv-overview__topic { gap: 6px; }
+        .kv-overview__title { font-size: clamp(24px, 7.5vw, 30px); }
+        .kv-overview__desc { font-size: clamp(10px, 2.8vw, 12px); }
+        .kv-overview__pagination { bottom: 16px; }
+      }
+      @media (orientation: landscape) and (max-height: 520px) {
+        .kv-overview {
+          height: min(420px, calc(100svh - 16px));
+          min-height: min(300px, calc(100svh - 16px));
+          border-radius: 16px;
+        }
+        .kv-overview__map-wrap {
+          inset: 0 0 0 44%;
+          width: auto;
+          height: auto;
+        }
+        .kv-overview__stage::before {
+          inset: 0 56% 0 0;
+          background-position: right -65px top -48px;
+          background-size: 300px auto;
+        }
+        .kv-overview__stage::after {
+          bottom: -46px;
+          left: -38px;
+          width: 105px;
+          height: 105px;
+        }
+        .kv-overview__content {
+          inset: 40% auto 0 0;
+          width: 44%;
+          align-items: center;
+          padding: 8px 24px 58px;
+          border-top: 1px solid #dcebe7;
+          border-right: 1px solid #dcebe7;
+        }
+        .kv-overview__brand-intro {
+          top: 10px;
+          right: calc(56% + 12px);
+          left: 12px;
+          padding: 8px 10px;
+          border-radius: 10px;
+        }
+        .kv-overview__brand-title { font-size: 14px; }
+        .kv-overview__brand-title span { display: inline; }
+        .kv-overview__brand-title span + span::before { content: " "; }
+        .kv-overview__brand-description {
+          display: block;
+          max-width: 100%;
+          margin-top: 4px;
+          font-size: 10px;
+          font-weight: 700;
+          line-height: 1.3;
+        }
+        .kv-overview__content::before {
+          width: 290px;
+          height: 290px;
+          right: -145px;
+          top: -112px;
+        }
+        .kv-overview__content::after {
+          width: 115px;
+          height: 115px;
+          left: -52px;
+          bottom: -58px;
+        }
+        .kv-overview__topic {
+          margin-bottom: 10px;
+          padding: 6px 10px 6px 7px;
+          font-size: 11px;
+        }
+        .kv-overview__topic::before { width: 7px; height: 7px; }
+        .kv-overview__title { font-size: clamp(30px, 5.8vw, 44px); line-height: 1.04; }
+        .kv-overview__desc { margin-top: 10px; font-size: clamp(13px, 2.1vw, 17px); line-height: 1.42; }
+        .kv-overview__pagination { bottom: 9px; gap: 6px; padding: 5px 7px; }
+        .kv-overview__arrow { width: 30px; height: 30px; }
+        .kv-overview__dots { gap: 4px; }
+        .kv-overview__dot { width: 5px; height: 5px; }
+        .kv-overview__dot.is-active { width: 19px; }
+        .kv-overview__counter { min-width: 28px; font-size: 9px; }
+        .kv-overview__data-status { top: 10px; right: 10px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .kv-overview__slide.is-active { animation: none; }
+        .kv-overview__spinner { animation: none; }
+        .kv-overview .leaflet-zoom-animated { transition: none !important; }
+      }
+    </style>
+
+    <div class="kv-overview__noise" aria-hidden="true"></div>
+    <div class="kv-overview__stage">
+      <div class="kv-overview__map-wrap">
+        <div class="kv-overview__map" data-role="map" role="region" aria-label="แผนที่แสดงจำนวนผู้ใช้งาน สามารถลากและซูมได้"></div>
+      </div>
+      <span class="kv-overview__data-status" data-role="data-status" role="status" aria-label="กำลังโหลดข้อมูล" title="กำลังโหลดข้อมูล"></span>
+      <div class="kv-overview__loader" data-role="loader" role="status" aria-live="polite">
+        <div class="kv-overview__loader-card">
+          <span class="kv-overview__spinner" aria-hidden="true"></span>
+          <span>กำลังโหลด</span>
+        </div>
+      </div>
+      <section class="kv-overview__brand-intro" aria-label="ชื่อและคำอธิบายระบบ">
+        <h1 class="kv-overview__brand-title"><span><strong>LEAD</strong> Education</span><span>Platform</span></h1>
+        <p class="kv-overview__brand-description">แพลตฟอร์มติดตาม วิเคราะห์ และประเมินผลการเรียนรู้แบบเฉพาะบุคคล</p>
+      </section>
+      <div class="kv-overview__content" data-role="slides" aria-live="polite"></div>
+      <div class="kv-overview__pagination" aria-label="ตัวควบคุมสไลด์ข้อมูล">
+        <button class="kv-overview__arrow" type="button" data-action="prev" aria-label="ข้อมูลก่อนหน้า">←</button>
+        <div class="kv-overview__dots" data-role="dots" aria-label="เลือกข้อมูลที่แสดง"></div>
+        <span class="kv-overview__counter" data-role="counter" aria-live="off">1 / 1</span>
+        <button class="kv-overview__arrow" type="button" data-action="next" aria-label="ข้อมูลถัดไป">→</button>
+      </div>
+    </div>
+
+    <script>
+      (() => {
+        const script = document.currentScript;
+        const root = script && script.closest(".kv-overview");
+        if (!root || root.dataset.ready === "true") return;
+        root.dataset.ready = "true";
+
+        const $ = selector => root.querySelector(selector);
+        const number = value => Number.isFinite(Number(value)) ? new Intl.NumberFormat("th-TH").format(Number(value)) : "—";
+        const compact = value => {
+          const n = Number(value);
+          if (!Number.isFinite(n)) return "—";
+          if (n >= 1000) return `${(n / 1000).toFixed(n < 10000 ? 1 : 0).replace(".0", "")}k`;
+          return String(n);
+        };
+        const fallbackSlides = [{
+          label: "ข้อมูลภาพรวม",
+          big: "—",
+          unit: "",
+          desc: "กำลังโหลดข้อมูลเรียลไทม์จากระบบ",
+          view: { lat: 13.6, lng: 101.2, zoom: 5.3 }
+        }];
+        let slides = fallbackSlides;
+        let index = 0;
+        let timer = 0;
+        let map = null;
+        const autoplayMs = Math.max(3000, Number(root.dataset.autoplayMs) || 6500);
+        const slidePalettes = [
+          { accent: "#0ea895", deep: "#075f58", soft: "#ddf7f2" },
+          { accent: "#4f73e8", deep: "#29458f", soft: "#e8efff" },
+          { accent: "#ee9b21", deep: "#98550b", soft: "#fff0d5" },
+          { accent: "#815bd2", deep: "#50318e", soft: "#eee8ff" },
+          { accent: "#ed684e", deep: "#963828", soft: "#ffebe6" },
+          { accent: "#bd4f9d", deep: "#742c61", soft: "#f9e7f4" }
+        ];
+
+        function selectSlides(items) {
+          if (!Array.isArray(items) || !items.length) return fallbackSlides;
+          const priorities = [
+            "ผู้ใช้งานทั่วประเทศ",
+            "สถาบันที่ร่วมโครงการ",
+            "วิชาที่เปิดสอนทั้งหมด",
+            "การลงทะเบียนเรียนสะสม",
+            "ผู้ใช้งานภาคเหนือ",
+            "ผู้ใช้งานภาคตะวันออกเฉียงเหนือ",
+            "ผู้ใช้งานภาคกลาง",
+            "ผู้ใช้งานภาคตะวันออก",
+            "ผู้ใช้งานภาคตะวันตก",
+            "ผู้ใช้งานภาคใต้",
+            "จังหวัดที่ใช้งานสูงสุด",
+            "สถาบันที่ใช้งานสูงสุด"
+          ];
+          const picked = priorities.map(label => items.find(item => item.label === label)).filter(Boolean);
+          return picked.length >= 3 ? picked : items.slice(0, 6);
+        }
+
+        function renderSlides() {
+          const host = $("[data-role='slides']");
+          const dots = $("[data-role='dots']");
+          host.replaceChildren();
+          dots.replaceChildren();
+          slides.forEach((slide, slideIndex) => {
+            const article = document.createElement("article");
+            article.className = "kv-overview__slide";
+            article.setAttribute("aria-hidden", "true");
+            const topic = document.createElement("div");
+            topic.className = "kv-overview__topic";
+            topic.textContent = slide.label || "ข้อมูลการใช้งาน";
+            const title = document.createElement("h2");
+            title.className = "kv-overview__title";
+            title.classList.toggle("is-number", /^[\d,.]/.test(String(slide.big || "")));
+            const value = document.createTextNode(slide.big || "—");
+            const unit = document.createElement("span");
+            unit.className = "kv-overview__unit";
+            unit.textContent = slide.unit || "";
+            title.append(value, unit);
+            const desc = document.createElement("p");
+            desc.className = "kv-overview__desc";
+            const description = String(slide.desc || "ข้อมูลภาพรวมการใช้งานระบบการเรียนรู้");
+            description.split(/(\d[\d,.]*%?)/g).filter(Boolean).forEach(part => {
+              if (/^\d/.test(part)) {
+                const emphasis = document.createElement("strong");
+                emphasis.textContent = part;
+                desc.appendChild(emphasis);
+              } else {
+                desc.appendChild(document.createTextNode(part));
+              }
+            });
+            article.append(topic, title, desc);
+            host.appendChild(article);
+
+            const dot = document.createElement("button");
+            dot.type = "button";
+            dot.className = "kv-overview__dot";
+            dot.setAttribute("aria-label", `แสดง ${slide.label || `สไลด์ที่ ${slideIndex + 1}`}`);
+            dot.addEventListener("click", () => { show(slideIndex); restart(); });
+            dots.appendChild(dot);
+          });
+          show(0, false);
+        }
+
+        function show(nextIndex, animate = true) {
+          index = (nextIndex + slides.length) % slides.length;
+          root.querySelectorAll(".kv-overview__slide").forEach((slide, i) => {
+            slide.classList.toggle("is-active", i === index);
+            slide.setAttribute("aria-hidden", i === index ? "false" : "true");
+            if (!animate && i === index) slide.style.animation = "none";
+            else slide.style.removeProperty("animation");
+          });
+          root.querySelectorAll(".kv-overview__dot").forEach((dot, i) => dot.classList.toggle("is-active", i === index));
+          $("[data-role='counter']").textContent = `${index + 1} / ${slides.length}`;
+          const current = slides[index];
+          const palette = slidePalettes[index % slidePalettes.length];
+          root.style.setProperty("--kv-slide-accent", palette.accent);
+          root.style.setProperty("--kv-slide-deep", palette.deep);
+          root.style.setProperty("--kv-slide-soft", palette.soft);
+          if (map && current.view) {
+            const detailLabels = new Set(["จังหวัดที่ใช้งานสูงสุด", "สถาบันที่ใช้งานสูงสุด"]);
+            const zoomStep = current.region || detailLabels.has(current.label) ? 1 : 0;
+            map.flyTo(
+              [current.view.lat, current.view.lng],
+              Math.min((current.view.zoom || 5.3) + zoomStep, 11),
+              { duration: .85 }
+            );
+          }
+        }
+
+        function restart() {
+          clearInterval(timer);
+          if (slides.length > 1 && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+            timer = setInterval(() => show(index + 1), autoplayMs);
+          }
+        }
+
+        function loadLeaflet() {
+          if (window.L) return Promise.resolve(window.L);
+          if (!document.querySelector("link[data-kv-leaflet]")) {
+            const link = document.createElement("link");
+            link.rel = "stylesheet";
+            link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+            link.dataset.kvLeaflet = "true";
+            document.head.appendChild(link);
+          }
+          return new Promise((resolve, reject) => {
+            const existing = document.querySelector("script[data-kv-leaflet]");
+            if (existing) {
+              existing.addEventListener("load", () => resolve(window.L), { once: true });
+              existing.addEventListener("error", reject, { once: true });
+              return;
+            }
+            const loader = document.createElement("script");
+            loader.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+            loader.dataset.kvLeaflet = "true";
+            loader.onload = () => resolve(window.L);
+            loader.onerror = reject;
+            document.head.appendChild(loader);
+          });
+        }
+
+        function initMap(points) {
+          return loadLeaflet().then(L => {
+            if (!L || map) return;
+            map = L.map($("[data-role='map']"), {
+              zoomControl: false,
+              scrollWheelZoom: false,
+              doubleClickZoom: true,
+              boxZoom: true,
+              keyboard: true,
+              dragging: true,
+              touchZoom: true,
+              attributionControl: false
+            }).setView([13.6, 101.2], 5.3);
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { minZoom: 4, maxZoom: 11 }).addTo(map);
+            const markerLayer = L.layerGroup().addTo(map);
+            map.on("dragstart zoomstart", () => clearInterval(timer));
+            map.on("dragend zoomend", restart);
+            (Array.isArray(points) ? points : []).forEach(point => {
+              const users = Number(point.n) || 0;
+              const color = point.pin || (users >= 2000 ? "#ef5b4f" : users >= 1000 ? "#ff8b3d" : users >= 500 ? "#f6b93b" : "#19bda9");
+              const size = Math.max(24, Math.min(Number(point.size) || 34, 58));
+              const icon = L.divIcon({
+                className: "",
+                iconSize: [size, size],
+                iconAnchor: [size / 2, size / 2],
+                html: `<div style="width:${size}px;height:${size}px;border-radius:50%;display:grid;place-items:center;background:${color};color:#fff;border:2px solid rgba(255,255,255,.9);box-shadow:0 0 0 7px ${color}25,0 5px 14px rgba(0,0,0,.22);font:800 ${point.big ? 12 : 10}px Inter,sans-serif">${compact(users)}</div>`
+              });
+              L.marker([point.lat, point.lng], { icon, interactive: false }).addTo(markerLayer);
+            });
+            setTimeout(() => map.invalidateSize(), 80);
+          });
+        }
+
+        function applyData(data) {
+          const status = $("[data-role='data-status']");
+          const loader = $("[data-role='loader']");
+          status.classList.add("is-success");
+          status.setAttribute("aria-label", "โหลดข้อมูลเรียลไทม์สำเร็จ");
+          status.title = "กำลังแสดงข้อมูลเรียลไทม์";
+          loader.classList.add("is-hidden");
+          loader.setAttribute("aria-hidden", "true");
+          root.setAttribute("aria-busy", "false");
+          slides = selectSlides(data.slides);
+          renderSlides();
+          initMap(data.points).catch(() => {});
+          restart();
+        }
+
+        function loadOverview(source) {
+          return fetch(`${source}${source.includes("?") ? "&" : "?"}v=${Date.now()}`, { cache: "no-store" })
+            .then(response => {
+              if (!response.ok) throw new Error(`HTTP ${response.status}`);
+              return response.json();
+            })
+            .then(data => {
+              if (!data || !Array.isArray(data.slides) || !data.slides.length || !Array.isArray(data.points)) {
+                throw new Error("Overview schema ไม่ถูกต้อง");
+              }
+              return data;
+            });
+        }
+
+        $("[data-action='prev']").addEventListener("click", () => { show(index - 1); restart(); });
+        $("[data-action='next']").addEventListener("click", () => { show(index + 1); restart(); });
+        root.addEventListener("focusin", () => clearInterval(timer));
+        root.addEventListener("focusout", event => { if (!root.contains(event.relatedTarget)) restart(); });
+        let touchX = null;
+        root.addEventListener("touchstart", event => { touchX = event.touches[0].clientX; }, { passive: true });
+        root.addEventListener("touchend", event => {
+          if (touchX == null) return;
+          const delta = event.changedTouches[0].clientX - touchX;
+          if (Math.abs(delta) > 45) { show(index + (delta < 0 ? 1 : -1)); restart(); }
+          touchX = null;
+        }, { passive: true });
+
+        renderSlides();
+        root.setAttribute("aria-busy", "true");
+        const source = root.dataset.overviewUrl || "https://api.lead.in.th/stats/overview";
+        loadOverview(source)
+          .then(applyData)
+          .catch(() => {
+            const status = $("[data-role='data-status']");
+            const loader = $("[data-role='loader']");
+            status.classList.remove("is-success");
+            status.setAttribute("aria-label", "โหลดข้อมูลไม่สำเร็จ");
+            status.title = "โหลดข้อมูลไม่สำเร็จ";
+            loader.classList.add("is-hidden");
+            loader.setAttribute("aria-hidden", "true");
+            root.setAttribute("aria-busy", "false");
+            slides = [{
+              label: "ข้อมูลภาพรวม",
+              big: "—",
+              unit: "",
+              desc: "ไม่สามารถโหลดข้อมูลเรียลไทม์ได้ กรุณาลองใหม่อีกครั้ง",
+              view: { lat: 13.6, lng: 101.2, zoom: 5.3 }
+            }];
+            renderSlides();
+            initMap([]).catch(() => {});
+          });
+      })();
+    </script>
+  </div>
+  <!-- ===== END COPY TO LMS ===== -->
+</body>
+</html>

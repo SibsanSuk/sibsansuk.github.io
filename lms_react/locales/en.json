@@ -2,7 +2,7 @@
   "_meta": {
     "locale": "en",
     "language": "English",
-    "version": 7
+    "version": 9
   },
   "app": {
     "title": "MECA Teacher Dashboard"
@@ -126,6 +126,61 @@
           "unit": "provinces",
           "description": "Provinces with a high number of platform users."
         }
+      }
+    },
+    "teacherSummary": {
+      "journeyTitle": "My teaching journey",
+      "currentLevel": "Current level",
+      "maxLevel": "Highest level",
+      "progressCount": "{{current}} / {{target}} learners",
+      "nextLevel": "{{formattedCount}} more learners to unlock Level {{level}}",
+      "highestLevel": "You unlocked the highest level. Amazing work!",
+      "noStudentData": "Add learner data to start earning achievements",
+      "criteriaProgress": "{{passed}} / {{total}} criteria met",
+      "nextRequirements": "Toward Level {{level}}: {{requirements}}",
+      "achievementUnlocked": "Unlocked Level {{level}} · {{name}}",
+      "viewCertificate": "View certificate",
+      "viewCriteria": "View Level 1 criteria",
+      "tenure": "Teaching for",
+      "tenureUnknown": "No data yet",
+      "tenureToday": "Started today",
+      "tenureDays": "{{formattedCount}} days",
+      "tenureMonths": "{{formattedCount}} months",
+      "tenureYearsMonths": "{{formattedYears}} yr {{formattedMonths}} mo",
+      "studentsTaught": "Learners supported",
+      "classroomsManaged": "Classrooms managed",
+      "subjectsCreated": "Courses delivered",
+      "subjectUnit": "courses",
+      "classroomUnit": "classes",
+      "studentUnit": "learners",
+      "latestAchievement": "Achievement unlocked",
+      "levels": {
+        "gettingStarted": "Getting started",
+        "beginner": "Journey starter",
+        "creator": "Learning creator",
+        "developer": "Teaching innovator",
+        "leader": "Learning leader",
+        "inspirer": "Learning inspirer"
+      },
+      "criteria": {
+        "subjects": "Courses delivered",
+        "classrooms": "Classrooms managed",
+        "students": "Learners taught"
+      },
+      "criteriaRemaining": {
+        "subjects": "{{formattedCount}} more courses",
+        "classrooms": "{{formattedCount}} more classes",
+        "students": "{{formattedCount}} more learners"
+      },
+      "achievements": {
+        "getStarted": "Create your first classroom to begin the journey",
+        "firstClassroom": "Opened your first classroom",
+        "students25": "Supported your first 25 learners",
+        "classrooms5": "Created 5 learning spaces",
+        "students50": "Shared learning with 50 learners",
+        "students100": "Shared learning with 100 learners",
+        "students250": "Shared learning with 250 learners",
+        "students500": "Shared learning with 500 learners"
       }
     },
     "classrooms": {
@@ -296,7 +351,6 @@
       "exerciseTime": "Exercise time",
       "exerciseTimeLoading": "Loading exercise time",
       "errorStatus": "Unable to load data",
-      "errorHint": "Hover over or focus the exclamation mark to view the reason",
       "renderErrorTitle": "Unable to display learner details",
       "renderErrorDescription": "This panel remains open so you can inspect and report the issue.",
       "durationMinutes": "{{value}} min",
