@@ -35,28 +35,45 @@
     pmremGenerator.dispose();
     scene.add(new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1));
     //const model = await new GLTFLoader().loadAsync('https://storage.googleapis.com/mediapipe-tasks/face_landmarker/raccoon_head.glb');
-    const model = await new GLTFLoader().loadAsync('https://sibsansuk.github.io/courses/game_ar/robot_head12.glb');
-    model.scene.scale.setScalar(2);
+    const model = await new GLTFLoader().loadAsync('https://sibsansuk.github.io/courses/game_ar/robot_head12.glb?v=1');
+    model.scene.scale.setScalar(1.8);
     mindar.addAnchor(1).group.add(model.scene);
     const meshes = [];
     model.scene.traverse(object => {
       if (object.isMesh && object.morphTargetDictionary && object.morphTargetInfluences) meshes.push(object);
     });
 
+    // เวลาตอบสนองของ blendshape (วินาที): ค่าสูงนิ่งขึ้น แต่ตอบสนองช้าลง
+    const blendshapeSmoothTime = 0.08;
+    // แยกการกะพริบตาทั้งสองข้างให้ตอบสนองเร็วขึ้น
+    const eyeBlinkSmoothTime = 0.02;
+    let previousTime;
+
     await mindar.start();
-    function animate() {
+    function animate(time) {
+      const deltaTime = previousTime === undefined ? 0 : (time - previousTime) / 1000;
+      previousTime = time;
+      // Exponential smoothing ทำให้ความนุ่มนวลใกล้เคียงกันแม้ frame rate ต่างกัน
+      const alpha = 1 - Math.exp(-deltaTime / blendshapeSmoothTime);
+      const eyeBlinkAlpha = 1 - Math.exp(-deltaTime / eyeBlinkSmoothTime);
       const categories = mindar.getLatestEstimate()?.blendshapes?.categories;
       // จับคู่ชื่อ blendshape กับ morph target ของโมเดล เช่น jawOpen, eyeBlinkLeft
       for (const mesh of meshes) {
         for (const { categoryName, score } of categories ?? []) {
           const index = mesh.morphTargetDictionary[categoryName];
-          if (index !== undefined) mesh.morphTargetInfluences[index] = score;
+          if (index !== undefined) {
+            const current = mesh.morphTargetInfluences[index];
+            const smoothAlpha = categoryName === 'eyeBlinkLeft' || categoryName === 'eyeBlinkRight'
+              ? eyeBlinkAlpha
+              : alpha;
+            mesh.morphTargetInfluences[index] = THREE.MathUtils.lerp(current, score, smoothAlpha);
+          }
         }
       }
       renderer.render(scene, camera);
       requestAnimationFrame(animate);
     }
-    animate();
+    requestAnimationFrame(animate);
   </script>
 </body>
 </html>
