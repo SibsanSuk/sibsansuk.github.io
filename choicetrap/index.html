@@ -1,0 +1,2611 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="ทดลอง ThinkAgain ผู้ช่วยทบทวนก่อนซื้อ โดยไม่ต้องติดตั้ง Extension">
+<title>ThinkAgain Demo</title>
+<style id="shop-style"></style>
+</head>
+<body>
+<noscript>โปรดเปิด JavaScript เพื่อทดลอง ThinkAgain</noscript>
+<script>(() => {
+  "use strict";
+  const routes = ["/", "/menu", "/cart", "/checkout", "/gadget", "/gadget/cart", "/gadget/p/air", "/gadget/p/pro", "/gadget/p/lite"];
+  const requested = new URLSearchParams(window.location.search).get("demo") || "/menu";
+  const route = requested.replace(/\/+$/, "") || "/menu";
+  const current = routes.includes(route) ? route : "/menu";
+  const gadget = current.startsWith("/gadget");
+  const shops = {"food": {"html": "\n\u003caside class=\"demo-toolbar\" aria-label=\"เกี่ยวกับเดโม\">\n  \u003cspan>\u003cstrong>ThinkAgain Demo\u003c/strong> · Companion v0.4.0 · ไม่ต้องติดตั้ง Extension\u003cbr>\n  ร้านค้าและราคาสมมติ ไม่มีการสั่งซื้อจริง · ข้อมูลเก็บในเบราว์เซอร์นี้\u003c/span>\n  \u003cnav aria-label=\"เลือกร้านตัวอย่าง\">\u003ca href=\"?demo=/menu/\">ร้านอาหาร\u003c/a> \u003ca href=\"?demo=/gadget/\">ร้านโน้ตบุ๊ก\u003c/a>\u003c/nav>\n  \u003cbutton type=\"button\" id=\"demo-reset\">เริ่มร้านนี้ใหม่\u003c/button>\n\u003c/aside>\n\n\u003cheader>\u003cb>ThinkBurger\u003c/b>\u003cspan class=\"note\">ร้านสมมติสำหรับทดสอบ\u003c/span>\n  \u003cnav>\u003ca href=\"?demo=/menu\">เมนู\u003c/a>\u003ca href=\"?demo=/cart\" id=\"cartlink\">ตะกร้า\u003c/a>\u003c/nav>\u003c/header>\n\u003cmain id=\"m\">\u003c/main>\n\n\n\n", "css": "\n  body { margin: 0; font: 16px/1.6 system-ui, \"Sukhumvit Set\", \"Noto Sans Thai\", sans-serif; background: #F6F4EF; color: #1D1B16; }\n  header { display: flex; align-items: center; gap: 16px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E6E1D6; }\n  header b { color: #1E6B47; font-size: 20px; }\n  header nav { margin-left: auto; display: flex; gap: 18px; }\n  header a { color: #1D1B16; text-decoration: none; }\n  main { max-width: 760px; margin: 24px auto; padding: 0 24px; display: grid; gap: 14px; }\n  .note { font-size: 13px; color: #6A665C; }\n  .card { background: #fff; border-radius: 16px; padding: 16px; display: grid; grid-template-columns: 96px 1fr auto; gap: 8px; align-items: center; box-shadow: 0 6px 18px -12px rgba(40,34,20,.35); }\n  .card.hero { border: 2px solid #F4B92B; }\n  .card h3 { margin: 0; font-size: 18px; }\n  .card p { margin: 0; color: #6A665C; font-size: 14px; }\n  .badge { background: #F4B92B; border-radius: 6px; padding: 2px 8px; font-size: 12px; margin-left: 6px; }\n  .price { font-weight: 700; font-size: 18px; }\n  .price s { color: #999; font-weight: 400; font-size: 14px; margin-right: 6px; }\n  button { font: inherit; border: 0; border-radius: 10px; padding: 10px 16px; background: #1E6B47; color: #fff; cursor: pointer; }\n  button.quiet { background: #EEE9DE; color: #1D1B16; }\n  .promo { background: #FDEBE1; color: #CF4510; padding: 10px 14px; border-radius: 12px; font-weight: 600; }\n  .card img { width: 96px; height: 72px; border-radius: 10px; }\n  .line img { width: 64px; height: 48px; border-radius: 8px; }\n  .line { background: #fff; border-radius: 14px; padding: 14px 16px; display: grid; grid-template-columns: 64px 1fr auto auto; gap: 14px; align-items: center; }\n  .line h3 { margin: 0; font-size: 17px; }\n  .line small { color: #6A665C; }\n  .qty { display: inline-flex; gap: 8px; align-items: center; }\n  .qty button { padding: 4px 10px; background: #EEE9DE; color: #1D1B16; }\n  .suggest { background: #FFF6DE; border-radius: 14px; padding: 14px 16px; }\n  .suggest .card { box-shadow: none; }\n  .summary { background: #fff; border-radius: 14px; padding: 14px 16px; display: grid; gap: 6px; }\n  .summary div { display: flex; justify-content: space-between; }\n  .summary .grand { font-weight: 700; font-size: 19px; border-top: 1px dashed #E6E1D6; padding-top: 8px; }\n  .pay { display: flex; gap: 12px; align-items: center; }\n\n\n.demo-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:12px 24px; padding:12px 24px; background:#f1edff; color:#32245c; font-size:13px; }\n.demo-toolbar nav { display:flex; gap:16px; margin-left:auto; }\n.demo-toolbar a { color:#5036af; }\n.demo-toolbar button { background:#5036af; color:white; font-size:13px; }\n@media(max-width:600px) {\n  header { flex-wrap:wrap; padding:12px; gap:8px; }\n  header nav { gap:12px; }\n  main { padding:0 12px; }\n  .card { grid-template-columns:72px 1fr; }\n  .card img { width:72px; }\n  .card .pay { grid-column:1 / -1; justify-content:flex-end; }\n  .line { grid-template-columns:48px 1fr; gap:8px; }\n  .line img { width:48px; }\n  .grid, .detail { grid-template-columns:1fr; }\n  .card.featured { grid-column:auto; grid-row:auto; }\n  .grid .card img { width:100%; }\n  .card.featured img { height:180px; }\n  .demo-toolbar { padding:12px; }\n}\n"}, "gadget": {"html": "\n\u003caside class=\"demo-toolbar\" aria-label=\"เกี่ยวกับเดโม\">\n  \u003cspan>\u003cstrong>ThinkAgain Demo\u003c/strong> · Companion v0.4.0 · ไม่ต้องติดตั้ง Extension\u003cbr>\n  ร้านค้าและราคาสมมติ ไม่มีการสั่งซื้อจริง · ข้อมูลเก็บในเบราว์เซอร์นี้\u003c/span>\n  \u003cnav aria-label=\"เลือกร้านตัวอย่าง\">\u003ca href=\"?demo=/menu/\">ร้านอาหาร\u003c/a> \u003ca href=\"?demo=/gadget/\">ร้านโน้ตบุ๊ก\u003c/a>\u003c/nav>\n  \u003cbutton type=\"button\" id=\"demo-reset\">เริ่มร้านนี้ใหม่\u003c/button>\n\u003c/aside>\n\n\u003cheader>\u003cb>ThinkGadget\u003c/b>\u003cspan class=\"note\">ร้านสมมติสำหรับทดสอบ\u003c/span>\n  \u003cnav>\u003ca href=\"?demo=/gadget\">สินค้า\u003c/a>\u003ca href=\"?demo=/gadget/cart\" id=\"cartlink\">ตะกร้า\u003c/a>\u003c/nav>\u003c/header>\n\u003cmain id=\"m\">\u003c/main>\n\n\n\n", "css": "\n  body { margin: 0; font: 16px/1.6 system-ui, \"Sukhumvit Set\", \"Noto Sans Thai\", sans-serif; background: #F4F5F7; color: #16181D; }\n  header { display: flex; align-items: center; gap: 16px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E5EA; }\n  header b { color: #1F4FD8; font-size: 20px; }\n  header nav { margin-left: auto; display: flex; gap: 18px; }\n  header a { color: #16181D; text-decoration: none; }\n  main { max-width: 920px; margin: 24px auto; padding: 0 24px; }\n  .note { font-size: 13px; color: #6B7080; }\n  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }\n  .card { background: #fff; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 6px; }\n  .card.featured { grid-column: span 2; grid-row: span 2; border: 2px solid #1F4FD8; }\n  .card img { width: 100%; max-width: 160px; height: 110px; object-fit: contain; }\n  .card.featured img { max-width: none; height: 300px; }\n  .card h3 { margin: 0; font-size: 17px; }\n  .badges { display: flex; gap: 6px; }\n  .badge { background: #FFB020; color: #16181D; border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 700; }\n  .badge.blue { background: #E6EEFF; color: #1F4FD8; }\n  .price { font-weight: 700; font-size: 18px; }\n  .btn, button { display: inline-block; font: inherit; border: 0; border-radius: 10px; padding: 10px 16px; background: #1F4FD8; color: #fff; cursor: pointer; text-decoration: none; text-align: center; }\n  .btn.quiet { background: #E9EBF0; color: #16181D; }\n  .detail { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; background: #fff; border-radius: 16px; padding: 24px; }\n  .detail img { width: 100%; height: 280px; object-fit: contain; }\n  .opt { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid #EEF0F3; }\n  .line { background: #fff; border-radius: 14px; padding: 12px 16px; display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; align-items: center; margin-bottom: 10px; }\n  .line img { width: 64px; height: 48px; object-fit: contain; }\n  .line h3 { margin: 0; font-size: 16px; }\n  .summary { background: #fff; border-radius: 14px; padding: 14px 16px; display: grid; gap: 6px; margin: 14px 0; }\n  .summary div { display: flex; justify-content: space-between; }\n  .summary .grand { font-weight: 700; font-size: 19px; border-top: 1px dashed #E3E5EA; padding-top: 8px; }\n\n\n.demo-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:12px 24px; padding:12px 24px; background:#f1edff; color:#32245c; font-size:13px; }\n.demo-toolbar nav { display:flex; gap:16px; margin-left:auto; }\n.demo-toolbar a { color:#5036af; }\n.demo-toolbar button { background:#5036af; color:white; font-size:13px; }\n@media(max-width:600px) {\n  header { flex-wrap:wrap; padding:12px; gap:8px; }\n  header nav { gap:12px; }\n  main { padding:0 12px; }\n  .card { grid-template-columns:72px 1fr; }\n  .card img { width:72px; }\n  .card .pay { grid-column:1 / -1; justify-content:flex-end; }\n  .line { grid-template-columns:48px 1fr; gap:8px; }\n  .line img { width:48px; }\n  .grid, .detail { grid-template-columns:1fr; }\n  .card.featured { grid-column:auto; grid-row:auto; }\n  .grid .card img { width:100%; }\n  .card.featured img { height:180px; }\n  .demo-toolbar { padding:12px; }\n}\n"}};
+  const shop = gadget ? shops.gadget : shops.food;
+  document.title = "ThinkAgain Demo · " + (gadget ? "ThinkGadget" : "ThinkBurger");
+  document.getElementById("shop-style").textContent = shop.css;
+  document.body.innerHTML = shop.html;
+
+  function navigate(next) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("demo", next.replace(/\/+$/, "") || "/menu");
+    window.location.assign(url.href);
+  }
+  // The actual extension gets a virtual shop pathname. Browser navigation always
+  // reloads this same HTM file, including when hosted in a repository subfolder.
+  const location = {
+    pathname: current,
+    search: window.location.search,
+    hostname: window.location.hostname,
+    origin: window.location.origin,
+    get href() { return window.location.href; },
+    set href(next) { navigate(next); },
+    assign: navigate
+  };
+  // Keep this single-file demo's data separate from other pages on the same host.
+  const prefix = "thinkagain-single:" + window.location.pathname + ":";
+  const localStorage = {
+    getItem: key => window.localStorage.getItem(prefix + key),
+    setItem: (key, value) => window.localStorage.setItem(prefix + key, value),
+    removeItem: key => window.localStorage.removeItem(prefix + key)
+  };
+
+  if (gadget) {
+    (() => {
+
+  // Fixture only: a laptop shop that uses the persuasive patterns ThinkAgain reflects on.
+  const svg = body => "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 110">${body}</svg>`);
+  const laptop = (screen, base) => svg(`<rect x="28" y="14" width="104" height="66" rx="6" fill="${base}"/><rect x="34" y="20" width="92" height="54" rx="3" fill="${screen}"/><path d="M14 84h132l-8 12H22z" fill="${base}"/>`);
+  const PRODUCTS = [
+    { id: "pro", name: "ThinkBook Pro 14", price: 39990, desc: "จอ 14\" · RAM 32GB · SSD 1TB", img: laptop("#7FA3FF", "#3B3F4A"), featured: true },
+    { id: "air", name: "ThinkBook Air 13", price: 24990, desc: "จอ 13\" · RAM 16GB · SSD 512GB", img: laptop("#9BE0D2", "#8E95A3") },
+    { id: "lite", name: "ThinkBook Lite 14", price: 17990, desc: "จอ 14\" · RAM 8GB · SSD 256GB", img: laptop("#F7D27A", "#A7ADB8") }
+  ];
+  const ADDONS = [
+    { id: "care", name: "ประกันอุบัติเหตุ 1 ปี", price: 1290, preset: true, img: svg('<path d="M80 12l46 16v28c0 28-20 44-46 52-26-8-46-24-46-52V28z" fill="#1F4FD8"/><path d="M62 58l12 12 24-26" stroke="#fff" stroke-width="8" fill="none"/>') },
+    { id: "bag", name: "กระเป๋าโน้ตบุ๊ก", price: 590, preset: true, img: svg('<rect x="22" y="34" width="116" height="66" rx="10" fill="#3B3F4A"/><path d="M60 34v-10h40v10" stroke="#3B3F4A" stroke-width="8" fill="none"/>') },
+    { id: "mouse", name: "เมาส์ไร้สาย", price: 390, preset: false, img: svg('<rect x="58" y="20" width="44" height="72" rx="22" fill="#8E95A3"/>') }
+  ];
+  const baht = n => "฿" + n.toLocaleString("th-TH");
+  const load = () => { try { return JSON.parse(localStorage.getItem("gadget-cart") || "[]"); } catch { return []; } };
+  const save = c => localStorage.setItem("gadget-cart", JSON.stringify(c));
+  const m = document.getElementById("m");
+  const path = location.pathname.replace(/\/+$/, "");
+  document.getElementById("cartlink").textContent = "ตะกร้า (" + load().length + ")";
+
+  if (path.startsWith("/gadget/cart")) {
+    const cart = load();
+    const total = cart.reduce((a, l) => a + l.price, 0);
+    m.innerHTML = `<h1>ตะกร้าสินค้า</h1>
+      ${cart.map(l => `<div class="line"><img src="${l.img}" alt="${l.name}"><div><h3>${l.name}</h3></div><span class="price">${baht(l.price)}</span></div>`).join("") || "<p>ตะกร้าว่าง</p>"}
+      <section class="summary"><div><span>ราคาสินค้า</span><span>${baht(total)}</span></div><div><span>ค่าจัดส่ง</span><span>ส่งฟรี</span></div>
+        <div class="grand"><span>ยอดรวมทั้งหมด (${cart.length} รายการ)</span><span>${baht(total)}</span></div></section>
+      <button>ชำระเงิน</button> <a href="?demo=/gadget">เลือกเพิ่ม</a>`;
+  } else if (path.startsWith("/gadget/p/")) {
+    const p = PRODUCTS.find(x => path.endsWith("/" + x.id)) || PRODUCTS[0];
+    m.innerHTML = `<div class="detail"><img src="${p.img}" alt="${p.name}">
+      <div><h1 style="margin:0">${p.name}</h1><p class="note">${p.desc}</p><p class="price">${baht(p.price)}</p>
+        <h2 style="font-size:16px">ตัวเลือกเสริม</h2>
+        ${ADDONS.map(a => `<label class="opt"><input type="checkbox" name="${a.id}" ${a.preset ? "checked" : ""}> ${a.name} (+${baht(a.price)})</label>`).join("")}
+        <p><button id="add">เพิ่มลงตะกร้า</button></p></div></div>`;
+    document.getElementById("add").addEventListener("click", () => {
+      const cart = load();
+      cart.push({ name: p.name, price: p.price, img: p.img });
+      for (const a of ADDONS) if (m.querySelector(`input[name=${a.id}]`).checked) cart.push({ name: a.name, price: a.price, img: a.img });
+      save(cart);
+      location.href = "/gadget/cart";
+    });
+  } else {
+    m.innerHTML = `<h1 style="margin-top:0">โน้ตบุ๊ก</h1><div class="grid">
+      ${PRODUCTS.map(p => `<div class="card${p.featured ? " featured" : ""}">
+        ${p.featured ? '<div class="badges"><span class="badge">BEST SELLER</span><span class="badge blue">แนะนำสำหรับคุณ</span></div>' : ""}
+        <img src="${p.img}" alt="${p.name}"><h3>${p.name}</h3><p class="note" style="margin:0">${p.desc}</p>
+        <span class="price">${baht(p.price)}</span>
+        <a class="btn${p.featured ? "" : " quiet"}" href="?demo=/gadget/p/${p.id}">เพิ่มลงตะกร้า</a></div>`).join("")}
+      </div><p class="note">สถานการณ์และราคาสมมติ ไม่มีการสั่งซื้อจริง</p>`;
+  }
+
+    })();
+  } else {
+    (() => {
+
+  // Fixture only: the page keeps its own cart in its own localStorage.
+  const MENU = [
+    { id: "box", name: "ชุดสุดคุ้ม ThinkBox", desc: "เบอร์เกอร์ไก่กรอบ + เฟรนช์ฟรายส์ + น้ำอัดลม", price: 139, was: 169, hero: true },
+    { id: "burger", name: "เบอร์เกอร์ไก่กรอบ", desc: "ไม่มีเครื่องเคียง", price: 89 },
+    { id: "chicken", name: "ไก่ทอด", desc: "1 ชิ้น สูตรกรอบ", price: 45 },
+    { id: "fries", name: "เฟรนช์ฟรายส์", desc: "ขนาดปกติ", price: 39 },
+    { id: "drink", name: "น้ำอัดลม", desc: "1 แก้ว", price: 25 },
+    { id: "pie", name: "พายสับปะรด", desc: "อบร้อน ๆ", price: 29 }
+  ];
+  // Simple drawn product pictures (data: URLs) so the fixture has real <img> elements.
+  const BG = '<rect width="120" height="90" rx="10" fill="#FFF3D9"/>';
+  const BUN = (x, y, w = 46) => `<g transform="translate(${x} ${y})"><path d="M0 14C0 0 ${w} 0 ${w} 14z" fill="#E3A24A"/><rect x="-2" y="14" width="${w + 4}" height="5" rx="2" fill="#6DB548"/><rect x="0" y="19" width="${w}" height="7" rx="3" fill="#9C5320"/><rect x="0" y="26" width="${w}" height="7" rx="3" fill="#D8933C"/></g>`;
+  const FRIES = (x, y) => `<g transform="translate(${x} ${y})"><path d="M4 0h4v16H4zM10 -3h4v19h-4zM16 0h4v16h-4zM22 -2h4v18h-4z" fill="#F6CA45"/><path d="M0 12h30l-4 22H4z" fill="#CF4510"/></g>`;
+  const CUP = (x, y, c = "#1E6B47") => `<g transform="translate(${x} ${y})"><rect x="14" y="-10" width="3" height="14" fill="#CF4510" transform="rotate(12 15 0)"/><rect x="-1" y="2" width="28" height="4" rx="2" fill="#D9D4C8"/><path d="M0 6h26l-3 30H3z" fill="${c}"/></g>`;
+  const PICS = {
+    box: BG + '<path d="M14 58h92l-6 24H20z" fill="#1E6B47"/>' + CUP(18, 22) + BUN(42, 30) + FRIES(84, 26),
+    burger: BG + BUN(30, 28, 60),
+    chicken: BG + '<ellipse cx="54" cy="46" rx="26" ry="20" fill="#C8762E"/><ellipse cx="50" cy="42" rx="20" ry="13" fill="#E09A45"/><rect x="74" y="50" width="22" height="7" rx="3" fill="#F3E9D6" transform="rotate(28 74 50)"/><circle cx="96" cy="64" r="5" fill="#F3E9D6"/>',
+    fries: BG + FRIES(45, 26),
+    drink: BG + CUP(47, 26),
+    pie: BG + '<rect x="28" y="34" width="64" height="26" rx="10" fill="#E3A24A"/><path d="M36 40h48M36 47h48M36 54h48" stroke="#C98A32" stroke-width="2"/>',
+    thaitea: BG + CUP(47, 26, "#E8833A"),
+    icecream: BG + '<circle cx="60" cy="34" r="16" fill="#FFF6E0" stroke="#EADBB8"/><path d="M46 40h28l-14 34z" fill="#D9A25B"/>'
+  };
+  const picture = id => "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 90">${PICS[id] || BG}</svg>`);
+  const load = () => { try { return JSON.parse(localStorage.getItem("fixture-cart") || "[]"); } catch { return []; } };
+  const save = cart => localStorage.setItem("fixture-cart", JSON.stringify(cart));
+  const baht = n => "฿" + n.toLocaleString("th-TH");
+  const m = document.getElementById("m");
+  function add(id, opts = {}) {
+    const item = MENU.find(i => i.id === id);
+    const cart = load();
+    const upsize = id === "box" ? 25 : 0; // pre-ticked "ชุดใหญ่ +25"
+    cart.push({ id, name: item.name, qty: 1, unit: item.price + upsize, option: upsize ? "ชุดใหญ่ (+฿25)" : "", ...opts });
+    save(cart); render();
+  }
+  function render() {
+    const cart = load();
+    document.getElementById("cartlink").textContent = "ตะกร้า (" + cart.reduce((a, l) => a + l.qty, 0) + ")";
+    const path = location.pathname.replace(/\/+$/, "");
+    if ((path.startsWith("/cart") || path.startsWith("/checkout")) && cartPhase === 0) {
+      m.innerHTML = `<h1>ตะกร้าสินค้า</h1><p class="note">กำลังโหลดตะกร้า…</p>`;
+    } else if (path.startsWith("/cart") || path.startsWith("/checkout")) {
+      const total = cart.reduce((a, l) => a + l.unit * l.qty, 0);
+      const count = cart.reduce((a, l) => a + l.qty, 0);
+      m.innerHTML = `<h1>${path.startsWith("/checkout") ? "ชำระเงิน" : "ตะกร้าสินค้า"}</h1>
+        ${cart.map((l, i) => `<div class="line"><img src="${picture(l.id)}" alt="${l.name}"><div><h3>${l.name}</h3><small>${l.option || "ขนาดปกติ"}</small></div>
+          <span class="qty"><button data-d="-1" data-i="${i}">−</button><span>${l.qty}</span><button data-d="1" data-i="${i}">+</button></span>
+          <span class="price">${baht(l.unit * l.qty)}</span></div>`).join("") || "<p>ตะกร้าว่าง</p>"}
+        <section class="suggest"><h2 style="margin:0 0 8px;font-size:16px">ลูกค้ามักสั่งคู่กัน</h2>
+          <div class="card"><img src="${picture("pie")}" alt="พายสับปะรด"><div><h3>พายสับปะรด</h3><p>อบร้อน ๆ</p></div><div class="pay"><span class="price">฿29</span><button data-add="pie">+ เพิ่ม</button></div></div></section>
+        ${cartPhase < 2 ? '<p class="note">กำลังคำนวณยอด…</p>' : `<section class="summary">
+          <div><span>ค่าอาหาร</span><span>${baht(total)}</span></div>
+          <div><span>ค่าจัดส่ง</span><span>ส่งฟรี</span></div>
+          <div class="grand"><span>ยอดรวมทั้งหมด (${count} รายการ)</span><span>${baht(total)}</span></div>
+        </section>`}
+        <div class="pay"><button>${path.startsWith("/checkout") ? "ยืนยันการสั่งซื้อ" : "ชำระเงิน"}</button><a href="?demo=/menu">เลือกเพิ่ม</a></div>`;
+    } else if (!menuReady) {
+      m.innerHTML = `<p class="note">กำลังโหลดเมนู…</p>`;
+    } else {
+      m.innerHTML = `<div class="promo">ดีลมื้อเที่ยง ราคานี้เฉพาะวันนี้ · เหลือเวลา 04:59</div>
+        ${MENU.map(i => `<div class="card${i.hero ? " hero" : ""}"><img src="${picture(i.id)}" alt="${i.name}"><div><h3>${i.name}${i.hero ? '<span class="badge">ขายดีอันดับ 1</span>' : ""}</h3><p>${i.desc}</p></div>
+          <div class="pay"><span class="price">${i.was ? `<s>${baht(i.was)}</s>` : ""}${baht(i.price)}</span><button class="${i.hero ? "" : "quiet"}" data-add="${i.id}">ใส่ตะกร้า</button></div></div>`).join("")}
+        <p class="note">สถานการณ์และราคาสมมติ ไม่มีการสั่งซื้อจริง</p>`;
+    }
+  }
+  // Like real shops, the menu arrives later from an API, and more items load after that.
+  const LATER = [
+    { id: "thaitea", name: "ชาไทย", desc: "แก้วใหญ่", price: 35 },
+    { id: "icecream", name: "ไอศกรีมวานิลลา", desc: "1 ถ้วย", price: 29 }
+  ];
+  const dynamic = !new URLSearchParams(location.search).has("static");
+  let menuReady = !dynamic;
+  // The cart arrives in steps too: lines after 2 s, the total after 3.5 s.
+  let cartPhase = dynamic ? 0 : 2;
+  const onCart = /^\/(cart|checkout)/.test(location.pathname);
+  if (dynamic && onCart) {
+    setTimeout(() => { cartPhase = 1; render(); }, 2000);
+    setTimeout(() => { cartPhase = 2; render(); }, 3500);
+  } else if (dynamic) {
+    setTimeout(() => { menuReady = true; render(); }, 2500);
+    setTimeout(() => { MENU.push(...LATER); render(); }, 6000);
+  }
+  m.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.add) add(b.dataset.add, b.dataset.add === "pie" && location.pathname.startsWith("/cart") ? { suggested: true } : {});
+    if (b.dataset.d) { const cart = load(); const l = cart[+b.dataset.i]; l.qty += +b.dataset.d; if (l.qty <= 0) cart.splice(+b.dataset.i, 1); save(cart); render(); }
+  });
+  render();
+
+    })();
+  }
+(() => {
+  "use strict";
+  document.getElementById("demo-reset").addEventListener("click", () => {
+    const gadget = location.pathname.startsWith("/gadget");
+    localStorage.removeItem("thinkagain-demo:v1:" + (gadget ? "gadget" : "food"));
+    localStorage.removeItem(gadget ? "gadget-cart" : "fixture-cart");
+    location.assign(gadget ? "/gadget/" : "/menu/");
+  });
+})();
+
+(function () {
+"use strict";
+// Used inside the demo bundle's private scope; never installs a global chrome shim.
+function createDemoStorage() {
+  const shop = location.pathname.startsWith("/gadget") ? "gadget" : "food";
+  const key = "thinkagain-demo:v1:" + shop;
+  const read = () => JSON.parse(localStorage.getItem(key) || "{}");
+  return Object.freeze({
+    async get(keys) {
+      const saved = read();
+      return Object.fromEntries(keys.filter(name => Object.hasOwn(saved, name)).map(name => [name, saved[name]]));
+    },
+    async set(values) {
+      localStorage.setItem(key, JSON.stringify({ ...read(), ...values }));
+    }
+  });
+}
+
+;
+const chrome = { storage: { local: createDemoStorage() } };
+
+;
+// Source: extension/src/shared/tokens.js
+(() => {
+  "use strict";
+
+  // v0.3 visual refresh: clean white surfaces, strong ink, one violet primary,
+  // teal→violet gradient only on the small brand badge.
+  const ta = globalThis.ThinkAgain = globalThis.ThinkAgain || {};
+  ta.tokens = Object.freeze({
+    surface: "#FFFFFF",
+    subtle: "#F5F6F8",
+    line: "#E6E8EC",
+    ink: "#111827",
+    text2: "#4B5563",
+    brand: "#6D4AFF",
+    brandHover: "#5A37F0",
+    brandSoft: "#F1EDFF",
+    teal: "#0E9F9A",
+    tealSoft: "#E6F7F6",
+    amber: "#B45309",
+    amberSoft: "#FFF4E2",
+    gradient: "linear-gradient(135deg, #12B5B0 0%, #6D4AFF 100%)",
+    radius: "16px",
+    radiusControl: "10px",
+    shadow: "0 16px 40px -12px rgba(17,24,39,.22), 0 2px 6px rgba(17,24,39,.06)",
+    font: '"Sukhumvit Set","Noto Sans Thai","IBM Plex Sans Thai","Leelawadee UI",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif',
+    dark: Object.freeze({
+      surface: "#1C1F26",
+      subtle: "#252932",
+      line: "#333844",
+      ink: "#F3F4F6",
+      text2: "#B4BAC6",
+      brand: "#9C86FF",
+      brandHover: "#AE9BFF",
+      brandSoft: "#2C2748",
+      tealSoft: "#173533",
+      amberSoft: "#3A2C17"
+    })
+  });
+})();
+
+;
+// Source: extension/src/shared/storage.js
+(() => {
+  "use strict";
+  const ta = globalThis.ThinkAgain = globalThis.ThinkAgain || {};
+  const corners = ["bl", "br", "tr", "tl"];
+  const INTENT_TTL_MS = 24 * 60 * 60 * 1000; // an intention is for today's shopping trip
+  let writes = Promise.resolve();
+
+  // chrome.storage.local only (never sync): the shopping intentions stay on this device.
+  async function read() {
+    const saved = await chrome.storage.local.get(["schema", "prefs", "sites", "userDenied", "intents", "seen", "reflections"]);
+    return {
+      schema: saved.schema ?? 2,
+      prefs: { lang: "th", motion: "auto", side: "right", y: 0.62, ...saved.prefs },
+      sites: saved.sites || {},
+      userDenied: saved.userDenied || [],
+      intents: saved.intents || {},
+      seen: saved.seen || {},              // persuasive UI noticed per shop (24 h)
+      reflections: saved.reflections || [] // the user's own answers, on this device only
+    };
+  }
+
+  function site(settings, origin) {
+    const saved = settings.sites[origin] || {};
+    return {
+      always: false, paused: false, seen: false, ...saved,
+      corner: corners.includes(saved.corner) ? saved.corner : "bl"
+    };
+  }
+
+  function queue(change) {
+    // Serialize this content context's writes and merge against fresh storage.
+    const operation = writes.then(async () => {
+      const settings = await read();
+      const result = change(settings);
+      await chrome.storage.local.set({ ...settings, schema: 2 });
+      return result;
+    });
+    writes = operation.catch(() => {});
+    return operation;
+  }
+
+  function updateSite(origin, patch) {
+    return queue(settings => {
+      const updated = { ...site(settings, origin), ...patch };
+      settings.sites = { ...settings.sites, [origin]: updated };
+      return updated;
+    });
+  }
+
+  function updatePrefs(patch) {
+    return queue(settings => {
+      settings.prefs = { ...settings.prefs, ...patch };
+      return settings.prefs;
+    });
+  }
+
+  function intent(settings, siteKey, now = Date.now()) {
+    const saved = settings.intents[siteKey];
+    return saved && now - saved.setAt < INTENT_TTL_MS ? saved : null;
+  }
+
+  function saveIntent(siteKey, entry) {
+    return queue(settings => {
+      const fresh = {};
+      const now = Date.now();
+      for (const [keyName, saved] of Object.entries(settings.intents)) {
+        if (saved && now - saved.setAt < INTENT_TTL_MS) fresh[keyName] = saved; // drop stale ones
+      }
+      if (entry) fresh[siteKey] = { ...entry, setAt: now };
+      else delete fresh[siteKey];
+      settings.intents = fresh;
+      return fresh[siteKey] || null;
+    });
+  }
+
+  function seenFor(settings, siteKey, now = Date.now()) {
+    const saved = settings.seen[siteKey];
+    return saved && now - saved.at < INTENT_TTL_MS ? saved.items : [];
+  }
+
+  // Merge newly noticed tactics into this shop's list (deduplicated, capped).
+  function addSeen(siteKey, items) {
+    return queue(settings => {
+      const now = Date.now();
+      const fresh = {};
+      for (const [name, entry] of Object.entries(settings.seen)) if (entry && now - entry.at < INTENT_TTL_MS) fresh[name] = entry;
+      const list = fresh[siteKey] ? [...fresh[siteKey].items] : [];
+      for (const item of items) {
+        if (!list.some(old => old.type === item.type && old.text === item.text)) list.push({ type: item.type, text: item.text, priciest: Boolean(item.priciest) });
+      }
+      fresh[siteKey] = { at: now, items: list.slice(-16) };
+      settings.seen = fresh;
+      return fresh[siteKey].items;
+    });
+  }
+
+  function clearSeen(siteKey) {
+    return queue(settings => { delete settings.seen[siteKey]; return []; });
+  }
+
+  function addReflection(entry) {
+    return queue(settings => {
+      settings.reflections = [...settings.reflections, { ...entry, at: Date.now() }].slice(-200);
+      return settings.reflections.length;
+    });
+  }
+
+  ta.storage = Object.freeze({ read, site, updateSite, updatePrefs, intent, saveIntent, seenFor, addSeen, clearSeen, addReflection, INTENT_TTL_MS });
+})();
+
+;
+// Source: extension/src/shared/i18n.js
+(() => {
+  "use strict";
+  const ta = globalThis.ThinkAgain = globalThis.ThinkAgain || {};
+  // {x} is filled by t(key, lang, { x }).
+  const th = Object.freeze({
+    name: "ThinkAgain",
+    charLabel: "น้องคิด ผู้ช่วยคิดก่อนซื้อ",
+    charHint: "คลิกเพื่อคุย · ลากเพื่อย้ายไปอีกฝั่ง",
+    close: "ปิด",
+    // 1. intention
+    askEyebrow: "ก่อนเลือกซื้อ",
+    askTitle: "ตั้งใจจะซื้ออะไรจริง ๆ?",
+    askTitleLate: "ตอนแรกตั้งใจซื้ออะไร?",
+    askSub: "เลือกจากที่เห็นในหน้านี้ หรือพิมพ์เองก็ได้",
+    askNoItems: "ยังหาสินค้าในหน้านี้ไม่เจอ ลองพิมพ์เองได้เลย",
+    ownLabel: "พิมพ์สิ่งที่ตั้งใจซื้อ",
+    ownPlaceholder: "หรือพิมพ์ เช่น ไก่ทอด 1 ชิ้น",
+    ownAdd: "เพิ่ม",
+    chosen: "ที่ตั้งใจไว้",
+    remove: "เอาออก",
+    less: "ลดจำนวน",
+    more: "เพิ่มจำนวน",
+    next: "ต่อไป",
+    later: "ไว้ทีหลัง",
+    // 2. budget
+    budgetEyebrow: "ตั้งงบ",
+    budgetTitle: "งบไม่เกินเท่าไร?",
+    budgetSub: "เลือกเพดานงบ หรือเลื่อนเลือกตัวเลข",
+    budgetChip: "ไม่เกิน {x}",
+    budgetRange: "เลื่อนเลือกงบสูงสุด",
+    budgetNow: "งบ {x}",
+    noBudget: "ไม่ตั้งงบ",
+    back: "ย้อนกลับ",
+    save: "จำไว้",
+    // 3. saved
+    savedEyebrow: "จำไว้แล้ว",
+    savedTitle: "จำไว้แล้ว",
+    savedSub: "ก่อนจ่าย จะเทียบให้ดูอีกที",
+    noBudgetSet: "ไม่ได้ตั้งงบ",
+    ok: "โอเค",
+    // 4. compare on cart / payment
+    cmpEyebrow: "ก่อนจ่าย",
+    cmpAllGood: "ตรงกับที่ตั้งใจ",
+    cmpExtrasN: "มีของเพิ่มมา {x} อย่าง",
+    cmpMissingN: "ขาด {x} อย่างที่ตั้งใจ",
+    cmpOver: "เกินงบ {x}",
+    cmpWithin: "อยู่ในงบ เหลือ {x}",
+    cmpNoTotal: "ไม่เจอยอดรวมในหน้านี้",
+    cmpIntended: "ที่ตั้งใจไว้",
+    cmpFound: "อยู่ในตะกร้า",
+    cmpMissing: "ไม่มี",
+    cmpExtra: "เพิ่มมา",
+    cmpMoreQty: "+{x} ชิ้น",
+    cmpExtras: "มีเพิ่มเข้ามา",
+    cmpNoExtras: "ไม่เห็นอะไรเพิ่มเข้ามา",
+    cmpTotal: "ยอดรวมในหน้านี้",
+    cmpBudget: "งบ {x}",
+    cmpNote: "อ่านจากหน้าเว็บ อาจคลาดเคลื่อนได้",
+    cmpEstimated: "ไม่เห็นยอดรวม จึงรวมจากราคาแต่ละรายการ",
+    confirm: "ตั้งใจซื้อแบบนี้",
+    review: "ดูอีกที",
+    editIntent: "แก้ที่ตั้งใจ",
+    bye: "โอเค ขอให้ได้ของที่อยากได้นะ",
+    // page controls
+    hide: "ซ่อน",
+    pause: "พักเว็บนี้",
+    privacy: "ทุกอย่างเก็บไว้ในเครื่องคุณ ไม่ส่งออกไปไหน",
+    thoughtLabel: "สิ่งที่ตั้งใจซื้อ คลิกเพื่อแก้",
+    thoughtMore: "+{x} อย่าง",
+    thoughtTotal: "รวม {x}",
+    // cart reflection
+    cmpAdded: "+{x} จากที่ตั้งใจ",
+    cmpAddedPlain: "เพิ่มมา {x}",
+    tacticsHead: "เมื่อสักครู่ หน้าร้านใช้",
+    term_visual: "Visual Hierarchy",
+    term_framing: "Persuasive Framing",
+    term_preselect: "Preselected Options",
+    term_urgency: "Urgency & Scarcity",
+    term_anchor: "Anchoring",
+    tacVisual: "{x} มีภาพและพื้นที่ใหญ่กว่า",
+    tacVisualPricey: "รุ่นแพงสุด ({x}) มีภาพและพื้นที่ใหญ่กว่า",
+    tacPreselect: "{x} ถูกเลือกไว้ตั้งแต่แรก",
+    tacAnchor: "ราคาเดิม {x} ถูกขีดฆ่าไว้ให้เห็น",
+    askInfluence: "อะไรมีผลต่อการเลือกของคุณมากที่สุด?",
+    inf_badge: "ป้ายแนะนำและสินค้าขายดี",
+    inf_layout: "ภาพและการจัดวางสินค้า",
+    inf_features: "คุณสมบัติของสินค้า",
+    inf_other: "เหตุผลอื่น / ไม่แน่ใจ",
+    thanks: "ขอบคุณที่ลองคิดทบทวน",
+    privacyShort: "เก็บในเครื่องคุณ"
+  });
+  // Translation comes in TA-005g. Empty keys fall back to the Thai brief.
+  const en = Object.freeze(Object.fromEntries(Object.keys(th).map(key => [key, ""])));
+  function t(key, lang = "th", values) {
+    const text = (lang === "en" && en[key]) || th[key] || key;
+    return values ? text.replace(/\{(\w+)\}/g, (_, name) => String(values[name] ?? "")) : text;
+  }
+  ta.i18n = Object.freeze({ th, en, t });
+})();
+
+;
+// Source: extension/src/shared/intent.js
+// Pure helpers for the "intention → budget → cart" reflection. No DOM, no storage.
+(() => {
+  "use strict";
+  const ta = globalThis.ThinkAgain = globalThis.ThinkAgain || {};
+
+  // A price written the way shops write it: ฿1,290 · 1,290.00 บาท · THB 89 · $12.50
+  const PRICE = /(?:฿|THB\s?|US\$|\$|€|£)\s?(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?|(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?\s?(?:บาท|(?:THB|฿)(?!\s?\d)|\.-)/gi;
+
+  function prices(text) {
+    const out = [];
+    for (const match of String(text || "").matchAll(PRICE)) {
+      const whole = (match[1] || match[3]).replace(/,/g, "");
+      const cents = match[2] || match[4] || "";
+      const value = Number(whole + (cents ? "." + cents : ""));
+      if (Number.isFinite(value) && value > 0 && value < 10000000) out.push(value);
+    }
+    return out;
+  }
+  const parsePrice = text => prices(text)[0] ?? null;
+  const hasPrice = text => prices(text).length > 0;
+
+  // Thai-aware fuzzy name matching: lower-case, drop spaces/punctuation/digits,
+  // then compare character bigrams (Dice coefficient).
+  function key(name) {
+    return String(name || "").toLowerCase()
+      .replace(/(?:x|×)?\s*[\d๐-๙]+\s*(?:ชิ้น|อัน|ชุด|กล่อง|แก้ว|ถุง|ขวด|จาน|ถ้วย|ห่อ|ตัว|เครื่อง|คู่|pcs?|ea)?/gi, "")
+      .replace(/\bqty\b/g, "")
+      .replace(/[^\p{L}\p{M}]+/gu, "");
+  }
+  function bigrams(text) {
+    const grams = new Map();
+    for (let i = 0; i < text.length - 1; i += 1) {
+      const gram = text.slice(i, i + 2);
+      grams.set(gram, (grams.get(gram) || 0) + 1);
+    }
+    return grams;
+  }
+  // Words of a name ("ThinkBook Air 13" → thinkbook, air, 13).
+  const words = name => String(name || "").toLowerCase().split(/[^\p{L}\p{M}\p{N}]+/u).filter(word => word.length >= 2 || /\d/.test(word));
+  function similarity(a, b) {
+    const score = rawSimilarity(a, b);
+    // Model names share most letters ("ThinkBook Air 13" vs "ThinkBook Pro 14"):
+    // when both have several words, every word of the shorter one must appear.
+    const wa = words(a);
+    const wb = words(b);
+    if (wa.length >= 2 && wb.length >= 2) {
+      const [short, long] = wa.length <= wb.length ? [wa, wb] : [wb, wa];
+      const covered = short.every(word => long.some(other => other === word || (word.length >= 3 && other.length >= 3 && (other.includes(word) || word.includes(other)))));
+      if (!covered) return Math.min(score, 0.4);
+    }
+    return score;
+  }
+  function rawSimilarity(a, b) {
+    const x = key(a);
+    const y = key(b);
+    if (!x || !y) return 0;
+    if (x === y) return 1;
+    if (x.length >= 3 && y.length >= 3 && (x.includes(y) || y.includes(x))) return 0.9;
+    const gx = bigrams(x);
+    const gy = bigrams(y);
+    let shared = 0;
+    for (const [gram, count] of gx) shared += Math.min(count, gy.get(gram) || 0);
+    const total = Math.max(1, x.length - 1) + Math.max(1, y.length - 1);
+    return (2 * shared) / total;
+  }
+  const MATCH = 0.5;
+
+  // "ไก่ทอด 2 ชิ้น" → { name: "ไก่ทอด", qty: 2 }
+  function parseIntentText(text) {
+    const raw = String(text || "").replace(/\s+/g, " ").trim().slice(0, 80);
+    if (!raw) return null;
+    const qtyMatch = raw.match(/(?:^|\s|x|×)(\d{1,2})\s*(?:[\u0E01-\u0E2E\u0E30-\u0E4E]{1,7}|pcs?|ea|pack|box|cups?)?\s*$/i)
+      || raw.match(/^(\d{1,2})\s*(?:x|×)?\s+/i);
+    const qty = qtyMatch ? Math.min(99, Math.max(1, Number(qtyMatch[1]))) : 1;
+    const name = (qtyMatch ? raw.replace(qtyMatch[0], " ") : raw).replace(/\s+/g, " ").trim() || raw;
+    return { name, qty };
+  }
+
+  // Budget chips: "nice" ceilings at or above what the user intends to spend.
+  const NICE = [50, 100, 150, 200, 300, 500, 800, 1000, 1500, 2000, 3000, 5000, 8000, 10000, 20000, 50000, 100000];
+  function budgetOptions(estimate) {
+    const base = Math.max(1, Number(estimate) || 0);
+    const chips = NICE.filter(value => value >= base).slice(0, 4);
+    let next = chips.length ? chips[chips.length - 1] : Math.ceil(base / 1000) * 1000;
+    if (!chips.length) chips.push(next);
+    while (chips.length < 4) { next *= 2; chips.push(next); }
+    const max = chips[chips.length - 1] * 2;
+    const step = max <= 1000 ? 10 : max <= 5000 ? 50 : max <= 20000 ? 100 : 500;
+    return { chips, min: step, max, step, initial: chips[0] };
+  }
+
+  // Compare what the user meant to buy with what the cart page shows.
+  function compare(intent, cart) {
+    const items = (intent && intent.items) || [];
+    const lines = (cart && cart.lines) || [];
+    const used = new Set();
+    const matched = [];
+    const missing = [];
+    for (const item of items) {
+      let best = -1;
+      let score = 0;
+      lines.forEach((line, index) => {
+        if (used.has(index)) return;
+        const value = similarity(item.name, line.name);
+        if (value > score) { score = value; best = index; }
+      });
+      if (best !== -1 && score >= MATCH) {
+        used.add(best);
+        const line = lines[best];
+        matched.push({ item, line, moreQty: Math.max(0, (line.qty || 1) - (item.qty || 1)) });
+      } else {
+        missing.push(item);
+      }
+    }
+    const extras = lines.filter((_, index) => !used.has(index));
+    const total = cart && Number.isFinite(cart.total) ? cart.total : null;
+    const budget = intent && Number.isFinite(intent.budget) ? intent.budget : null;
+    const over = total !== null && budget !== null ? Math.round((total - budget) * 100) / 100 : null;
+    return { matched, missing, extras, total, budget, over, estimated: Boolean(cart && cart.estimated) };
+  }
+
+  // Group sub-domains of one shop: cart.lazada.co.th and www.lazada.co.th → lazada.co.th
+  const SECOND_LEVEL = /^(?:co|or|ac|go|in|mi|net|com|org|edu|gov)\.(?:th|uk|jp|au|nz|sg|my|id|ph|vn|kr|in|za|br)$/;
+  function siteKey(hostname) {
+    const host = String(hostname || "").toLowerCase().replace(/\.$/, "");
+    if (!host.includes(".") || /^\d+\.\d+\.\d+\.\d+$/.test(host) || host.startsWith("[")) return host;
+    const labels = host.split(".");
+    const lastTwo = labels.slice(-2).join(".");
+    return SECOND_LEVEL.test(lastTwo) ? labels.slice(-3).join(".") : lastTwo;
+  }
+
+  const formatBaht = value => "฿" + Number(value).toLocaleString("th-TH", { maximumFractionDigits: 2 });
+
+  const api = Object.freeze({ prices, parsePrice, hasPrice, key, similarity, parseIntentText,
+    budgetOptions, compare, siteKey, formatBaht, MATCH });
+  ta.intent = api;
+  if (typeof module === "object" && module.exports) module.exports = api;
+})();
+
+;
+// Source: extension/src/shared/sensitive.js
+// Pure classification helpers. No DOM access here: page-scan.js collects the
+// booleans and short button/link labels, and this file only decides the zone.
+(() => {
+  "use strict";
+  const ta = globalThis.ThinkAgain = globalThis.ThinkAgain || {};
+
+  // Brief §2.6 seed list. manifest.json carries the same hosts as
+  // exclude_matches, so the content script is never even injected there.
+  const DENIED_HOSTS = Object.freeze([
+    "kasikornbank.com", "kbank.co.th", "scb.co.th", "krungthai.com", "bangkokbank.com",
+    "krungsri.com", "ttbbank.com", "gsb.or.th", "baac.or.th", "ghbank.co.th", "uob.co.th",
+    "cimbthai.com", "kkpfg.com", "lhbank.co.th", "tisco.co.th",
+    "truemoney.com", "paypal.com", "stripe.com", "checkout.stripe.com", "omise.co", "2c2p.com",
+    "gbprimepay.com", "ksher.com", "rabbitlinepay.com", "adyen.com", "wise.com",
+    "rd.go.th", "sso.go.th",
+    "set.or.th", "settrade.com", "bitkub.com", "binance.com", "binance.th"
+  ]);
+
+  // Path segments. "bag" alone is left out: fashion shops use /bag for handbags.
+  const PAYMENT_PATH = /(?:^|\/)(?:checkout|check-out|checkouts|payment|payments|pay|billing|place-?order|onepage|order\/(?:confirm|review|pay|payment)|cart\/confirm)(?:\/|$|[.?#;])/i;
+  const CART_PATH = /(?:^|\/)(?:cart|carts|basket|shopping-?cart|shopping-?bag|viewcart|view-cart|trolley)(?:\/|$|[.?#;])/i;
+  const LOGIN_PATH = /(?:^|\/)(?:login|log-in|signin|sign-in|signup|sign-up|register|account\/security)(?:\/|$|[.?#;])/i;
+  const PAYMENT_SUBDOMAIN = /^(?:checkout|pay|payment|payments|billing)\./i;
+  const CART_SUBDOMAIN = /^(?:cart|basket)\./i;
+
+  // Whole-label matches after normalise(). Short labels only, so a paragraph
+  // that merely mentions "ชำระเงิน" never counts.
+  const CHECKOUT_LABELS = [
+    // Thai
+    /^(?:ไป(?:ที่)?(?:หน้า)?)?(?:ดำเนินการ)?ชำระ(?:เงิน)?(?:ทันที|เลย|ตอนนี้)?$/,
+    /^(?:ไป)?(?:ที่)?(?:หน้า)?(?:จ่ายเงิน|จ่ายเลย)$/,
+    /^ยืนยัน(?:การ)?(?:ชำระ(?:เงิน)?|สั่งซื้อ(?:สินค้า)?|คำสั่งซื้อ|และชำระเงิน|การจ่ายเงิน)$/,
+    /^(?:ทำการ|ดำเนินการ)?สั่งซื้อ(?:สินค้า)?(?:เลย|ทันที)?$/,
+    /^สั่งสินค้า$/,
+    /^เช็คเอาท์$|^เช็กเอาต์$|^เช็คเอาต์$/,
+    // English
+    /^(?:proceed to |go to |continue to |secure )?check ?out(?: now| securely)?$/,
+    /^(?:place|submit|complete|confirm|review) (?:your |my )?(?:order|purchase|payment)$/,
+    /^(?:pay|pay now|pay securely|confirm and pay|confirm & pay|continue to payment|proceed to payment|complete purchase)$/
+  ];
+
+  // Buttons that put something in a cart (product / menu pages).
+  const BUY_LABELS = [
+    /^(?:\+\s*)?(?:เพิ่ม|ใส่|หยิบ)(?:ลง|ใส่|เข้า)?(?:ใน)?(?:ตะกร้า|รถเข็น)(?:สินค้า)?$/,
+    /^ซื้อ(?:เลย|ทันที|ตอนนี้|สินค้า|สินค้านี้)?$/,
+    /^สั่ง(?:เลย|อาหาร|เลยตอนนี้)$/,
+    /^(?:add to (?:cart|bag|basket|order)|add|buy now|buy it now|order now|add to my order)$/
+  ];
+  const CART_LINK_LABELS = [/^(?:ตะกร้า(?:สินค้า|ของฉัน)?|รถเข็น|cart|my cart|shopping cart|basket|bag|view cart|ดูตะกร้า)$/];
+
+  function normaliseHost(hostname) {
+    return String(hostname || "").toLowerCase().replace(/\.$/, "");
+  }
+
+  function isDeniedHost(hostname, userDenied = []) {
+    const host = normaliseHost(hostname);
+    if (!host) return false;
+    return [...DENIED_HOSTS, ...userDenied].some(entry => {
+      const domain = normaliseHost(entry);
+      return domain && (host === domain || host.endsWith("." + domain));
+    });
+  }
+
+  function pathZone(hostname, pathname) {
+    const host = normaliseHost(hostname);
+    const path = String(pathname || "/");
+    if (PAYMENT_SUBDOMAIN.test(host) || PAYMENT_PATH.test(path)) return "payment";
+    if (CART_SUBDOMAIN.test(host) || CART_PATH.test(path)) return "cart";
+    if (LOGIN_PATH.test(path)) return "login";
+    return null;
+  }
+
+  // Lower-case, drop counts/prices/arrows/punctuation, collapse spaces.
+  function normalise(label) {
+    return String(label || "")
+      .toLowerCase()
+      .replace(/[\d๐-๙]+(?:[.,]\d+)?/g, " ")
+      .replace(/[()[\]{}<>«»‹›→←➔➜›»"'“”‘’.:;,!?*•·|/\\+\-–—_฿$€£¥%#@]/g, " ")
+      .replace(/\b(?:thb|baht|items?)\b|บาท|ชิ้น|รายการ/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function isCheckoutLabel(label) {
+    const text = normalise(label);
+    if (!text || text.length > 40) return false;
+    return CHECKOUT_LABELS.some(pattern => pattern.test(text));
+  }
+
+  function isBuyLabel(label) {
+    const text = normalise(label);
+    return Boolean(text) && text.length <= 40 && BUY_LABELS.some(pattern => pattern.test(text));
+  }
+  function isCartLinkLabel(label) {
+    const text = normalise(label);
+    return Boolean(text) && CART_LINK_LABELS.some(pattern => pattern.test(text));
+  }
+
+  // Is this a page where people pick things to buy? Several weak signals must agree.
+  function shoppingScore({ labels = [], priceCount = 0, hasProductData = false } = {}) {
+    let score = 0;
+    if (labels.some(isBuyLabel)) score += 2;
+    if (hasProductData) score += 2;
+    if (labels.some(isCartLinkLabel)) score += 1;
+    if (priceCount >= 1) score += 1;
+    if (priceCount >= 3) score += 1;
+    return score;
+  }
+
+  // → { zone, reasons } where zone is one of
+  //   "denied"  : finance site, render nothing
+  //   "payment" : card fields or a payment/checkout URL
+  //   "cart"    : a cart/basket URL
+  //   "checkout": an ordinary-looking URL that shows a visible checkout/pay button
+  //   "shopping": product / menu page (buy buttons, prices, product data)
+  //   "login"   : password field or login URL (quiet; no warning)
+  //   "normal"
+  function classify({ hostname, pathname, userDenied = [], hasCardField = false,
+    hasPasswordField = false, labels = [], priceCount = 0, hasProductData = false } = {}) {
+    if (isDeniedHost(hostname, userDenied)) return { zone: "denied", reasons: ["host"] };
+    const fromPath = pathZone(hostname, pathname);
+    if (hasCardField) return { zone: "payment", reasons: ["card-field"] };
+    if (fromPath === "payment" || fromPath === "cart") return { zone: fromPath, reasons: ["path"] };
+    const button = labels.find(isCheckoutLabel);
+    if (button !== undefined && !hasPasswordField && fromPath !== "login") {
+      return { zone: "checkout", reasons: ["label"] };
+    }
+    if (hasPasswordField || fromPath === "login") return { zone: "login", reasons: ["login"] };
+    if (shoppingScore({ labels, priceCount, hasProductData }) >= 3) return { zone: "shopping", reasons: ["shop"] };
+    return { zone: "normal", reasons: [] };
+  }
+
+  const api = Object.freeze({ DENIED_HOSTS, isDeniedHost, pathZone, normalise, isCheckoutLabel,
+    isBuyLabel, isCartLinkLabel, shoppingScore, classify });
+  ta.sensitive = api;
+  if (typeof module === "object" && module.exports) module.exports = api;
+})();
+
+;
+// Source: extension/src/content/catalog.js
+// Reads what the page SHOWS: product names, prices, cart lines and totals.
+// It never reads form fields or what the user types, never changes the page,
+// and nothing leaves the device. Results are short-lived summaries.
+(() => {
+  "use strict";
+  const ta = globalThis.ThinkAgain = globalThis.ThinkAgain || {};
+  const { prices, parsePrice, hasPrice, key } = ta.intent;
+
+  const SKIP = "script,style,noscript,template,svg,thinkagain-companion";
+  const CHROME = "nav,header,footer,[role=navigation],[role=banner],[role=contentinfo]";
+  const NAME = 'h1,h2,h3,h4,h5,[itemprop="name"],[class*="name" i],[class*="title" i]';
+  const TOTAL = /^(?:ยอด(?:รวม|ชำระ|สุทธิ|ที่ต้องชำระ|เงินรวม|คำสั่งซื้อ)|รวม(?:ทั้งหมด|ทั้งสิ้น|เงิน|ยอด|สุทธิ)?|ราคา(?:รวม|สุทธิ)|ชำระทั้งหมด|(?:grand |order |estimated |cart )?total|amount due|to pay)/i;
+  const SUBTOTAL = /^(?:subtotal|sub-total|ค่าอาหาร|ราคาสินค้า|ยอดสินค้า|รวมค่าสินค้า|ยอดรวมสินค้า)/i;
+  const PRICE_AT = /(?:฿|THB|US\$|\$|€|£)\s?\d|\d[\d,]*(?:\.\d{1,2})?\s?(?:บาท|(?:THB|฿)(?!\s?\d)|\.-)/i;
+  const FEE = /^(?:ค่า(?:จัด)?ส่ง|ค่าบริการ|ส่วนลด|ภาษี|vat|shipping|delivery|discount|tax|service)/i;
+  const ADD_BUTTON = /^(?:\+\s*)?(?:เพิ่ม|ใส่ตะกร้า|เพิ่มลงตะกร้า|add|add to cart)$/i;
+  const MAX_TEXT_NODES = 4000;
+
+  const clean = text => String(text || "").replace(/\s+/g, " ").trim();
+  // Prefer the element's own text so badges inside a heading ("ขายดีอันดับ 1") are left out.
+  function nameOf(el) {
+    const own = clean([...el.childNodes].filter(node => node.nodeType === 3).map(node => node.nodeValue).join(" "));
+    return (own.length >= 2 ? own : clean(el.textContent)).slice(0, 70);
+  }
+  // Text with a space between elements, so "Pro 14" + "฿39,990" never reads as "14฿".
+  function spaced(el) {
+    if (!el.ownerDocument || !el.ownerDocument.createTreeWalker) return clean(el.textContent);
+    const walker = el.ownerDocument.createTreeWalker(el, 4);
+    const parts = [];
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) parts.push(node.nodeValue);
+    return clean(parts.join(" "));
+  }
+  const inChrome = node => Boolean(node.closest && node.closest(CHROME));
+
+  // Elements whose own text holds a price, in document order.
+  function priceElements(doc = document) {
+    const root = doc.body;
+    if (!root || !doc.createTreeWalker) return [];
+    const walker = doc.createTreeWalker(root, 4 /* NodeFilter.SHOW_TEXT */);
+    const found = [];
+    let seen = 0;
+    for (let node = walker.nextNode(); node && seen < MAX_TEXT_NODES; node = walker.nextNode()) {
+      seen += 1;
+      const parent = node.parentElement;
+      if (!parent || parent.closest(SKIP) || parent.closest("s,del,strike")) continue; // skip "was" prices
+      if (!hasPrice(node.nodeValue) || /^\s*[+＋]/.test(node.nodeValue)) continue; // "+฿25" add-on deltas
+      if (found.length && found[found.length - 1].el === parent) continue;
+      found.push({ el: parent, text: node.nodeValue });
+    }
+    return found;
+  }
+
+  function productData(doc = document) {
+    const items = [];
+    for (const script of doc.querySelectorAll('script[type="application/ld+json"]')) {
+      let data;
+      try { data = JSON.parse(script.textContent); } catch { continue; }
+      const stack = [data];
+      while (stack.length && items.length < 20) {
+        const entry = stack.pop();
+        if (!entry || typeof entry !== "object") continue;
+        if (Array.isArray(entry)) { stack.push(...entry); continue; }
+        const type = [].concat(entry["@type"] || []).join(" ");
+        if (/Product|MenuItem|Offer/i.test(type) && typeof entry.name === "string") {
+          const offer = [].concat(entry.offers || [])[0] || {};
+          const price = Number(offer.price ?? offer.lowPrice ?? entry.price);
+          items.push({ name: clean(entry.name).slice(0, 70), price: Number.isFinite(price) ? price : null });
+        }
+        for (const child of Object.values(entry)) if (child && typeof child === "object") stack.push(child);
+      }
+    }
+    return items;
+  }
+
+  // Walk up from a price to the smallest container that also has a name.
+  function cardFor(priceEl) {
+    let node = priceEl;
+    for (let depth = 0; depth < 6 && node && node !== document.body; depth += 1) {
+      const name = node.querySelector && [...node.querySelectorAll(NAME)].find(el => {
+        const text = clean(el.textContent);
+        return text && text.length <= 70 && !hasPrice(text) && !el.closest(SKIP);
+      });
+      if (name && clean(node.textContent).length <= 600) return { card: node, nameEl: name };
+      node = node.parentElement;
+    }
+    return null;
+  }
+
+  // The product's picture: the biggest real <img> in the card, or in a parent that
+  // still holds only this one product. Only images the page already shows are used.
+  function bigImage(container) {
+    let best = null;
+    let bestArea = 0;
+    for (const img of container.querySelectorAll("img")) {
+      if (img.closest(SKIP)) continue;
+      const box = img.getBoundingClientRect();
+      const width = box.width || img.naturalWidth || 0;
+      const height = box.height || img.naturalHeight || 0;
+      if (width < 28 || height < 28) continue; // icons, ratings, 1×1 trackers
+      if (width * height > bestArea) { best = img; bestArea = width * height; }
+    }
+    return best;
+  }
+  function imageFor(card, nameEl) {
+    let node = card;
+    for (let depth = 0; depth < 4 && node && node !== document.body; depth += 1) {
+      const names = [...node.querySelectorAll(NAME)].filter(el => clean(el.textContent) && el !== nameEl && !nameEl.contains(el) && !el.contains(nameEl));
+      if (depth > 0 && names.length > 2) break; // reached a list of several products
+      const img = bigImage(node);
+      if (img) return img;
+      node = node.parentElement;
+    }
+    return null;
+  }
+  function imageByAlt(doc, name) {
+    const wanted = key(name);
+    if (!wanted) return null;
+    const found = [...doc.querySelectorAll("img[alt]")].find(img => key(img.getAttribute("alt")) === wanted);
+    return found && bigImage(found.parentElement || found) === found ? found : null;
+  }
+  const imageReady = img => Boolean(img && img.complete && img.naturalWidth > 0);
+
+  function addButtonIn(card) {
+    return [...card.querySelectorAll('button,[role=button],a')].some(el => ADD_BUTTON.test(clean(el.textContent || el.getAttribute("aria-label"))));
+  }
+
+  // Product / menu candidates for "what do you intend to buy?"
+  function products(doc = document, limit = 8) {
+    const out = [];
+    const seen = new Set();
+    const push = (name, price, image = null) => {
+      const id = key(name);
+      if (!id || id.length < 2 || out.length >= limit) return;
+      if (seen.has(id)) {
+        const known = out.find(item => key(item.name) === id);
+        if (known && !known.image && image) known.image = image;
+        return;
+      }
+      seen.add(id);
+      out.push({ name, price, image });
+    };
+    for (const item of productData(doc)) push(item.name, item.price, imageByAlt(doc, item.name));
+    const ogType = doc.querySelector('meta[property="og:type"]')?.getAttribute("content") || "";
+    if (/product/i.test(ogType)) {
+      const ogTitle = clean(doc.querySelector('meta[property="og:title"]')?.getAttribute("content"));
+      if (ogTitle) push(ogTitle.slice(0, 70), null);
+    }
+    for (const { el: priceEl, text: priceText } of priceElements(doc)) {
+      if (out.length >= limit) break;
+      if (inChrome(priceEl)) continue;
+      const found = cardFor(priceEl);
+      if (!found) continue;
+      push(nameOf(found.nameEl), parsePrice(priceText), imageFor(found.card, found.nameEl));
+    }
+    return out;
+  }
+
+  // Lines and total on a cart / checkout page.
+  function cart(doc = document) {
+    let total = null;
+    let totalRank = -1;
+    const totalRows = new Set();
+    for (const el of doc.querySelectorAll("body *")) {
+      if (el.children.length > 3 || el.closest(SKIP)) continue;
+      const text = spaced(el);
+      if (!text || text.length > 60) continue;
+      // The label is the text before the first price, without "(3 รายการ)" or ":".
+      const at = text.search(PRICE_AT);
+      const label = (at === -1 ? text : text.slice(0, at)).replace(/\([^)]*\)|\[[^\]]*\]/g, "").replace(/[:：]/g, "").trim();
+      if (!label || label.length > 30) continue;
+      const isSub = SUBTOTAL.test(label);
+      const isFee = !isSub && FEE.test(label);
+      const isTotal = !isSub && !isFee && TOTAL.test(label);
+      if (!isTotal && !isSub && !isFee) continue;
+      let row = at !== -1 ? el : el.parentElement;
+      for (let depth = 0; depth < 3 && row && !hasPrice(spaced(row)); depth += 1) row = row.parentElement;
+      if (!row || clean(row.textContent).length > 160) continue;
+      totalRows.add(row);
+      if (isFee) continue;
+      const values = prices(spaced(row));
+      if (!values.length) continue;
+      const value = values[values.length - 1];
+      const rank = isSub ? 1 : /ชำระ|grand|order total|amount due|to pay|ทั้งสิ้น|สุทธิ|คำสั่งซื้อ/i.test(label) ? 3 : 2;
+      if (rank > totalRank || (rank === totalRank && value > total)) { total = value; totalRank = rank; }
+    }
+    const lines = [];
+    const cards = [];
+    for (const { el: priceEl } of priceElements(doc)) {
+      if (inChrome(priceEl) || [...totalRows].some(row => row.contains(priceEl))) continue;
+      const found = cardFor(priceEl);
+      if (!found || cards.some(card => card === found.card || card.contains(found.card))) continue;
+      if ([...totalRows].some(row => found.card.contains(row))) continue;
+      if (addButtonIn(found.card)) continue; // "customers also bought" suggestions
+      // A bigger card that wraps an earlier, smaller one replaces it (same cart line).
+      const inner = cards.findIndex(card => found.card.contains(card));
+      if (inner !== -1) { cards.splice(inner, 1); lines.splice(inner, 1); }
+      cards.push(found.card);
+      const text = spaced(found.card);
+      const qtyMatch = text.match(/(?:×|x|จำนวน|qty\.?:?)\s?(\d{1,2})\b/i) || text.match(/[−–-]\s*(\d{1,2})\s*\+/);
+      const values = prices(text);
+      lines.push({
+        name: nameOf(found.nameEl),
+        qty: qtyMatch ? Number(qtyMatch[1]) : 1,
+        price: values.length ? values[values.length - 1] : null,
+        detail: clean([...found.card.querySelectorAll("small,[class*=option i],[class*=variant i],[class*=desc i]")]
+          .map(el => el.textContent).join(" · ")).slice(0, 80),
+        image: imageFor(found.card, found.nameEl)
+      });
+      if (lines.length >= 12) break;
+    }
+    // No total label (or not rendered yet) but lines with prices: estimate from them.
+    let estimated = false;
+    if (total === null && lines.length && lines.every(line => line.price !== null)) {
+      total = Math.round(lines.reduce((sum, line) => sum + line.price, 0) * 100) / 100;
+      estimated = true;
+    }
+    return { lines, total, estimated };
+  }
+
+  function priceCount(doc = document) {
+    return priceElements(doc).filter(({ el }) => !inChrome(el)).length;
+  }
+
+  ta.catalog = Object.freeze({ products, cart, priceCount, productData, imageReady });
+})();
+
+;
+// Source: extension/src/content/tactics.js
+// Notices persuasive UI on shop pages, so the cart page can later say
+// "a moment ago, the shop used …". Reads only what the page SHOWS and the
+// defaults the SHOP set (an option ticked in the page's own markup). It never
+// reads what the user typed, never listens to page fields, never changes the page.
+(() => {
+  "use strict";
+  const ta = globalThis.ThinkAgain = globalThis.ThinkAgain || {};
+  const { key } = ta.intent;
+
+  const SKIP = "script,style,noscript,template,svg,thinkagain-companion";
+  const CHROME = "nav,header,footer,[role=navigation],[role=banner],[role=contentinfo]";
+  const FRAMING = /^(?:#?\s*1\s*)?(?:best[\s-]?sell(?:er|ing)|top seller|ขายดี(?:ที่สุด|อันดับ\s*\d+)?|สินค้าขายดี|ยอดนิยม|ยอดฮิต|มาแรง|แนะนำ(?:สำหรับคุณ|เลย)?|ตัวเลือกแนะนำ|recommended(?: for you)?|our pick|top pick|editor'?s choice|most popular|popular|คุ้มที่สุด|คุ้มสุด|คุ้มกว่า|hot(?: deal)?|ดีลเด็ด)\s*!?$/i;
+  const URGENCY = /(?:เหลือ(?:เพียง|อีก|แค่)?\s?\d+\s?(?:ชิ้น|ชุด|ที่|เครื่อง|อัน)|only \d+ left|เหลือเวลา|หมดเขต|หมดใน|เฉพาะวันนี้|วันนี้เท่านั้น|flash ?sale|ends? in|limited time|ใกล้หมด|almost gone)/i;
+  const ADDON = /(?:\+\s?(?:฿|THB|\$)?\s?\d)|ประกัน|รับประกัน|warranty|insurance|protection|care\b|กระเป๋า|\bbag\b|\bcase\b|เคส|ฟิล์ม|ชุดใหญ่|upsize|อัปไซซ์|บริการเสริม|ติดตั้ง|add-?on|สมาชิก|subscription/i;
+  const clean = text => String(text || "").replace(/\s+/g, " ").trim();
+  const usable = el => !el.closest(SKIP) && !el.closest(CHROME);
+
+  function shown(el) {
+    const box = el.getBoundingClientRect();
+    return box.width > 0 && box.height > 0;
+  }
+
+  // "BEST SELLER", "แนะนำสำหรับคุณ", "ขายดีอันดับ 1" …
+  function framing(doc) {
+    const found = new Map();
+    for (const el of doc.querySelectorAll("body *")) {
+      if (found.size >= 4) break;
+      if (el.children.length > 1 || !usable(el)) continue;
+      const text = clean(el.textContent);
+      if (!text || text.length > 30 || !FRAMING.test(text) || !shown(el)) continue;
+      found.set(text.toLowerCase(), text);
+    }
+    return [...found.values()].map(text => ({ type: "framing", text }));
+  }
+
+  // "เหลือเพียง 3 ชิ้น", "เหลือเวลา 04:59", "Flash sale" …
+  function urgency(doc) {
+    const found = new Map();
+    for (const el of doc.querySelectorAll("body *")) {
+      if (found.size >= 2) break;
+      if (el.children.length > 2 || !usable(el)) continue;
+      const text = clean(el.textContent);
+      if (!text || text.length > 60 || !URGENCY.test(text) || !shown(el)) continue;
+      found.set(text.toLowerCase(), text);
+    }
+    return [...found.values()].map(text => ({ type: "urgency", text }));
+  }
+
+  // Struck-through "was" prices.
+  function anchoring(doc) {
+    const out = [];
+    for (const el of doc.querySelectorAll("s,del,strike")) {
+      if (!usable(el) || !ta.intent.hasPrice(el.textContent) || !shown(el)) continue;
+      out.push({ type: "anchor", text: clean(el.textContent) });
+      if (out.length >= 2) break;
+    }
+    return out;
+  }
+
+  // One product given far more room (picture area) than the others.
+  function hierarchy(products) {
+    const sized = products.filter(item => item.image && item.image.isConnected).map(item => {
+      const box = item.image.getBoundingClientRect();
+      return { item, area: box.width * box.height };
+    }).filter(entry => entry.area > 0);
+    if (sized.length < 3) return [];
+    const areas = sized.map(entry => entry.area).sort((a, b) => a - b);
+    const median = areas[Math.floor(areas.length / 2)];
+    const biggest = sized.reduce((a, b) => (b.area > a.area ? b : a));
+    if (biggest.area < median * 1.8) return [];
+    const prices = sized.map(entry => entry.item.price).filter(Number.isFinite);
+    const priciest = Number.isFinite(biggest.item.price) && prices.length > 1 && biggest.item.price >= Math.max(...prices);
+    return [{ type: "visual", text: biggest.item.name, priciest }];
+  }
+
+  // Add-ons the SHOP ticked by default (checked in its markup), e.g. insurance, a bag, upsize.
+  function preselected(doc) {
+    const out = [];
+    const seen = new Set();
+    const toggles = doc.querySelectorAll('input[type=checkbox],input[type=radio],[role=checkbox][aria-checked="true"],[role=switch][aria-checked="true"]');
+    for (const el of toggles) {
+      if (!usable(el)) continue;
+      const isInput = el.tagName === "INPUT";
+      if (isInput && !el.defaultChecked) continue; // the page's own default, not the user's click
+      const label = isInput
+        ? clean((el.labels && el.labels[0] && el.labels[0].textContent) || (el.closest("label") || el.parentElement || {}).textContent)
+        : clean(el.textContent || el.getAttribute("aria-label"));
+      if (!label || label.length > 80 || !ADDON.test(label)) continue;
+      const short = label.replace(/\s*\(?\+\s?(?:฿|THB|\$)?\s?[\d,.]+\)?\s*(?:บาท)?/g, "").slice(0, 40).trim() || label.slice(0, 40);
+      if (seen.has(key(short))) continue;
+      seen.add(key(short));
+      out.push({ type: "preselect", text: short });
+      if (out.length >= 4) break;
+    }
+    return out;
+  }
+
+  function detect(doc = document, products = []) {
+    const read = (fn, ...args) => { try { return fn(...args); } catch { return []; } };
+    return [
+      ...read(hierarchy, products),
+      ...read(framing, doc),
+      ...read(preselected, doc),
+      ...read(urgency, doc),
+      ...read(anchoring, doc)
+    ];
+  }
+
+  ta.tactics = Object.freeze({ detect, FRAMING, URGENCY, ADDON });
+})();
+
+;
+// Source: extension/src/content/page-scan.js
+// The only place that looks at the host page. It reports:
+//   - whether a card or password field EXISTS (one querySelector each, boolean);
+//   - the short visible labels of buttons and button-like links.
+// It never reads what the user typed, never listens to page elements, and
+// never keeps or sends anything: the result is classified and dropped.
+(() => {
+  "use strict";
+  const ta = globalThis.ThinkAgain = globalThis.ThinkAgain || {};
+
+  const CARD_FIELD = 'input[autocomplete^="cc-"],iframe[name^="__privateStripeFrame"]';
+  const PASSWORD_FIELD = "input[type=password]";
+  const CONTROLS = 'button,[role=button],input[type=submit],input[type=button],a[href]';
+  const MAX_CONTROLS = 400;
+  const MAX_LABEL = 60;
+
+  function visible(node, viewportWidth) {
+    if (typeof node.getBoundingClientRect !== "function") return true;
+    if (node.closest && node.closest('[hidden],[aria-hidden="true"],[inert]')) return false;
+    const box = node.getBoundingClientRect();
+    // Off-canvas drawers (translateX(100%)) and collapsed menus do not count.
+    return box.width > 0 && box.height > 0 && box.right > 0 && box.left < viewportWidth;
+  }
+
+  function label(node) {
+    const tag = String(node.tagName || "").toLowerCase();
+    // Header/nav links ("Checkout" in a site menu) appear on every page; only
+    // real buttons count there.
+    if (tag === "a" && node.closest && node.closest("nav,header,[role=navigation]")) return "";
+    // For <input type=submit|button> we use the accessible name attributes only.
+    const text = tag === "input" ? "" : String(node.textContent || "");
+    const name = node.getAttribute("aria-label") || node.getAttribute("title") || "";
+    const chosen = text.trim() || name;
+    return chosen.length <= MAX_LABEL ? chosen : "";
+  }
+
+  function scan(doc = document, viewportWidth = globalThis.innerWidth || 1280) {
+    const hasCardField = Boolean(doc.querySelector(CARD_FIELD));
+    const hasPasswordField = Boolean(doc.querySelector(PASSWORD_FIELD));
+    const labels = [];
+    const controls = doc.querySelectorAll ? doc.querySelectorAll(CONTROLS) : [];
+    const limit = Math.min(controls.length, MAX_CONTROLS);
+    for (let index = 0; index < limit; index += 1) {
+      const node = controls[index];
+      if (String(node.tagName || "").toLowerCase() === "thinkagain-companion") continue;
+      const text = label(node);
+      if (text && visible(node, viewportWidth)) labels.push(text);
+    }
+    const catalog = ta.catalog;
+    const priceCount = catalog ? catalog.priceCount(doc) : 0;
+    const hasProductData = catalog ? catalog.productData(doc).length > 0
+      || /product/i.test(doc.querySelector('meta[property="og:type"]')?.getAttribute("content") || "") : false;
+    return { hasCardField, hasPasswordField, labels, priceCount, hasProductData };
+  }
+
+  ta.pageScan = Object.freeze({ scan, CARD_FIELD, PASSWORD_FIELD, CONTROLS });
+})();
+
+;
+// Source: extension/src/content/companion-styles.js
+(() => {
+  "use strict";
+  const ta = globalThis.ThinkAgain;
+  const t = ta.tokens;
+  ta.companionStyles = `
+    :host {
+      all: initial;
+      --surface: ${t.surface};
+      --subtle: ${t.subtle};
+      --line: ${t.line};
+      --ink: ${t.ink};
+      --text2: ${t.text2};
+      --brand: ${t.brand};
+      --brand-hover: ${t.brandHover};
+      --brand-soft: ${t.brandSoft};
+      --teal: ${t.teal};
+      --teal-soft: ${t.tealSoft};
+      --amber: ${t.amber};
+      --amber-soft: ${t.amberSoft};
+      --over: #C2410C;
+      font: 400 15px/1.55 ${t.font};
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    button { font-family: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    button:disabled { cursor: not-allowed; opacity: .45; }
+    button:focus-visible, input:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--brand) 45%, transparent); outline-offset: 2px;
+    }
+    svg { display: block; }
+    .num { font-variant-numeric: tabular-nums; }
+
+    /* The overlay never blocks the page: only the character and the dialog take pointer events. */
+    .layer { position: fixed; inset: 0; z-index: 2147483646; pointer-events: none; direction: ltr; text-align: left; }
+
+    /* ---------- Character ---------- */
+    .char { position: fixed; width: 96px; height: 118px; pointer-events: none; }
+    .char-move { width: 100%; height: 100%; }
+    .char-button {
+      width: 100%; height: 100%; padding: 0; border: 0; background: none; pointer-events: auto;
+      cursor: grab; touch-action: none; border-radius: 40%;
+    }
+    .char.dragging .char-button { cursor: grabbing; }
+    .char-body { width: 100%; height: 100%; transform-origin: 100% 100%;
+      filter: drop-shadow(0 10px 14px rgba(40, 24, 110, .28)); transition: translate .25s cubic-bezier(.34,1.56,.64,1); }
+    .char[data-side="left"] .char-body { transform-origin: 0% 100%; }
+    .char[data-side="left"] svg { transform: scaleX(-1); }
+    .char svg { width: 100%; height: 100%; overflow: visible; }
+    .char[data-state="peek"] .char-button:hover .char-body { translate: -10px 0; }
+    .char[data-side="left"][data-state="peek"] .char-button:hover .char-body { translate: 10px 0; }
+    .char.dragging .char-body { translate: 0 0; rotate: -6deg; }
+
+    .bob { animation: ta-bob 3.2s ease-in-out infinite alternate; }
+    .eyes { transform-box: fill-box; transform-origin: center; animation: ta-blink 5.2s infinite; }
+    .pupils { transform: translateX(-2.5px); transition: transform .3s ease; }
+    .char[data-mood="think"] .pupils { transform: translate(-2px, -3px); }
+    .mouth, .brows, .rays { display: none; }
+    .char[data-mood="happy"] .mouth.happy,
+    .char[data-mood="think"] .mouth.think,
+    .char[data-mood="worried"] .mouth.worried,
+    .char[data-mood="worried"] .brows,
+    .char[data-mood="think"] .rays { display: inline; }
+    .char[data-mood="think"] .bulb circle { fill: #FFE07A; }
+    .wave-hand { transform-box: fill-box; transform-origin: 80% 85%; }
+    .char-body.waving .wave-hand { animation: ta-wave 1.1s cubic-bezier(.34,1.56,.64,1); }
+
+    /* ---------- Dialog: always white, one idea per view ---------- */
+    .dialog {
+      position: fixed; pointer-events: auto; overflow: visible;
+      background: #FFFFFF; color: var(--ink);
+      border-radius: 20px;
+      box-shadow: 0 18px 48px -14px rgba(17,24,39,.22), 0 0 0 1px rgba(17,24,39,.05);
+      display: flex; flex-direction: column;
+    }
+    .tail { position: absolute; width: 16px; height: 16px; background: #FFFFFF; transform: rotate(45deg); box-shadow: 1px -1px 0 rgba(17,24,39,.04); }
+    .dialog[data-tail="right"] .tail { right: -7px; }
+    .dialog[data-tail="left"] .tail { left: -7px; }
+    .dialog[data-tail="none"] .tail { display: none; }
+    .dlg-content { padding: 20px 20px 4px; overflow-y: auto; overscroll-behavior: contain; max-height: calc(100vh - 96px); border-radius: 20px 20px 0 0; position: relative; }
+    .dlg-close {
+      position: absolute; top: 12px; right: 12px; z-index: 1; width: 28px; height: 28px; border: 0; border-radius: 50%;
+      background: transparent; color: #9CA3AF; display: grid; place-items: center;
+    }
+    .dlg-close:hover { background: var(--subtle); color: var(--ink); }
+    .dlg-close svg, .stepper svg, .mark svg, .privacy svg, .add svg, .chip-check svg { fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+    .dlg-close svg { width: 16px; height: 16px; }
+    .view { display: flex; flex-direction: column; gap: 14px; }
+    .dlg-head { padding-right: 24px; }
+    .eyebrow { display: block; font-size: 12.5px; font-weight: 600; color: var(--brand); margin-bottom: 2px; }
+    .title { margin: 0; font-size: 19px; font-weight: 700; line-height: 1.3; letter-spacing: -.01em; text-wrap: balance; }
+    .sub { margin: 0; color: var(--text2); font-size: 13.5px; }
+    .muted { color: #9CA3AF; font-weight: 500; }
+
+    /* chips */
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chips:empty { display: none; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+      height: 34px; padding: 0 12px; border-radius: 999px; border: 0; background: var(--subtle);
+      color: var(--ink); font: 500 14px/1 ${t.font};
+      transition: transform .18s cubic-bezier(.34,1.56,.64,1), background .15s, color .15s;
+    }
+    .chip:hover { background: #ECEEF2; }
+    .chip:active { transform: scale(.94); }
+    .chip[aria-pressed="true"] { background: var(--brand); color: #fff; padding-left: 8px; }
+    .chip-check { width: 18px; height: 18px; border-radius: 50%; background: rgba(255,255,255,.25); display: grid; place-items: center; }
+    .chip-check svg { width: 12px; height: 12px; }
+    .chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+
+    /* product tiles (when the page shows pictures) */
+    .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; max-height: 312px; overflow-y: auto; margin: 0 -2px; padding: 2px; }
+    .tiles:empty { display: none; }
+    .tile {
+      position: relative; display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 0 0 6px;
+      border: 0; border-radius: 12px; background: var(--surface); color: var(--ink); text-align: left;
+      box-shadow: 0 0 0 1px #ECEEF2; transition: transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .15s;
+    }
+    .tile:hover { box-shadow: 0 0 0 1px #D9DCE3, 0 4px 12px -6px rgba(17,24,39,.2); }
+    .tile:active { transform: scale(.95); }
+    .tile[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--brand); }
+    .tile-img { display: grid; place-items: center; width: 100%; aspect-ratio: 4 / 3; border-radius: 12px 12px 4px 4px; overflow: hidden;
+      background: var(--subtle); color: #9CA3AF; font-size: 20px; font-weight: 700; }
+    .tile-img canvas { width: 100%; height: 100%; display: block; }
+    .tile-name { padding: 0 8px; font-size: 13px; font-weight: 600; line-height: 1.3; overflow: hidden;
+      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; word-break: break-word; }
+    .tile-price { padding: 0 8px; margin-top: -3px; font-size: 12px; color: var(--text2); }
+    .tile-check { position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; background: var(--brand); color: #fff;
+      display: grid; place-items: center; box-shadow: 0 0 0 2px #fff; }
+    .tile-check svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* small product pictures in lists */
+    .thumb { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; overflow: hidden;
+      background: var(--subtle); color: #9CA3AF; font-size: 14px; font-weight: 700; }
+    .thumb canvas { width: 100%; height: 100%; display: block; }
+    .pic { position: relative; width: 36px; height: 36px; flex: none; }
+    .pic .thumb { width: 36px; height: 36px; border-radius: 10px; }
+    .pic .mark { position: absolute; right: -4px; bottom: -4px; width: 18px; height: 18px; box-shadow: 0 0 0 2px #fff; }
+    .pic .mark svg { width: 10px; height: 10px; }
+
+    /* own text */
+    .own { display: flex; gap: 6px; }
+    .own-text {
+      flex: 1; min-width: 0; height: 38px; border-radius: 10px; border: 1px solid var(--line);
+      background: #fff; color: var(--ink); padding: 0 12px; font: 400 14px/1 ${t.font};
+    }
+    .own-text::placeholder { color: #9CA3AF; }
+    .add { width: 38px; height: 38px; border-radius: 10px; border: 0; background: var(--subtle); color: var(--ink); display: grid; place-items: center; flex: none; }
+    .add:hover { background: #ECEEF2; }
+    .add svg { width: 16px; height: 16px; }
+    .chosen { display: grid; gap: 4px; }
+    .chosen:empty { display: none; }
+    .chosen-row { display: flex; align-items: center; gap: 10px; padding: 4px 0; border-bottom: 1px solid #F1F2F4; }
+    .chosen-row:last-child { border-bottom: 0; }
+    .chosen-name { flex: 1; min-width: 0; font-weight: 600; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .stepper { display: inline-flex; align-items: center; gap: 2px; }
+    .stepper button { width: 28px; height: 28px; border: 0; border-radius: 50%; background: var(--subtle); color: var(--ink); display: grid; place-items: center; }
+    .stepper button:hover { background: #ECEEF2; }
+    .stepper svg { width: 12px; height: 12px; }
+    .stepper output { min-width: 24px; text-align: center; font-weight: 600; font-size: 14.5px; }
+
+    /* buttons */
+    .actions { display: flex; gap: 6px; align-items: center; }
+    .actions.stack { flex-direction: column; align-items: stretch; }
+    .actions.stack .primary { flex: none; }
+    .actions .row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .primary, .ghost {
+      height: 42px; border-radius: 12px; padding: 0 16px; font: 600 14.5px/1 ${t.font};
+      transition: transform .18s cubic-bezier(.34,1.56,.64,1), background .15s;
+    }
+    .primary:active, .ghost:active { transform: scale(.96); }
+    .primary { flex: 1; border: 0; background: var(--brand); color: #fff; }
+    .primary:hover:not(:disabled) { background: var(--brand-hover); }
+    .ghost { border: 0; background: transparent; color: var(--text2); }
+    .ghost:hover { background: var(--subtle); color: var(--ink); }
+    .link { border: 0; background: none; padding: 2px; color: #9CA3AF; font: 500 12.5px/1.3 ${t.font}; }
+    .link:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+    .link.center { align-self: center; margin-top: -6px; }
+
+    /* budget */
+    .budget-now { display: block; font-size: 34px; font-weight: 700; line-height: 1.1; letter-spacing: -.02em; color: var(--ink); }
+    .own-range { width: 100%; height: 24px; margin: -4px 0 0; background: transparent; -webkit-appearance: none; appearance: none; }
+    .own-range::-webkit-slider-runnable-track {
+      height: 6px; border-radius: 999px;
+      background: linear-gradient(90deg, var(--brand) 0 var(--fill, 0%), #E5E7EB var(--fill, 0%) 100%);
+    }
+    .own-range::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 22px; height: 22px; margin-top: -8px; border-radius: 50%;
+      background: #fff; border: 0; box-shadow: 0 1px 3px rgba(17,24,39,.3), 0 0 0 1px rgba(17,24,39,.06);
+      transition: transform .18s cubic-bezier(.34,1.56,.64,1);
+    }
+    .own-range:active::-webkit-slider-thumb { transform: scale(1.2); }
+    .budget-chips .chip { height: 30px; font-size: 13.5px; }
+
+    /* saved */
+    .summary { list-style: none; margin: 0; padding: 0; display: grid; }
+    .summary li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid #F1F2F4; font-weight: 600; font-size: 14.5px; }
+    .summary li:last-child { border-bottom: 0; }
+    .pill-row { display: flex; }
+    .budget-pill { padding: 5px 12px; border-radius: 999px; background: var(--teal-soft); color: var(--teal); font-weight: 600; font-size: 13.5px; }
+
+    /* compare */
+    .meter { display: grid; gap: 8px; }
+    .meter-head { display: flex; justify-content: space-between; align-items: baseline; }
+    .meter-head strong { font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
+    .meter-head span { font-size: 13.5px; color: var(--text2); }
+    .bar { position: relative; height: 8px; border-radius: 999px; background: #EEF0F3; }
+    .fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--teal); }
+    .fill.over { background: linear-gradient(90deg, var(--teal) 0 var(--b), #F28C38 var(--b) 100%); }
+    .mark-line { position: absolute; top: -4px; bottom: -4px; width: 2px; border-radius: 2px; background: var(--ink); }
+    .view.is-over .title { color: var(--over); }
+    .cmp-list { list-style: none; margin: 0; padding: 0; display: grid; }
+    .cmp-list li { display: grid; grid-template-columns: 36px 1fr auto; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px solid #F1F2F4; font-size: 14.5px; }
+    .cmp-list li:last-child { border-bottom: 0; }
+    .cmp-name { min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tag { font-size: 13px; font-weight: 600; color: var(--text2); }
+    .mark { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; }
+    .mark svg { width: 12px; height: 12px; }
+    li.ok .mark { background: var(--teal-soft); color: var(--teal); }
+    li.warn .mark, li.extra .mark { background: var(--amber-soft); color: var(--amber); }
+    li.extra .tag, li.warn .tag { color: var(--amber); }
+    li.miss .mark { background: #E5E7EB; color: #6B7280; }
+    li.miss .thumb { opacity: .55; }
+    li.miss .cmp-name { color: #9CA3AF; font-weight: 500; text-decoration: line-through; }
+    .note { margin: -4px 0 0; font-size: 12px; color: #9CA3AF; }
+
+    /* cart reflection */
+    .added { align-self: flex-start; margin-top: -6px; padding: 4px 10px; border-radius: 999px; background: var(--amber-soft); color: var(--amber); font-weight: 600; font-size: 13.5px; }
+    .tactics { display: grid; gap: 8px; padding: 12px; border-radius: 14px; background: #FAFAFB; }
+    .tactics .label { font-size: 12.5px; font-weight: 600; color: var(--text2); }
+    .tactics ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+    .tactic { display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: start; }
+    .tactic-icon { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: var(--brand-soft); color: var(--brand); }
+    .t-preselect .tactic-icon { background: var(--teal-soft); color: var(--teal); }
+    .t-urgency .tactic-icon, .t-anchor .tactic-icon { background: var(--amber-soft); color: var(--amber); }
+    .tactic-icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+    .tactic-copy { display: grid; min-width: 0; }
+    .tactic-term { font-size: 12.5px; font-weight: 700; color: var(--ink); letter-spacing: .01em; }
+    .tactic-line { font-size: 13.5px; color: var(--text2); line-height: 1.4; }
+    .question { display: grid; gap: 8px; }
+    .q-title { font-size: 15px; font-weight: 700; line-height: 1.35; }
+    .influence { display: grid; gap: 6px; }
+    .influence-option {
+      display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 8px 12px; border: 0; border-radius: 12px;
+      background: var(--subtle); color: var(--ink); text-align: left; font: 500 14px/1.35 ${t.font};
+      transition: transform .18s cubic-bezier(.34,1.56,.64,1), background .15s;
+    }
+    .influence-option:hover { background: #ECEEF2; }
+    .influence-option:active { transform: scale(.97); }
+    .influence-option .dot { width: 18px; height: 18px; flex: none; border-radius: 50%; box-shadow: inset 0 0 0 2px #C9CDD6; background: #fff; transition: box-shadow .15s; }
+    .influence-option[aria-checked="true"] { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+    .influence-option[aria-checked="true"] .dot { box-shadow: inset 0 0 0 6px var(--brand); }
+    .thanks { margin: 0; font-size: 12.5px; color: var(--teal); font-weight: 600; }
+
+    .bye .bye-text { margin: 2px 24px 6px 0; font-size: 16px; font-weight: 600; }
+
+    .dlg-footer {
+      display: flex; gap: 12px; align-items: center; justify-content: space-between;
+      padding: 10px 20px 14px; margin-top: 10px;
+    }
+    .privacy { display: inline-flex; gap: 5px; align-items: center; font-size: 12px; color: #9CA3AF; }
+    .privacy svg { width: 13px; height: 13px; color: var(--teal); }
+    .links { display: inline-flex; gap: 12px; }
+
+    /* ---------- Thought balloon ---------- */
+    .thought {
+      position: fixed; pointer-events: auto; display: flex; flex-direction: column; gap: 6px;
+      min-width: 150px; max-width: 230px; padding: 10px 12px; border: 0; border-radius: 18px;
+      background: #FFFFFF; color: var(--ink); text-align: left; cursor: pointer;
+      box-shadow: 0 12px 32px -12px rgba(17,24,39,.28), 0 0 0 1px rgba(17,24,39,.05);
+      font: 400 13.5px/1.3 ${t.font};
+    }
+    .thought:hover { box-shadow: 0 14px 36px -12px rgba(17,24,39,.32), 0 0 0 1px rgba(109,74,255,.35); }
+    .thought-items { display: grid; gap: 6px; }
+    .thought-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .thought .thumb { width: 26px; height: 26px; border-radius: 7px; font-size: 12px; }
+    .thought-name { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .thought-price { font-weight: 600; color: var(--text2); }
+    .thought-more { font-size: 12px; color: var(--text2); padding-left: 34px; }
+    .thought-foot { font-size: 12px; font-weight: 600; color: var(--teal); padding-top: 6px; border-top: 1px solid #F1F2F4; }
+    .puff { position: absolute; border-radius: 50%; background: #FFFFFF; box-shadow: 0 4px 10px -4px rgba(17,24,39,.25), 0 0 0 1px rgba(17,24,39,.05); }
+    .puff.big { width: 12px; height: 12px; }
+    .puff.small { width: 7px; height: 7px; }
+    .thought[data-place="above"] .puff.big { bottom: -9px; }
+    .thought[data-place="above"] .puff.small { bottom: -19px; }
+    .thought[data-place="below"] .puff.big { top: -9px; }
+    .thought[data-place="below"] .puff.small { top: -19px; }
+    .thought[data-side="right"] .puff.big { right: 34px; }
+    .thought[data-side="right"] .puff.small { right: 26px; }
+    .thought[data-side="left"] .puff.big { left: 34px; }
+    .thought[data-side="left"] .puff.small { left: 26px; }
+
+    @keyframes ta-bob { from { transform: translateY(0); } to { transform: translateY(-3px); } }
+    @keyframes ta-blink { 0%, 93%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+    @keyframes ta-wave {
+      0% { transform: rotate(0); } 25% { transform: rotate(-38deg); } 50% { transform: rotate(18deg); }
+      75% { transform: rotate(-28deg); } 100% { transform: rotate(0); }
+    }
+    :host([data-motion="off"]) .bob, :host([data-motion="off"]) .eyes, :host([data-motion="off"]) .wave-hand { animation: none !important; }
+    @media (prefers-reduced-motion: reduce) {
+      .bob, .eyes, .wave-hand { animation: none !important; }
+      .chip, .primary, .secondary, .char-body { transition: none; }
+    }
+  `;
+})();
+
+;
+// Source: extension/src/content/character.js
+// "น้องคิด" — ThinkAgain's character. It clings to the left or right edge of
+// the window, can be dragged to the other side, and moves with back/bounce easing.
+(() => {
+  "use strict";
+  const ta = globalThis.ThinkAgain = globalThis.ThinkAgain || {};
+
+  const EASE = Object.freeze({
+    outBack: "cubic-bezier(.34,1.56,.64,1)",
+    inBack: "cubic-bezier(.36,0,.66,-.56)",
+    out: "cubic-bezier(.2,.8,.2,1)"
+  });
+  // easeOutBounce, sampled as keyframes (used for "landing" and pop-ups).
+  const BOUNCE = [
+    { offset: 0, scale: 0.55 }, { offset: 0.42, scale: 1.08 }, { offset: 0.62, scale: 0.95 },
+    { offset: 0.78, scale: 1.03 }, { offset: 0.9, scale: 0.99 }, { offset: 1, scale: 1 }
+  ];
+
+  function reducedMotion(prefs) {
+    return (prefs && prefs.motion === "off")
+      || Boolean(globalThis.matchMedia && globalThis.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+
+  // Promise-returning animate(); with reduced motion it becomes a short fade/jump.
+  function play(el, frames, options, prefs) {
+    if (!el.animate) return Promise.resolve();
+    const reduce = reducedMotion(prefs);
+    const animation = el.animate(reduce ? [frames[0], frames[frames.length - 1]] : frames,
+      { fill: "forwards", ...options, ...(reduce ? { duration: 120, easing: "linear" } : {}) });
+    return animation.finished.then(() => {
+      try { animation.commitStyles(); } catch { /* element may be detached */ }
+      animation.cancel();
+    }, () => {});
+  }
+
+  const NS = "http://www.w3.org/2000/svg"; // XML namespace id, not a network URL
+  function svg(tag, attrs = {}, children = []) {
+    const node = document.createElementNS(NS, tag);
+    for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
+    for (const child of children) node.append(child);
+    return node;
+  }
+
+  function drawing(gradientId) {
+    const grad = svg("linearGradient", { id: gradientId, x1: "0", y1: "0", x2: "1", y2: "1" }, [
+      svg("stop", { offset: "0", "stop-color": "#14B8B2" }), svg("stop", { offset: "1", "stop-color": "#6D4AFF" })
+    ]);
+    const pupils = svg("g", { class: "pupils" }, [
+      svg("circle", { cx: "38", cy: "60", r: "5.6", fill: "#1B1340" }),
+      svg("circle", { cx: "66", cy: "60", r: "5.6", fill: "#1B1340" }),
+      svg("circle", { cx: "40", cy: "57.5", r: "1.9", fill: "#fff" }),
+      svg("circle", { cx: "68", cy: "57.5", r: "1.9", fill: "#fff" })
+    ]);
+    const stroke = { fill: "none", stroke: "#1B1340", "stroke-width": "3", "stroke-linecap": "round" };
+    return svg("svg", { viewBox: "0 -10 104 128", "aria-hidden": "true", focusable: "false" }, [
+      svg("defs", {}, [grad]),
+      svg("g", { class: "bob" }, [
+        // idea-bulb antenna
+        svg("path", { d: "M52 18 C52 11 56 7 60 5", fill: "none", stroke: "#4B32C3", "stroke-width": "3", "stroke-linecap": "round" }),
+        svg("g", { class: "bulb" }, [
+          svg("circle", { cx: "61", cy: "5", r: "5.5", fill: "#FFD25E" }),
+          svg("path", { class: "rays", d: "M61 -4v-3M69 0l2-2M53 0l-2-2", fill: "none", stroke: "#FFB020", "stroke-width": "2", "stroke-linecap": "round" })
+        ]),
+        // body
+        svg("path", { d: "M52 16 C81 16 95 40 95 67 C95 96 76 112 52 112 C28 112 9 96 9 67 C9 40 23 16 52 16 Z", fill: `url(#${gradientId})` }),
+        svg("ellipse", { cx: "52", cy: "84", rx: "27", ry: "20", fill: "#fff", opacity: ".16" }),
+        svg("ellipse", { cx: "31", cy: "74", rx: "6.5", ry: "3.6", fill: "#FF9EC1", opacity: ".6" }),
+        svg("ellipse", { cx: "73", cy: "74", rx: "6.5", ry: "3.6", fill: "#FF9EC1", opacity: ".6" }),
+        svg("g", { class: "eyes" }, [
+          svg("ellipse", { cx: "38", cy: "58", rx: "10.5", ry: "12", fill: "#fff" }),
+          svg("ellipse", { cx: "66", cy: "58", rx: "10.5", ry: "12", fill: "#fff" }),
+          pupils
+        ]),
+        svg("g", { class: "brows" }, [
+          svg("path", { d: "M29 45 L43 41", ...stroke }), svg("path", { d: "M75 45 L61 41", ...stroke })
+        ]),
+        svg("path", { class: "mouth happy", d: "M44 79 Q52 87 60 79", ...stroke }),
+        svg("ellipse", { class: "mouth think", cx: "54", cy: "82", rx: "3.6", ry: "4.2", fill: "#1B1340" }),
+        svg("path", { class: "mouth worried", d: "M45 84 Q52 78 59 84", ...stroke }),
+        // the hand that waves (screen side) and the one gripping the window edge
+        svg("g", { class: "wave-hand" }, [svg("ellipse", { cx: "9", cy: "80", rx: "7.5", ry: "9", fill: "#16B3B0" })]),
+        svg("ellipse", { class: "grip-hand", cx: "97", cy: "70", rx: "7.5", ry: "9.5", fill: "#6D4AFF" })
+      ])
+    ]);
+  }
+
+  const WIDTH = 96;
+  const HEIGHT = 118;
+  const GRIP = 12; // how far the body tucks behind the window edge
+
+  function createCharacter({ root, prefs, label, hint, onActivate, onMoved }) {
+    let side = prefs.side === "left" ? "left" : "right";
+    let yRatio = Math.min(0.85, Math.max(0.12, Number(prefs.y) || 0.62));
+    let state = "away";
+
+    const wrap = document.createElement("div");
+    wrap.className = "char";
+    const mover = document.createElement("div");
+    mover.className = "char-move";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "char-button";
+    button.setAttribute("aria-label", label);
+    button.title = hint;
+    const body = document.createElement("div");
+    body.className = "char-body";
+    body.append(drawing("ta-grad-" + Math.random().toString(36).slice(2, 8)));
+    button.append(body);
+    mover.append(button);
+    wrap.append(mover);
+    root.append(wrap);
+
+    const dir = () => (side === "right" ? 1 : -1);
+    const offsets = { away: 135, peek: 44, out: 0 };
+    const shift = name => `translateX(${dir() * offsets[name]}%)`;
+    function place() {
+      const width = globalThis.innerWidth || 1280;
+      const height = globalThis.innerHeight || 800;
+      wrap.dataset.side = side;
+      wrap.style.left = (side === "right" ? width - WIDTH + GRIP : -GRIP) + "px";
+      wrap.style.top = Math.round(Math.min(height - HEIGHT - 8, Math.max(8, yRatio * height - HEIGHT / 2))) + "px";
+    }
+    place();
+    mover.style.transform = shift("away");
+    wrap.dataset.state = state;
+
+    async function go(next) {
+      if (next === state) return;
+      const from = state;
+      state = next;
+      wrap.dataset.state = next;
+      const easing = next === "away" ? EASE.inBack : EASE.outBack;
+      const duration = next === "away" ? 420 : from === "away" ? 720 : 480;
+      await play(mover, [{ transform: shift(from) }, { transform: shift(next) }], { duration, easing }, prefs);
+      if (from === "away" && next !== "away") land();
+    }
+    function land() {
+      // squash on arrival, then settle with a bounce
+      play(body, [
+        { transform: "scale(1.12, .86)" }, { transform: "scale(.94, 1.06)", offset: 0.4 },
+        { transform: "scale(1.03, .98)", offset: 0.7 }, { transform: "scale(1, 1)" }
+      ], { duration: 520, easing: "ease-out" }, prefs);
+    }
+    function wave() {
+      body.classList.remove("waving");
+      void body.offsetWidth;
+      body.classList.add("waving");
+    }
+    function mood(name) { wrap.dataset.mood = name; }
+    mood("happy");
+
+    // Drag to move along the edge or across to the other side.
+    let drag = null;
+    button.addEventListener("pointerdown", event => {
+      if (event.button !== 0) return;
+      drag = { x: event.clientX, y: event.clientY, left: wrap.offsetLeft, top: wrap.offsetTop, moved: false };
+      button.setPointerCapture?.(event.pointerId);
+    });
+    button.addEventListener("pointermove", event => {
+      if (!drag) return;
+      const dx = event.clientX - drag.x;
+      const dy = event.clientY - drag.y;
+      if (!drag.moved && Math.hypot(dx, dy) < 6) return;
+      if (!drag.moved) { drag.moved = true; wrap.classList.add("dragging"); mover.style.transform = "none"; onMoved?.("start"); }
+      wrap.style.left = drag.left + dx + "px";
+      wrap.style.top = drag.top + dy + "px";
+    });
+    const endDrag = event => {
+      if (!drag) return;
+      const moved = drag.moved;
+      drag = null;
+      if (!moved) return;
+      const width = globalThis.innerWidth || 1280;
+      const height = globalThis.innerHeight || 800;
+      const from = { left: wrap.style.left, top: wrap.style.top };
+      side = event.clientX < width / 2 ? "left" : "right";
+      yRatio = Math.min(0.88, Math.max(0.1, event.clientY / height));
+      place();
+      const to = { left: wrap.style.left, top: wrap.style.top };
+      wrap.classList.remove("dragging");
+      mover.style.transform = shift(state);
+      play(wrap, [from, to], { duration: 560, easing: EASE.outBack }, prefs).then(() => {
+        wrap.style.left = to.left;
+        wrap.style.top = to.top;
+        land();
+        onMoved?.("end", { side, y: Math.round(yRatio * 100) / 100 });
+      });
+      suppressClick = true;
+    };
+    let suppressClick = false;
+    button.addEventListener("pointerup", endDrag);
+    button.addEventListener("pointercancel", endDrag);
+    button.addEventListener("click", event => {
+      if (suppressClick) { suppressClick = false; event.preventDefault(); return; }
+      onActivate?.();
+    });
+
+    function onResize() { if (!drag) place(); }
+    globalThis.addEventListener("resize", onResize);
+
+    return {
+      element: wrap,
+      button,
+      go,
+      wave,
+      mood,
+      land,
+      get state() { return state; },
+      get side() { return side; },
+      box() {
+        return { left: wrap.offsetLeft, top: wrap.offsetTop, width: WIDTH, height: HEIGHT, side };
+      },
+      setLabel(text) { button.setAttribute("aria-label", text); },
+      destroy() { globalThis.removeEventListener("resize", onResize); wrap.remove(); }
+    };
+  }
+
+  ta.motion = Object.freeze({ EASE, BOUNCE, play, reducedMotion });
+  ta.character = Object.freeze({ createCharacter, WIDTH, HEIGHT });
+})();
+
+;
+// Source: extension/src/content/dialog.js
+// The speech-bubble dialog beside the character, and its four views:
+// intention → budget → saved, and the cart comparison.
+//
+// GUARDRAIL NOTE: this is the only content-script file allowed to read `.value`
+// or listen for input/keydown, and only on its OWN controls, which live inside
+// ThinkAgain's closed shadow root and are named own* (ownText, ownRange).
+// It never touches the page's fields.
+(() => {
+  "use strict";
+  const ta = globalThis.ThinkAgain = globalThis.ThinkAgain || {};
+  const { formatBaht, budgetOptions, parseIntentText, key } = ta.intent;
+  const { EASE, BOUNCE, play } = ta.motion;
+
+  function h(tag, attrs = {}, ...children) {
+    const node = document.createElement(tag);
+    for (const [name, value] of Object.entries(attrs)) {
+      if (value === false || value === null || value === undefined) continue;
+      if (name === "class") node.className = value;
+      else if (name === "text") node.textContent = value;
+      else if (name.startsWith("on")) node.addEventListener(name.slice(2), value);
+      else if (value === true) node.setAttribute(name, "");
+      else node.setAttribute(name, value);
+    }
+    for (const child of children.flat()) if (child !== null && child !== undefined && child !== false) node.append(child);
+    return node;
+  }
+
+  const NS = "http://www.w3.org/2000/svg"; // XML namespace id, not a network URL
+  const PATHS = {
+    close: ["M6 6l12 12", "M18 6L6 18"],
+    check: ["M5 12.5l4.5 4.5L19 7.5"],
+    dash: ["M7 12h10"],
+    plus: ["M12 6v12", "M6 12h12"],
+    lock: ["M6.5 11h11a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1z", "M8.5 11V8a3.5 3.5 0 0 1 7 0v3"],
+    layout: ["M3.5 4.5h10v15h-10z", "M16.5 4.5h4v6.5h-4z", "M16.5 13h4v6.5h-4z"],
+    tag: ["M3.5 12V4.5H11l9.5 9.5-7.5 7.5z", "M7.5 8.5h.01"],
+    checkbox: ["M4.5 4.5h15v15h-15z", "M8.5 12l2.5 2.5 4.5-5"],
+    clock: ["M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17z", "M12 7.5V12l3 2"],
+    strike: ["M5 12h14", "M8 7.5h8", "M8 16.5h8"]
+  };
+  function icon(name) {
+    const node = document.createElementNS(NS, "svg");
+    node.setAttribute("viewBox", "0 0 24 24");
+    node.setAttribute("aria-hidden", "true");
+    for (const d of PATHS[name]) {
+      const path = document.createElementNS(NS, "path");
+      path.setAttribute("d", d);
+      node.append(path);
+    }
+    return node;
+  }
+
+  function createDialog({ root, text, prefs, onDismiss, onHide, onPause }) {
+    const panel = h("section", { class: "dialog", role: "dialog", "aria-modal": "false", "aria-labelledby": "ta-dlg-title", hidden: true });
+    const tail = h("span", { class: "tail", "aria-hidden": "true" });
+    const closeButton = h("button", { type: "button", class: "icon-button dlg-close", "aria-label": text("close"), title: text("close"), onclick: () => onDismiss?.() }, icon("close"));
+    const content = h("div", { class: "dlg-content" });
+    const footer = h("div", { class: "dlg-footer" },
+      h("span", { class: "privacy", title: text("privacy") }, icon("lock"), text("privacyShort")),
+      h("span", { class: "links" },
+        h("button", { type: "button", class: "link", onclick: () => onHide?.() }, text("hide")),
+        h("button", { type: "button", class: "link", onclick: () => onPause?.() }, text("pause"))));
+    panel.append(tail, closeButton, content, footer);
+    root.append(panel);
+    let open = false;
+    let anchor = null;
+
+    function position(box = anchor) {
+      if (!box || panel.hidden) return;
+      anchor = box;
+      const width = globalThis.innerWidth || 1280;
+      const height = globalThis.innerHeight || 800;
+      const narrow = width < 520;
+      const panelWidth = Math.min(316, width - (narrow ? 24 : box.width + 36));
+      panel.style.width = panelWidth + "px";
+      panel.dataset.side = box.side;
+      const panelHeight = panel.offsetHeight || 420;
+      const centre = box.top + box.height / 2;
+      let top;
+      if (narrow) {
+        panel.style.left = Math.round((width - panelWidth) / 2) + "px";
+        top = box.top - panelHeight - 10 > 8 ? box.top - panelHeight - 10 : Math.min(height - panelHeight - 8, box.top + box.height + 10);
+        panel.dataset.tail = "none";
+      } else {
+        panel.style.left = (box.side === "right" ? box.left - panelWidth - 6 : box.left + box.width + 6) + "px";
+        top = centre - Math.min(panelHeight / 2, 120);
+        panel.dataset.tail = box.side;
+      }
+      top = Math.max(8, Math.min(height - panelHeight - 8, top));
+      panel.style.top = Math.round(top) + "px";
+      panel.style.maxHeight = (height - 16) + "px";
+      tail.style.top = Math.round(Math.max(18, Math.min(panelHeight - 30, centre - top - 9))) + "px";
+      panel.style.transformOrigin = `${box.side === "right" ? "100%" : "0%"} ${Math.round(centre - top)}px`;
+    }
+
+    async function show(view, box) {
+      content.replaceChildren(view);
+      const wasOpen = open;
+      open = true;
+      panel.hidden = false;
+      position(box);
+      if (!wasOpen) {
+        await play(panel, BOUNCE.map(step => ({ offset: step.offset, transform: `scale(${step.scale})`, opacity: step.offset === 0 ? 0 : 1 })),
+          { duration: 560, easing: "ease-out" }, prefs);
+      } else {
+        play(content, [{ opacity: 0, transform: "translateY(6px)" }, { opacity: 1, transform: "none" }], { duration: 220, easing: EASE.out }, prefs);
+      }
+      const first = content.querySelector("[data-autofocus]");
+      if (first && panel.contains(document.activeElement) === false && first.dataset.autofocus === "always") first.focus({ preventScroll: true });
+    }
+
+    async function hide() {
+      if (!open) return;
+      open = false;
+      await play(panel, [{ transform: "scale(1)", opacity: 1 }, { transform: "scale(.7)", opacity: 0 }], { duration: 300, easing: EASE.inBack }, prefs);
+      if (!open) panel.hidden = true;
+      panel.style.opacity = "";
+      panel.style.transform = "";
+    }
+
+    globalThis.addEventListener("resize", () => position());
+    // Keep the bubble on screen as its own content grows or shrinks.
+    if (globalThis.ResizeObserver) new ResizeObserver(() => position()).observe(panel);
+    return { element: panel, show, hide, position, get isOpen() { return open; } };
+  }
+
+  // A product picture, copied from the <img> the page ALREADY shows into our own
+  // canvas: no new request is made. Cross-origin pictures still display; their
+  // pixels are never read. Without a loaded picture we show the first letter.
+  function thumb(img, width, height, label, className = "thumb") {
+    const box = h("span", { class: className, "aria-hidden": "true" });
+    if (img && img.complete && img.naturalWidth > 0) {
+      const ratio = Math.min(3, globalThis.devicePixelRatio || 1);
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(width * ratio);
+      canvas.height = Math.round(height * ratio);
+      const context = canvas.getContext && canvas.getContext("2d");
+      if (context) {
+        try {
+          const scale = Math.max(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight); // cover
+          const drawWidth = img.naturalWidth * scale;
+          const drawHeight = img.naturalHeight * scale;
+          context.drawImage(img, (canvas.width - drawWidth) / 2, (canvas.height - drawHeight) / 2, drawWidth, drawHeight);
+          box.classList.add("has-img");
+          box.append(canvas);
+          return box;
+        } catch { /* fall through to the letter */ }
+      }
+    }
+    const letter = String(label || "").match(/[ก-ฮA-Za-z0-9]/);
+    box.textContent = letter ? letter[0].toUpperCase() : "•";
+    return box;
+  }
+
+  // ---------- Views (short copy: one question or one answer per view) ----------
+  function header(title, eyebrow) {
+    return h("div", { class: "dlg-head" },
+      eyebrow ? h("span", { class: "eyebrow", text: eyebrow }) : null,
+      h("h2", { class: "title", id: "ta-dlg-title", text: title }));
+  }
+
+  function stepper(text, value, onChange, label) {
+    return h("span", { class: "stepper", role: "group", "aria-label": label },
+      h("button", { type: "button", "aria-label": text("less"), onclick: () => onChange(value - 1) }, icon("dash")),
+      h("output", { class: "num", text: String(value) }),
+      h("button", { type: "button", "aria-label": text("more"), onclick: () => onChange(value + 1) }, icon("plus")));
+  }
+
+  function intentView({ text, candidates: initialCandidates, items, late, onNext, onLater }) {
+    let candidates = initialCandidates;
+    const chosen = items.map(item => ({ ...item }));
+    const wrap = h("div", { class: "view" });
+    const chipBox = h("div", { class: "chips" });
+    const chosenBox = h("div", { class: "chosen" });
+    const nextButton = h("button", { type: "button", class: "primary", onclick: () => onNext(chosen) }, text("next"));
+    const ownText = h("input", { type: "text", class: "own-text", maxlength: "80", placeholder: text("ownPlaceholder"), "aria-label": text("ownLabel"), autocomplete: "off", "data-autofocus": candidates.length ? "" : "always" });
+    const addOwn = () => {
+      const parsed = parseIntentText(ownText.value);
+      if (!parsed) return;
+      const existing = chosen.find(item => key(item.name) === key(parsed.name));
+      if (existing) existing.qty = parsed.qty; else chosen.push({ ...parsed, price: null });
+      ownText.value = "";
+      refresh();
+    };
+    ownText.addEventListener("keydown", event => {
+      if (event.key === "Enter") { event.preventDefault(); addOwn(); }
+    });
+
+    const imageOf = name => candidates.find(candidate => key(candidate.name) === key(name))?.image || null;
+    function refresh() {
+      // With pictures: a grid of tiles. Without any: compact chips.
+      const tiles = candidates.some(candidate => candidate.image);
+      chipBox.className = tiles ? "tiles" : "chips";
+      chipBox.replaceChildren(...candidates.map(candidate => {
+        const on = chosen.some(item => key(item.name) === key(candidate.name));
+        const toggle = () => {
+          const index = chosen.findIndex(item => key(item.name) === key(candidate.name));
+          if (index === -1) chosen.push({ name: candidate.name, qty: 1, price: candidate.price ?? null });
+          else chosen.splice(index, 1);
+          refresh();
+        };
+        const title = candidate.price ? candidate.name + " " + formatBaht(candidate.price) : candidate.name;
+        if (tiles) {
+          return h("button", { type: "button", class: "tile", "aria-pressed": String(on), title, onclick: toggle },
+            thumb(candidate.image, 92, 70, candidate.name, "tile-img"),
+            h("span", { class: "tile-name", text: candidate.name }),
+            candidate.price ? h("span", { class: "tile-price num", text: formatBaht(candidate.price) }) : null,
+            on ? h("span", { class: "tile-check" }, icon("check")) : null);
+        }
+        return h("button", { type: "button", class: "chip", "aria-pressed": String(on), title, onclick: toggle },
+          on ? h("span", { class: "chip-check" }, icon("check")) : null, h("span", { class: "chip-name", text: candidate.name }));
+      }));
+      chosenBox.replaceChildren(...chosen.map((item, index) => h("div", { class: "chosen-row" },
+        thumb(imageOf(item.name), 32, 32, item.name),
+        h("span", { class: "chosen-name", text: item.name }),
+        stepper(text, item.qty, value => {
+          if (value <= 0) chosen.splice(index, 1); else item.qty = Math.min(99, value);
+          refresh();
+        }, item.name))));
+      nextButton.disabled = chosen.length === 0;
+    }
+    refresh();
+    wrap.append(
+      header(late ? text("askTitleLate") : text("askTitle")),
+      chipBox,
+      h("div", { class: "own" }, ownText, h("button", { type: "button", class: "add", "aria-label": text("ownAdd"), title: text("ownAdd"), onclick: addOwn }, icon("plus"))),
+      chosenBox,
+      h("div", { class: "actions" }, nextButton, h("button", { type: "button", class: "ghost", onclick: onLater }, text("later"))));
+    // Products that a dynamic page loads later appear as new chips; choices are kept.
+    wrap.updateCandidates = list => { candidates = list; refresh(); };
+    return wrap;
+  }
+
+  function budgetView({ text, estimate, budget, onBack, onSave }) {
+    const options = budgetOptions(estimate);
+    let value = Number.isFinite(budget) ? budget : options.initial;
+    const wrap = h("div", { class: "view" });
+    const chipBox = h("div", { class: "chips budget-chips" });
+    const now = h("output", { class: "budget-now num", "aria-live": "polite" });
+    const ownRange = h("input", { type: "range", class: "own-range", min: String(options.min), max: String(options.max), step: String(options.step), value: String(Math.min(options.max, value)), "aria-label": text("budgetRange") });
+    ownRange.addEventListener("input", () => { value = Number(ownRange.value); refresh(); });
+    function refresh() {
+      chipBox.replaceChildren(...options.chips.map(chip => h("button", {
+        type: "button", class: "chip", "aria-pressed": String(chip === value),
+        onclick: () => { value = chip; ownRange.value = String(chip); refresh(); }
+      }, formatBaht(chip))));
+      now.textContent = formatBaht(value);
+      ownRange.style.setProperty("--fill", ((value - options.min) / (options.max - options.min)) * 100 + "%");
+    }
+    refresh();
+    wrap.append(
+      header(text("budgetTitle")),
+      now,
+      ownRange,
+      chipBox,
+      h("div", { class: "actions" },
+        h("button", { type: "button", class: "primary", onclick: () => onSave(value) }, text("save")),
+        h("button", { type: "button", class: "ghost", onclick: onBack }, text("back"))),
+      h("button", { type: "button", class: "link center", onclick: () => onSave(null) }, text("noBudget")));
+    return wrap;
+  }
+
+  function summaryList(items) {
+    return h("ul", { class: "summary" }, items.map(item => h("li", {},
+      h("span", { text: item.name }), h("span", { class: "num muted", text: "×" + item.qty }))));
+  }
+
+  function savedView({ text, intent, onOk, onEdit }) {
+    return h("div", { class: "view" },
+      header(text("savedTitle")),
+      summaryList(intent.items),
+      h("div", { class: "pill-row" }, h("span", { class: "budget-pill num", text: Number.isFinite(intent.budget) ? text("budgetNow", { x: formatBaht(intent.budget) }) : text("noBudgetSet") })),
+      h("p", { class: "sub", text: text("savedSub") }),
+      h("div", { class: "actions" }, h("button", { type: "button", class: "primary", onclick: onOk }, text("ok")),
+        onEdit ? h("button", { type: "button", class: "ghost", onclick: onEdit }, text("editIntent")) : null));
+  }
+
+  // How each kind of persuasive UI is shown on the cart page: an icon, the HCI
+  // term, and one short Thai line with what this shop actually did.
+  const TACTIC_ORDER = ["visual", "framing", "preselect", "urgency", "anchor"];
+  const TACTIC_ICON = { visual: "layout", framing: "tag", preselect: "checkbox", urgency: "clock", anchor: "strike" };
+  function tacticRows(text, tactics) {
+    const groups = new Map();
+    for (const item of tactics) {
+      if (!groups.has(item.type)) groups.set(item.type, []);
+      groups.get(item.type).push(item);
+    }
+    const quote = list => list.slice(0, 2).map(item => "“" + item.text + "”").join(" · ");
+    const plain = list => list.slice(0, 2).map(item => item.text).join(" · ");
+    return TACTIC_ORDER.filter(type => groups.has(type)).map(type => {
+      const list = groups.get(type);
+      const line = type === "visual" ? text(list[0].priciest ? "tacVisualPricey" : "tacVisual", { x: list[0].text })
+        : type === "framing" ? quote(list)
+        : type === "preselect" ? text("tacPreselect", { x: plain(list) })
+        : type === "urgency" ? quote(list)
+        : text("tacAnchor", { x: plain(list) });
+      return h("li", { class: "tactic t-" + type },
+        h("span", { class: "tactic-icon" }, icon(TACTIC_ICON[type])),
+        h("span", { class: "tactic-copy" },
+          h("span", { class: "tactic-term", lang: "en", text: text("term_" + type) }),
+          h("span", { class: "tactic-line", text: line })));
+    });
+  }
+
+  const INFLUENCES = ["badge", "layout", "features", "other"];
+  function compareView({ text, result, intent = null, tactics = [], answer = null, onAnswer, onConfirm, onReview, onEdit }) {
+    const over = result.over !== null && result.over > 0;
+    const drifted = result.extras.length > 0 || result.missing.length > 0 || result.matched.some(match => match.moreQty);
+    const title = over ? text("cmpOver", { x: formatBaht(result.over) })
+      : result.extras.length ? text("cmpExtrasN", { x: result.extras.length })
+      : result.missing.length ? text("cmpMissingN", { x: result.missing.length })
+      : text("cmpAllGood");
+
+    // With a budget: total vs budget meter. Without one: how much was added on top.
+    let summary = null;
+    if (result.budget !== null && result.total !== null) {
+      const budget = result.budget;
+      const max = Math.max(result.total, budget) * 1.08 || 1;
+      summary = h("div", { class: "meter" },
+        h("div", { class: "meter-head num" },
+          h("strong", { text: (result.estimated ? "≈ " : "") + formatBaht(result.total) }),
+          h("span", { text: text("cmpBudget", { x: formatBaht(budget) }) })),
+        h("div", { class: "bar" },
+          h("span", { class: "fill" + (over ? " over" : ""), style: `width:${(result.total / max) * 100}%;--b:${Math.min(100, (budget / result.total) * 100)}%` }),
+          h("span", { class: "mark-line", style: `left:${(budget / max) * 100}%` })));
+    } else {
+      // Prefer "cart total − what I meant to spend"; without intended prices, sum the extras.
+      const items = (intent && intent.items) || [];
+      const priced = items.length > 0 && items.every(item => Number.isFinite(item.price) && item.price > 0);
+      const cartTotal = result.total !== null ? result.total : null;
+      if (priced && cartTotal !== null) {
+        const meant = items.reduce((sum, item) => sum + item.price * item.qty, 0);
+        const diff = Math.round((cartTotal - meant) * 100) / 100;
+        if (diff > 0) summary = h("span", { class: "added num", text: text("cmpAdded", { x: formatBaht(diff) }) });
+      } else {
+        const added = result.extras.reduce((sum, line) => sum + (line.price || 0), 0);
+        if (added > 0) summary = h("span", { class: "added num", text: text("cmpAddedPlain", { x: formatBaht(added) }) });
+      }
+    }
+
+    const pic = (image, name, mark) => h("span", { class: "pic" }, thumb(image, 36, 36, name), h("span", { class: "mark" }, icon(mark)));
+    const rows = [
+      ...result.matched.map(({ item, line, moreQty }) => h("li", { class: moreQty ? "warn" : "ok" },
+        pic(line.image, item.name, moreQty ? "plus" : "check"),
+        h("span", { class: "cmp-name", text: item.name }),
+        h("span", { class: "tag", text: moreQty ? text("cmpMoreQty", { x: moreQty }) : "×" + item.qty }))),
+      ...result.missing.map(item => h("li", { class: "miss" },
+        pic(null, item.name, "dash"),
+        h("span", { class: "cmp-name", text: item.name }),
+        h("span", { class: "tag", text: text("cmpMissing") }))),
+      ...result.extras.map(line => h("li", { class: "extra" },
+        pic(line.image, line.name, "plus"),
+        h("span", { class: "cmp-name", text: line.name + (line.qty > 1 ? " ×" + line.qty : ""), title: line.detail || "" }),
+        h("span", { class: "tag num", text: line.price ? formatBaht(line.price) : text("cmpExtra") })))
+    ];
+
+    // "A moment ago, the shop used …" — only when the cart drifted from the intention.
+    const tacticList = drifted && tactics.length ? h("div", { class: "tactics" },
+      h("span", { class: "label", text: text("tacticsHead") }),
+      h("ul", {}, tacticRows(text, tactics))) : null;
+
+    // One reflective question; the answer stays on this device.
+    let chosen = answer;
+    const options = h("div", { class: "influence", role: "radiogroup", "aria-label": text("askInfluence") });
+    const thanks = h("p", { class: "thanks", text: text("thanks"), hidden: !chosen });
+    function paint() {
+      options.replaceChildren(...INFLUENCES.map(id => h("button", {
+        type: "button", role: "radio", "aria-checked": String(chosen === id), class: "influence-option",
+        onclick: () => { chosen = id; paint(); thanks.hidden = false; onAnswer?.(id); }
+      }, h("span", { class: "dot", "aria-hidden": "true" }), text("inf_" + id))));
+    }
+    paint();
+    const question = drifted ? h("div", { class: "question" },
+      h("span", { class: "q-title", text: text("askInfluence") }), options, thanks) : null;
+
+    return h("div", { class: "view" + (over ? " is-over" : "") },
+      header(title, text("cmpEyebrow")),
+      summary,
+      h("ul", { class: "cmp-list" }, rows),
+      tacticList,
+      question,
+      result.total === null || result.estimated ? h("p", { class: "note", text: result.total === null ? text("cmpNoTotal") : text("cmpEstimated") }) : null,
+      h("div", { class: "actions stack" },
+        h("button", { type: "button", class: "primary", onclick: onConfirm }, text("confirm")),
+        h("div", { class: "row" },
+          h("button", { type: "button", class: "ghost", onclick: onReview }, text("review")),
+          h("button", { type: "button", class: "ghost", onclick: onEdit }, text("editIntent")))));
+  }
+
+  function byeView({ text }) {
+    return h("div", { class: "view bye" }, h("p", { class: "bye-text", text: text("bye") }));
+  }
+
+  // ---------- Thought balloon: what I meant to buy, kept above the character ----------
+  function createThought({ root, text, prefs, onOpen }) {
+    const list = h("div", { class: "thought-items" });
+    const foot = h("div", { class: "thought-foot num" });
+    const bubble = h("button", { type: "button", class: "thought", hidden: true, "aria-label": text("thoughtLabel"), onclick: () => onOpen?.() },
+      list, foot, h("span", { class: "puff big", "aria-hidden": "true" }), h("span", { class: "puff small", "aria-hidden": "true" }));
+    root.append(bubble);
+    let visible = false;
+    let anchor = null;
+
+    function render(intent, imageFor) {
+      const items = intent.items.slice(0, 3);
+      list.replaceChildren(...items.map(item => h("span", { class: "thought-row" },
+        thumb(imageFor(item.name), 26, 26, item.name),
+        h("span", { class: "thought-name", text: item.name + (item.qty > 1 ? " ×" + item.qty : "") }),
+        Number.isFinite(item.price) && item.price ? h("span", { class: "thought-price num", text: formatBaht(item.price * item.qty) }) : null)));
+      if (intent.items.length > 3) list.append(h("span", { class: "thought-more", text: text("thoughtMore", { x: intent.items.length - 3 }) }));
+      const priced = intent.items.filter(item => Number.isFinite(item.price) && item.price);
+      const total = priced.reduce((sum, item) => sum + item.price * item.qty, 0);
+      const parts = [];
+      if (intent.items.length > 1 && priced.length) parts.push(text("thoughtTotal", { x: formatBaht(total) }));
+      if (Number.isFinite(intent.budget)) parts.push(text("budgetNow", { x: formatBaht(intent.budget) }));
+      foot.textContent = parts.join(" · ");
+      foot.hidden = parts.length === 0;
+    }
+
+    function position(box = anchor) {
+      if (!box || bubble.hidden) return;
+      anchor = box;
+      const width = globalThis.innerWidth || 1280;
+      const height = globalThis.innerHeight || 800;
+      const bubbleWidth = bubble.offsetWidth || 200;
+      const bubbleHeight = bubble.offsetHeight || 90;
+      const above = box.top - bubbleHeight >= 8;
+      bubble.dataset.side = box.side;
+      bubble.dataset.place = above ? "above" : "below";
+      bubble.style.left = (box.side === "right" ? width - bubbleWidth - 12 : 12) + "px";
+      bubble.style.top = Math.round(above ? box.top - bubbleHeight + 2 : Math.min(height - bubbleHeight - 8, box.top + box.height + 14)) + "px";
+      bubble.style.transformOrigin = `${box.side === "right" ? "85%" : "15%"} ${above ? "110%" : "-10%"}`;
+    }
+
+    async function show(intent, imageFor, box) {
+      render(intent, imageFor);
+      const wasVisible = visible;
+      visible = true;
+      bubble.hidden = false;
+      position(box);
+      if (!wasVisible) {
+        await play(bubble, BOUNCE.map(step => ({ offset: step.offset, transform: `scale(${step.scale})`, opacity: step.offset === 0 ? 0 : 1 })),
+          { duration: 600, easing: "ease-out" }, prefs);
+      }
+    }
+
+    async function hide() {
+      if (!visible) return;
+      visible = false;
+      await play(bubble, [{ transform: "scale(1)", opacity: 1 }, { transform: "scale(.6)", opacity: 0 }], { duration: 260, easing: EASE.inBack }, prefs);
+      if (!visible) bubble.hidden = true;
+      bubble.style.opacity = "";
+      bubble.style.transform = "";
+    }
+
+    globalThis.addEventListener("resize", () => position());
+    return { element: bubble, show, hide, position, get visible() { return visible; } };
+  }
+
+  ta.dialog = Object.freeze({ createDialog, createThought, intentView, budgetView, savedView, compareView, byeView, h, thumb });
+})();
+
+;
+// Source: extension/src/content/companion.js
+// Orchestrates ThinkAgain on a page:
+//   shopping page  → the character slides in and asks what you intend to buy + budget
+//   cart / payment → it pops out and compares the cart with that intention
+// It only adds its own overlay; it never edits the shop's page.
+(() => {
+  "use strict";
+  const ta = globalThis.ThinkAgain;
+  if (ta.companionStarted || document.documentElement.querySelector("thinkagain-companion")) return;
+  ta.companionStarted = true;
+
+  const CART_ZONES = ["payment", "cart", "checkout"];
+  // The budget step is switched off for now: the reflection focuses on WHAT the
+  // user meant to buy. Set to true to ask for a budget again (all code is kept).
+  const ASK_BUDGET = false;
+  // Dynamic pages: a MutationObserver only marks the page "dirty" (cheap); a 1 s
+  // ticker then re-scans at most every MIN_GAP ms, backing off to MAX_GAP while
+  // nothing relevant changes, and skipping ticks while the tab is hidden.
+  const WATCH = Object.freeze({ tickMs: 1000, minGapMs: 1500, maxGapMs: 6000, backoff: 1.5 });
+
+  let settings;
+  let site;            // per-origin prefs (paused)
+  let shopKey;         // groups sub-domains of one shop
+  let zone = "normal";
+  let ui = null;       // { host, character, dialog }
+  let hiddenForPage = false;
+  let stopped = false;
+  let flow = null;     // what the dialog is doing: "ask" | "budget" | "saved" | "compare" | "bye"
+  let draft = null;    // intention being edited
+  let askView = null;  // open intention view (gets new product chips live)
+  let cartSeen = "";   // signature of the cart last shown in the comparison
+  const confirmedTotals = new Map(); // page → total when the user confirmed
+  const answers = new Map();          // page → the user's reflection answer
+  const images = new Map();  // product name key → the page's <img>, for thumbnails
+  let inactiveStreak = 0;    // scans in a row that did not look like a shop
+  let userOpenedAt = 0;      // the user clicked the character: keep it around
+  const STICKY_MS = 20000;
+  const CART_WAIT_MS = 12000; // cart lines/total may arrive late from an API
+  let cartWaitSince = 0;
+  const HIDE_AFTER_SCANS = 3;
+  const askedPages = new Set();
+  const comparedPages = new Set();
+  const confirmedPages = new Set();
+  const text = (key, values) => ta.i18n.t(key, settings.prefs.lang, values);
+  const pageKey = () => zone + " " + location.pathname;
+
+  function evaluate() {
+    return ta.sensitive.classify({
+      hostname: location.hostname,
+      pathname: location.pathname,
+      userDenied: settings.userDenied,
+      ...ta.pageScan.scan(document)
+    }).zone;
+  }
+
+  function currentIntent() { return ta.storage.intent(settings, shopKey); }
+
+  // A broken or unusual page must never break the companion itself.
+  function safe(fn, fallback) {
+    try { return fn(); } catch (error) { console.error("ThinkAgain: page read failed", error); return fallback; }
+  }
+  const readProducts = () => remember(safe(() => ta.catalog.products(document), []));
+  const readCart = () => {
+    const cart = safe(() => ta.catalog.cart(document), { lines: [], total: null });
+    remember(cart.lines);
+    return cart;
+  };
+  function remember(list) {
+    for (const item of list) if (item.image) images.set(ta.intent.key(item.name), item.image);
+    return list;
+  }
+  function imageFor(name) {
+    const wanted = ta.intent.key(name);
+    let best = null;
+    let score = 0;
+    for (const [known, img] of images) {
+      if (!img.isConnected) continue;
+      const value = known === wanted ? 1 : ta.intent.similarity(known, wanted);
+      if (value > score) { best = img; score = value; }
+    }
+    return score >= ta.intent.MATCH ? best : null;
+  }
+
+  function updateThought() {
+    if (!ui) return;
+    const intent = currentIntent();
+    if (intent && intent.items.length && !ui.dialog.isOpen && ui.character.state !== "away" && !flow) {
+      safe(() => ui.thought.show(intent, imageFor, ui.character.box()));
+    } else {
+      ui.thought.hide();
+    }
+  }
+
+  function ensureUI() {
+    if (ui) return ui;
+    const host = document.createElement("thinkagain-companion");
+    host.lang = "th";
+    host.dataset.motion = settings.prefs.motion;
+    const shadow = host.attachShadow({ mode: "closed" });
+    const style = document.createElement("style");
+    style.textContent = ta.companionStyles;
+    const layer = document.createElement("div");
+    layer.className = "layer";
+    shadow.append(style, layer);
+    const character = ta.character.createCharacter({
+      root: layer,
+      prefs: settings.prefs,
+      label: text("charLabel"),
+      hint: text("charHint"),
+      onActivate: () => {
+        userOpenedAt = Date.now();
+        if (ui.dialog.isOpen) closeDialog(); else openForZone(true);
+      },
+      onMoved: (phase, where) => {
+        if (phase === "start") { ui.thought.hide(); if (ui.dialog.isOpen) ui.dialog.hide(); return; }
+        settings.prefs.side = where.side;
+        settings.prefs.y = where.y;
+        ta.storage.updatePrefs(where).catch(error => console.error("ThinkAgain: unable to save position", error));
+        if (flow && flow !== "bye") openForZone(true); else updateThought();
+      }
+    });
+    const dialog = ta.dialog.createDialog({
+      root: layer, text, prefs: settings.prefs,
+      onDismiss: () => closeDialog(),
+      onHide: () => { hiddenForPage = true; teardown(); },
+      onPause: async () => {
+        try { await ta.storage.updateSite(location.origin, { paused: true }); } catch (error) { console.error("ThinkAgain: unable to save pause", error); }
+        stopped = true;
+        teardown();
+      }
+    });
+    const thought = ta.dialog.createThought({
+      root: layer, text, prefs: settings.prefs,
+      onOpen: () => { userOpenedAt = Date.now(); openForZone(true); }
+    });
+    document.documentElement.append(host);
+    ui = { host, character, dialog, thought };
+    return ui;
+  }
+
+  function escape(event) {
+    if (event.key === "Escape" && ui && ui.dialog.isOpen) {
+      event.preventDefault();
+      closeDialog();
+      ui.character.button.focus({ preventScroll: true });
+    }
+  }
+
+  async function show(view, mood = "happy") {
+    const { character, dialog, thought } = ensureUI();
+    thought.hide();
+    character.mood(mood);
+    if (character.state !== "out") await character.go("out");
+    document.addEventListener("keydown", escape, true);
+    await dialog.show(view, character.box());
+  }
+
+  async function closeDialog(tuck = true) {
+    if (!ui) return;
+    flow = null;
+    document.removeEventListener("keydown", escape, true);
+    await ui.dialog.hide();
+    if (tuck && ui && !ui.dialog.isOpen) await ui.character.go("peek");
+    updateThought();
+  }
+
+  function teardown() {
+    document.removeEventListener("keydown", escape, true);
+    if (!ui) return;
+    const old = ui;
+    ui = null;
+    flow = null;
+    old.dialog.hide();
+    old.character.go("away").then(() => old.host.remove());
+  }
+
+  // ---------- Flows ----------
+  function askIntent(late) {
+    flow = "ask";
+    const saved = currentIntent();
+    draft = draft || { items: saved ? saved.items.map(item => ({ ...item })) : [], budget: saved ? saved.budget : null };
+    const candidates = readProducts();
+    askView = ta.dialog.intentView({
+      text, candidates, items: draft.items, late,
+      onNext: items => {
+        draft.items = items;
+        if (ASK_BUDGET) askBudget(late); else saveDraft(late, null);
+      },
+      onLater: () => { draft = null; closeDialog(); }
+    });
+    askView.candidateKey = candidateKey(candidates);
+    show(askView, "think");
+  }
+
+  function askBudget(late) {
+    flow = "budget";
+    const estimate = draft.items.reduce((sum, item) => sum + (item.price || 0) * item.qty, 0);
+    show(ta.dialog.budgetView({
+      text, estimate, budget: draft.budget,
+      onBack: () => askIntent(late),
+      onSave: budget => saveDraft(late, budget)
+    }), "think");
+  }
+
+  async function saveDraft(late, budget) {
+    const chosenIntent = { items: draft.items, budget };
+    draft = null;
+    try {
+      const saved = await ta.storage.saveIntent(shopKey, chosenIntent);
+      settings.intents[shopKey] = saved;
+    } catch (error) {
+      console.error("ThinkAgain: unable to save intention", error);
+      settings.intents[shopKey] = { ...chosenIntent, setAt: Date.now() };
+    }
+    if (late || CART_ZONES.includes(zone)) compareNow();
+    else { await closeDialog(); ui?.character.wave(); } // the thought balloon now shows the intention
+  }
+
+  // Remember persuasive UI seen on this shop, so the cart page can point back to it.
+  const noticed = new Set();
+  function noticeTactics(products) {
+    const found = safe(() => ta.tactics.detect(document, products), []);
+    const fresh = found.filter(item => !noticed.has(item.type + "|" + item.text));
+    if (!fresh.length) return;
+    for (const item of fresh) noticed.add(item.type + "|" + item.text);
+    const local = ta.storage.seenFor(settings, shopKey).slice();
+    for (const item of fresh) if (!local.some(old => old.type === item.type && old.text === item.text)) local.push(item);
+    settings.seen[shopKey] = { at: Date.now(), items: local };
+    ta.storage.addSeen(shopKey, fresh).catch(error => console.error("ThinkAgain: unable to save what was noticed", error));
+  }
+
+  function savedNote() {
+    flow = "saved";
+    show(ta.dialog.savedView({
+      text, intent: currentIntent(),
+      onOk: () => { closeDialog(); ui?.character.wave(); },
+      onEdit: () => { draft = null; askIntent(false); }
+    }), "happy");
+  }
+
+  function compareNow() {
+    const intent = currentIntent();
+    if (!intent) { askIntent(true); return; }
+    flow = "compare";
+    comparedPages.add(pageKey());
+    const cart = readCart();
+    cartSeen = cartKey(cart);
+    noticeTactics([]); // add-ons ticked on the cart page itself count too
+    const result = ta.intent.compare(intent, cart);
+    const tactics = ta.storage.seenFor(settings, shopKey);
+    const worried = (result.over !== null && result.over > 0) || result.extras.length > 0;
+    show(ta.dialog.compareView({
+      text, result, intent, tactics, answer: answers.get(pageKey()) || null,
+      onAnswer: choice => {
+        answers.set(pageKey(), choice);
+        ta.storage.addReflection({
+          site: shopKey, choice,
+          tactics: [...new Set(tactics.map(item => item.type))],
+          extras: result.extras.length, missing: result.missing.length
+        }).catch(error => console.error("ThinkAgain: unable to save reflection", error));
+      },
+      onConfirm: () => {
+        confirmedPages.add(pageKey());
+        confirmedTotals.set(pageKey(), result.total);
+        flow = "bye";
+        show(ta.dialog.byeView({ text }), "happy");
+        ui.character.wave();
+        setTimeout(() => { if (flow === "bye") closeDialog(); }, 1700);
+      },
+      onReview: () => closeDialog(),
+      onEdit: () => { draft = null; askIntent(true); }
+    }), worried ? "worried" : "happy");
+  }
+
+  function openForZone(userAsked) {
+    if (CART_ZONES.includes(zone)) compareNow();
+    else if (zone === "shopping") currentIntent() && userAsked ? savedNote() : askIntent(false);
+  }
+
+  // ---------- Page state ----------
+  // Signatures include whether each picture has loaded, so lazy images show up once ready.
+  const pictured = item => (item.image && ta.catalog.imageReady(item.image) ? "#img" : "");
+  const candidateKey = list => list.map(item => item.name + "@" + (item.price ?? "") + pictured(item)).join("|");
+  const cartKey = cart => (cart.total ?? "") + (cart.estimated ? "~" : "") + "|" + cart.lines.map(line => line.name + "×" + line.qty + "@" + (line.price ?? "") + pictured(line)).join("|");
+
+  // Returns a short signature of what was found, used for back-off.
+  async function refresh() {
+    if (stopped || hiddenForPage) return "off";
+    let next = safe(evaluate, zone);
+    if (next === "denied") { stopped = true; teardown(); return "off"; }
+    // A lone "Checkout" button (mini-cart, header) is only a cart if a total is visible.
+    if (next === "checkout" && safe(() => ta.catalog.cart(document).total, null) === null) next = "shopping";
+    const nextActive = next === "shopping" || CART_ZONES.includes(next);
+    if (!nextActive) {
+      // Pages re-render all the time; don't vanish on one odd scan, while the user
+      // is talking to the character, or right after they clicked it.
+      const busy = ui && (ui.dialog.isOpen || flow || Date.now() - userOpenedAt < STICKY_MS);
+      if (ui && (busy || ++inactiveStreak < HIDE_AFTER_SCANS)) return zone + "~hold";
+      inactiveStreak = 0;
+      zone = next;
+      if (ui) teardown();
+      return zone;
+    }
+    inactiveStreak = 0;
+    const changed = next !== zone;
+    zone = next;
+    const { character, dialog } = ensureUI();
+    const key = pageKey();
+
+    if (dialog.isOpen && !changed) {
+      // Live updates while a dialog is open.
+      if (flow === "ask" && askView) {
+        const candidates = readProducts();
+        noticeTactics(candidates);
+        const newKey = candidateKey(candidates);
+        if (newKey !== askView.candidateKey) { askView.candidateKey = newKey; askView.updateCandidates(candidates); }
+        return zone + "#" + newKey;
+      }
+      if (flow === "compare") {
+        const cart = readCart();
+        const newKey = cartKey(cart);
+        if (newKey !== cartSeen) compareNow();
+        // Still no total (or only an estimate)? Keep looking at full speed instead of backing off.
+        return zone + "#" + newKey + (cart.total === null || cart.estimated ? "#poll" + Date.now() : "");
+      }
+      return zone;
+    }
+
+    if (CART_ZONES.includes(zone)) {
+      const cart = readCart();
+      // Wait (briefly) for the cart to load before comparing; keep scanning at full speed meanwhile.
+      const loaded = cart.lines.length > 0 || (cart.total !== null && !cart.estimated);
+      if (!loaded && !comparedPages.has(key)) {
+        if (!cartWaitSince || changed) cartWaitSince = Date.now();
+        if (Date.now() - cartWaitSince < CART_WAIT_MS) {
+          if (character.state === "away") await character.go("peek");
+          character.mood("think");
+          updateThought();
+          return zone + "#waiting#poll" + Date.now();
+        }
+      }
+      cartWaitSince = 0;
+      const confirmedAt = confirmedTotals.get(key);
+      // More was added after the user confirmed → reflect again.
+      if (confirmedPages.has(key) && cart.total !== null && confirmedAt !== null && confirmedAt !== undefined && cart.total > confirmedAt) {
+        confirmedPages.delete(key);
+        comparedPages.delete(key);
+      }
+      if (!comparedPages.has(key) && !confirmedPages.has(key)) { await character.go("out"); compareNow(); }
+      else if (character.state === "away") character.go("peek");
+      else if (!dialog.isOpen && currentIntent()) {
+        // Keep the face honest while tucked away: worried when over budget.
+        const result = ta.intent.compare(currentIntent(), cart);
+        character.mood((result.over !== null && result.over > 0) ? "worried" : "happy");
+      }
+      updateThought();
+      return zone + "#" + cartKey(cart) + (cart.total === null || cart.estimated ? "#poll" + Date.now() : "");
+    }
+    if (!currentIntent() && !askedPages.has(key)) {
+      askedPages.add(key);
+      await character.go("out");
+      askIntent(false);
+    } else if (character.state === "away" || (changed && !dialog.isOpen && !flow && Date.now() - userOpenedAt > STICKY_MS)) {
+      await character.go("peek");
+    }
+    if (!dialog.isOpen) {
+      noticeTactics(readProducts()); // keep pictures for the balloon; note persuasive UI
+      updateThought();
+    } else if (flow === "ask") {
+      noticeTactics(readProducts());
+    }
+    return zone;
+  }
+
+  let dirty = true;
+  let lastScan = 0;
+  let gap = WATCH.minGapMs;
+  let lastHref = location.href;
+  let lastSignature = "";
+  let observer = null;
+  let ticker = null;
+  let scanning = false;
+  let pollAnyway = false; // keep scanning without DOM changes (e.g. waiting for a cart)
+
+  function markDirty() { dirty = true; }
+  function markNavigation() { dirty = true; gap = WATCH.minGapMs; lastScan = 0; }
+
+  async function tick() {
+    if (stopped || hiddenForPage) { stopWatching(); return; }
+    if (scanning || document.visibilityState === "hidden") return;
+    if (location.href !== lastHref) { lastHref = location.href; markNavigation(); }
+    if ((!dirty && !pollAnyway) || Date.now() - lastScan < gap) return;
+    dirty = false;
+    lastScan = Date.now();
+    scanning = true;
+    try {
+      const signature = await refresh();
+      // Nothing new → look less often (infinite scroll, tickers); something new → look again soon.
+      gap = signature === lastSignature ? Math.min(WATCH.maxGapMs, gap * WATCH.backoff) : WATCH.minGapMs;
+      lastSignature = signature;
+      pollAnyway = String(signature).includes("#poll");
+    } catch (error) {
+      console.error("ThinkAgain: rescan failed", error);
+    } finally {
+      scanning = false;
+    }
+  }
+
+  function startWatching() {
+    const target = document.body || document.documentElement;
+    if (globalThis.MutationObserver) {
+      // Our own UI lives on <html>, outside <body>, so it never wakes this observer.
+      observer = new MutationObserver(markDirty);
+      observer.observe(target, { childList: true, subtree: true, characterData: true });
+    }
+    globalThis.addEventListener("popstate", markNavigation);
+    ticker = setInterval(tick, WATCH.tickMs);
+  }
+
+  function stopWatching() {
+    observer?.disconnect();
+    observer = null;
+    globalThis.removeEventListener("popstate", markNavigation);
+    if (ticker) clearInterval(ticker);
+    ticker = null;
+  }
+
+  async function start() {
+    settings = await ta.storage.read();
+    site = ta.storage.site(settings, location.origin);
+    if (site.paused) return;
+    shopKey = ta.intent.siteKey(location.hostname);
+    lastSignature = await refresh();
+    pollAnyway = String(lastSignature).includes("#poll");
+    lastScan = Date.now();
+    dirty = false;
+    if (stopped) return;
+    startWatching();
+  }
+
+  start().catch(error => console.error("ThinkAgain: unable to start", error));
+})();
+
+})();
+
+})();
+</script>
+</body>
+</html>

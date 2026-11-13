@@ -13,9 +13,10 @@
     assignId: query.get("assignid") || query.get("assignId") || runtime.assignId || "",
     baseUrl: runtime.baseUrl || "https://adaptive-profile-bn.ae.app.meca.in.th",
     bookrollBaseUrl: runtime.bookrollBaseUrl || "https://adaptive-profile-bn.ae.app.meca.in.th",
-    sbsUrl: runtime.sbsUrl || "https://sbs-backend.mooc.meca.in.th",
+    sbsUrl: runtime.sbsUrl || "https://api.lead.in.th",
     overviewUrl: runtime.overviewUrl || "https://api.lead.in.th/stats/overview",
-    clientId: runtime.clientId || "dashboard"
+    clientId: runtime.clientId || "dashboard",
+    showTeacherLevels: runtime.showTeacherLevels === true
   };
   const oidc = {
     authorizationEndpoint: "https://id.meca.in.th/auth/realms/kidbright/protocol/openid-connect/auth",
@@ -40,6 +41,10 @@
     if (Array.isArray(payload)) return payload;
     if (!payload || typeof payload !== "object") return [];
     return payload.data || payload.results || payload.items || payload.rows || [];
+  };
+  const item = (payload) => {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
+    return payload.data && !Array.isArray(payload.data) ? payload.data : payload;
   };
   const decodeJwt = (token) => {
     try {
@@ -359,6 +364,23 @@
     courseTree: (courseId) => request(`${config.sbsUrl}/lms/${encodeURIComponent(courseId)}`, { auth: false, label: "โครงสร้างรายวิชา" }),
     progress: (assignId) => request(`${config.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}/progress`, { label: "ความคืบหน้าห้องเรียน" }),
     grades: (assignId) => request(`${config.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}/grades`, { label: "คะแนน Quiz ห้องเรียน" }),
+    classroomInvitations: (classroomId) => request(`${config.baseUrl}/api/kidbright/classroom/${encodeURIComponent(classroomId)}/invitations`, { label: "รายการลิงก์เชิญห้องเรียน" }),
+    async createClassroomInvitation(classroomId, body = {}) {
+      const payload = await request(`${config.baseUrl}/api/kidbright/classroom/${encodeURIComponent(classroomId)}/invitations`, {
+        method: "POST",
+        body,
+        label: "สร้างลิงก์เชิญห้องเรียน"
+      });
+      return item(payload);
+    },
+    async ensureClassroomInvitation(classroomId, body = {}) {
+      const payload = await endpoints.classroomInvitations(classroomId);
+      const listed = list(payload);
+      const invitations = Array.isArray(listed) ? listed : listed && typeof listed === "object" ? [listed] : [];
+      const active = invitations.find((invitation) => invitation?.canAccept === true)
+        || invitations.find((invitation) => invitation?.expired !== true);
+      return active || endpoints.createClassroomInvitation(classroomId, body);
+    },
     institutes: (name) => request(`${config.baseUrl}/api/kidbright/institute?instituteName=${encodeURIComponent(name)}`, { label: "ค้นหาโรงเรียน" }),
     createAssignment: (body) => request(`${config.baseUrl}/api/kidbright/assign`, { method: "POST", body, label: "เพิ่มห้องเรียน" }),
     deleteAssignment: (assignId) => request(`${config.baseUrl}/api/kidbright/assign/${encodeURIComponent(assignId)}`, { method: "DELETE", label: "นำห้องเรียนออก" }),
@@ -369,12 +391,164 @@
       });
       return request(`${config.baseUrl}/api/kidbright/course${params.size ? `?${params}` : ""}`, { label: "ค้นหารายวิชา" });
     },
+    courseCatalog: (q) => request(`${config.sbsUrl}/lms/catalog${q ? `?q=${encodeURIComponent(q)}` : ""}`, { auth: false, label: "รายการรายวิชา LMS" }),
+    createClassroom: (body) => request(`${config.baseUrl}/api/kidbright/classroom`, { method: "POST", body, label: "สร้างห้องเรียน" }),
     bookroll: (email, courseId) => request(`${config.bookrollBaseUrl}/api/kidbright/course/${encodeURIComponent(courseId)}/data/bookroll?email=${encodeURIComponent(email)}`, { label: "BookRoll ผู้เรียน" }),
     video: (email, courseId) => request(`https://viola.thaidlt.com/meca/chart/bar/?userName=${encodeURIComponent(email)}&usageId=${encodeURIComponent(courseId)}`, { auth: false, label: "Video ผู้เรียน" }),
     chatbot: (email, courseId) => request(`${config.baseUrl}/api/kidbright/course/${encodeURIComponent(courseId)}/data/chatbot?email=${encodeURIComponent(email)}`, {
       label: "Chatbot Quiz ผู้เรียน"
     })
   };
+
+  /*
+   * Temporary teacher-overview fallback.
+   * Keep the UI coupled to loadTeacherSummary(), so a future aggregate endpoint
+   * can replace this sequential per-classroom implementation in one place.
+   */
+  const classroomSummaryKey = (classroom, index = 0) => String(
+    classroom?.classroomId || classroom?.assignId || classroom?.id || `class-${index}`
+  );
+  const hasNumericValue = (value) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+  const classroomProgressSummary = (payload) => {
+    const listed = list(payload);
+    const rows = Array.isArray(listed) ? listed : listed && typeof listed === "object" ? [listed] : [];
+    const learners = new Set();
+    const progressValues = [];
+    let completed = 0;
+    rows.forEach((row, index) => {
+      const identity = String(row?.email || row?.userId || row?.user_id || row?.id || `row-${index}`).trim().toLowerCase();
+      if (identity) learners.add(identity);
+      const progress = Number(row?.progress);
+      if (!Number.isFinite(progress)) return;
+      const safeProgress = clamp(progress);
+      progressValues.push(safeProgress);
+      if (safeProgress >= 100) completed += 1;
+    });
+    return {
+      students: learners.size,
+      progress: progressValues.length ? Math.round(average(progressValues)) : 0,
+      completed
+    };
+  };
+  const teacherSummaryManager = (() => {
+    const listeners = new Set();
+    let generation = 0;
+    let snapshot = {
+      state: "idle",
+      total: 0,
+      completed: 0,
+      succeeded: 0,
+      failed: 0,
+      rooms: [],
+      totals: { students: null, completed: null, avgProgress: null }
+    };
+    const copy = () => ({
+      ...snapshot,
+      totals: { ...snapshot.totals },
+      rooms: snapshot.rooms.map((room) => ({
+        ...room,
+        data: room.data ? { ...room.data } : null
+      }))
+    });
+    const notify = () => {
+      const next = copy();
+      listeners.forEach((listener) => {
+        try { listener(next); } catch (_) {}
+      });
+    };
+    const publish = (rooms, state) => {
+      const completedRooms = rooms.filter((room) => room.state === "success" || room.state === "error");
+      const succeeded = rooms.filter((room) => room.state === "success").length;
+      const failed = rooms.filter((room) => room.state === "error").length;
+      const allStudentsKnown = rooms.every((room) => hasNumericValue(room.data?.students));
+      const allCompletedKnown = rooms.every((room) => hasNumericValue(room.data?.completed));
+      const progressRooms = rooms.filter((room) => hasNumericValue(room.data?.progress));
+      const studentTotal = allStudentsKnown
+        ? rooms.reduce((sum, room) => sum + Number(room.data.students), 0)
+        : null;
+      const completedTotal = allCompletedKnown
+        ? rooms.reduce((sum, room) => sum + Number(room.data.completed), 0)
+        : null;
+      const progressWeight = progressRooms.reduce((sum, room) => sum + Math.max(1, Number(room.data?.students) || 0), 0);
+      const avgProgress = progressRooms.length && progressWeight
+        ? Math.round(progressRooms.reduce((sum, room) => sum + Number(room.data.progress) * Math.max(1, Number(room.data?.students) || 0), 0) / progressWeight)
+        : rooms.length === 0 ? 0 : null;
+      snapshot = {
+        state,
+        total: rooms.length,
+        completed: completedRooms.length,
+        succeeded,
+        failed,
+        rooms,
+        totals: {
+          students: studentTotal,
+          completed: completedTotal,
+          avgProgress
+        }
+      };
+      notify();
+    };
+    const fallbackData = (classroom) => ({
+      students: hasNumericValue(classroom?.students) ? Number(classroom.students) : null,
+      progress: hasNumericValue(classroom?.progress) ? Number(classroom.progress) : null,
+      completed: null
+    });
+    const load = async (classrooms) => {
+      const run = ++generation;
+      const safeClassrooms = Array.isArray(classrooms) ? classrooms : [];
+      const rooms = safeClassrooms.map((classroom, index) => ({
+        key: classroomSummaryKey(classroom, index),
+        classroomId: classroom?.classroomId || "",
+        assignId: classroom?.assignId || classroom?.id || classroom?.classroomId || "",
+        courseId: classroom?.courseId || "",
+        title: classroom?.title || classroom?.courseId || `ห้อง ${index + 1}`,
+        state: "pending",
+        error: "",
+        data: fallbackData(classroom)
+      }));
+      publish(rooms, rooms.length ? "loading" : "success");
+      for (const room of rooms) {
+        if (run !== generation) return copy();
+        room.state = "loading";
+        publish(rooms, "loading");
+        if (!room.assignId) {
+          room.state = "error";
+          room.error = "ไม่พบ assignId";
+          apiManager.reportIssue("Teacher summary classroom input", room.error, {
+            url: "client://teacher-summary/classroom",
+            context: { courseId: room.courseId, title: room.title }
+          });
+          publish(rooms, "loading");
+          continue;
+        }
+        try {
+          const payload = await endpoints.progress(room.assignId);
+          if (run !== generation) return copy();
+          room.data = classroomProgressSummary(payload);
+          room.state = "success";
+        } catch (error) {
+          if (run !== generation) return copy();
+          room.state = "error";
+          room.error = error?.message || String(error);
+        }
+        publish(rooms, "loading");
+      }
+      if (run === generation) publish(rooms, rooms.some((room) => room.state === "error") ? "partial" : "success");
+      return copy();
+    };
+    return {
+      load,
+      cancel() {
+        generation += 1;
+      },
+      getSnapshot: copy,
+      subscribe(listener) {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      }
+    };
+  })();
+  const loadTeacherSummary = (classrooms) => teacherSummaryManager.load(classrooms);
 
   const COLORS = ["#f43f7e", "#f5b301", "#22c55e", "#0f766e", "#6366f1", "#0ea5e9", "#ef4444", "#8b5cf6"];
   const statusFor = (progress) => {
@@ -415,7 +589,9 @@
         output.push({
           id: String(assignment.assignId || assignment.assign_id || assignment.id || `class-${output.length}`),
           assignId: assignment.assignId || assignment.assign_id || assignment.id || "",
+          classroomId: assignment.classroomId || assignment.classroom_id || course.classroomId || course.classroom_id || "",
           courseId: course.courseId || course.course_id || "",
+          joinCode: assignment.joinCode || assignment.join_code || course.joinCode || course.join_code || "",
           color: COLORS[output.length % COLORS.length],
           title: course.courseName || course.courseTitle || course.title || course.courseId || "ห้องเรียน",
           grade: assignment.grade || "",
@@ -995,6 +1171,7 @@
     oidc,
     debug,
     manager: apiManager,
+    teacherSummaryManager,
     apiLog,
     SESSION_EXPIRED,
     readAuth,
@@ -1006,6 +1183,8 @@
     logout,
     clearAuth,
     endpoints,
+    loadTeacherSummary,
+    classroomSummaryKey,
     overview,
     list,
     clamp,

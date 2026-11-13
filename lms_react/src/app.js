@@ -279,7 +279,8 @@ const debugJson = value => {
 function ApiDebugPanel({
   authed,
   teacher,
-  selected
+  selected,
+  teacherSummary
 }) {
   const initialUi = useMemo(readDebugUi, []);
   const [entries, setEntries] = useState(() => API.manager.getEntries());
@@ -371,6 +372,7 @@ function ApiDebugPanel({
   const successCount = entries.filter(entry => entry.state === "success" || entry.state === "cached").length;
   const errorCount = entries.filter(entry => entry.state === "error").length;
   const loadingCount = entries.filter(entry => entry.state === "loading").length;
+  const summaryRooms = Array.isArray(teacherSummary?.rooms) ? teacherSummary.rooms : [];
 
   const panel = React.createElement("section", {
     ref: panelRef,
@@ -437,6 +439,23 @@ function ApiDebugPanel({
   }, "sbsUrl: ", React.createElement("span", {
     className: "select-all text-emerald-200"
   }, API.config.sbsUrl)), React.createElement("div", {
+    className: "mt-2 border-t border-slate-800 pt-2"
+  }, React.createElement("div", {
+    className: "font-bold text-slate-300"
+  }, "Teacher summary queue · ", React.createElement("span", {
+    className: teacherSummary?.state === "loading" ? "text-amber-300" : teacherSummary?.failed ? "text-red-400" : "text-emerald-400"
+  }, teacherSummary?.state || "idle"), " · ", teacherSummary?.completed || 0, "/", teacherSummary?.total || 0), summaryRooms.map(room => React.createElement("div", {
+    key: room.key,
+    className: "mt-0.5 flex min-w-0 items-center gap-1.5"
+  }, React.createElement("span", {
+    className: room.state === "success" ? "text-emerald-400" : room.state === "error" ? "text-red-400" : room.state === "loading" ? "text-amber-300" : "text-slate-500"
+  }, room.state === "success" ? "✓" : room.state === "error" ? "×" : room.state === "loading" ? "◌" : "·"), React.createElement("span", {
+    className: "min-w-0 flex-1 truncate text-slate-400",
+    title: room.title
+  }, room.title), React.createElement("span", {
+    className: "shrink-0 text-slate-500",
+    title: room.error || ""
+  }, room.state === "success" ? `${room.data?.students ?? "—"} คน · ${room.data?.progress ?? "—"}%` : room.state)))), React.createElement("div", {
     className: "pt-1 font-bold text-slate-300"
   }, "API calls ", entries.length, " · ", React.createElement("span", {
     className: "text-emerald-400"
@@ -529,19 +548,50 @@ function App() {
   const [removeTarget, setRemoveTarget] = useState(null);
   const [student, setStudent] = useState(null);
   const [studentDetail, setStudentDetail] = useState(null);
+  const [teacherSummary, setTeacherSummary] = useState(() => API.teacherSummaryManager?.getSnapshot?.() || {
+    state: "idle",
+    total: 0,
+    completed: 0,
+    succeeded: 0,
+    failed: 0,
+    rooms: [],
+    totals: { students: null, completed: null, avgProgress: null }
+  });
   const studentRequestRef = useRef(0);
-  const selected = classrooms.find(course => String(course.id) === String(selectedId)) || null;
+  const hydratedClassrooms = useMemo(() => {
+    const summaryByRoom = new Map((teacherSummary.rooms || []).map(room => [room.key, room]));
+    return classrooms.map((course, index) => {
+      const key = API.classroomSummaryKey?.(course, index) || String(course.classroomId || course.assignId || course.id || `class-${index}`);
+      const summaryRoom = summaryByRoom.get(key);
+      return {
+        ...course,
+        ...(summaryRoom?.data?.students != null ? { students: summaryRoom.data.students } : {}),
+        ...(summaryRoom?.data?.progress != null ? { progress: summaryRoom.data.progress } : {}),
+        summaryState: summaryRoom?.state || "idle"
+      };
+    });
+  }, [classrooms, teacherSummary]);
+  const selected = hydratedClassrooms.find(course => String(course.id) === String(selectedId)) || null;
   const closeHeaderMenus = () => {
     setProfileOpen(false);
     setNoticeOpen(false);
     setLeadoOpen(false);
   };
-  const refreshClassrooms = useCallback(async () => {
-    const payload = await API.endpoints.classrooms();
+  const refreshClassrooms = useCallback(async (sub, instituteId = "") => {
+    if (!sub) throw new Error("ไม่พบข้อมูลผู้สอน กรุณาเข้าสู่ระบบอีกครั้ง");
+    const payload = await API.endpoints.classrooms(sub, instituteId);
     const mapped = API.flattenClassrooms(payload);
     setClassrooms(mapped);
+    if (typeof API.loadTeacherSummary === "function") {
+      API.loadTeacherSummary(mapped).catch(cause => {
+        API.manager.reportIssue("Teacher summary orchestration", cause, {
+          url: "client://teacher-summary/orchestration"
+        });
+      });
+    }
     return mapped;
   }, []);
+  useEffect(() => API.teacherSummaryManager?.subscribe?.(setTeacherSummary), []);
   useEffect(() => {
     let live = true;
     (async () => {
@@ -591,7 +641,7 @@ function App() {
         };
         if (!live) return;
         setTeacher(nextTeacher);
-        const mapped = await refreshClassrooms();
+        const mapped = await refreshClassrooms(sub, instituteId);
         if (!live) return;
         const deepLinkId = API.config.classroomId || API.config.assignId;
         if (deepLinkId) {
@@ -625,20 +675,25 @@ function App() {
     setError("");
     closeHeaderMenus();
     try {
-      const classroomId = course.classroomId || course.id;
+      const assignId = course.assignId || course.id;
+      const classroomId = course.classroomId || "";
+      const canLoadInvitations = Boolean(classroomId) && typeof API.endpoints.ensureClassroomInvitation === "function";
       const [tree, progress, grades, inviteResult] = await Promise.all([
         API.endpoints.courseTree(course.courseId),
-        API.endpoints.progress(classroomId),
-        API.endpoints.grades(classroomId),
-        API.endpoints.ensureClassroomInvitation(classroomId, {}).catch(error => ({ __error: error }))
+        API.endpoints.progress(assignId),
+        API.endpoints.grades(assignId),
+        canLoadInvitations
+          ? API.endpoints.ensureClassroomInvitation(classroomId, {}).catch(error => ({ __error: error }))
+          : Promise.resolve({ __unsupported: true })
       ]);
       setDataset(API.buildDataset(tree, progress, grades, course.title, course.courseId));
-      const invitation = inviteResult && !inviteResult.__error ? inviteResult : null;
+      const invitation = inviteResult && !inviteResult.__error && !inviteResult.__unsupported ? inviteResult : null;
       let inviteList = invitation ? [invitation] : [];
-      if (!invitation) {
+      if (!invitation && typeof API.endpoints.classroomInvitations === "function") {
         try {
           const listed = await API.endpoints.classroomInvitations(classroomId);
-          inviteList = API.list(listed);
+          const rows = API.list(listed);
+          inviteList = Array.isArray(rows) ? rows : rows && typeof rows === "object" ? [rows] : [];
         } catch (_) {
           inviteList = [];
         }
@@ -732,7 +787,7 @@ function App() {
     }
   };
   const afterClassroomChange = async () => {
-    await refreshClassrooms();
+    await refreshClassrooms(teacher.sub, teacher.instituteId);
   };
   if (!ready) {
     return React.createElement(React.Fragment, null, React.createElement("div", {
@@ -742,7 +797,8 @@ function App() {
     })), API.debug && React.createElement(ApiDebugPanel, {
       authed: authed,
       teacher: teacher,
-      selected: selected
+      selected: selected,
+      teacherSummary: teacherSummary
     }));
   }
   return React.createElement("div", {
@@ -778,7 +834,8 @@ function App() {
   }, !selected ? React.createElement(Landing, {
     authed: authed,
     teacher: teacher,
-    classrooms: classrooms,
+    classrooms: hydratedClassrooms,
+    teacherSummary: teacherSummary,
     courseTab: courseTab,
     setCourseTab: setCourseTab,
     onOpenCourse: openCourse,
@@ -802,7 +859,7 @@ function App() {
     onClose: () => setImportOpen(false),
     onImported: async () => {
       setImportOpen(false);
-      await refreshClassrooms();
+      await refreshClassrooms(teacher.sub, teacher.instituteId);
       await openCourse(selected);
     }
   }), editProfileOpen && React.createElement(EditProfileModal, {
@@ -833,7 +890,8 @@ function App() {
   }), sessionExpired && React.createElement(SessionExpired, null), API.debug && React.createElement(ApiDebugPanel, {
     authed: authed,
     teacher: teacher,
-    selected: selected
+    selected: selected,
+    teacherSummary: teacherSummary
   }));
 }
 function Header({
@@ -1094,6 +1152,7 @@ function Landing({
   authed,
   teacher,
   classrooms,
+  teacherSummary,
   courseTab,
   setCourseTab,
   onOpenCourse,
@@ -1127,7 +1186,9 @@ function Landing({
     className: "grid min-w-0 flex-none grid-cols-1 gap-3.5 p-3.5 sm:gap-[18px] sm:p-[22px] lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1.35fr)_minmax(380px,1fr)]"
   }, React.createElement(TeacherSummary, {
     teacher: teacher,
-    classrooms: classrooms
+    classrooms: classrooms,
+    summary: teacherSummary,
+    onOpenCourse: onOpenCourse
   }), authed ? React.createElement(CourseList, {
     classrooms: classrooms,
     courseTab: courseTab,
@@ -1185,9 +1246,181 @@ function SignInCard() {
     className: "text-slate-500"
   }, t("auth.privacy", {}, "นโยบายความเป็นส่วนตัว")))));
 }
+function TeacherOperationalSummary({
+  summary,
+  classrooms,
+  onOpenCourse
+}) {
+  const { t, formatNumber } = window.TeacherI18n.useI18n();
+  const h = React.createElement;
+  const rooms = Array.isArray(summary?.rooms) ? summary.rooms : [];
+  const safeClassrooms = Array.isArray(classrooms) ? classrooms : [];
+  const loading = summary?.state === "loading";
+  const resolved = summary?.state === "success" || summary?.state === "partial";
+  const hasNumber = value => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
+  const classroomsByKey = new Map(safeClassrooms.map((classroom, index) => [
+    API.classroomSummaryKey?.(classroom, index) || String(classroom.classroomId || classroom.assignId || classroom.id || `class-${index}`),
+    classroom
+  ]));
+  const attentionRooms = resolved ? rooms.filter(room => {
+    if (room.state === "error") return true;
+    const students = Number(room.data?.students);
+    const progress = Number(room.data?.progress);
+    return room.state === "success" && (students === 0 || Number.isFinite(progress) && progress < 30);
+  }).length : null;
+  const metrics = [{
+    label: t("landing.teacherSummary.operational.averageProgress", {}, "ความคืบหน้าเฉลี่ย"),
+    value: hasNumber(summary?.totals?.avgProgress) ? `${formatNumber(summary.totals.avgProgress)}%` : "—",
+    tone: "bg-indigo-50 text-indigo-600"
+  }, {
+    label: t("landing.teacherSummary.operational.completedLearners", {}, "เรียนครบแล้ว"),
+    value: hasNumber(summary?.totals?.completed)
+      ? `${formatNumber(summary.totals.completed)} ${t("landing.teacherSummary.studentUnit", {}, "คน")}`
+      : "—",
+    tone: "bg-emerald-50 text-emerald-600"
+  }, {
+    label: t("landing.teacherSummary.operational.attentionRooms", {}, "ห้องที่ควรติดตาม"),
+    value: hasNumber(attentionRooms)
+      ? `${formatNumber(attentionRooms)} ${t("landing.teacherSummary.classroomUnit", {}, "ห้อง")}`
+      : "—",
+    tone: attentionRooms > 0 ? "bg-orange-50 text-orange-600" : "bg-teal-50 text-teal-600"
+  }];
+  const missions = [];
+  if (!safeClassrooms.length && resolved) {
+    missions.push({
+      key: "no-classrooms",
+      title: t("landing.teacherSummary.missions.noClassroomsTitle", {}, "เริ่มด้วยการสร้างห้องเรียนแรก"),
+      description: t("landing.teacherSummary.missions.noClassroomsDescription", {}, "เพิ่มห้องเรียนเพื่อเริ่มติดตามภาพรวมการสอน"),
+      tone: "bg-slate-100 text-slate-500",
+      icon: "plus"
+    });
+  }
+  const missionPriority = room => {
+    if (room.state === "error") return 0;
+    if (room.state !== "success") return 9;
+    const students = Number(room.data?.students);
+    const progress = Number(room.data?.progress);
+    if (students === 0) return 1;
+    if (Number.isFinite(progress) && progress < 30) return 2;
+    if (Number.isFinite(progress) && progress >= 80 && progress < 100) return 3;
+    return 9;
+  };
+  [...rooms].sort((left, right) => missionPriority(left) - missionPriority(right)).forEach(room => {
+    if (missions.length >= 2) return;
+    const classroom = classroomsByKey.get(room.key);
+    if (room.state === "error") {
+      missions.push({
+        key: `${room.key}-error`,
+        title: t("landing.teacherSummary.missions.dataUnavailableTitle", { classroom: room.title }, `ตรวจสอบข้อมูล ${room.title}`),
+        description: t("landing.teacherSummary.missions.dataUnavailableDescription", {}, "ระบบยังดึงข้อมูลห้องนี้ไม่สำเร็จ"),
+        tone: "bg-red-50 text-red-600",
+        icon: "alert",
+        classroom
+      });
+      return;
+    }
+    if (room.state !== "success") return;
+    const students = Number(room.data?.students);
+    const progress = Number(room.data?.progress);
+    if (students === 0) {
+      missions.push({
+        key: `${room.key}-students`,
+        title: t("landing.teacherSummary.missions.addStudentsTitle", { classroom: room.title }, `เพิ่มผู้เรียนใน ${room.title}`),
+        description: t("landing.teacherSummary.missions.addStudentsDescription", {}, "ห้องนี้ยังไม่มีผู้เรียนในระบบ"),
+        tone: "bg-sky-50 text-sky-600",
+        icon: "users",
+        classroom
+      });
+    } else if (Number.isFinite(progress) && progress < 30) {
+      missions.push({
+        key: `${room.key}-progress`,
+        title: t("landing.teacherSummary.missions.followUpTitle", { classroom: room.title }, `ติดตาม ${room.title}`),
+        description: t("landing.teacherSummary.missions.followUpDescription", { progress: formatNumber(progress) }, `ความคืบหน้าเฉลี่ยอยู่ที่ ${formatNumber(progress)}%`),
+        tone: "bg-orange-50 text-orange-600",
+        icon: "alert",
+        classroom
+      });
+    } else if (Number.isFinite(progress) && progress >= 80 && progress < 100) {
+      missions.push({
+        key: `${room.key}-near-complete`,
+        title: t("landing.teacherSummary.missions.nearCompleteTitle", { classroom: room.title }, `ช่วยผู้เรียนให้ถึงเส้นชัยใน ${room.title}`),
+        description: t("landing.teacherSummary.missions.nearCompleteDescription", { progress: formatNumber(progress) }, `ความคืบหน้าเฉลี่ยอยู่ที่ ${formatNumber(progress)}%`),
+        tone: "bg-emerald-50 text-emerald-600",
+        icon: "check",
+        classroom
+      });
+    }
+  });
+  if (resolved && safeClassrooms.length && !missions.length) {
+    missions.push({
+      key: "healthy",
+      title: t("landing.teacherSummary.missions.healthyTitle", {}, "ทุกห้องเรียนดำเนินไปตามปกติ"),
+      description: t("landing.teacherSummary.missions.healthyDescription", {}, "ยังไม่มีห้องเรียนที่ต้องดำเนินการเร่งด่วน"),
+      tone: "bg-emerald-50 text-emerald-600",
+      icon: "check"
+    });
+  }
+  return h("div", {
+    className: "flex flex-1 flex-col gap-3 px-4 py-4 sm:px-5"
+  }, h("div", null, h("h3", {
+    className: "mb-2 text-[12px] font-extrabold text-slate-700"
+  }, t("landing.teacherSummary.operational.title", {}, "ภาพรวมล่าสุด")), h("div", {
+    className: "grid grid-cols-3 gap-2"
+  }, metrics.map(metric => h("div", {
+    key: metric.label,
+    className: "rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5"
+  }, h("div", {
+    className: "truncate text-[9px] font-bold text-slate-400",
+    title: metric.label
+  }, metric.label), h("div", {
+    className: cx("mt-1 text-[13px] font-extrabold", metric.tone.split(" ")[1])
+  }, loading ? h("span", {
+    role: "status",
+    "aria-label": t("common.loading", {}, "กำลังโหลด..."),
+    className: "spinner inline-block h-3.5 w-3.5 rounded-full border-2 border-slate-200 border-t-brand-600"
+  }) : metric.value))))), h("div", {
+    className: "flex min-h-0 flex-1 flex-col rounded-2xl border border-slate-100 bg-white"
+  }, h("div", {
+    className: "flex items-center gap-2 border-b border-slate-100 px-3.5 py-2.5"
+  }, h(Icon, {
+    name: "check",
+    size: 15,
+    className: "text-brand-600"
+  }), h("h3", {
+    className: "text-[12px] font-extrabold text-slate-700"
+  }, t("landing.teacherSummary.missions.title", {}, "สิ่งที่ควรทำต่อ"))), loading ? h("div", {
+    className: "flex flex-1 items-center justify-center gap-2 py-5 text-[11px] font-semibold text-slate-400"
+  }, h("span", {
+    className: "spinner inline-block h-4 w-4 rounded-full border-2 border-slate-200 border-t-brand-600"
+  }), t("landing.teacherSummary.missions.loading", {}, "กำลังประมวลผลคำแนะนำ...")) : h("div", {
+    className: "divide-y divide-slate-100"
+  }, missions.map(mission => h("div", {
+    key: mission.key,
+    className: "flex items-center gap-2.5 px-3.5 py-2.5"
+  }, h("span", {
+    className: cx("flex h-8 w-8 shrink-0 items-center justify-center rounded-xl", mission.tone)
+  }, h(Icon, {
+    name: mission.icon,
+    size: 15
+  })), h("div", {
+    className: "min-w-0 flex-1"
+  }, h("div", {
+    className: "truncate text-[11px] font-extrabold text-slate-700",
+    title: mission.title
+  }, mission.title), h("div", {
+    className: "mt-0.5 truncate text-[9px] font-medium text-slate-400",
+    title: mission.description
+  }, mission.description)), mission.classroom && typeof onOpenCourse === "function" && h("button", {
+    type: "button",
+    onClick: () => onOpenCourse(mission.classroom),
+    className: "shrink-0 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[9px] font-extrabold text-brand-700 hover:bg-brand-50"
+  }, t("landing.teacherSummary.missions.openClassroom", {}, "เปิดห้อง")))))));
+}
 function TeacherSummary({
   teacher,
-  classrooms
+  classrooms,
+  summary,
+  onOpenCourse
 }) {
   const {
     t,
@@ -1195,6 +1428,7 @@ function TeacherSummary({
     locale
   } = window.TeacherI18n.useI18n();
   const h = React.createElement;
+  const showTeacherLevels = API.config.showTeacherLevels === true;
   const safeClassrooms = Array.isArray(classrooms) ? classrooms : [];
   const hasNumericValue = value => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
   const subjectCount = useMemo(() => {
@@ -1207,8 +1441,15 @@ function TeacherSummary({
   const studentCounts = safeClassrooms
     .filter(course => hasNumericValue(course?.students))
     .map(course => Number(course.students));
-  const totalStudents = studentCounts.reduce((sum, value) => sum + value, 0);
-  const hasStudentData = studentCounts.length > 0 || safeClassrooms.length === 0;
+  const summaryLoading = summary?.state === "loading";
+  const summaryResolved = summary?.state === "success" || summary?.state === "partial";
+  const summaryHasStudentTotal = summaryResolved && hasNumericValue(summary?.totals?.students);
+  const totalStudents = summaryResolved
+    ? summaryHasStudentTotal ? Number(summary.totals.students) : 0
+    : studentCounts.reduce((sum, value) => sum + value, 0);
+  const hasStudentData = summaryResolved
+    ? summaryHasStudentTotal
+    : studentCounts.length > 0 || safeClassrooms.length === 0;
   const startTimes = safeClassrooms
     .map(course => course?.startDate ? new Date(course.startDate).getTime() : NaN)
     .filter(value => Number.isFinite(value) && value <= Date.now());
@@ -1360,6 +1601,7 @@ function TeacherSummary({
   }, {
     label: t("landing.teacherSummary.studentsTaught", {}, "นักเรียนที่ดูแล"),
     value: hasStudentData ? `${formatNumber(totalStudents)} ${t("landing.teacherSummary.studentUnit", {}, "คน")}` : "—",
+    loading: summaryLoading,
     icon: "users",
     tone: "bg-sky-50 text-sky-600"
   }, {
@@ -1391,16 +1633,16 @@ function TeacherSummary({
   }, h("div", {
     className: "flex items-center gap-2"
   }, h(Icon, {
-    name: "trophy",
+    name: showTeacherLevels ? "trophy" : "chart",
     size: 19,
-    className: "text-amber-200"
+    className: showTeacherLevels ? "text-amber-200" : "text-teal-100"
   }), h("h2", {
     className: "text-lg font-extrabold sm:text-[20px]"
   }, t("landing.teacherSummary.journeyTitle", {}, "เส้นทางการสอนของฉัน"))), h("div", {
     className: "mt-1 truncate text-[11px] font-semibold text-teal-100"
-  }, teacher?.school || "-")), h("span", {
+  }, teacher?.school || "-")), showTeacherLevels && h("span", {
     className: "shrink-0 rounded-full border border-white/20 bg-white/15 px-3 py-1.5 font-inter text-xs font-extrabold shadow-sm backdrop-blur"
-  }, displayLevel.level ? `LEVEL ${displayLevel.level}` : "START")), h("div", {
+  }, displayLevel.level ? `LEVEL ${displayLevel.level}` : "START")), showTeacherLevels && h("div", {
     className: "relative mt-5 flex items-center gap-4"
   }, h("div", {
     className: "flex h-[74px] w-[74px] shrink-0 items-center justify-center rounded-[24px] border border-white/25 bg-white/15 shadow-lg shadow-teal-900/10 backdrop-blur"
@@ -1448,8 +1690,12 @@ function TeacherSummary({
     className: "text-[10px] font-bold leading-4 text-slate-400"
   }, stat.label)), h("div", {
     className: "mt-2 truncate text-[15px] font-extrabold text-slate-800",
-    title: stat.value
-  }, stat.value)))), h("div", {
+    title: stat.loading ? t("common.loading", {}, "กำลังโหลด...") : stat.value
+  }, stat.loading ? h("span", {
+    role: "status",
+    "aria-label": t("common.loading", {}, "กำลังโหลด..."),
+    className: "spinner inline-block h-4 w-4 rounded-full border-2 border-slate-200 border-t-brand-600 align-middle"
+  }) : stat.value)))), showTeacherLevels ? h("div", {
     className: "flex flex-1 items-center px-4 py-4 sm:px-5"
   }, h("div", {
     className: "flex w-full flex-wrap items-center gap-3 rounded-2xl border border-amber-100 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3"
@@ -1475,7 +1721,11 @@ function TeacherSummary({
     size: 14
   }), currentLevel
     ? t("landing.teacherSummary.viewCertificate", {}, "ดูใบประกาศ")
-    : t("landing.teacherSummary.viewCriteria", {}, "ดูเกณฑ์ Level 1")))));
+    : t("landing.teacherSummary.viewCriteria", {}, "ดูเกณฑ์ Level 1")))) : h(TeacherOperationalSummary, {
+    summary,
+    classrooms: safeClassrooms,
+    onOpenCourse
+  }));
 }
 function CourseList({
   classrooms,
@@ -1545,6 +1795,7 @@ function CourseCard({
   const menuButtonRef = useRef(null);
   const status = classroomStatus(course);
   const started = course.startDate ? formatRelativeTime(course.startDate) : "";
+  const summaryLoading = course.summaryState === "pending" || course.summaryState === "loading";
   const toggleMenu = () => {
     if (menu) {
       setMenu(false);
@@ -1597,7 +1848,11 @@ function CourseCard({
   }, React.createElement(Icon, {
     name: "users",
     size: 14
-  }), course.students == null ? "—" : t("landing.classrooms.studentCount", {
+  }), course.students == null ? summaryLoading ? React.createElement("span", {
+    role: "status",
+    "aria-label": t("common.loading", {}, "กำลังโหลด..."),
+    className: "spinner inline-block h-3 w-3 rounded-full border-2 border-slate-200 border-t-brand-600"
+  }) : "—" : t("landing.classrooms.studentCount", {
     count: Number(course.students),
     formattedCount: formatNumber(course.students)
   }, `${formatNumber(course.students)} คน`)), course.joinCode && React.createElement("span", {
@@ -1621,7 +1876,11 @@ function CourseCard({
     }
   })), React.createElement("span", {
     className: "w-9 text-right font-inter text-xs font-bold text-slate-600"
-  }, course.progress == null ? "—" : `${course.progress}%`))), React.createElement("div", {
+  }, course.progress == null ? summaryLoading ? React.createElement("span", {
+    role: "status",
+    "aria-label": t("common.loading", {}, "กำลังโหลด..."),
+    className: "spinner inline-block h-3 w-3 rounded-full border-2 border-slate-200 border-t-brand-600"
+  }) : "—" : `${course.progress}%`))), React.createElement("div", {
     className: "relative flex shrink-0 flex-col items-end gap-1.5"
   }, React.createElement("button", {
     onClick: onOpen,
@@ -1782,10 +2041,11 @@ function ClassroomInviteCard({
   const [error, setError] = useState("");
   const invitation = inviteInfo?.active || null;
   const joinCode = inviteInfo?.joinCode || selected?.joinCode || "";
-  const inviteLink = invitation?.id ? API.invitationUrl(invitation.id) : "";
-  const joinLink = joinCode && (inviteInfo?.courseId || selected?.courseId)
+  const inviteLink = invitation?.url || invitation?.inviteUrl || invitation?.invitationUrl
+    || (invitation?.id && typeof API.invitationUrl === "function" ? API.invitationUrl(invitation.id) : "");
+  const joinLink = selected?.joinUrl || (joinCode && (inviteInfo?.courseId || selected?.courseId) && typeof API.joinCodeUrl === "function"
     ? API.joinCodeUrl(inviteInfo?.courseId || selected.courseId, joinCode)
-    : "";
+    : "");
   const seatsLabel = invitation
     ? invitation.maxNumbers == null
       ? "ไม่จำกัดจำนวน"
@@ -1814,14 +2074,20 @@ function ClassroomInviteCard({
   const refreshInvite = async createNew => {
     const classroomId = inviteInfo?.classroomId || selected?.classroomId || selected?.id;
     if (!classroomId || busy) return;
+    const action = createNew ? API.endpoints.createClassroomInvitation : API.endpoints.ensureClassroomInvitation;
+    if (typeof action !== "function") {
+      setError("ระบบลิงก์เชิญยังไม่พร้อมใช้งาน กรุณารีเฟรชหน้าแล้วลองอีกครั้ง");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
-      const invitationNext = createNew
-        ? await API.endpoints.createClassroomInvitation(classroomId, {})
-        : await API.endpoints.ensureClassroomInvitation(classroomId, {});
-      const listed = await API.endpoints.classroomInvitations(classroomId).catch(() => [invitationNext]);
-      const invitations = API.list(listed);
+      const invitationNext = await action(classroomId, {});
+      const listed = typeof API.endpoints.classroomInvitations === "function"
+        ? await API.endpoints.classroomInvitations(classroomId).catch(() => [invitationNext])
+        : [invitationNext];
+      const rows = API.list(listed);
+      const invitations = Array.isArray(rows) ? rows : rows && typeof rows === "object" ? [rows] : [];
       if (invitationNext && !invitations.some(item => item.id === invitationNext.id)) {
         invitations.unshift(invitationNext);
       }
@@ -3736,14 +4002,14 @@ function RemoveModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const remove = async () => {
-    const classroomId = course.classroomId || course.id;
-    if (!classroomId || saving) {
-      if (!classroomId) {
-        const message = "ห้องเรียนนี้ไม่มี classroomId จึงนำออกไม่ได้";
-        API.manager.reportIssue("Remove classroom input", "ห้องเรียนนี้ไม่มี classroomId จึงนำออกไม่ได้", {
+    const assignId = course.assignId || course.id;
+    if (!assignId || saving) {
+      if (!assignId) {
+        const message = "ห้องเรียนนี้ไม่มี assignId จึงนำออกไม่ได้";
+        API.manager.reportIssue("Remove classroom input", message, {
           url: "client://classroom/remove",
           context: {
-            classroomId: course?.id || "",
+            assignId: course?.id || "",
             classroomTitle: course?.title || ""
           }
         });
@@ -3754,7 +4020,7 @@ function RemoveModal({
     setSaving(true);
     setError("");
     try {
-      await API.endpoints.deleteClassroom(classroomId);
+      await API.endpoints.deleteAssignment(assignId);
       await onRemoved();
       onClose();
     } catch (cause) {

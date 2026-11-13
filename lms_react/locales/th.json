@@ -154,6 +154,29 @@
       "classroomUnit": "ห้อง",
       "studentUnit": "คน",
       "latestAchievement": "ความสำเร็จที่ปลดล็อก",
+      "operational": {
+        "title": "ภาพรวมล่าสุด",
+        "averageProgress": "ความคืบหน้าเฉลี่ย",
+        "completedLearners": "เรียนครบแล้ว",
+        "attentionRooms": "ห้องที่ควรติดตาม"
+      },
+      "missions": {
+        "title": "สิ่งที่ควรทำต่อ",
+        "loading": "กำลังประมวลผลคำแนะนำ...",
+        "openClassroom": "เปิดห้อง",
+        "noClassroomsTitle": "เริ่มด้วยการสร้างห้องเรียนแรก",
+        "noClassroomsDescription": "เพิ่มห้องเรียนเพื่อเริ่มติดตามภาพรวมการสอน",
+        "dataUnavailableTitle": "ตรวจสอบข้อมูล {{classroom}}",
+        "dataUnavailableDescription": "ระบบยังดึงข้อมูลห้องนี้ไม่สำเร็จ",
+        "addStudentsTitle": "เพิ่มผู้เรียนใน {{classroom}}",
+        "addStudentsDescription": "ห้องนี้ยังไม่มีผู้เรียนในระบบ",
+        "followUpTitle": "ติดตาม {{classroom}}",
+        "followUpDescription": "ความคืบหน้าเฉลี่ยอยู่ที่ {{progress}}%",
+        "nearCompleteTitle": "ช่วยผู้เรียนให้ถึงเส้นชัยใน {{classroom}}",
+        "nearCompleteDescription": "ความคืบหน้าเฉลี่ยอยู่ที่ {{progress}}%",
+        "healthyTitle": "ทุกห้องเรียนดำเนินไปตามปกติ",
+        "healthyDescription": "ยังไม่มีห้องเรียนที่ต้องดำเนินการเร่งด่วน"
+      },
       "levels": {
         "gettingStarted": "กำลังเริ่มต้น",
         "beginner": "เริ่มต้นเส้นทาง",

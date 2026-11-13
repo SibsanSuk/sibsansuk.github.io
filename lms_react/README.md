@@ -41,7 +41,7 @@ python3 -m http.server 3000
   window.TEACHER_DASHBOARD_CONFIG = {
     baseUrl: "https://adaptive-profile-bn.ae.app.meca.in.th",
     bookrollBaseUrl: "https://adaptive-profile-bn.ae.app.meca.in.th",
-    sbsUrl: "https://sbs-backend.mooc.meca.in.th",
+    sbsUrl: "https://api.lead.in.th",
     clientId: "dashboard",
     instituteId: "",
     assignId: ""

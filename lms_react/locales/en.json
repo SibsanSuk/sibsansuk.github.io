@@ -154,6 +154,29 @@
       "classroomUnit": "classes",
       "studentUnit": "learners",
       "latestAchievement": "Achievement unlocked",
+      "operational": {
+        "title": "Latest overview",
+        "averageProgress": "Average progress",
+        "completedLearners": "Completed",
+        "attentionRooms": "Classes to review"
+      },
+      "missions": {
+        "title": "Recommended next steps",
+        "loading": "Preparing recommendations...",
+        "openClassroom": "Open class",
+        "noClassroomsTitle": "Start by creating your first classroom",
+        "noClassroomsDescription": "Add a classroom to begin tracking your teaching overview.",
+        "dataUnavailableTitle": "Check data for {{classroom}}",
+        "dataUnavailableDescription": "The classroom data could not be loaded yet.",
+        "addStudentsTitle": "Add learners to {{classroom}}",
+        "addStudentsDescription": "This classroom does not have any learners yet.",
+        "followUpTitle": "Follow up with {{classroom}}",
+        "followUpDescription": "Average progress is {{progress}}%.",
+        "nearCompleteTitle": "Help {{classroom}} reach the finish line",
+        "nearCompleteDescription": "Average progress is {{progress}}%.",
+        "healthyTitle": "All classrooms are progressing normally",
+        "healthyDescription": "No classroom needs urgent action right now."
+      },
       "levels": {
         "gettingStarted": "Getting started",
         "beginner": "Journey starter",

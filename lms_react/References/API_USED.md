@@ -7,6 +7,7 @@
 | ชื่อ | URL |
 |---|---|
 | Profile API | `https://adaptive-profile-bn.ae.app.meca.in.th` |
+| Teacher LMS Gateway | `https://api.lead.in.th` |
 | SBS API | `https://sbs-backend.mooc.meca.in.th` |
 | OIDC | `https://id.meca.in.th/auth/realms/kidbright` |
 | BookRoll | `https://bookroll.thaidlt.com` |
@@ -82,7 +83,7 @@
 
 | Method | Endpoint | Auth | ใช้ทำอะไร |
 |---|---|---|---|
-| GET | `{SBS_BASE}/lms/{courseId}` | ไม่ส่ง Bearer | Course tree และชนิดเครื่องมือ |
+| GET | `{TEACHER_LMS_BASE}/lms/{courseId}` | ไม่ส่ง Bearer | Course tree และชนิดเครื่องมือ โดย `TEACHER_LMS_BASE=https://api.lead.in.th` |
 | GET | `{PROFILE_BASE}/api/kidbright/assign/{assignId}/progress` | Bearer token | ความคืบหน้าของนักเรียน |
 | GET | `{PROFILE_BASE}/api/kidbright/assign/{assignId}/grades` | Bearer token | คะแนนของนักเรียน |
 
@@ -261,7 +262,7 @@ node gen-overview.mjs
    ├─ GET teacher/{sub}
    └─ GET course/teacher/{sub}
       └─ เลือกห้องเรียน
-         ├─ GET SBS /lms/{courseId}
+         ├─ GET Teacher LMS Gateway /lms/{courseId}
          ├─ GET assign/{assignId}/progress
          └─ GET assign/{assignId}/grades
             └─ เปิดนักเรียน
