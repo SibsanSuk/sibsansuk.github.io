@@ -16,9 +16,9 @@
   const route = requested.replace(/\/+$/, "") || "/menu";
   const current = routes.includes(route) ? route : "/menu";
   const gadget = current.startsWith("/gadget");
-  const shops = {"food": {"html": "\n\u003caside class=\"demo-toolbar\" aria-label=\"เกี่ยวกับเดโม\">\n  \u003cspan>\u003cstrong>ThinkAgain Demo\u003c/strong> · Companion v0.4.0 · ไม่ต้องติดตั้ง Extension\u003cbr>\n  ร้านค้าและราคาสมมติ ไม่มีการสั่งซื้อจริง · ข้อมูลเก็บในเบราว์เซอร์นี้\u003c/span>\n  \u003cnav aria-label=\"เลือกร้านตัวอย่าง\">\u003ca href=\"?demo=/menu/\">ร้านอาหาร\u003c/a> \u003ca href=\"?demo=/gadget/\">ร้านโน้ตบุ๊ก\u003c/a>\u003c/nav>\n  \u003cbutton type=\"button\" id=\"demo-reset\">เริ่มร้านนี้ใหม่\u003c/button>\n\u003c/aside>\n\n\u003cheader>\u003cb>ThinkBurger\u003c/b>\u003cspan class=\"note\">ร้านสมมติสำหรับทดสอบ\u003c/span>\n  \u003cnav>\u003ca href=\"?demo=/menu\">เมนู\u003c/a>\u003ca href=\"?demo=/cart\" id=\"cartlink\">ตะกร้า\u003c/a>\u003c/nav>\u003c/header>\n\u003cmain id=\"m\">\u003c/main>\n\n\n\n", "css": "\n  body { margin: 0; font: 16px/1.6 system-ui, \"Sukhumvit Set\", \"Noto Sans Thai\", sans-serif; background: #F6F4EF; color: #1D1B16; }\n  header { display: flex; align-items: center; gap: 16px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E6E1D6; }\n  header b { color: #1E6B47; font-size: 20px; }\n  header nav { margin-left: auto; display: flex; gap: 18px; }\n  header a { color: #1D1B16; text-decoration: none; }\n  main { max-width: 760px; margin: 24px auto; padding: 0 24px; display: grid; gap: 14px; }\n  .note { font-size: 13px; color: #6A665C; }\n  .card { background: #fff; border-radius: 16px; padding: 16px; display: grid; grid-template-columns: 96px 1fr auto; gap: 8px; align-items: center; box-shadow: 0 6px 18px -12px rgba(40,34,20,.35); }\n  .card.hero { border: 2px solid #F4B92B; }\n  .card h3 { margin: 0; font-size: 18px; }\n  .card p { margin: 0; color: #6A665C; font-size: 14px; }\n  .badge { background: #F4B92B; border-radius: 6px; padding: 2px 8px; font-size: 12px; margin-left: 6px; }\n  .price { font-weight: 700; font-size: 18px; }\n  .price s { color: #999; font-weight: 400; font-size: 14px; margin-right: 6px; }\n  button { font: inherit; border: 0; border-radius: 10px; padding: 10px 16px; background: #1E6B47; color: #fff; cursor: pointer; }\n  button.quiet { background: #EEE9DE; color: #1D1B16; }\n  .promo { background: #FDEBE1; color: #CF4510; padding: 10px 14px; border-radius: 12px; font-weight: 600; }\n  .card img { width: 96px; height: 72px; border-radius: 10px; }\n  .line img { width: 64px; height: 48px; border-radius: 8px; }\n  .line { background: #fff; border-radius: 14px; padding: 14px 16px; display: grid; grid-template-columns: 64px 1fr auto auto; gap: 14px; align-items: center; }\n  .line h3 { margin: 0; font-size: 17px; }\n  .line small { color: #6A665C; }\n  .qty { display: inline-flex; gap: 8px; align-items: center; }\n  .qty button { padding: 4px 10px; background: #EEE9DE; color: #1D1B16; }\n  .suggest { background: #FFF6DE; border-radius: 14px; padding: 14px 16px; }\n  .suggest .card { box-shadow: none; }\n  .summary { background: #fff; border-radius: 14px; padding: 14px 16px; display: grid; gap: 6px; }\n  .summary div { display: flex; justify-content: space-between; }\n  .summary .grand { font-weight: 700; font-size: 19px; border-top: 1px dashed #E6E1D6; padding-top: 8px; }\n  .pay { display: flex; gap: 12px; align-items: center; }\n\n\n.demo-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:12px 24px; padding:12px 24px; background:#f1edff; color:#32245c; font-size:13px; }\n.demo-toolbar nav { display:flex; gap:16px; margin-left:auto; }\n.demo-toolbar a { color:#5036af; }\n.demo-toolbar button { background:#5036af; color:white; font-size:13px; }\n@media(max-width:600px) {\n  header { flex-wrap:wrap; padding:12px; gap:8px; }\n  header nav { gap:12px; }\n  main { padding:0 12px; }\n  .card { grid-template-columns:72px 1fr; }\n  .card img { width:72px; }\n  .card .pay { grid-column:1 / -1; justify-content:flex-end; }\n  .line { grid-template-columns:48px 1fr; gap:8px; }\n  .line img { width:48px; }\n  .grid, .detail { grid-template-columns:1fr; }\n  .card.featured { grid-column:auto; grid-row:auto; }\n  .grid .card img { width:100%; }\n  .card.featured img { height:180px; }\n  .demo-toolbar { padding:12px; }\n}\n"}, "gadget": {"html": "\n\u003caside class=\"demo-toolbar\" aria-label=\"เกี่ยวกับเดโม\">\n  \u003cspan>\u003cstrong>ThinkAgain Demo\u003c/strong> · Companion v0.4.0 · ไม่ต้องติดตั้ง Extension\u003cbr>\n  ร้านค้าและราคาสมมติ ไม่มีการสั่งซื้อจริง · ข้อมูลเก็บในเบราว์เซอร์นี้\u003c/span>\n  \u003cnav aria-label=\"เลือกร้านตัวอย่าง\">\u003ca href=\"?demo=/menu/\">ร้านอาหาร\u003c/a> \u003ca href=\"?demo=/gadget/\">ร้านโน้ตบุ๊ก\u003c/a>\u003c/nav>\n  \u003cbutton type=\"button\" id=\"demo-reset\">เริ่มร้านนี้ใหม่\u003c/button>\n\u003c/aside>\n\n\u003cheader>\u003cb>ThinkGadget\u003c/b>\u003cspan class=\"note\">ร้านสมมติสำหรับทดสอบ\u003c/span>\n  \u003cnav>\u003ca href=\"?demo=/gadget\">สินค้า\u003c/a>\u003ca href=\"?demo=/gadget/cart\" id=\"cartlink\">ตะกร้า\u003c/a>\u003c/nav>\u003c/header>\n\u003cmain id=\"m\">\u003c/main>\n\n\n\n", "css": "\n  body { margin: 0; font: 16px/1.6 system-ui, \"Sukhumvit Set\", \"Noto Sans Thai\", sans-serif; background: #F4F5F7; color: #16181D; }\n  header { display: flex; align-items: center; gap: 16px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E5EA; }\n  header b { color: #1F4FD8; font-size: 20px; }\n  header nav { margin-left: auto; display: flex; gap: 18px; }\n  header a { color: #16181D; text-decoration: none; }\n  main { max-width: 920px; margin: 24px auto; padding: 0 24px; }\n  .note { font-size: 13px; color: #6B7080; }\n  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }\n  .card { background: #fff; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 6px; }\n  .card.featured { grid-column: span 2; grid-row: span 2; border: 2px solid #1F4FD8; }\n  .card img { width: 100%; max-width: 160px; height: 110px; object-fit: contain; }\n  .card.featured img { max-width: none; height: 300px; }\n  .card h3 { margin: 0; font-size: 17px; }\n  .badges { display: flex; gap: 6px; }\n  .badge { background: #FFB020; color: #16181D; border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 700; }\n  .badge.blue { background: #E6EEFF; color: #1F4FD8; }\n  .price { font-weight: 700; font-size: 18px; }\n  .btn, button { display: inline-block; font: inherit; border: 0; border-radius: 10px; padding: 10px 16px; background: #1F4FD8; color: #fff; cursor: pointer; text-decoration: none; text-align: center; }\n  .btn.quiet { background: #E9EBF0; color: #16181D; }\n  .detail { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; background: #fff; border-radius: 16px; padding: 24px; }\n  .detail img { width: 100%; height: 280px; object-fit: contain; }\n  .opt { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid #EEF0F3; }\n  .line { background: #fff; border-radius: 14px; padding: 12px 16px; display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; align-items: center; margin-bottom: 10px; }\n  .line img { width: 64px; height: 48px; object-fit: contain; }\n  .line h3 { margin: 0; font-size: 16px; }\n  .summary { background: #fff; border-radius: 14px; padding: 14px 16px; display: grid; gap: 6px; margin: 14px 0; }\n  .summary div { display: flex; justify-content: space-between; }\n  .summary .grand { font-weight: 700; font-size: 19px; border-top: 1px dashed #E3E5EA; padding-top: 8px; }\n\n\n.demo-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:12px 24px; padding:12px 24px; background:#f1edff; color:#32245c; font-size:13px; }\n.demo-toolbar nav { display:flex; gap:16px; margin-left:auto; }\n.demo-toolbar a { color:#5036af; }\n.demo-toolbar button { background:#5036af; color:white; font-size:13px; }\n@media(max-width:600px) {\n  header { flex-wrap:wrap; padding:12px; gap:8px; }\n  header nav { gap:12px; }\n  main { padding:0 12px; }\n  .card { grid-template-columns:72px 1fr; }\n  .card img { width:72px; }\n  .card .pay { grid-column:1 / -1; justify-content:flex-end; }\n  .line { grid-template-columns:48px 1fr; gap:8px; }\n  .line img { width:48px; }\n  .grid, .detail { grid-template-columns:1fr; }\n  .card.featured { grid-column:auto; grid-row:auto; }\n  .grid .card img { width:100%; }\n  .card.featured img { height:180px; }\n  .demo-toolbar { padding:12px; }\n}\n"}};
+  const shops = {"food": {"html": "\n\u003cheader>\u003cb>ThinkBurger\u003c/b>\n  \u003cnav>\u003ca href=\"?demo=/menu\">เมนู\u003c/a>\u003ca href=\"?demo=/cart\" id=\"cartlink\">ตะกร้า\u003c/a>\u003c/nav>\u003c/header>\n\u003cmain id=\"m\">\u003c/main>\n\n\n\n", "css": "\n  body { margin: 0; font: 16px/1.6 system-ui, \"Sukhumvit Set\", \"Noto Sans Thai\", sans-serif; background: #F6F4EF; color: #1D1B16; }\n  header { display: flex; align-items: center; gap: 16px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E6E1D6; }\n  header b { color: #1E6B47; font-size: 20px; }\n  header nav { margin-left: auto; display: flex; gap: 18px; }\n  header a { color: #1D1B16; text-decoration: none; }\n  main { max-width: 760px; margin: 24px auto; padding: 0 24px; display: grid; gap: 14px; }\n  .note { font-size: 13px; color: #6A665C; }\n  .card { background: #fff; border-radius: 16px; padding: 16px; display: grid; grid-template-columns: 96px 1fr auto; gap: 8px; align-items: center; box-shadow: 0 6px 18px -12px rgba(40,34,20,.35); }\n  .card.hero { border: 2px solid #F4B92B; }\n  .card h3 { margin: 0; font-size: 18px; }\n  .card p { margin: 0; color: #6A665C; font-size: 14px; }\n  .badge { background: #F4B92B; border-radius: 6px; padding: 2px 8px; font-size: 12px; margin-left: 6px; }\n  .price { font-weight: 700; font-size: 18px; }\n  .price s { color: #999; font-weight: 400; font-size: 14px; margin-right: 6px; }\n  button { font: inherit; border: 0; border-radius: 10px; padding: 10px 16px; background: #1E6B47; color: #fff; cursor: pointer; }\n  button.quiet { background: #EEE9DE; color: #1D1B16; }\n  .promo { background: #FDEBE1; color: #CF4510; padding: 10px 14px; border-radius: 12px; font-weight: 600; }\n  .card img { width: 96px; height: 72px; border-radius: 10px; }\n  .line img { width: 64px; height: 48px; border-radius: 8px; }\n  .line { background: #fff; border-radius: 14px; padding: 14px 16px; display: grid; grid-template-columns: 64px 1fr auto auto; gap: 14px; align-items: center; }\n  .line h3 { margin: 0; font-size: 17px; }\n  .line small { color: #6A665C; }\n  .qty { display: inline-flex; gap: 8px; align-items: center; }\n  .qty button { padding: 4px 10px; background: #EEE9DE; color: #1D1B16; }\n  .suggest { background: #FFF6DE; border-radius: 14px; padding: 14px 16px; }\n  .suggest .card { box-shadow: none; }\n  .summary { background: #fff; border-radius: 14px; padding: 14px 16px; display: grid; gap: 6px; }\n  .summary div { display: flex; justify-content: space-between; }\n  .summary .grand { font-weight: 700; font-size: 19px; border-top: 1px dashed #E6E1D6; padding-top: 8px; }\n  .pay { display: flex; gap: 12px; align-items: center; }\n\n\n@media(max-width:600px) {\n  header { flex-wrap:wrap; padding:12px; gap:8px; }\n  header nav { gap:12px; }\n  main { padding:0 12px; }\n  .card { grid-template-columns:72px 1fr; }\n  .card img { width:72px; }\n  .card .pay { grid-column:1 / -1; justify-content:flex-end; }\n  .line { grid-template-columns:48px 1fr; gap:8px; }\n  .line img { width:48px; }\n  .grid, .detail { grid-template-columns:1fr; }\n  .card.featured { grid-column:auto; grid-row:auto; }\n  .grid .card img { width:100%; }\n  .card.featured img { height:180px; }\n  }\n"}, "gadget": {"html": "\n\u003cheader>\u003cb>ThinkGadget\u003c/b>\n  \u003cnav>\u003ca href=\"?demo=/gadget\">สินค้า\u003c/a>\u003ca href=\"?demo=/gadget/cart\" id=\"cartlink\">ตะกร้า\u003c/a>\u003c/nav>\u003c/header>\n\u003cmain id=\"m\">\u003c/main>\n\n\n\n", "css": "\n  body { margin: 0; font: 16px/1.6 system-ui, \"Sukhumvit Set\", \"Noto Sans Thai\", sans-serif; background: #F4F5F7; color: #16181D; }\n  header { display: flex; align-items: center; gap: 16px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E5EA; }\n  header b { color: #1F4FD8; font-size: 20px; }\n  header nav { margin-left: auto; display: flex; gap: 18px; }\n  header a { color: #16181D; text-decoration: none; }\n  main { max-width: 920px; margin: 24px auto; padding: 0 24px; }\n  .note { font-size: 13px; color: #6B7080; }\n  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }\n  .card { background: #fff; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 6px; }\n  .card.featured { grid-column: span 2; grid-row: span 2; border: 2px solid #1F4FD8; }\n  .card img { width: 100%; max-width: 160px; height: 110px; object-fit: contain; }\n  .card.featured img { max-width: none; height: 300px; }\n  .card h3 { margin: 0; font-size: 17px; }\n  .badges { display: flex; gap: 6px; }\n  .badge { background: #FFB020; color: #16181D; border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 700; }\n  .badge.blue { background: #E6EEFF; color: #1F4FD8; }\n  .price { font-weight: 700; font-size: 18px; }\n  .btn, button { display: inline-block; font: inherit; border: 0; border-radius: 10px; padding: 10px 16px; background: #1F4FD8; color: #fff; cursor: pointer; text-decoration: none; text-align: center; }\n  .btn.quiet { background: #E9EBF0; color: #16181D; }\n  .detail { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; background: #fff; border-radius: 16px; padding: 24px; }\n  .detail img { width: 100%; height: 280px; object-fit: contain; }\n  .opt { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid #EEF0F3; }\n  .line { background: #fff; border-radius: 14px; padding: 12px 16px; display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; align-items: center; margin-bottom: 10px; }\n  .line img { width: 64px; height: 48px; object-fit: contain; }\n  .line h3 { margin: 0; font-size: 16px; }\n  .summary { background: #fff; border-radius: 14px; padding: 14px 16px; display: grid; gap: 6px; margin: 14px 0; }\n  .summary div { display: flex; justify-content: space-between; }\n  .summary .grand { font-weight: 700; font-size: 19px; border-top: 1px dashed #E3E5EA; padding-top: 8px; }\n\n\n@media(max-width:600px) {\n  header { flex-wrap:wrap; padding:12px; gap:8px; }\n  header nav { gap:12px; }\n  main { padding:0 12px; }\n  .card { grid-template-columns:72px 1fr; }\n  .card img { width:72px; }\n  .card .pay { grid-column:1 / -1; justify-content:flex-end; }\n  .line { grid-template-columns:48px 1fr; gap:8px; }\n  .line img { width:48px; }\n  .grid, .detail { grid-template-columns:1fr; }\n  .card.featured { grid-column:auto; grid-row:auto; }\n  .grid .card img { width:100%; }\n  .card.featured img { height:180px; }\n  }\n"}};
   const shop = gadget ? shops.gadget : shops.food;
-  document.title = "ThinkAgain Demo · " + (gadget ? "ThinkGadget" : "ThinkBurger");
+  document.title = gadget ? "ThinkGadget" : "ThinkBurger";
   document.getElementById("shop-style").textContent = shop.css;
   document.body.innerHTML = shop.html;
 
@@ -45,6 +45,55 @@
     setItem: (key, value) => window.localStorage.setItem(prefix + key, value),
     removeItem: key => window.localStorage.removeItem(prefix + key)
   };
+
+  // Fly a copy of the product picture into the header cart link, then bump the link.
+  // Lives on <html> (outside <body>) so it never looks like page content.
+  function flyToCart(from, onLand) {
+    const target = document.getElementById("cartlink");
+    const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!from || !target || reduce || !from.animate) { onLand(); return; }
+    const a = from.getBoundingClientRect();
+    const b = target.getBoundingClientRect();
+    if (!a.width || !b.width) { onLand(); return; }
+    const ghost = from.cloneNode(false);
+    ghost.removeAttribute("id");
+    ghost.alt = "";
+    ghost.setAttribute("aria-hidden", "true");
+    Object.assign(ghost.style, {
+      position: "fixed", left: a.left + "px", top: a.top + "px", width: a.width + "px", height: a.height + "px",
+      margin: "0", zIndex: "2147483000", pointerEvents: "none", objectFit: "contain",
+      borderRadius: "12px", boxShadow: "0 12px 28px -10px rgba(0,0,0,.45)", willChange: "transform, opacity"
+    });
+    document.documentElement.appendChild(ghost);
+    const dx = b.left + b.width / 2 - (a.left + a.width / 2);
+    const dy = b.top + b.height / 2 - (a.top + a.height / 2);
+    // Arc upward, but keep the picture (shrunk to .7 at the peak) inside the window.
+    const lift = Math.max(0, Math.min(120, Math.abs(dy) * 0.35 + 40, a.top + a.height * 0.15 + dy * 0.35 - 8));
+    const end = Math.max(0.08, 28 / Math.max(a.width, a.height));
+    const flight = ghost.animate([
+      { transform: "translate(0,0) scale(1)", opacity: 1 },
+      { transform: `translate(${dx * 0.35}px, ${dy * 0.35 - lift}px) scale(.7)`, opacity: 1, offset: 0.4 },
+      { transform: `translate(${dx}px, ${dy}px) scale(${end})`, opacity: 0.4 }
+    ], { duration: 750, easing: "cubic-bezier(.45,.05,.55,.95)", fill: "forwards" });
+    let landed = false;
+    const land = () => {
+      if (landed) return;
+      landed = true;
+      ghost.remove();
+      onLand();
+      target.animate([
+        { transform: "scale(1)" }, { transform: "scale(1.3)", color: "#CF4510" }, { transform: "scale(1)" }
+      ], { duration: 380, easing: "ease-out" });
+    };
+    flight.onfinish = land;
+    setTimeout(land, 1200); // safety net if the animation never finishes (hidden tab)
+  }
+  if (!document.getElementById("cart-bump-style")) {
+    const st = document.createElement("style");
+    st.id = "cart-bump-style";
+    st.textContent = "#cartlink { display:inline-block; transform-origin:center; }";
+    document.head.appendChild(st);
+  }
 
   if (gadget) {
     (() => {
@@ -84,12 +133,18 @@
         <h2 style="font-size:16px">ตัวเลือกเสริม</h2>
         ${ADDONS.map(a => `<label class="opt"><input type="checkbox" name="${a.id}" ${a.preset ? "checked" : ""}> ${a.name} (+${baht(a.price)})</label>`).join("")}
         <p><button id="add">เพิ่มลงตะกร้า</button></p></div></div>`;
-    document.getElementById("add").addEventListener("click", () => {
+    document.getElementById("add").addEventListener("click", e => {
+      const btn = e.currentTarget;
+      if (btn.disabled) return;
+      btn.disabled = true;
       const cart = load();
       cart.push({ name: p.name, price: p.price, img: p.img });
       for (const a of ADDONS) if (m.querySelector(`input[name=${a.id}]`).checked) cart.push({ name: a.name, price: a.price, img: a.img });
       save(cart);
-      location.href = "/gadget/cart";
+      flyToCart(m.querySelector(".detail img"), () => {
+        document.getElementById("cartlink").textContent = "ตะกร้า (" + cart.length + ")";
+        setTimeout(() => { location.href = "/gadget/cart"; }, 350);
+      });
     });
   } else {
     m.innerHTML = `<h1 style="margin-top:0">โน้ตบุ๊ก</h1><div class="grid">
@@ -141,9 +196,14 @@
     cart.push({ id, name: item.name, qty: 1, unit: item.price + upsize, option: upsize ? "ชุดใหญ่ (+฿25)" : "", ...opts });
     save(cart); render();
   }
+  let flying = 0; // items still in the air; the header count catches up when they land
+  const updateCount = () => {
+    const count = load().reduce((a, l) => a + l.qty, 0);
+    document.getElementById("cartlink").textContent = "ตะกร้า (" + Math.max(0, count - flying) + ")";
+  };
   function render() {
     const cart = load();
-    document.getElementById("cartlink").textContent = "ตะกร้า (" + cart.reduce((a, l) => a + l.qty, 0) + ")";
+    updateCount();
     const path = location.pathname.replace(/\/+$/, "");
     if ((path.startsWith("/cart") || path.startsWith("/checkout")) && cartPhase === 0) {
       m.innerHTML = `<h1>ตะกร้าสินค้า</h1><p class="note">กำลังโหลดตะกร้า…</p>`;
@@ -190,22 +250,25 @@
   }
   m.addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
-    if (b.dataset.add) add(b.dataset.add, b.dataset.add === "pie" && location.pathname.startsWith("/cart") ? { suggested: true } : {});
+    if (b.dataset.add) {
+      const img = b.closest(".card")?.querySelector("img");
+      const ghostFrom = img && img.isConnected ? img : null;
+      // Measure before add() re-renders and replaces the card.
+      const snapshot = ghostFrom && ghostFrom.cloneNode(false);
+      if (snapshot) {
+        const r = ghostFrom.getBoundingClientRect();
+        snapshot.getBoundingClientRect = () => r;
+      }
+      flying++;
+      add(b.dataset.add, b.dataset.add === "pie" && location.pathname.startsWith("/cart") ? { suggested: true } : {});
+      flyToCart(snapshot, () => { flying--; updateCount(); });
+    }
     if (b.dataset.d) { const cart = load(); const l = cart[+b.dataset.i]; l.qty += +b.dataset.d; if (l.qty <= 0) cart.splice(+b.dataset.i, 1); save(cart); render(); }
   });
   render();
 
     })();
   }
-(() => {
-  "use strict";
-  document.getElementById("demo-reset").addEventListener("click", () => {
-    const gadget = location.pathname.startsWith("/gadget");
-    localStorage.removeItem("thinkagain-demo:v1:" + (gadget ? "gadget" : "food"));
-    localStorage.removeItem(gadget ? "gadget-cart" : "fixture-cart");
-    location.assign(gadget ? "/gadget/" : "/menu/");
-  });
-})();
 
 (function () {
 "use strict";
