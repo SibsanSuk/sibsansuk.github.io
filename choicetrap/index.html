@@ -16,7 +16,7 @@
   const route = requested.replace(/\/+$/, "") || "/menu";
   const current = routes.includes(route) ? route : "/menu";
   const gadget = current.startsWith("/gadget");
-  const shops = {"food": {"html": "\n\u003cheader>\u003cb>ThinkBurger\u003c/b>\n  \u003cnav>\u003ca href=\"?demo=/menu\">เมนู\u003c/a>\u003ca href=\"?demo=/cart\" id=\"cartlink\">ตะกร้า\u003c/a>\u003c/nav>\u003c/header>\n\u003cmain id=\"m\">\u003c/main>\n\n\n\n", "css": "\n  body { margin: 0; font: 16px/1.6 system-ui, \"Sukhumvit Set\", \"Noto Sans Thai\", sans-serif; background: #F6F4EF; color: #1D1B16; }\n  header { display: flex; align-items: center; gap: 16px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E6E1D6; }\n  header b { color: #1E6B47; font-size: 20px; }\n  header nav { margin-left: auto; display: flex; gap: 18px; }\n  header a { color: #1D1B16; text-decoration: none; }\n  main { max-width: 760px; margin: 24px auto; padding: 0 24px; display: grid; gap: 14px; }\n  .note { font-size: 13px; color: #6A665C; }\n  .card { background: #fff; border-radius: 16px; padding: 16px; display: grid; grid-template-columns: 96px 1fr auto; gap: 8px; align-items: center; box-shadow: 0 6px 18px -12px rgba(40,34,20,.35); }\n  .card.hero { border: 2px solid #F4B92B; }\n  .card h3 { margin: 0; font-size: 18px; }\n  .card p { margin: 0; color: #6A665C; font-size: 14px; }\n  .badge { background: #F4B92B; border-radius: 6px; padding: 2px 8px; font-size: 12px; margin-left: 6px; }\n  .price { font-weight: 700; font-size: 18px; }\n  .price s { color: #999; font-weight: 400; font-size: 14px; margin-right: 6px; }\n  button { font: inherit; border: 0; border-radius: 10px; padding: 10px 16px; background: #1E6B47; color: #fff; cursor: pointer; }\n  button.quiet { background: #EEE9DE; color: #1D1B16; }\n  .promo { background: #FDEBE1; color: #CF4510; padding: 10px 14px; border-radius: 12px; font-weight: 600; }\n  .card img { width: 96px; height: 72px; border-radius: 10px; }\n  .line img { width: 64px; height: 48px; border-radius: 8px; }\n  .line { background: #fff; border-radius: 14px; padding: 14px 16px; display: grid; grid-template-columns: 64px 1fr auto auto; gap: 14px; align-items: center; }\n  .line h3 { margin: 0; font-size: 17px; }\n  .line small { color: #6A665C; }\n  .qty { display: inline-flex; gap: 8px; align-items: center; }\n  .qty button { padding: 4px 10px; background: #EEE9DE; color: #1D1B16; }\n  .suggest { background: #FFF6DE; border-radius: 14px; padding: 14px 16px; }\n  .suggest .card { box-shadow: none; }\n  .summary { background: #fff; border-radius: 14px; padding: 14px 16px; display: grid; gap: 6px; }\n  .summary div { display: flex; justify-content: space-between; }\n  .summary .grand { font-weight: 700; font-size: 19px; border-top: 1px dashed #E6E1D6; padding-top: 8px; }\n  .pay { display: flex; gap: 12px; align-items: center; }\n\n\n@media(max-width:600px) {\n  header { flex-wrap:wrap; padding:12px; gap:8px; }\n  header nav { gap:12px; }\n  main { padding:0 12px; }\n  .card { grid-template-columns:72px 1fr; }\n  .card img { width:72px; }\n  .card .pay { grid-column:1 / -1; justify-content:flex-end; }\n  .line { grid-template-columns:48px 1fr; gap:8px; }\n  .line img { width:48px; }\n  .grid, .detail { grid-template-columns:1fr; }\n  .card.featured { grid-column:auto; grid-row:auto; }\n  .grid .card img { width:100%; }\n  .card.featured img { height:180px; }\n  }\n"}, "gadget": {"html": "\n\u003cheader>\u003cb>ThinkGadget\u003c/b>\n  \u003cnav>\u003ca href=\"?demo=/gadget\">สินค้า\u003c/a>\u003ca href=\"?demo=/gadget/cart\" id=\"cartlink\">ตะกร้า\u003c/a>\u003c/nav>\u003c/header>\n\u003cmain id=\"m\">\u003c/main>\n\n\n\n", "css": "\n  body { margin: 0; font: 16px/1.6 system-ui, \"Sukhumvit Set\", \"Noto Sans Thai\", sans-serif; background: #F4F5F7; color: #16181D; }\n  header { display: flex; align-items: center; gap: 16px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E5EA; }\n  header b { color: #1F4FD8; font-size: 20px; }\n  header nav { margin-left: auto; display: flex; gap: 18px; }\n  header a { color: #16181D; text-decoration: none; }\n  main { max-width: 920px; margin: 24px auto; padding: 0 24px; }\n  .note { font-size: 13px; color: #6B7080; }\n  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }\n  .card { background: #fff; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 6px; }\n  .card.featured { grid-column: span 2; grid-row: span 2; border: 2px solid #1F4FD8; }\n  .card img { width: 100%; max-width: 160px; height: 110px; object-fit: contain; }\n  .card.featured img { max-width: none; height: 300px; }\n  .card h3 { margin: 0; font-size: 17px; }\n  .badges { display: flex; gap: 6px; }\n  .badge { background: #FFB020; color: #16181D; border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 700; }\n  .badge.blue { background: #E6EEFF; color: #1F4FD8; }\n  .price { font-weight: 700; font-size: 18px; }\n  .btn, button { display: inline-block; font: inherit; border: 0; border-radius: 10px; padding: 10px 16px; background: #1F4FD8; color: #fff; cursor: pointer; text-decoration: none; text-align: center; }\n  .btn.quiet { background: #E9EBF0; color: #16181D; }\n  .detail { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; background: #fff; border-radius: 16px; padding: 24px; }\n  .detail img { width: 100%; height: 280px; object-fit: contain; }\n  .opt { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid #EEF0F3; }\n  .line { background: #fff; border-radius: 14px; padding: 12px 16px; display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; align-items: center; margin-bottom: 10px; }\n  .line img { width: 64px; height: 48px; object-fit: contain; }\n  .line h3 { margin: 0; font-size: 16px; }\n  .summary { background: #fff; border-radius: 14px; padding: 14px 16px; display: grid; gap: 6px; margin: 14px 0; }\n  .summary div { display: flex; justify-content: space-between; }\n  .summary .grand { font-weight: 700; font-size: 19px; border-top: 1px dashed #E3E5EA; padding-top: 8px; }\n\n\n@media(max-width:600px) {\n  header { flex-wrap:wrap; padding:12px; gap:8px; }\n  header nav { gap:12px; }\n  main { padding:0 12px; }\n  .card { grid-template-columns:72px 1fr; }\n  .card img { width:72px; }\n  .card .pay { grid-column:1 / -1; justify-content:flex-end; }\n  .line { grid-template-columns:48px 1fr; gap:8px; }\n  .line img { width:48px; }\n  .grid, .detail { grid-template-columns:1fr; }\n  .card.featured { grid-column:auto; grid-row:auto; }\n  .grid .card img { width:100%; }\n  .card.featured img { height:180px; }\n  }\n"}};
+  const shops = {"food": {"html": "\n\u003cheader>\u003cb>\u003cspan aria-hidden=\"true\">🍔\u003c/span> ThinkBurger\u003c/b>\n  \u003cnav>\u003ca href=\"?demo=/menu\">เมนู\u003c/a>\u003ca href=\"?demo=/cart\" id=\"cartlink\">ตะกร้า\u003c/a>\u003c/nav>\u003c/header>\n\u003cmain id=\"m\">\u003c/main>\n\n\n\n", "css": "\n  body { margin: 0; font: 16px/1.6 system-ui, \"Sukhumvit Set\", \"Noto Sans Thai\", sans-serif; color: #2B1A12;\n    background: #FFF4E4 radial-gradient(1200px 400px at 50% -120px, #FFE1B8, transparent) no-repeat; }\n  header { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; gap: 16px; padding: 12px 24px; background: #fff;\n    border-top: 4px solid #E63B2E; box-shadow: 0 6px 18px -12px rgba(120,40,10,.35); }\n  header b { color: #E63B2E; font-size: 21px; font-weight: 800; letter-spacing: -.2px; }\n  header nav { margin-left: auto; display: flex; gap: 18px; }\n  header a { color: #2B1A12; text-decoration: none; font-weight: 500; }\n  main { max-width: 760px; margin: 24px auto; padding: 0 24px; display: grid; gap: 14px; }\n  .note { font-size: 13px; color: #8A6A55; }\n  .card { background: #fff; border-radius: 18px; padding: 12px 16px 12px 12px; display: grid; grid-template-columns: 112px 1fr auto; gap: 14px; align-items: center;\n    box-shadow: 0 10px 24px -16px rgba(150,60,10,.45); transition: transform .15s ease, box-shadow .15s ease; }\n  .card:hover { transform: translateY(-2px); box-shadow: 0 16px 30px -16px rgba(150,60,10,.5); }\n  .card.hero { border: 2px solid #FFC21A; background: linear-gradient(120deg, #FFFBEA, #fff 60%); }\n  .card h3 { margin: 0; font-size: 18px; }\n  .card p { margin: 0; color: #8A6A55; font-size: 14px; }\n  .badge { background: #FFC21A; color: #2B1A12; border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 700; margin-left: 6px; display: inline-block; white-space: nowrap; vertical-align: 2px; line-height: 1.5; }\n  .price { font-weight: 800; font-size: 19px; color: #E63B2E; }\n  .price s { color: #B9A797; font-weight: 400; font-size: 14px; margin-right: 6px; }\n  button { font: inherit; font-weight: 600; border: 0; border-radius: 12px; padding: 10px 16px; background: #E63B2E; color: #fff; cursor: pointer;\n    box-shadow: 0 6px 14px -8px rgba(230,59,46,.8); transition: transform .1s ease, background .15s ease; }\n  button:hover { background: #D12F22; }\n  button:active { transform: scale(.97); }\n  button:focus-visible { outline: 3px solid #FFC21A; outline-offset: 2px; }\n  button.quiet { background: #FFE8D2; color: #D2381F; box-shadow: none; }\n  button.quiet:hover { background: #FFDABC; }\n  .promo { background: linear-gradient(100deg, #FF4D2E, #FF8A1F); color: #fff; padding: 12px 14px; border-radius: 14px; font-weight: 700;\n    box-shadow: 0 10px 24px -14px rgba(255,77,46,.9); }\n  .card img { width: 112px; height: 84px; border-radius: 12px; object-fit: cover; background: #FFE8D2; }\n  .card.hero img { height: 96px; }\n  .line img { width: 64px; height: 48px; border-radius: 10px; object-fit: cover; background: #FFE8D2; }\n  .line { background: #fff; border-radius: 16px; padding: 12px 16px 12px 12px; display: grid; grid-template-columns: 64px 1fr auto auto; gap: 14px; align-items: center;\n    box-shadow: 0 10px 24px -18px rgba(150,60,10,.45); }\n  .line h3 { margin: 0; font-size: 17px; }\n  .line small { color: #8A6A55; }\n  .qty { display: inline-flex; gap: 8px; align-items: center; }\n  .qty button { padding: 4px 10px; background: #FFE8D2; color: #D2381F; box-shadow: none; }\n  .suggest { background: #FFF0C7; border-radius: 16px; padding: 14px 16px; }\n  .suggest .card { box-shadow: none; }\n  .summary { background: #fff; border-radius: 16px; padding: 14px 16px; display: grid; gap: 6px; }\n  .summary div { display: flex; justify-content: space-between; }\n  .summary .grand { font-weight: 800; font-size: 19px; border-top: 1px dashed #F6DEC4; padding-top: 8px; }\n  .summary .grand span:last-child { color: #E63B2E; }\n  .pay { display: flex; gap: 12px; align-items: center; }\n  .pay a { color: #D2381F; }\n\n@media(max-width:600px) {\n  header { flex-wrap:wrap; padding:12px; gap:8px; }\n  header nav { gap:12px; }\n  main { padding:0 12px; }\n  .card { grid-template-columns:96px 1fr; }\n  .card img, .card.hero img { width:96px; height:76px; }\n  .card .pay { grid-column:1 / -1; justify-content:flex-end; }\n  .line { grid-template-columns:48px 1fr; gap:8px; }\n  .line img { width:48px; height:40px; }\n}\n"}, "gadget": {"html": "\n\u003cheader>\u003cb>ThinkGadget\u003c/b>\n  \u003cnav>\u003ca href=\"?demo=/gadget\">สินค้า\u003c/a>\u003ca href=\"?demo=/gadget/cart\" id=\"cartlink\">ตะกร้า\u003c/a>\u003c/nav>\u003c/header>\n\u003cmain id=\"m\">\u003c/main>\n\n\n\n", "css": "\n  body { margin: 0; font: 16px/1.6 system-ui, \"Sukhumvit Set\", \"Noto Sans Thai\", sans-serif; background: #F4F5F7; color: #16181D; }\n  header { position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 14px -10px rgba(0,0,0,.25); display: flex; align-items: center; gap: 16px; padding: 12px 24px; background: #fff; border-bottom: 1px solid #E3E5EA; }\n  header b { color: #1F4FD8; font-size: 20px; }\n  header nav { margin-left: auto; display: flex; gap: 18px; }\n  header a { color: #16181D; text-decoration: none; }\n  main { max-width: 920px; margin: 24px auto; padding: 0 24px; }\n  .note { font-size: 13px; color: #6B7080; }\n  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }\n  .card { background: #fff; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 6px; }\n  .card.featured { grid-column: span 2; grid-row: span 2; border: 2px solid #1F4FD8; }\n  .card img { width: 100%; max-width: 160px; height: 110px; object-fit: contain; }\n  .card.featured img { max-width: none; height: 300px; }\n  .card h3 { margin: 0; font-size: 17px; }\n  .badges { display: flex; gap: 6px; }\n  .badge { background: #FFB020; color: #16181D; border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 700; }\n  .badge.blue { background: #E6EEFF; color: #1F4FD8; }\n  .price { font-weight: 700; font-size: 18px; }\n  .btn, button { display: inline-block; font: inherit; border: 0; border-radius: 10px; padding: 10px 16px; background: #1F4FD8; color: #fff; cursor: pointer; text-decoration: none; text-align: center; }\n  .btn.quiet { background: #E9EBF0; color: #16181D; }\n  .detail { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; background: #fff; border-radius: 16px; padding: 24px; }\n  .detail img { width: 100%; height: 280px; object-fit: contain; }\n  .opt { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid #EEF0F3; }\n  .line { background: #fff; border-radius: 14px; padding: 12px 16px; display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; align-items: center; margin-bottom: 10px; }\n  .line img { width: 64px; height: 48px; object-fit: contain; }\n  .line h3 { margin: 0; font-size: 16px; }\n  .summary { background: #fff; border-radius: 14px; padding: 14px 16px; display: grid; gap: 6px; margin: 14px 0; }\n  .summary div { display: flex; justify-content: space-between; }\n  .summary .grand { font-weight: 700; font-size: 19px; border-top: 1px dashed #E3E5EA; padding-top: 8px; }\n\n\n@media(max-width:600px) {\n  header { flex-wrap:wrap; padding:12px; gap:8px; }\n  header nav { gap:12px; }\n  main { padding:0 12px; }\n  .card { grid-template-columns:72px 1fr; }\n  .card img { width:72px; }\n  .card .pay { grid-column:1 / -1; justify-content:flex-end; }\n  .line { grid-template-columns:48px 1fr; gap:8px; }\n  .line img { width:48px; }\n  .grid, .detail { grid-template-columns:1fr; }\n  .card.featured { grid-column:auto; grid-row:auto; }\n  .grid .card img { width:100%; }\n  .card.featured img { height:180px; }\n  }\n"}};
   const shop = gadget ? shops.gadget : shops.food;
   document.title = gadget ? "ThinkGadget" : "ThinkBurger";
   document.getElementById("shop-style").textContent = shop.css;
@@ -55,7 +55,7 @@
     const a = from.getBoundingClientRect();
     const b = target.getBoundingClientRect();
     if (!a.width || !b.width) { onLand(); return; }
-    const ghost = from.cloneNode(false);
+    const ghost = from.cloneNode(from.tagName !== "IMG"); // tickets need their content
     ghost.removeAttribute("id");
     ghost.alt = "";
     ghost.setAttribute("aria-hidden", "true");
@@ -65,7 +65,7 @@
       borderRadius: "12px", boxShadow: "0 12px 28px -10px rgba(0,0,0,.45)", willChange: "transform, opacity"
     });
     document.documentElement.appendChild(ghost);
-    const dx = b.left + b.width / 2 - (a.left + a.width / 2);
+    const dx = b.left + 11 - (a.left + a.width / 2); // aim at the cart icon (22px, left edge of the link)
     const dy = b.top + b.height / 2 - (a.top + a.height / 2);
     // Arc upward, but keep the picture (shrunk to .7 at the peak) inside the window.
     const lift = Math.max(0, Math.min(120, Math.abs(dy) * 0.35 + 40, a.top + a.height * 0.15 + dy * 0.35 - 8));
@@ -81,17 +81,49 @@
       landed = true;
       ghost.remove();
       onLand();
+      // Catch the item: squash down, spring up, settle with a small wobble.
+      target.getAnimations().forEach(x => x.cancel());
       target.animate([
-        { transform: "scale(1)" }, { transform: "scale(1.3)", color: "#CF4510" }, { transform: "scale(1)" }
-      ], { duration: 380, easing: "ease-out" });
+        { transform: "translateY(0) scale(1, 1)", offset: 0 },
+        { transform: "translateY(2px) scale(1.25, .75)", color: "#CF4510", offset: 0.18 },
+        { transform: "translateY(-9px) scale(.9, 1.15)", color: "#CF4510", offset: 0.42 },
+        { transform: "translateY(0) scale(1.08, .94)", offset: 0.66 },
+        { transform: "translateY(-2px) scale(.98, 1.03)", offset: 0.82 },
+        { transform: "translateY(0) scale(1, 1)", offset: 1 }
+      ], { duration: 650, easing: "ease-out" });
+      target.classList.remove("cart-caught");
+      void target.offsetWidth; // restart the ring
+      target.classList.add("cart-caught");
     };
     flight.onfinish = land;
     setTimeout(land, 1200); // safety net if the animation never finishes (hidden tab)
   }
+  // Small confirmation bubble at the bottom of the screen.
+  let toastTimer = 0;
+  function toast(text) {
+    document.querySelector(".shop-toast")?.remove();
+    const el = document.createElement("div");
+    el.className = "shop-toast";
+    el.setAttribute("role", "status");
+    el.textContent = text;
+    document.documentElement.appendChild(el);
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.remove(), 2400);
+  }
   if (!document.getElementById("cart-bump-style")) {
     const st = document.createElement("style");
     st.id = "cart-bump-style";
-    st.textContent = "#cartlink { display:inline-block; transform-origin:center; }";
+    // The icon is a CSS pseudo-element, so the link's text stays "ตะกร้า (n)".
+    const cartIcon = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3.5h2.2l2.4 11a1 1 0 0 0 1 .8h9.2a1 1 0 0 0 1-.8l1.6-7.5H6"/><circle cx="9.5" cy="19.5" r="1.4"/><circle cx="17" cy="19.5" r="1.4"/></svg>');
+    st.textContent = `
+      #cartlink { position:relative; display:inline-flex; align-items:center; gap:6px; transform-origin:50% 100%; }
+      #cartlink::before { content:""; width:22px; height:22px; background:currentColor;
+        -webkit-mask:url("${cartIcon}") center / contain no-repeat; mask:url("${cartIcon}") center / contain no-repeat; }
+      #cartlink::after { content:""; position:absolute; left:11px; top:50%; width:30px; height:30px; margin:-15px 0 0 -15px;
+        border-radius:50%; border:2px solid #CF4510; opacity:0; pointer-events:none; }
+      #cartlink.cart-caught::after { animation:cart-ring .6s ease-out; }
+      @keyframes cart-ring { 0% { transform:scale(.4); opacity:.8; } 100% { transform:scale(1.6); opacity:0; } }
+      @media (prefers-reduced-motion: reduce) { #cartlink.cart-caught::after { animation:none; } }`;
     document.head.appendChild(st);
   }
 
@@ -167,7 +199,7 @@
     { id: "chicken", name: "ไก่ทอด", desc: "1 ชิ้น สูตรกรอบ", price: 45 },
     { id: "fries", name: "เฟรนช์ฟรายส์", desc: "ขนาดปกติ", price: 39 },
     { id: "drink", name: "น้ำอัดลม", desc: "1 แก้ว", price: 25 },
-    { id: "pie", name: "พายสับปะรด", desc: "อบร้อน ๆ", price: 29 }
+    { id: "pie", name: "พายแอปเปิล", desc: "อบร้อน ๆ", price: 29 }
   ];
   // Simple drawn product pictures (data: URLs) so the fixture has real <img> elements.
   const BG = '<rect width="120" height="90" rx="10" fill="#FFF3D9"/>';
@@ -184,7 +216,22 @@
     thaitea: BG + CUP(47, 26, "#E8833A"),
     icecream: BG + '<circle cx="60" cy="34" r="16" fill="#FFF6E0" stroke="#EADBB8"/><path d="M46 40h28l-14 34z" fill="#D9A25B"/>'
   };
-  const picture = id => "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 90">${PICS[id] || BG}</svg>`);
+  // Food photos from Unsplash (free to use under the Unsplash License). If one fails to load,
+  // e.g. offline, the drawn picture above takes its place.
+  const PHOTOS = {
+    box: "1594212699903-ec8a3eca50f5", burger: "1606755962773-d324e0a13086", chicken: "1626082927389-6cd097cdc6ec",
+    fries: "1630384060421-cb20d0e0649d", drink: "1513558161293-cdaf765ed2fd", pie: "1621743478914-cc8a86d7e7b5",
+    thaitea: "1558857563-b371033873b8", icecream: "1570197788417-0e82375c9371"
+  };
+  const photo = id => `https://images.unsplash.com/photo-${PHOTOS[id]}?w=360&h=270&fit=crop&q=75&auto=format`;
+  const PHOTO_IDS = new Map(Object.keys(PHOTOS).map(id => [photo(id), id]));
+  document.addEventListener("error", e => {
+    const img = e.target;
+    const id = img && img.tagName === "IMG" && PHOTO_IDS.get(img.getAttribute("src"));
+    if (id) img.src = drawn(id);
+  }, true);
+  const picture = id => PHOTOS[id] ? photo(id) : drawn(id);
+  const drawn = id => "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 90">${PICS[id] || BG}</svg>`);
   const load = () => { try { return JSON.parse(localStorage.getItem("fixture-cart") || "[]"); } catch { return []; } };
   const save = cart => localStorage.setItem("fixture-cart", JSON.stringify(cart));
   const baht = n => "฿" + n.toLocaleString("th-TH");
@@ -196,15 +243,231 @@
     cart.push({ id, name: item.name, qty: 1, unit: item.price + upsize, option: upsize ? "ชุดใหญ่ (+฿25)" : "", ...opts });
     save(cart); render();
   }
+  // ---- Vouchers: collect on the menu, apply on the cart (one delivery code + one discount code).
+  // Sales levers on show: minimum spend, "only X% left", deadlines, a progress bar to the next
+  // threshold, auto-applying the best code, and "you saved ฿X".
+  const DELIVERY_FEE = 39;
+  const VOUCHERS = [
+    { code: "FREESHIP", kind: "ship", head: "ส่งฟรี", icon: "🛵", min: 199, cond: "ขั้นต่ำ ฿199", meta: "ลดค่าส่งสูงสุด ฿39", goal: "รับส่งฟรี", value: (sub, fee) => fee },
+    { code: "SHIP20", kind: "ship", head: "ลดค่าส่ง ฿20", icon: "🛵", min: 0, cond: "ไม่มีขั้นต่ำ", meta: "ใช้ได้ทุกเมนู", value: () => 20 },
+    { code: "SAVE30", kind: "disc", head: "ลด ฿30", icon: "🎟️", min: 249, cond: "ขั้นต่ำ ฿249", used: 88, goal: "รับส่วนลด ฿30", value: () => 30 },
+    { code: "PCT15", kind: "disc", head: "ลด 15%", icon: "🎟️", min: 399, cond: "ขั้นต่ำ ฿399 · ลดสูงสุด ฿50", meta: "หมดเขต 23:59 วันนี้", goal: "รับส่วนลด 15%", value: sub => Math.min(50, Math.floor(sub * 0.15)) },
+    { code: "NEWUSER", kind: "disc", head: "ลด ฿40", icon: "🎁", min: 150, cond: "ขั้นต่ำ ฿150", meta: "สำหรับลูกค้าใหม่", value: () => 40, hidden: true }
+  ];
+  const loadJSON = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+  const collected = () => loadJSON("vouchers", []);
+  const picks = () => loadJSON("voucher-picks", {}); // { ship: code | "none", disc: code | "none" }
+  const savePicks = p => localStorage.setItem("voucher-picks", JSON.stringify(p));
+  function collectCode(code) {
+    const got = collected();
+    if (!got.includes(code)) { got.push(code); localStorage.setItem("vouchers", JSON.stringify(got)); }
+  }
+  function pricing(cart) {
+    const sub = cart.reduce((a, l) => a + l.unit * l.qty, 0);
+    const fee = cart.length ? DELIVERY_FEE : 0;
+    const got = collected();
+    const pick = picks();
+    const eligible = v => sub > 0 && sub >= v.min;
+    const amount = v => v.kind === "ship" ? Math.min(fee, v.value(sub, fee)) : Math.min(sub, v.value(sub));
+    const chosen = {};
+    for (const kind of ["ship", "disc"]) {
+      if (pick[kind] === "none") { chosen[kind] = null; continue; }
+      const wanted = VOUCHERS.find(v => v.code === pick[kind]);
+      // The shopper's pick if it still works; otherwise auto-apply the best collected code.
+      chosen[kind] = wanted && got.includes(wanted.code) && eligible(wanted) ? wanted
+        : VOUCHERS.filter(v => v.kind === kind && got.includes(v.code) && eligible(v)).sort((a, b) => amount(b) - amount(a))[0] || null;
+    }
+    const shipOff = chosen.ship ? amount(chosen.ship) : 0;
+    const discOff = chosen.disc ? amount(chosen.disc) : 0;
+    const best = kind => Math.max(0, ...VOUCHERS.filter(v => v.kind === kind && (!v.hidden || got.includes(v.code)) && eligible(v)).map(amount));
+    const missed = best("ship") + best("disc") - shipOff - discOff;
+    return { sub, fee, got, chosen, shipOff, discOff, missed, eligible, total: sub + fee - shipOff - discOff };
+  }
+  // Progress toward the next minimum spend that unlocks something.
+  let goalFrom = null;
+  function goalBar(sub) {
+    const next = VOUCHERS.filter(v => !v.hidden && v.goal && v.min > sub).sort((a, b) => a.min - b.min)[0];
+    if (!next) { goalFrom = null; return `<div class="goal done">🎉 ยอดถึงขั้นต่ำทุกโค้ดแล้ว ใช้ส่วนลดได้เต็มที่</div>`; }
+    const pct = Math.max(4, Math.round(sub / next.min * 100));
+    const from = goalFrom && goalFrom.code === next.code ? goalFrom.pct : 0;
+    goalFrom = { code: next.code, pct };
+    return `<div class="goal"><div>${next.icon} สั่งเพิ่มอีก <b>${baht(next.min - sub)}</b> ${next.goal}</div>
+      <div class="goal-bar"><i style="width:${pct}%;--from:${from}%"></i></div></div>`;
+  }
+  function ticket(v, p, where) {
+    const got = p.got.includes(v.code);
+    const applied = p.chosen[v.kind] === v;
+    let cls = "", btn;
+    if (!got) btn = `<button type="button" class="v-btn" data-v="${v.code}" data-act="collect">เก็บ</button>`;
+    else if (where === "menu") btn = `<button type="button" class="v-btn done" disabled>เก็บแล้ว ✓</button>`;
+    else if (applied) { cls = " applied"; btn = `<button type="button" class="v-btn on" data-v="${v.code}" data-act="remove">✓ ใช้อยู่</button>`; }
+    else if (p.eligible(v)) btn = `<button type="button" class="v-btn" data-v="${v.code}" data-act="apply">ใช้</button>`;
+    else { cls = " locked"; btn = `<button type="button" class="v-btn done" disabled>ขาดอีก ${baht(v.min - p.sub)}</button>`; }
+    const used = v.used ? `<span class="v-meta">ใช้ไปแล้ว ${v.used}%</span><span class="v-used"><i style="width:${v.used}%"></i></span>` : `<span class="v-meta">${v.meta}</span>`;
+    // Three children on purpose (stub, body, edge): ThinkAgain then notes just the deadline
+    // ("หมดเขต 23:59 วันนี้"), not the whole ticket, as urgency.
+    return `<div class="voucher ${v.kind}${cls}" data-code="${v.code}"><div class="v-stub"><span aria-hidden="true">${v.icon}</span><b>${v.head}</b></div>
+      <div class="v-body"><span class="v-cond">${v.cond}</span>${used}${btn}</div><span class="v-edge" aria-hidden="true"></span></div>`;
+  }
+  function voucherStrip(cart) {
+    const p = pricing(cart);
+    return `<section class="vstrip"><div class="v-label">🎟️ โค้ดส่วนลดวันนี้ <span>เก็บไว้ ใช้ได้ตอนชำระเงิน</span></div>
+      <div class="vtrack">${VOUCHERS.filter(v => !v.hidden).map(v => ticket(v, p, "menu")).join("")}</div></section>
+      ${cart.length ? goalBar(p.sub) : ""}`;
+  }
+  let codeDraft = "", codeMsg = null; // the typed code survives re-renders
+  function checkoutPanel(cart, count) {
+    const p = pricing(cart);
+    const list = VOUCHERS.filter(v => !v.hidden || p.got.includes(v.code));
+    return `<section class="checkout">
+      ${goalBar(p.sub)}
+      <div class="vbox">
+        <div class="v-label">🎟️ โค้ดส่วนลด <span>ใช้ได้ 1 โค้ดค่าส่ง + 1 โค้ดส่วนลด</span></div>
+        ${p.missed > 0 ? `<div class="nudge">💡 ยังมีโค้ดที่ใช้ได้ ประหยัดเพิ่มได้อีก <b>${baht(p.missed)}</b></div>` : ""}
+        <div class="vlist">${list.map(v => ticket(v, p, "cart")).join("")}</div>
+        <form class="code-form" autocomplete="off"><input name="code" value="${codeDraft}" placeholder="กรอกโค้ด เช่น NEWUSER" aria-label="กรอกโค้ดส่วนลด"><button type="submit">ใช้โค้ด</button></form>
+        ${codeMsg ? `<p class="code-msg ${codeMsg.ok ? "ok" : "err"}" role="status">${codeMsg.text}</p>` : ""}
+      </div>
+      <section class="summary">
+        <div><span>ค่าอาหาร</span><span>${baht(p.sub)}</span></div>
+        <div><span>ค่าจัดส่ง</span><span>${baht(p.fee)}</span></div>
+        ${p.shipOff ? `<div class="disc"><span>ส่วนลดค่าส่ง · ${p.chosen.ship.code}</span><span>−${baht(p.shipOff)}</span></div>` : ""}
+        ${p.discOff ? `<div class="disc"><span>ส่วนลดโค้ด · ${p.chosen.disc.code}</span><span>−${baht(p.discOff)}</span></div>` : ""}
+        <div class="grand"><span>ยอดรวมทั้งหมด (${count} รายการ)</span><span>${baht(p.total)}</span></div>
+        ${p.shipOff + p.discOff ? `<div class="saved">ส่วนลดรวม · คุณประหยัดไป ${baht(p.shipOff + p.discOff)} 🎉</div>` : ""}
+      </section></section>`;
+  }
+  function voucherAction(b) {
+    const v = VOUCHERS.find(x => x.code === b.dataset.v);
+    if (!v) return;
+    const act = b.dataset.act;
+    const onMenu = !/^\/(cart|checkout)/.test(location.pathname);
+    const pick = picks();
+    if (act === "collect") {
+      const card = b.closest(".voucher");
+      let snap = null;
+      if (card) {
+        const r = card.getBoundingClientRect();
+        snap = card.cloneNode(true);
+        snap.getBoundingClientRect = () => r;
+      }
+      collectCode(v.code);
+      if (!onMenu) { pick[v.kind] = v.code; savePicks(pick); }
+      render();
+      flyToCart(snap, () => {});
+      toast(onMenu ? `เก็บโค้ด ${v.head} แล้ว · ใช้ได้ที่ตะกร้า` : `เก็บและใช้โค้ด ${v.head} แล้ว`);
+    } else if (act === "apply") {
+      pick[v.kind] = v.code; savePicks(pick); render();
+      toast(`ใช้โค้ด ${v.head} แล้ว`);
+    } else if (act === "remove") {
+      pick[v.kind] = "none"; savePicks(pick); render();
+    }
+  }
+  m.addEventListener("input", e => { if (e.target.name === "code") codeDraft = e.target.value; });
+  m.addEventListener("submit", e => {
+    if (!e.target.matches(".code-form")) return;
+    e.preventDefault();
+    const code = codeDraft.trim().toUpperCase();
+    const v = VOUCHERS.find(x => x.code === code);
+    const sub = load().reduce((a, l) => a + l.unit * l.qty, 0);
+    if (!code) codeMsg = { ok: false, text: "กรอกโค้ดก่อนนะ" };
+    else if (!v) codeMsg = { ok: false, text: "ไม่พบโค้ดนี้ หรือโค้ดหมดอายุแล้ว" };
+    else {
+      collectCode(v.code);
+      const pick = picks(); pick[v.kind] = v.code; savePicks(pick);
+      codeMsg = sub >= v.min
+        ? { ok: true, text: `ใช้โค้ด ${v.code} แล้ว · ${v.head}` }
+        : { ok: false, text: `โค้ดนี้ใช้ได้เมื่อสั่งครบ ${baht(v.min)} (ขาดอีก ${baht(v.min - sub)})` };
+      codeDraft = "";
+    }
+    render();
+  });
+  {
+    const st = document.createElement("style");
+    st.textContent = `
+      #deals { max-width:760px; margin:24px auto -10px; padding:0 24px; display:grid; gap:14px; }
+      #deals[hidden] { display:none; }
+      @media (max-width:600px) { #deals { padding:0 12px; } }
+      .vstrip, .vbox, .checkout { display:grid; gap:10px; }
+      .checkout { gap:14px; }
+      .vbox { background:#fff; border-radius:14px; padding:14px 16px; }
+      .v-label { font-weight:700; display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; }
+      .v-label span { font-weight:400; font-size:13px; color:#8A6A55; }
+      .vtrack { display:flex; gap:10px; overflow-x:auto; padding:2px 2px 8px; scroll-snap-type:x mandatory; }
+      .vlist { display:grid; gap:10px; }
+      .voucher { position:relative; flex:0 0 auto; width:250px; scroll-snap-align:start; display:grid; grid-template-columns:84px 1fr;
+        background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 6px 18px -12px rgba(40,34,20,.45); border:1px solid #F8E6D0; min-height:92px; box-sizing:border-box; }
+      .vlist .voucher { width:auto; box-shadow:none; }
+      .v-edge { display:none; }
+      .voucher::before, .voucher::after { content:""; position:absolute; left:76px; width:16px; height:16px; border-radius:50%; background:#FFF4E4; }
+      .vbox .voucher::before, .vbox .voucher::after { background:#fff; border:1px solid #F8E6D0; }
+      .voucher::before { top:-9px; } .voucher::after { bottom:-9px; }
+      .v-stub { background:#F0441F; color:#fff; display:grid; place-content:center; gap:2px; text-align:center; padding:8px 6px; line-height:1.2; border-right:2px dashed rgba(255,255,255,.7); }
+      .v-stub span { font-size:20px; } .v-stub b { font-size:15px; }
+      .voucher.ship .v-stub { background:linear-gradient(160deg,#2BC46A,#12A150); }
+      .voucher.disc .v-stub { background:linear-gradient(160deg,#FF8A1F,#F0441F); }
+      .v-body { padding:8px 12px 8px 14px; display:grid; gap:2px; align-content:center; font-size:13px; }
+      .v-cond { font-weight:600; }
+      .v-meta { color:#8A6A55; font-size:12px; }
+      .v-used { display:block; height:4px; background:#FFE8D2; border-radius:2px; overflow:hidden; }
+      .v-used i { display:block; height:100%; background:#F0441F; }
+      .v-btn { justify-self:start; margin-top:4px; padding:4px 16px; font-size:13px; border-radius:999px; }
+      .v-btn.done { background:#FFE8D2; color:#8A6A55; cursor:default; }
+      .v-btn.on { background:#DDF5E6; color:#12A150; }
+      .voucher.applied { border-color:#12A150; box-shadow:0 0 0 1px #12A150; }
+      .voucher.locked { opacity:.55; filter:grayscale(.6); }
+      .goal { background:#fff; border-radius:12px; padding:10px 14px; display:grid; gap:6px; font-size:14px; }
+      .goal b { color:#F0441F; }
+      .goal.done { color:#12A150; font-weight:600; }
+      .goal-bar { height:8px; background:#FFE8D2; border-radius:4px; overflow:hidden; }
+      .goal-bar i { display:block; height:100%; border-radius:4px; background:linear-gradient(90deg,#FFC21A,#F0441F); }
+      .nudge { background:#FFF0C7; border-radius:10px; padding:8px 12px; font-size:14px; }
+      .nudge b { color:#F0441F; }
+      .code-form { display:flex; gap:8px; }
+      .code-form input { flex:1; min-width:0; font:inherit; padding:9px 12px; border:1px solid #F6DEC4; border-radius:10px; text-transform:uppercase; }
+      .code-form input::placeholder { text-transform:none; }
+      .code-msg { margin:0; font-size:13px; } .code-msg.err { color:#B3261E; } .code-msg.ok { color:#12A150; }
+      .summary .disc span:last-child { color:#F0441F; font-weight:600; }
+      .summary .saved { justify-content:center !important; background:#FFE3D6; color:#F0441F; font-weight:700; border-radius:10px; padding:6px 10px; }
+      .summary s { color:#999; font-weight:400; margin-right:4px; }
+      .shop-toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:1001; max-width:calc(100% - 32px);
+        background:#2B1A12; color:#fff; padding:10px 18px; border-radius:999px; font:14px/1.5 system-ui, "Sukhumvit Set", "Noto Sans Thai", sans-serif;
+        box-shadow:0 10px 30px -10px rgba(0,0,0,.5); pointer-events:none; }
+      @media (prefers-reduced-motion: no-preference) {
+        .goal-bar i { animation:goal-grow .7s cubic-bezier(.2,.8,.3,1); }
+        .shop-toast { animation:toast-in .25s ease-out; }
+        .voucher.applied { animation:v-pop .35s ease-out; }
+      }
+      @keyframes goal-grow { from { width:var(--from); } }
+      @keyframes toast-in { from { transform:translate(-50%, 16px); opacity:0; } }
+      @keyframes v-pop { 50% { transform:scale(1.02); } }`;
+    document.head.appendChild(st);
+  }
+
   let flying = 0; // items still in the air; the header count catches up when they land
   const updateCount = () => {
     const count = load().reduce((a, l) => a + l.qty, 0);
     document.getElementById("cartlink").textContent = "ตะกร้า (" + Math.max(0, count - flying) + ")";
   };
+  // Deals (promo, vouchers, spend goal) live in their own block above <main>: their prices
+  // ("ขั้นต่ำ ฿199") must not be read as menu prices by anything scanning the menu.
+  const deals = document.createElement("section");
+  deals.id = "deals";
+  deals.setAttribute("aria-label", "ดีลและโค้ดส่วนลด");
+  m.before(deals);
+  deals.addEventListener("click", e => { const b = e.target.closest("button[data-v]"); if (b) voucherAction(b); });
   function render() {
+    const keep = deals.querySelector(".vtrack")?.scrollLeft || 0;
+    renderPage();
+    const track = deals.querySelector(".vtrack");
+    if (track) track.scrollLeft = keep;
+  }
+  function renderPage() {
     const cart = load();
     updateCount();
     const path = location.pathname.replace(/\/+$/, "");
+    deals.innerHTML = "";
+    deals.hidden = true;
     if ((path.startsWith("/cart") || path.startsWith("/checkout")) && cartPhase === 0) {
       m.innerHTML = `<h1>ตะกร้าสินค้า</h1><p class="note">กำลังโหลดตะกร้า…</p>`;
     } else if (path.startsWith("/cart") || path.startsWith("/checkout")) {
@@ -215,28 +478,57 @@
           <span class="qty"><button data-d="-1" data-i="${i}">−</button><span>${l.qty}</span><button data-d="1" data-i="${i}">+</button></span>
           <span class="price">${baht(l.unit * l.qty)}</span></div>`).join("") || "<p>ตะกร้าว่าง</p>"}
         <section class="suggest"><h2 style="margin:0 0 8px;font-size:16px">ลูกค้ามักสั่งคู่กัน</h2>
-          <div class="card"><img src="${picture("pie")}" alt="พายสับปะรด"><div><h3>พายสับปะรด</h3><p>อบร้อน ๆ</p></div><div class="pay"><span class="price">฿29</span><button data-add="pie">+ เพิ่ม</button></div></div></section>
-        ${cartPhase < 2 ? '<p class="note">กำลังคำนวณยอด…</p>' : `<section class="summary">
-          <div><span>ค่าอาหาร</span><span>${baht(total)}</span></div>
-          <div><span>ค่าจัดส่ง</span><span>ส่งฟรี</span></div>
-          <div class="grand"><span>ยอดรวมทั้งหมด (${count} รายการ)</span><span>${baht(total)}</span></div>
-        </section>`}
+          <div class="card"><img src="${picture("pie")}" alt="พายแอปเปิล"><div><h3>พายแอปเปิล</h3><p>อบร้อน ๆ</p></div><div class="pay"><span class="price">฿29</span><button data-add="pie">+ เพิ่ม</button></div></div></section>
+        ${cartPhase < 2 ? '<p class="note">กำลังคำนวณยอด…</p>' : checkoutPanel(cart, count)}
         <div class="pay"><button>${path.startsWith("/checkout") ? "ยืนยันการสั่งซื้อ" : "ชำระเงิน"}</button><a href="?demo=/menu">เลือกเพิ่ม</a></div>`;
     } else if (!menuReady) {
       m.innerHTML = `<p class="note">กำลังโหลดเมนู…</p>`;
     } else {
-      m.innerHTML = `<div class="promo">ดีลมื้อเที่ยง ราคานี้เฉพาะวันนี้ · เหลือเวลา 04:59</div>
-        ${MENU.map(i => `<div class="card${i.hero ? " hero" : ""}"><img src="${picture(i.id)}" alt="${i.name}"><div><h3>${i.name}${i.hero ? '<span class="badge">ขายดีอันดับ 1</span>' : ""}</h3><p>${i.desc}</p></div>
+      // Three children on purpose: ThinkAgain notes urgency text from small elements, so the
+      // stable label is noted once while the ticking digits (no keyword) are ignored.
+      deals.hidden = false;
+      deals.innerHTML = `<div class="promo"><span class="promo-icon" aria-hidden="true">⏰</span><span>ดีลมื้อเที่ยง ราคานี้เฉพาะวันนี้ · เหลือเวลา</span><span class="countdown" role="timer">${clock()}</span></div>
+        ${voucherStrip(cart)}`;
+      m.innerHTML = `${MENU.map(i => `<div class="card${i.hero ? " hero" : ""}"><img src="${picture(i.id)}" alt="${i.name}"><div><h3>${i.name}${i.hero ? '<span class="badge">ขายดีอันดับ 1</span>' : ""}</h3><p>${i.desc}</p></div>
           <div class="pay"><span class="price">${i.was ? `<s>${baht(i.was)}</s>` : ""}${baht(i.price)}</span><button class="${i.hero ? "" : "quiet"}" data-add="${i.id}">ใส่ตะกร้า</button></div></div>`).join("")}
-        <p class="note">สถานการณ์และราคาสมมติ ไม่มีการสั่งซื้อจริง</p>`;
+        <p class="note">สถานการณ์และราคาสมมติ ไม่มีการสั่งซื้อจริง · ภาพอาหารจาก Unsplash</p>`;
     }
   }
   // Like real shops, the menu arrives later from an API, and more items load after that.
   const LATER = [
-    { id: "thaitea", name: "ชาไทย", desc: "แก้วใหญ่", price: 35 },
+    { id: "thaitea", name: "ชาไทยไข่มุก", desc: "แก้วใหญ่ หวานมัน", price: 35 },
     { id: "icecream", name: "ไอศกรีมวานิลลา", desc: "1 ถ้วย", price: 29 }
   ];
   const dynamic = !new URLSearchParams(location.search).has("static");
+  // Lunch-deal countdown: 5 minutes, kept across pages, and quietly restarts when it runs out.
+  const DEAL_MS = 5 * 60 * 1000;
+  const dealEnd = () => {
+    let end = +localStorage.getItem("deal-end") || 0;
+    if (end <= Date.now()) { end = Date.now() + DEAL_MS; localStorage.setItem("deal-end", String(end)); }
+    return end;
+  };
+  const clock = () => {
+    if (!dynamic) return "04:59";
+    const left = Math.max(0, Math.ceil((dealEnd() - Date.now()) / 1000) - 1);
+    return String(Math.floor(left / 60)).padStart(2, "0") + ":" + String(left % 60).padStart(2, "0");
+  };
+  if (dynamic) setInterval(() => {
+    const el = deals.querySelector(".promo .countdown");
+    if (!el) return;
+    el.textContent = clock();
+    el.classList.remove("tick"); void el.offsetWidth; el.classList.add("tick");
+  }, 1000);
+  {
+    const st = document.createElement("style");
+    st.textContent = `
+      .promo { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+      .promo .countdown { margin-left:auto; background:#fff; color:#E63B2E; border-radius:8px; padding:2px 10px;
+        font-variant-numeric:tabular-nums; font-weight:800; font-size:18px; letter-spacing:.5px; }
+      .promo .countdown.tick { animation:deal-tick .45s ease-out; }
+      @keyframes deal-tick { 0% { transform:scale(1.12); background:#FFE27A; } 100% { transform:scale(1); background:#fff; } }
+      @media (prefers-reduced-motion: reduce) { .promo .countdown.tick { animation:none; } }`;
+    document.head.appendChild(st);
+  }
   let menuReady = !dynamic;
   // The cart arrives in steps too: lines after 2 s, the total after 3.5 s.
   let cartPhase = dynamic ? 0 : 2;
@@ -248,8 +540,104 @@
     setTimeout(() => { menuReady = true; render(); }, 2500);
     setTimeout(() => { MENU.push(...LATER); render(); }, 6000);
   }
+  // Upsell right after an item lands in the cart: combo upgrades and add-on deals.
+  // Accepted extras go in as their own cart lines, so the cart shows what was added.
+  const OFFERS = {
+    burger: { title: "อัปเกรดเป็นชุดคอมโบ?", desc: "เพิ่มเฟรนช์ฟรายส์ + น้ำอัดลม", badge: "คุ้มกว่า", was: 64, price: 49,
+      yes: "อัปเกรดเป็นชุด +฿49", no: "ไม่เป็นไร ขอแค่เบอร์เกอร์",
+      lines: [{ id: "fries", unit: 29, option: "ราคาชุดคอมโบ" }, { id: "drink", unit: 20, option: "ราคาชุดคอมโบ" }] },
+    chicken: { title: "เพิ่มอีกนิด ได้เป็นชุด", desc: "ไก่ทอดชิ้นที่ 2 + น้ำอัดลม", badge: "คุ้มกว่า", was: 70, price: 49,
+      yes: "รับชุดนี้ +฿49", no: "ไม่ล่ะ ชิ้นเดียวพอ",
+      lines: [{ id: "chicken", unit: 29, option: "ชิ้นที่ 2 ราคาพิเศษ" }, { id: "drink", unit: 20, option: "ราคาชุดคอมโบ" }] },
+    box: { title: "ซื้อพ่วงราคาพิเศษ", desc: "พายแอปเปิล อบร้อน ๆ เฉพาะสั่งพร้อมชุดนี้", badge: "ดีลเด็ด", was: 29, price: 19,
+      yes: "เพิ่มพาย ฿19", no: "ไม่ล่ะ ขอบคุณ",
+      lines: [{ id: "pie", unit: 19, option: "ราคาซื้อพ่วง" }] }
+  };
+  {
+    const st = document.createElement("style");
+    st.textContent = `
+      .offer-backdrop { position:fixed; inset:0; z-index:1000; background:rgba(29,27,22,.45); display:flex; align-items:center; justify-content:center; padding:16px; }
+      .offer-sheet { position:relative; width:min(420px, 100%); background:#fff; border-radius:20px; padding:22px 20px 16px; display:grid; gap:10px; text-align:center;
+        box-shadow:0 24px 60px -20px rgba(0,0,0,.5); }
+      .offer-kicker { margin:0; font-size:13px; color:#12A150; font-weight:600; }
+      .offer-head { margin:0; font-size:22px; font-weight:700; }
+      .offer-items { display:flex; align-items:center; justify-content:center; gap:10px; font-size:22px; color:#8A6A55; }
+      .offer-items img { width:112px; height:84px; border-radius:14px; object-fit:cover; }
+      .offer-sheet .desc { margin:0; color:#8A6A55; }
+      .offer-price { display:flex; align-items:center; justify-content:center; gap:8px; font-size:22px; font-weight:800; color:#F0441F; }
+      .offer-price s { color:#999; font-weight:400; font-size:15px; }
+      .offer-price .badge { margin:0; color:#2B1A12; }
+      .offer-yes { width:100%; padding:14px 16px; font-size:17px; font-weight:700; }
+      .offer-no, .offer-close, .v-btn.done, .v-btn.on { box-shadow:none !important; }
+      .offer-no { background:none !important; color:#8A8578 !important; font-size:13px; padding:6px; }
+      .offer-close { position:absolute; top:8px; right:10px; background:none !important; color:#8A8578 !important; font-size:22px; line-height:1; padding:6px 10px; }
+      @media (max-width:600px) {
+        .offer-backdrop { align-items:flex-end; padding:0; }
+        .offer-sheet { width:100%; border-radius:20px 20px 0 0; padding-bottom:calc(16px + env(safe-area-inset-bottom)); }
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .offer-backdrop { animation:offer-fade .2s ease-out; }
+        .offer-sheet { animation:offer-up .32s cubic-bezier(.2,.9,.3,1.15); }
+      }
+      @keyframes offer-fade { from { opacity:0; } }
+      @keyframes offer-up { from { transform:translateY(40px) scale(.96); opacity:0; } }`;
+    document.head.appendChild(st);
+  }
+  let offerOpen = null;
+  function closeOffer() {
+    if (!offerOpen) return;
+    offerOpen.remove();
+    offerOpen = null;
+    document.removeEventListener("keydown", offerKeys);
+  }
+  function offerKeys(e) { if (e.key === "Escape") closeOffer(); }
+  function showOffer(id) {
+    const o = OFFERS[id];
+    const item = MENU.find(i => i.id === id);
+    if (!o || !item) return;
+    closeOffer();
+    const pics = o.lines.map(l => `<img src="${picture(l.id)}" alt="${MENU.find(i => i.id === l.id)?.name || ""}">`).join("<span>+</span>");
+    const wrap = document.createElement("div");
+    wrap.className = "offer-backdrop";
+    wrap.innerHTML = `<div class="offer-sheet" role="dialog" aria-modal="true" aria-labelledby="offer-title">
+        <button type="button" class="offer-close" aria-label="ปิด">×</button>
+        <p class="offer-kicker">✓ เพิ่ม${item.name}ลงตะกร้าแล้ว</p>
+        <p class="offer-head" id="offer-title">${o.title}</p>
+        <div class="offer-items">${pics}</div>
+        <p class="desc">${o.desc}</p>
+        <div class="offer-price"><span class="badge">${o.badge}</span><s>${baht(o.was)}</s><span>${baht(o.price)}</span></div>
+        <button type="button" class="offer-yes">${o.yes}</button>
+        <button type="button" class="offer-no">${o.no}</button>
+      </div>`;
+    wrap.addEventListener("click", e => {
+      if (e.target === wrap || e.target.closest(".offer-close, .offer-no")) { closeOffer(); return; }
+      if (!e.target.closest(".offer-yes")) return;
+      const imgs = [...wrap.querySelectorAll(".offer-items img")];
+      const snaps = imgs.map(img => {
+        const snap = img.cloneNode(false), r = img.getBoundingClientRect();
+        snap.getBoundingClientRect = () => r;
+        return snap;
+      });
+      const cart = load();
+      for (const l of o.lines) {
+        const extra = MENU.find(i => i.id === l.id);
+        cart.push({ id: l.id, name: extra.name, qty: 1, unit: l.unit, option: l.option, suggested: true });
+      }
+      flying += o.lines.length;
+      save(cart);
+      closeOffer();
+      render();
+      snaps.forEach((snap, i) => setTimeout(() => flyToCart(snap, () => { flying--; updateCount(); }), i * 140));
+    });
+    document.body.appendChild(wrap);
+    document.addEventListener("keydown", offerKeys);
+    offerOpen = wrap;
+    wrap.querySelector(".offer-yes").focus({ preventScroll: true });
+  }
+
   m.addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.v) { voucherAction(b); return; }
     if (b.dataset.add) {
       const img = b.closest(".card")?.querySelector("img");
       const ghostFrom = img && img.isConnected ? img : null;
@@ -261,7 +649,9 @@
       }
       flying++;
       add(b.dataset.add, b.dataset.add === "pie" && location.pathname.startsWith("/cart") ? { suggested: true } : {});
-      flyToCart(snapshot, () => { flying--; updateCount(); });
+      const id = b.dataset.add;
+      const onMenu = !/^\/(cart|checkout)/.test(location.pathname);
+      flyToCart(snapshot, () => { flying--; updateCount(); if (onMenu && OFFERS[id]) showOffer(id); });
     }
     if (b.dataset.d) { const cart = load(); const l = cart[+b.dataset.i]; l.qty += +b.dataset.d; if (l.qty <= 0) cart.splice(+b.dataset.i, 1); save(cart); render(); }
   });
@@ -455,6 +845,15 @@ const chrome = { storage: { local: createDemoStorage() } };
     charLabel: "น้องคิด ผู้ช่วยคิดก่อนซื้อ",
     charHint: "คลิกเพื่อคุย · ลากเพื่อย้ายไปอีกฝั่ง",
     close: "ปิด",
+    // 0. offer: ask first whether the shopper wants company while deciding
+    offerEyebrow: "สวัสดี ฉันชื่อน้องคิด",
+    offerTitle: "ให้ช่วยอยู่เคียงข้างตอนตัดสินใจซื้อไหม?",
+    offerTitleLate: "ก่อนจ่าย ให้ช่วยทบทวนอีกทีไหม?",
+    offerSub: "บอกสิ่งที่ตั้งใจซื้อไว้ก่อน แล้วก่อนจ่ายจะเทียบให้ดูว่ายังตรงกับที่ตั้งใจไหม",
+    offerSubLate: "บอกสิ่งที่ตั้งใจซื้อ แล้วจะเทียบกับตะกร้าให้ดู",
+    offerYes: "ให้ช่วย",
+    offerNo: "ไม่ต้อง ขอบคุณ",
+    offerDeclined: "โอเค ถ้าอยากให้ช่วย คลิกที่ฉันได้ตลอดนะ",
     // 1. intention
     askEyebrow: "ก่อนเลือกซื้อ",
     askTitle: "ตั้งใจจะซื้ออะไรจริง ๆ?",
@@ -2149,8 +2548,18 @@ const chrome = { storage: { local: createDemoStorage() } };
           h("button", { type: "button", class: "ghost", onclick: onEdit }, text("editIntent")))));
   }
 
-  function byeView({ text }) {
-    return h("div", { class: "view bye" }, h("p", { class: "bye-text", text: text("bye") }));
+  function byeView({ text, message }) {
+    return h("div", { class: "view bye" }, h("p", { class: "bye-text", text: message || text("bye") }));
+  }
+
+  // Step 0: ask before helping. Yes → the intention question; no → stay out of the way.
+  function offerView({ text, late, onYes, onNo }) {
+    return h("div", { class: "view" },
+      header(text(late ? "offerTitleLate" : "offerTitle"), text("offerEyebrow")),
+      h("p", { class: "sub", text: text(late ? "offerSubLate" : "offerSub") }),
+      h("div", { class: "actions" },
+        h("button", { type: "button", class: "primary", onclick: onYes }, text("offerYes")),
+        h("button", { type: "button", class: "ghost", onclick: onNo }, text("offerNo"))));
   }
 
   // ---------- Thought balloon: what I meant to buy, kept above the character ----------
@@ -2219,7 +2628,7 @@ const chrome = { storage: { local: createDemoStorage() } };
     return { element: bubble, show, hide, position, get visible() { return visible; } };
   }
 
-  ta.dialog = Object.freeze({ createDialog, createThought, intentView, budgetView, savedView, compareView, byeView, h, thumb });
+  ta.dialog = Object.freeze({ createDialog, createThought, offerView, intentView, budgetView, savedView, compareView, byeView, h, thumb });
 })();
 
 ;
@@ -2400,6 +2809,32 @@ const chrome = { storage: { local: createDemoStorage() } };
   }
 
   // ---------- Flows ----------
+  // The shopper's answer to "want me by your side?" lasts a day, like an intention.
+  const ASSIST_TTL_MS = 24 * 60 * 60 * 1000;
+  function assistChoice() {
+    const assist = site && site.assist;
+    return assist && Date.now() - assist.at < ASSIST_TTL_MS ? assist.choice : null;
+  }
+  function setAssist(choice) {
+    const assist = { choice, at: Date.now() };
+    site = { ...site, assist };
+    ta.storage.updateSite(location.origin, { assist }).catch(error => console.error("ThinkAgain: unable to save answer", error));
+  }
+
+  function offerHelp(late) {
+    flow = "offer";
+    show(ta.dialog.offerView({
+      text, late,
+      onYes: () => { setAssist("yes"); if (late) compareNow(); else askIntent(false); },
+      onNo: () => {
+        setAssist("no");
+        flow = "bye";
+        show(ta.dialog.byeView({ text, message: text("offerDeclined") }), "happy");
+        setTimeout(() => { if (flow === "bye") closeDialog(); }, 2200);
+      }
+    }), "happy").then(() => ui?.character.wave());
+  }
+
   function askIntent(late) {
     flow = "ask";
     const saved = currentIntent();
@@ -2498,6 +2933,9 @@ const chrome = { storage: { local: createDemoStorage() } };
   }
 
   function openForZone(userAsked) {
+    // Clicking the character after "no" counts as asking for help.
+    if (userAsked && assistChoice() === "no") setAssist("yes");
+    if (!currentIntent() && !assistChoice()) { offerHelp(CART_ZONES.includes(zone)); return; }
     if (CART_ZONES.includes(zone)) compareNow();
     else if (zone === "shopping") currentIntent() && userAsked ? savedNote() : askIntent(false);
   }
@@ -2571,7 +3009,14 @@ const chrome = { storage: { local: createDemoStorage() } };
         confirmedPages.delete(key);
         comparedPages.delete(key);
       }
-      if (!comparedPages.has(key) && !confirmedPages.has(key)) { await character.go("out"); compareNow(); }
+      if (!comparedPages.has(key) && !confirmedPages.has(key)) {
+        if (currentIntent() || assistChoice() === "yes") { await character.go("out"); compareNow(); }
+        else {
+          comparedPages.add(key);
+          if (assistChoice() === "no") { if (character.state === "away") await character.go("peek"); }
+          else { await character.go("out"); offerHelp(true); }
+        }
+      }
       else if (character.state === "away") character.go("peek");
       else if (!dialog.isOpen && currentIntent()) {
         // Keep the face honest while tucked away: worried when over budget.
@@ -2583,8 +3028,9 @@ const chrome = { storage: { local: createDemoStorage() } };
     }
     if (!currentIntent() && !askedPages.has(key)) {
       askedPages.add(key);
-      await character.go("out");
-      askIntent(false);
+      const choice = assistChoice();
+      if (choice === "no") { if (character.state === "away") await character.go("peek"); }
+      else { await character.go("out"); if (choice === "yes") askIntent(false); else offerHelp(false); }
     } else if (character.state === "away" || (changed && !dialog.isOpen && !flow && Date.now() - userOpenedAt > STICKY_MS)) {
       await character.go("peek");
     }
