@@ -3,675 +3,743 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light" />
+<meta name="theme-color" content="#0d9488" />
 <title>โปรไฟล์สมรรถนะ AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
+/* Tokens follow students/v2/dashboard.css (student dashboard) and the
+   teacher dashboard header. Light theme only, same as both dashboards. */
 :root {
-  --bg: #f4f6f8;
+  color-scheme: light;
+  --bgA: #f7fbfb;
+  --bgB: #ffffff;
   --panel: #ffffff;
-  --panel-2: #f8fafc;
-  --ink: #0f172a;
+  --panel-2: #f4f7f9;
+  --ink: #102a2f;
   --ink-2: #334155;
-  --muted: #64748b;
-  --line: #e2e8f0;
-  --track: #eef2f6;
-  --brand: #0d9488;
-  --brand-50: #f0fdfa;
-  --brand-700: #0f766e;
-  --d1: #2563a8;
-  --d2: #12876f;
-  --d3: #d98a0b;
-  --d4: #6b4fa0;
-  --d1s: #2563a8; --d2s: #0f7a64; --d3s: #b86f00; --d4s: #6b4fa0;
-  --ok: #059669;
-  --ok-bg: #ecfdf5;
-  --warn: #b45309;
-  --warn-bg: #fffbeb;
-  --idle: #64748b;
-  --idle-bg: #f1f5f9;
-  --shadow: 0 1px 3px rgba(16,24,40,.06), 0 1px 2px rgba(16,24,40,.04);
+  --muted: #5b6b6f;
+  --line: #e3e8ee;
+  --track: #e8eef2;
+  --brand: #18a4aa;
+  --brand-50: #e0faf8;
+  --brand-500: #1fb9b7;
+  --brand-700: #138a92;
+  --brand-800: #0f6b72;
+  --cat-1: #f56a6a;
+  --cat-2: #f6b86a;
+  --cat-3: #8ccf7a;
+  --cat-4: #5f76c8;
+  --ok: #166534; --ok-bg: #dcfce7; --ok-line: #bbf7d0;
+  --info: #1d4ed8; --info-bg: #dbeafe; --info-line: #bfdbfe;
+  --warn: #b45309; --warn-bg: #fef3c7;
+  --idle: #475569; --idle-bg: #f1f5f9; --idle-line: #e2e8f0;
+  --rXL: 24px; --rLG: 18px; --rMD: 14px;
+  --shadow-sm: 0 6px 14px rgba(12,34,46,.07);
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0b1220; --panel: #111a2b; --panel-2: #0f1726; --ink: #e5edf7; --ink-2: #c3cfdd;
-    --muted: #8a9ab0; --line: #22304a; --track: #1a2538; --brand: #2dd4bf; --brand-50: #0f2a2a; --brand-700: #5eead4;
-    --d1: #5b9be0; --d2: #34b597; --d3: #f0a937; --d4: #9a7fd1;
-    --ok: #34d399; --ok-bg: #0f2a22; --warn: #fbbf24; --warn-bg: #2a2110; --idle: #94a3b8; --idle-bg: #1a2538;
-    --shadow: none;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #0b1220; --panel: #111a2b; --panel-2: #0f1726; --ink: #e5edf7; --ink-2: #c3cfdd;
-  --muted: #8a9ab0; --line: #22304a; --track: #1a2538; --brand: #2dd4bf; --brand-50: #0f2a2a; --brand-700: #5eead4;
-  --d1: #5b9be0; --d2: #34b597; --d3: #f0a937; --d4: #9a7fd1;
-  --ok: #34d399; --ok-bg: #0f2a22; --warn: #fbbf24; --warn-bg: #2a2110; --idle: #94a3b8; --idle-bg: #1a2538;
-  --shadow: none;
-}
-* { box-sizing: border-box; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; }
 body {
-  background: var(--bg); color: var(--ink);
-  font-family: "Noto Sans Thai", "Inter", system-ui, sans-serif; font-size: 15px; line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 10% 5%, rgba(31,185,183,.08), transparent 40%),
+    radial-gradient(circle at 95% 15%, rgba(79,208,200,.10), transparent 45%),
+    linear-gradient(180deg, var(--bgA), var(--bgB));
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: "Kanit", "Noto Sans Thai", "Segoe UI", system-ui, sans-serif;
+  font-size: 15px; font-weight: 400; line-height: 1.5;
 }
-.num { font-family: Inter, "Noto Sans Thai", sans-serif; font-variant-numeric: tabular-nums; }
-.wrap { max-width: 1240px; margin: 0 auto; padding: 20px 16px 48px; }
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+.num { font-feature-settings: "tnum" 1; }
 h1, h2, h3 { margin: 0; line-height: 1.35; }
-h2 { font-size: 18px; font-weight: 700; }
-.sub { color: var(--muted); font-size: 13px; }
-button { font: inherit; color: inherit; }
+h2 { font-size: 18px; font-weight: 600; }
+button, select { font: inherit; color: inherit; }
 
-/* top bar */
-.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-.crumbs { color: var(--muted); font-size: 13px; }
-.crumbs b { color: var(--ink-2); font-weight: 600; }
-.demo-tag { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; background: var(--warn-bg); color: var(--warn); font-size: 12px; font-weight: 600; }
-.band-select { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
-.band-select select { font: inherit; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; }
+/* header: same shape as the teacher dashboard header */
+.topnav {
+  position: sticky; top: 0; z-index: 50; height: 60px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 0 22px; background: rgba(255,255,255,.82);
+  backdrop-filter: blur(12px) saturate(1.2); -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  border-bottom: 1px solid rgba(0,0,0,.05); box-shadow: 0 1px 2px rgba(16,24,40,.05);
+}
+.topnav .left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.topnav img { height: 34px; object-fit: contain; }
+.topnav .vr { width: 1px; height: 26px; background: #e2e8f0; flex: none; }
+.topnav .page { font-size: 15px; font-weight: 600; color: #1e293b; white-space: nowrap; }
+.av { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 13px; font-weight: 600; background: linear-gradient(135deg, #2dd4bf, #0d9488); }
+
+.wrap { max-width: 1240px; margin: 0 auto; padding: 20px 16px 40px; }
+.clay { background: var(--panel); border: 1px solid var(--line); border-radius: var(--rXL); box-shadow: var(--shadow-sm); }
+.clay-soft { background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--rLG); }
+.cat-card { border-left: 6px solid transparent; }
+.cat-1 { border-left-color: var(--cat-1); } .cat-2 { border-left-color: var(--cat-2); }
+.cat-3 { border-left-color: var(--cat-3); } .cat-4 { border-left-color: var(--cat-4); }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; border: 1px solid transparent; font-size: 12px; font-weight: 500; white-space: nowrap; line-height: 1.3; }
+.st-ok { background: var(--ok-bg); color: var(--ok); border-color: var(--ok-line); }
+.st-dev { background: var(--info-bg); color: var(--info); border-color: var(--info-line); }
+.st-idle { background: var(--idle-bg); color: var(--idle); border-color: var(--idle-line); }
 
 /* hero */
-.hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 2fr); gap: 0; overflow: hidden; }
-.who { display: flex; gap: 16px; align-items: center; padding: 22px; border-right: 1px solid var(--line); }
-.avatar { flex: none; width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center; background: linear-gradient(135deg, var(--brand), var(--d1)); color: #fff; font-size: 24px; font-weight: 700; }
-.who h1 { font-size: 21px; font-weight: 700; }
-.who .meta { color: var(--muted); font-size: 13px; }
-.who .course { margin-top: 6px; display: inline-block; font-size: 12px; font-weight: 600; color: var(--brand-700); background: var(--brand-50); padding: 2px 10px; border-radius: 999px; }
-.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.kpi { padding: 18px 20px; border-right: 1px solid var(--line); }
-.kpi:last-child { border-right: 0; }
-.kpi .label { color: var(--muted); font-size: 13px; }
-.kpi .value { margin-top: 4px; font-size: 30px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
-.kpi .value small { font-size: 15px; font-weight: 600; color: var(--muted); letter-spacing: 0; }
-.kpi .hint { margin-top: 4px; color: var(--muted); font-size: 12px; }
-.bar { height: 6px; border-radius: 99px; background: var(--track); overflow: hidden; margin-top: 8px; }
-.bar > i { display: block; height: 100%; border-radius: 99px; background: var(--brand); }
+.hero { padding: 18px 20px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; }
+.org { display: inline-block; margin-top: 4px; padding: 2px 12px; border-radius: 999px; background: var(--brand-500); color: #fff; font-size: 12px; font-weight: 600; letter-spacing: .02em; }
+.who { display: flex; gap: 14px; align-items: center; min-width: 0; }
+.who .av { width: 56px; height: 56px; font-size: 20px; border-radius: 18px; }
+.who h1 { font-size: 22px; font-weight: 700; }
+.who .meta { color: var(--muted); font-size: 13px; font-weight: 300; }
+.ctrl { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.demo-tag { padding: 3px 10px; border-radius: 999px; background: var(--warn-bg); color: var(--warn); font-size: 12px; white-space: nowrap; }
+select { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 7px 12px; font-size: 14px; }
+select:focus { outline: none; border-color: rgba(31,185,183,.72); box-shadow: 0 0 0 4px rgba(31,185,183,.18); }
+.stats { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.stat { padding: 12px 16px; }
+.stat .label { color: #64748b; font-size: 13px; }
+.stat .value { font-size: 26px; font-weight: 700; line-height: 1.25; }
+.stat .value small { font-size: 14px; font-weight: 400; color: var(--muted); }
+.bar { height: 8px; border-radius: 99px; background: #e2e8f0; overflow: hidden; margin-top: 6px; }
+.bar > i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--brand-700), var(--brand-500)); }
 
-/* main grid */
-.grid-main { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; }
-.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 18px 20px 0; flex-wrap: wrap; }
-
-/* wheel */
-.wheel-box { padding: 8px 12px 16px; }
-.wheel { display: block; width: 100%; max-width: 520px; margin: 0 auto; height: auto; }
-.wheel .seg { cursor: pointer; outline: none; }
-.wheel .seg:hover .band, .wheel .seg:focus-visible .band { filter: brightness(1.06); }
-.wheel .seg:focus-visible .sel-ring { stroke: var(--ink); stroke-width: 2; stroke-dasharray: 3 3; }
-.wheel .code { font-family: Inter, sans-serif; font-size: 11px; font-weight: 700; fill: #fff; pointer-events: none; }
-.wheel .center-big { font-family: Inter, sans-serif; font-size: 34px; font-weight: 800; fill: var(--ink); }
-.wheel .center-sm { font-size: 11px; fill: var(--muted); }
-.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; justify-content: center; padding: 4px 16px 0; font-size: 12px; color: var(--muted); }
+/* main */
+.grid-main { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; align-items: start; }
+.head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 18px 20px 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
-.sw { width: 14px; height: 10px; border-radius: 3px; display: inline-block; }
-.domains-legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px; padding: 12px 20px 0; font-size: 13px; }
-.domains-legend span { display: flex; gap: 8px; align-items: center; color: var(--ink-2); }
-.domains-legend i { flex: none; width: 10px; height: 10px; border-radius: 50%; }
+.sw { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+
+.wheel { display: block; width: 100%; height: auto; padding: 4px 8px 12px; }
+.wheel .seg { cursor: pointer; outline: none; }
+.wheel .seg:hover .name-bg { filter: brightness(.96); }
+.wheel .seg:focus-visible .sel { stroke: #0f172a; stroke-width: 2.5; stroke-dasharray: 4 3; }
+.wheel text { font-family: "Kanit", "Noto Sans Thai", sans-serif; pointer-events: none; }
+.wheel .code { font-size: 14px; font-weight: 600; fill: #fff; }
+.wheel .name { font-size: 10.5px; font-weight: 400; fill: #1e293b; }
+.wheel .dname { font-size: 10.5px; font-weight: 600; fill: #fff; }
 
 /* detail */
 .detail { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
-.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-.detail-title { font-size: 19px; font-weight: 700; margin-top: 8px; }
-.detail-title .num { color: var(--muted); margin-right: 6px; }
+.src { display: flex; flex-direction: column; gap: 10px; }
+.crs { display: flex; gap: 10px; align-items: center; padding: 6px 10px 6px 6px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: inherit; text-decoration: none; transition: border-color .15s, box-shadow .15s; }
+.crs:hover { border-color: var(--brand-500); box-shadow: 0 0 0 3px rgba(31,185,183,.12); }
+.crs img { flex: none; width: 64px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; background: var(--panel-2); }
+.crs .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.crs .n { font-size: 13px; font-weight: 500; line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.crs .s { font-size: 12px; color: var(--muted); font-weight: 300; }
+.crs .sc { flex: none; font-size: 13px; font-weight: 600; }
+.crs.rec { background: var(--panel-2); }
+.gain { display: inline-block; margin: 3px 4px 0 0; padding: 0 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+.go { flex: none; padding: 6px 12px; border-radius: 999px; color: #fff; font-size: 12px; font-weight: 600; white-space: nowrap; background: linear-gradient(90deg, var(--brand-700), var(--brand-500)); }
+.d-title { font-size: 19px; font-weight: 600; margin-top: 8px; }
+.d-title .c { color: var(--muted); margin-right: 6px; }
 .meter { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.step { position: relative; border-radius: 10px; padding: 10px 10px 8px; background: var(--track); color: var(--muted); font-size: 13px; font-weight: 600; text-align: center; }
-.step .dots { letter-spacing: 2px; font-size: 12px; }
-.step.done { color: #fff; }
-.step.goal { outline: 2px dashed currentColor; outline-offset: -2px; }
-.step .flag { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); font-size: 11px; padding: 0 8px; border-radius: 99px; background: var(--ink); color: var(--panel); white-space: nowrap; }
-.status-line { font-size: 14px; color: var(--ink-2); }
-.box { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--panel-2); }
-.box h3 { font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
-.box p { margin: 0; font-size: 14px; color: var(--ink-2); }
-.rubric { display: flex; flex-direction: column; gap: 6px; }
-.rub { display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 10px; align-items: start; padding: 8px 10px; border-radius: 10px; font-size: 14px; color: var(--ink-2); border: 1px solid transparent; }
-.rub b { font-size: 12px; font-weight: 700; }
-.rub.got { background: var(--ok-bg); }
-.rub.got b { color: var(--ok); }
-.rub.next { border-color: var(--line); border-style: dashed; background: var(--panel); }
-.rub.next b { color: var(--warn); }
-.rub.later b { color: var(--muted); }
-.evi { display: flex; flex-direction: column; gap: 6px; }
-.evi-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); font-size: 14px; }
-.evi-row .name { flex: 1; min-width: 0; }
-.evi-row .role { font-size: 11px; font-weight: 700; color: var(--muted); width: 34px; flex: none; }
-.evi-row .score { flex: none; font-weight: 700; width: 44px; text-align: right; }
-.empty { color: var(--muted); font-size: 14px; }
-
-/* status chips */
-.st-ok { background: var(--ok-bg); color: var(--ok); }
-.st-dev { background: var(--warn-bg); color: var(--warn); }
-.st-idle { background: var(--idle-bg); color: var(--idle); }
-
-/* domain cards */
-.domains { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
-.dcard { overflow: hidden; }
-.dcard-head { padding: 14px 18px; color: #fff; display: flex; justify-content: space-between; gap: 12px; align-items: center; }
-.dcard-head h3 { font-size: 15px; font-weight: 700; }
-.dcard-head .pct { font-size: 22px; font-weight: 800; }
-.dcard-head .pct small { font-size: 12px; font-weight: 600; opacity: .85; display: block; text-align: right; font-family: "Noto Sans Thai", sans-serif; }
-.crow { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; width: 100%; padding: 9px 18px; border: 0; border-top: 1px solid var(--line); background: none; text-align: left; cursor: pointer; font-size: 14px; }
-.crow:hover { background: var(--panel-2); }
-.crow.active { background: var(--brand-50); }
-.crow .code { font-weight: 700; color: var(--muted); font-size: 13px; }
-.lv { display: inline-flex; gap: 4px; }
-.lv i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-.lv i.off { background: var(--track); }
+.step { position: relative; border-radius: var(--rMD); padding: 12px 6px; text-align: center; font-size: 14px; font-weight: 500; background: #f1f4f7; color: #94a3b8; border: 2px solid transparent; }
+.step.need { background: #fff; border-style: dashed; }
+.step .flag { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); font-size: 11px; padding: 0 8px; border-radius: 99px; background: #0f172a; color: #fff; white-space: nowrap; }
+.status { font-size: 15px; font-weight: 500; }
+.next { border-radius: var(--rMD); padding: 10px 14px; font-size: 14px; font-weight: 300; border-left: 5px solid; }
+.next b { display: block; font-size: 12px; font-weight: 600; }
+.label-sm { font-size: 13px; color: #64748b; margin-bottom: 8px; }
+.ev { display: flex; flex-wrap: wrap; gap: 6px; }
+.ev .chip { font-size: 13px; padding: 4px 10px; }
+.ev .chip.sec { border-style: dashed; }
+.muted { color: var(--muted); font-size: 14px; font-weight: 300; }
 
 /* lessons */
-.lessons { margin-top: 16px; }
-.table-wrap { overflow-x: auto; padding: 8px 0 4px; }
-table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 860px; }
-th { text-align: left; font-size: 12px; font-weight: 600; color: var(--muted); padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
-tr.lesson-row:hover td { background: var(--panel-2); }
-td.lesson-name { font-weight: 600; min-width: 220px; }
-td.lesson-name .code { color: var(--muted); font-weight: 700; margin-right: 6px; }
-.mini { display: flex; align-items: center; gap: 8px; min-width: 96px; }
+.lessons { margin-top: 16px; overflow: hidden; }
+.grid-main, #detail { scroll-margin-top: 76px; }
+.tabs { display: flex; gap: 8px; overflow-x: auto; padding: 14px 20px 0; border-bottom: 1px solid var(--line); }
+.tab { flex: none; width: 250px; display: flex; gap: 10px; align-items: center; padding: 8px 10px; margin-bottom: -1px; border: 1px solid var(--line); border-radius: 14px 14px 0 0; background: var(--panel-2); cursor: pointer; text-align: left; opacity: .8; }
+.tab:hover { opacity: 1; }
+.tab.on { background: #fff; border-bottom-color: #fff; opacity: 1; box-shadow: inset 0 3px 0 var(--brand-500); }
+.tab img { flex: none; width: 60px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 6px; }
+.tab .n { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 13px; font-weight: 500; line-height: 1.3; }
+.tab .chip { margin-top: 4px; font-size: 11px; padding: 0 8px; }
+.cpanel { padding: 18px 20px 12px; display: flex; flex-direction: column; gap: 18px; }
+.ctop { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.6fr); gap: 16px; align-items: center; }
+.cinfo { display: flex; gap: 14px; align-items: center; min-width: 0; }
+.cinfo img { flex: none; width: 150px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 12px; background: var(--panel-2); }
+.cinfo .t { font-size: 15px; font-weight: 600; line-height: 1.4; }
+.cinfo .link { margin-left: 10px; font-size: 13px; color: var(--brand-700); text-decoration: none; }
+.cinfo .link:hover { text-decoration: underline; }
+.cstats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.got { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.got button { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; background: #fff; cursor: pointer; text-align: left; font-size: 14px; }
+.got button:hover { border-color: var(--brand-500); box-shadow: 0 0 0 3px rgba(31,185,183,.12); }
+.got .cd { flex: none; min-width: 36px; text-align: center; padding: 1px 6px; border-radius: 8px; color: #fff; font-size: 13px; font-weight: 600; }
+.got .nm { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.got .gain { margin: 0; flex: none; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 680px; }
+th { text-align: left; font-size: 12px; font-weight: 500; color: #64748b; padding: 8px 12px; background: var(--panel-2); white-space: nowrap; }
+th:first-child { border-radius: 10px 0 0 10px; } th:last-child { border-radius: 0 10px 10px 0; }
+td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+td .lc { color: var(--muted); font-weight: 600; margin-right: 8px; }
+.mini { display: flex; align-items: center; gap: 8px; min-width: 120px; }
 .mini .bar { flex: 1; margin: 0; }
-.mini span { width: 36px; text-align: right; font-size: 13px; }
-.cchip { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; margin: 0 4px 4px 0; border-radius: 6px; border: 1px solid; background: var(--panel); font-size: 12px; font-weight: 700; cursor: pointer; font-family: Inter, sans-serif; }
-.cchip.sec { border-style: dashed; font-weight: 600; }
-.why { margin-top: 6px; font-size: 12px; color: var(--muted); font-weight: 400; }
-.why summary { cursor: pointer; color: var(--brand-700); width: fit-content; }
-.why p { margin: 6px 0 0; line-height: 1.55; }
-.foot { margin-top: 18px; color: var(--muted); font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
+.mini span { width: 40px; text-align: right; font-size: 13px; }
+.cchip { display: inline-block; padding: 1px 8px; margin: 2px 4px 2px 0; border-radius: 8px; border: 1.5px solid; font-size: 12px; font-weight: 600; cursor: pointer; background: #fff; }
+.cchip.sec { border-style: dashed; font-weight: 500; }
+.foot { margin-top: 14px; color: var(--muted); font-size: 12px; font-weight: 300; text-align: center; }
 
 @media (max-width: 1000px) {
-  .hero { grid-template-columns: minmax(0, 1fr); }
-  .who { border-right: 0; border-bottom: 1px solid var(--line); }
+  .ctop { grid-template-columns: minmax(0, 1fr); }
   .grid-main { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 720px) {
-  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .kpi:nth-child(2) { border-right: 0; }
-  .kpi:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
-  .domains { grid-template-columns: minmax(0, 1fr); }
-  .domains-legend { grid-template-columns: minmax(0, 1fr); }
-  .crow { grid-template-columns: 30px minmax(0, 1fr) auto; padding: 9px 14px; }
-  .crow .chip { grid-column: 2 / 4; justify-self: start; }
-  .topbar > div:last-child { width: 100%; justify-content: space-between; }
-  .kpi .value { font-size: 26px; }
+  .topnav { padding: 0 12px; }
+  .hide-sm { display: none; }
+  .hero { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+  .cinfo img { width: 110px; }
+  .got { grid-template-columns: minmax(0, 1fr); }
+  .tabs { padding: 12px 12px 0; }
+  .tab { width: 210px; }
+  .cpanel { padding: 16px 14px 10px; }
+  .ctrl { justify-content: flex-start; }
+  .stat .value { font-size: 22px; }
 }
 @media print {
-  body { background: #fff; }
-  .band-select, .why summary { display: none; }
-  .panel { box-shadow: none; break-inside: avoid; }
+  .topnav, .ctrl select { display: none; }
+  .clay { box-shadow: none; break-inside: avoid; }
 }
 </style>
 </head>
 <body>
-<div class="wrap">
-
-  <div class="topbar">
-    <div>
-      <div class="crumbs">Student Dashboard › <b>โปรไฟล์สมรรถนะ AI</b></div>
-    </div>
-    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-      <span class="demo-tag">● ข้อมูลตัวอย่างสำหรับ demo</span>
-      <label class="band-select">เทียบเป้าหมายช่วงชั้น
-        <select id="band"></select>
-      </label>
-    </div>
+<header class="topnav">
+  <div class="left">
+    <img src="https://lms.mooc.meca.in.th/static/sbs-themes/images/logo-adap-green-untext.1c98bf032947.png" alt="MECA" />
+    <span class="vr hide-sm"></span>
+    <img class="hide-sm" src="https://www.nectec.or.th/wp-content/uploads/2021/08/cropped-logo.png" alt="NECTEC" />
+    <span class="vr"></span>
+    <span class="page">โปรไฟล์สมรรถนะ AI</span>
   </div>
+  <span class="av" id="nav-av"></span>
+</header>
 
-  <section class="panel hero">
+<main class="wrap">
+  <section class="clay hero">
     <div class="who">
-      <div class="avatar" id="avatar"></div>
+      <div class="av" id="avatar"></div>
       <div>
         <h1 id="s-name"></h1>
         <div class="meta" id="s-meta"></div>
-        <span class="course" id="s-course"></span>
       </div>
     </div>
-    <div class="kpis" id="kpis"></div>
+    <div class="ctrl">
+      <span class="demo-tag">ข้อมูลตัวอย่าง</span>
+      <select id="band" aria-label="เป้าหมายช่วงชั้น"></select>
+    </div>
+    <div class="stats" id="stats"></div>
   </section>
 
   <div class="grid-main">
-    <section class="panel">
-      <div class="section-head">
-        <div>
-          <h2>วงล้อสมรรถนะ AI</h2>
-          <div class="sub">22 สมรรถนะใน 4 โดเมน · วงในคือระดับเข้าใจ วงกลางคือประยุกต์ วงนอกคือต่อยอด · คลิกเพื่อดูรายละเอียด</div>
-        </div>
+    <section class="clay">
+      <div class="head">
+        <h2>วงล้อสมรรถนะ AI</h2>
+        <div class="legend" id="legend"></div>
       </div>
-      <div class="wheel-box">
-        <svg class="wheel" id="wheel" viewBox="-250 -250 500 500" role="img" aria-label="วงล้อสมรรถนะ AI ของนักเรียน"></svg>
-        <div class="legend" id="wheel-legend"></div>
-        <div class="domains-legend" id="domains-legend"></div>
-      </div>
+      <svg class="wheel" id="wheel" viewBox="-380 -380 760 760" role="img" aria-label="วงล้อสมรรถนะ AI"></svg>
     </section>
-
-    <section class="panel" aria-live="polite">
+    <section class="clay" aria-live="polite">
       <div class="detail" id="detail"></div>
     </section>
   </div>
 
-  <div class="domains" id="domains"></div>
-
-  <section class="panel lessons">
-    <div class="section-head">
-      <div>
-        <h2 id="module-title"></h2>
-        <div class="sub">ความก้าวหน้ารายบทเรียน และสมรรถนะที่แต่ละบทเรียนประเมิน (สมรรถนะหลักเป็นกรอบทึบ สมรรถนะรองเป็นกรอบประ)</div>
-      </div>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>บทเรียน</th><th>สถานะ</th><th>วิดีโอ</th><th>BookRoll</th><th>แบบทดสอบ</th><th>สมรรถนะหลัก</th><th>สมรรถนะรอง</th>
-          </tr>
-        </thead>
-        <tbody id="lessons"></tbody>
-      </table>
-    </div>
+  <section class="clay lessons">
+    <div class="head"><h2>หลักสูตรที่เรียน</h2></div>
+    <div class="tabs" id="tabs" role="tablist"></div>
+    <div class="cpanel" id="cpanel" role="tabpanel"></div>
   </section>
 
-  <div class="foot">
-    <div>ระดับ: ● เข้าใจ · ●● ประยุกต์ · ●●● ต่อยอด · เป้าหมายแต่ละช่วงชั้นมาจากตารางระดับสมรรถนะ (ฉบับร่าง) · การ mapping บทเรียนมาจากไฟล์ “ตัวอย่าง mapping สำหรับการ demo”</div>
-    <div>ชื่อนักเรียน ความก้าวหน้า คะแนน และระดับที่ได้ทั้งหมดเป็นข้อมูลจำลอง ยังไม่ได้คำนวณจากระบบจริง</div>
-  </div>
-</div>
+  <div class="foot">ข้อมูลนักเรียน และการ mapping ของหลักสูตรอื่นนอกจาก ม.ปลาย Module 1 เป็นข้อมูลจำลอง · กรอบสมรรถนะ AI ฉบับร่าง</div>
+</main>
 
 <script>
 (function () {
   "use strict";
 
-  // ---------- Framework (from reference images) ----------
+  // ---------- Framework (from the reference images) ----------
   var LEVELS = ["", "เข้าใจ", "ประยุกต์", "ต่อยอด"];
 
   var BANDS = [
-    { id: "p", label: "ประถมศึกษา" },
-    { id: "m1", label: "ม.ต้น" },
-    { id: "m2", label: "ม.ปลาย + ปวช." },
-    { id: "hi", label: "ปวส. + อุดมศึกษา" }
+    { id: "p", label: "เป้าหมาย ประถมศึกษา" },
+    { id: "m1", label: "เป้าหมาย ม.ต้น" },
+    { id: "m2", label: "เป้าหมาย ม.ปลาย + ปวช." },
+    { id: "hi", label: "เป้าหมาย ปวส. + อุดมศึกษา" }
   ];
 
+  // shade[0..2] = เข้าใจ / ประยุกต์ / ต่อยอด (light → dark, like the rubric table header)
+  // on[0..2] = text color on each shade; tint = name ring; solid = code ring.
   var DOMAINS = [
-    { id: 1, name: "การอยู่ร่วมกับปัญญาประดิษฐ์", color: "--d1", solid: "--d1s" },
-    { id: 2, name: "การสร้างสรรค์ผลงานด้วยปัญญาประดิษฐ์", color: "--d2", solid: "--d2s" },
-    { id: 3, name: "การจัดการการใช้ปัญญาประดิษฐ์", color: "--d3", solid: "--d3s" },
-    { id: 4, name: "การออกแบบและพัฒนาปัญญาประดิษฐ์", color: "--d4", solid: "--d4s" }
+    { id: 1, name: ["การอยู่ร่วมกับ", "ปัญญาประดิษฐ์"], full: "การอยู่ร่วมกับปัญญาประดิษฐ์", icon: "chip",
+      bubble: "#2563a8", solid: "#1d4f8c", tint: "#e3edf8", shade: ["#a9c8ec", "#5b93d3", "#1f5aa0"], on: ["#123d6e", "#fff", "#fff"] },
+    { id: 2, name: ["การสร้างสรรค์ผลงาน", "ด้วยปัญญาประดิษฐ์"], full: "การสร้างสรรค์ผลงานด้วยปัญญาประดิษฐ์", icon: "bulb",
+      bubble: "#16967a", solid: "#0f7a64", tint: "#ddf2eb", shade: ["#9edcc8", "#3aae92", "#0f7a64"], on: ["#0b5244", "#fff", "#fff"] },
+    { id: 3, name: ["การจัดการการใช้", "ปัญญาประดิษฐ์"], full: "การจัดการการใช้ปัญญาประดิษฐ์", icon: "shield",
+      bubble: "#e39a1c", solid: "#c47605", tint: "#fcefd6", shade: ["#f7d595", "#eea93a", "#c47605"], on: ["#6b4100", "#4a2d00", "#fff"] },
+    { id: 4, name: ["การออกแบบและ", "พัฒนาปัญญาประดิษฐ์"], full: "การออกแบบและพัฒนาปัญญาประดิษฐ์", icon: "code",
+      bubble: "#6b4fa0", solid: "#563a8c", tint: "#ebe5f6", shade: ["#c8b7e6", "#9478c9", "#5b3d94"], on: ["#3b2466", "#fff", "#fff"] }
   ];
 
-  // target levels per band: [ประถม, ม.ต้น, ม.ปลาย+ปวช., ปวส.+อุดมศึกษา]
+  // t = target level per band [ประถม, ม.ต้น, ม.ปลาย+ปวช., ปวส.+อุดมศึกษา]; l = wheel label lines
   var COMPETENCIES = [
-    { code: "1.1", d: 1, name: "ตระหนักถึงบทบาทของ AI ในชีวิตและสังคม", t: [1, 2, 3, 3] },
-    { code: "1.2", d: 1, name: "เข้าใจการทำงานพื้นฐานของ AI", t: [1, 2, 3, 3] },
-    { code: "1.3", d: 1, name: "ประเมินผลลัพธ์ของ AI อย่างมีวิจารณญาณ", t: [1, 2, 3, 3] },
-    { code: "1.4", d: 1, name: "รู้เท่าทัน AI แนะนำเนื้อหา", t: [1, 2, 3, 3] },
-    { code: "1.5", d: 1, name: "วิเคราะห์อคติและความเป็นธรรมในการใช้ AI", t: [1, 2, 3, 3] },
-    { code: "1.6", d: 1, name: "ป้องกันภัยและความเสี่ยงที่เกี่ยวข้องกับ AI", t: [2, 2, 3, 3] },
-    { code: "2.1", d: 2, name: "ระดมความคิดและต่อยอดความคิดสร้างสรรค์ร่วมกับ AI", t: [1, 2, 3, 3] },
-    { code: "2.2", d: 2, name: "ออกแบบพรอมต์และวิธีการสื่อสารกับ AI เพื่อให้ทำงานตามเป้าหมาย", t: [1, 2, 3, 3] },
-    { code: "2.3", d: 2, name: "ใช้เครื่องมือ AI เพื่อสร้างผลงาน", t: [1, 2, 3, 3] },
-    { code: "2.4", d: 2, name: "ปรับปรุงผลงานผ่านการทำงานร่วมกับ AI", t: [1, 2, 3, 3] },
-    { code: "2.5", d: 2, name: "แก้ปัญหาในบริบทจริงโดยประยุกต์ใช้ AI", t: [1, 2, 3, 3] },
-    { code: "2.6", d: 2, name: "ใช้ AI อย่างซื่อตรง โปร่งใส และเคารพทรัพย์สินทางปัญญา", t: [1, 2, 3, 3] },
-    { code: "3.1", d: 3, name: "วิเคราะห์ความจำเป็นและความเหมาะสมในการใช้ AI", t: [1, 2, 3, 3] },
-    { code: "3.2", d: 3, name: "เลือกรูปแบบ AI ให้สอดคล้องกับลักษณะงาน", t: [1, 2, 3, 3] },
-    { code: "3.3", d: 3, name: "กำหนดบทบาทระหว่างมนุษย์กับ AI และความรับผิดชอบของมนุษย์", t: [1, 2, 2, 3] },
-    { code: "3.4", d: 3, name: "ติดตามและประเมินผลลัพธ์จากการใช้ AI", t: [1, 2, 3, 3] },
-    { code: "3.5", d: 3, name: "ใช้ AI โดยคำนึงถึงความยั่งยืน", t: [1, 1, 2, 3] },
-    { code: "3.6", d: 3, name: "ใช้ AI โดยคำนึงถึงสุขภาวะและการพัฒนาตนเอง", t: [1, 2, 3, 3] },
-    { code: "4.1", d: 4, name: "วิเคราะห์เทคนิค AI ที่เหมาะสมกับปัญหา", t: [1, 1, 2, 2] },
-    { code: "4.2", d: 4, name: "ใช้ข้อมูลในการสอน AI อย่างมีจริยธรรม", t: [1, 1, 2, 2] },
-    { code: "4.3", d: 4, name: "ประเมินคุณภาพของ AI", t: [1, 1, 2, 2] },
-    { code: "4.4", d: 4, name: "พัฒนา AI เพื่อคุณภาพชีวิตที่ดีและประโยชน์ส่วนรวม", t: [1, 1, 2, 2] }
+    { code: "1.1", d: 1, t: [1, 2, 3, 3], name: "ตระหนักถึงบทบาทของ AI ในชีวิตและสังคม", l: ["ตระหนักถึง", "บทบาทของ AI", "ในชีวิตและสังคม"] },
+    { code: "1.2", d: 1, t: [1, 2, 3, 3], name: "เข้าใจการทำงานพื้นฐานของ AI", l: ["เข้าใจการทำงาน", "พื้นฐานของ AI"] },
+    { code: "1.3", d: 1, t: [1, 2, 3, 3], name: "ประเมินผลลัพธ์ของ AI อย่างมีวิจารณญาณ", l: ["ประเมินผลลัพธ์", "ของ AI อย่างมี", "วิจารณญาณ"] },
+    { code: "1.4", d: 1, t: [1, 2, 3, 3], name: "รู้เท่าทัน AI แนะนำเนื้อหา", l: ["รู้เท่าทัน AI", "แนะนำเนื้อหา"] },
+    { code: "1.5", d: 1, t: [1, 2, 3, 3], name: "วิเคราะห์อคติและความเป็นธรรมในการใช้ AI", l: ["วิเคราะห์อคติ", "และความเป็นธรรม", "ในการใช้ AI"] },
+    { code: "1.6", d: 1, t: [2, 2, 3, 3], name: "ป้องกันภัยและความเสี่ยงที่เกี่ยวข้องกับ AI", l: ["ป้องกันภัยและ", "ความเสี่ยงที่", "เกี่ยวข้องกับ AI"] },
+    { code: "2.1", d: 2, t: [1, 2, 3, 3], name: "ระดมความคิดและต่อยอดความคิดสร้างสรรค์ร่วมกับ AI", l: ["ระดมความคิด", "และต่อยอด", "ความคิดสร้างสรรค์", "ร่วมกับ AI"] },
+    { code: "2.2", d: 2, t: [1, 2, 3, 3], name: "ออกแบบพรอมต์และวิธีการสื่อสารกับ AI เพื่อให้ทำงานตามเป้าหมาย", l: ["ออกแบบพรอมต์", "และวิธีสื่อสาร", "กับ AI ให้ทำงาน", "ตามเป้าหมาย"] },
+    { code: "2.3", d: 2, t: [1, 2, 3, 3], name: "ใช้เครื่องมือ AI เพื่อสร้างผลงาน", l: ["ใช้เครื่องมือ AI", "เพื่อสร้างผลงาน"] },
+    { code: "2.4", d: 2, t: [1, 2, 3, 3], name: "ปรับปรุงผลงานผ่านการทำงานร่วมกับ AI", l: ["ปรับปรุงผลงาน", "ผ่านการทำงาน", "ร่วมกับ AI"] },
+    { code: "2.5", d: 2, t: [1, 2, 3, 3], name: "แก้ปัญหาในบริบทจริงโดยประยุกต์ใช้ AI", l: ["แก้ปัญหาใน", "บริบทจริงโดย", "ประยุกต์ใช้ AI"] },
+    { code: "2.6", d: 2, t: [1, 2, 3, 3], name: "ใช้ AI อย่างซื่อตรง โปร่งใส และเคารพทรัพย์สินทางปัญญา", l: ["ใช้ AI อย่าง", "ซื่อตรง โปร่งใส", "เคารพทรัพย์สิน", "ทางปัญญา"] },
+    { code: "3.1", d: 3, t: [1, 2, 3, 3], name: "วิเคราะห์ความจำเป็นและความเหมาะสมในการใช้ AI", l: ["วิเคราะห์ความ", "จำเป็นและ", "ความเหมาะสม", "ในการใช้ AI"] },
+    { code: "3.2", d: 3, t: [1, 2, 3, 3], name: "เลือกรูปแบบ AI ให้สอดคล้องกับลักษณะงาน", l: ["เลือกรูปแบบ AI", "ให้สอดคล้องกับ", "ลักษณะงาน"] },
+    { code: "3.3", d: 3, t: [1, 2, 2, 3], name: "กำหนดบทบาทระหว่างมนุษย์กับ AI และความรับผิดชอบของมนุษย์", l: ["กำหนดบทบาท", "มนุษย์กับ AI", "และความรับผิดชอบ", "ของมนุษย์"] },
+    { code: "3.4", d: 3, t: [1, 2, 3, 3], name: "ติดตามและประเมินผลลัพธ์จากการใช้ AI", l: ["ติดตามและ", "ประเมินผลลัพธ์", "จากการใช้ AI"] },
+    { code: "3.5", d: 3, t: [1, 1, 2, 3], name: "ใช้ AI โดยคำนึงถึงความยั่งยืน", l: ["ใช้ AI โดย", "คำนึงถึง", "ความยั่งยืน"] },
+    { code: "3.6", d: 3, t: [1, 2, 3, 3], name: "ใช้ AI โดยคำนึงถึงสุขภาวะและการพัฒนาตนเอง", l: ["ใช้ AI โดยคำนึง", "ถึงสุขภาวะและ", "การพัฒนาตนเอง"] },
+    { code: "4.1", d: 4, t: [1, 1, 2, 2], name: "วิเคราะห์เทคนิค AI ที่เหมาะสมกับปัญหา", l: ["วิเคราะห์เทคนิค", "AI ที่เหมาะสม", "กับปัญหา"] },
+    { code: "4.2", d: 4, t: [1, 1, 2, 2], name: "ใช้ข้อมูลในการสอน AI อย่างมีจริยธรรม", l: ["ใช้ข้อมูลในการ", "สอน AI อย่างมี", "จริยธรรม"] },
+    { code: "4.3", d: 4, t: [1, 1, 2, 2], name: "ประเมินคุณภาพของ AI", l: ["ประเมิน", "คุณภาพ", "ของ AI"] },
+    { code: "4.4", d: 4, t: [1, 1, 2, 2], name: "พัฒนา AI เพื่อคุณภาพชีวิตที่ดีและประโยชน์ส่วนรวม", l: ["พัฒนา AI เพื่อ", "คุณภาพชีวิตที่ดี", "และประโยชน์", "ส่วนรวม"] }
   ];
 
-  // Competency descriptions and level descriptors (only those present in the reference).
+  // Level descriptors present in the reference (1.1–1.3 only).
   var RUBRICS = {
-    "1.1": {
-      desc: "ระบุการใช้งานและตัวอย่างของระบบ AI ในบริบทชีวิตประจำวัน อธิบายเกี่ยวกับอิทธิพลของ AI ต่อการตัดสินใจในด้านต่าง ๆ รวมถึงการวิเคราะห์ว่า AI หล่อหลอมความเชื่อ พฤติกรรม และโอกาสของบุคคลในฐานะผู้ใช้ ผู้เรียน และพลเมืองอย่างไร",
-      levels: ["ระบุตัวอย่างเทคโนโลยี AI รอบตัวและอธิบายประโยชน์ได้", "อธิบายว่าการใช้ AI ส่งผลต่อการตัดสินใจในบริบทต่าง ๆ อย่างไร", "วิเคราะห์บทบาทของ AI ที่มีต่อชีวิต สังคม การศึกษา และการประกอบอาชีพ"]
-    },
-    "1.2": {
-      desc: "อธิบายว่า AI สร้างผลลัพธ์จากรูปแบบของข้อมูล ไม่ใช่จากความเข้าใจหรือความรู้สึก ชี้แจงความเข้าใจผิดที่พบบ่อยเกี่ยวกับพฤติกรรมของ AI รวมถึงการอธิบายกลไกเฉพาะที่ทำให้ระบบ AI ให้ผลลัพธ์เช่นนั้น",
-      levels: ["อธิบายได้ว่าความสามารถของ AI เกิดจากการเรียนรู้จากข้อมูล แต่ไม่ใช่จากการคิดและความรู้สึกนึกคิดในลักษณะเดียวกับมนุษย์", "อธิบายกระบวนการทำงาน (รับรู้ คิด ปฏิบัติ) ของ AI", "อภิปรายกลไกการเลียนแบบพฤติกรรมมนุษย์ของ AI และผลที่เกิดขึ้นต่อผู้ใช้งาน"]
-    },
-    "1.3": {
-      desc: "ตรวจสอบความถูกต้องและประเมินความน่าเชื่อถือของผลลัพธ์ที่ได้จาก AI รวมถึงการให้เหตุผลประกอบการตัดสินใจว่าควรยอมรับ แก้ไข หรือปฏิเสธผลลัพธ์นั้น",
-      levels: ["ตรวจสอบความถูกต้องของข้อมูลที่สร้างโดย AI ก่อนนำไปใช้", "ใช้เกณฑ์ประเมินคุณภาพ ความน่าเชื่อถือ ความครบถ้วน และความเหมาะสมของผลลัพธ์จาก AI", "ให้เหตุผลประกอบการตัดสินใจว่าจะยอมรับ แก้ไข หรือปฏิเสธผลลัพธ์ที่สร้างจาก AI"]
-    }
+    "1.1": ["ระบุตัวอย่างเทคโนโลยี AI รอบตัวและอธิบายประโยชน์ได้", "อธิบายว่าการใช้ AI ส่งผลต่อการตัดสินใจในบริบทต่าง ๆ อย่างไร", "วิเคราะห์บทบาทของ AI ที่มีต่อชีวิต สังคม การศึกษา และการประกอบอาชีพ"],
+    "1.2": ["อธิบายได้ว่าความสามารถของ AI เกิดจากการเรียนรู้จากข้อมูล ไม่ใช่การคิดแบบมนุษย์", "อธิบายกระบวนการทำงาน (รับรู้ คิด ปฏิบัติ) ของ AI", "อภิปรายกลไกการเลียนแบบพฤติกรรมมนุษย์ของ AI และผลต่อผู้ใช้งาน"],
+    "1.3": ["ตรวจสอบความถูกต้องของข้อมูลที่สร้างโดย AI ก่อนนำไปใช้", "ใช้เกณฑ์ประเมินคุณภาพ ความน่าเชื่อถือ ความครบถ้วน และความเหมาะสมของผลลัพธ์จาก AI", "ให้เหตุผลประกอบการตัดสินใจว่าจะยอมรับ แก้ไข หรือปฏิเสธผลลัพธ์ที่สร้างจาก AI"]
   };
 
-  // ---------- Course mapping (from the xlsx) ----------
+  // ---------- Module 1 lesson mapping (from the xlsx) ----------
   var MODULE = {
     title: "Module 1 วิวัฒนาการ Gen AI และจริยธรรม",
-    course: "หลักสูตรปัญญาประดิษฐ์ · ม.ปลาย",
-    // Module-level competency goals: levels the module aims for + summary text
-    goals: {
-      "1.1": { levels: [1, 3], text: "อธิบายประวัติความเป็นมา การเติบโตอย่างรวดเร็วของ Generative AI ตัวอย่างการนำ AI มาใช้ประโยชน์ในชีวิตประจำวัน รวมถึงวิเคราะห์ผลกระทบของ AI ต่อการศึกษา เศรษฐกิจ สังคม และการประกอบอาชีพในอนาคตได้" },
-      "1.2": { levels: [1], text: "อธิบายกลไกพื้นฐานของ Generative AI ที่สร้างผลลัพธ์ใหม่จากการเรียนรู้รูปแบบของข้อมูล รวมถึงตระหนักถึงข้อจำกัดของ AI ที่ขาดความเข้าใจเชิงลึกและต้องพึ่งพาคุณภาพข้อมูล" },
-      "1.3": { levels: [1], text: "รู้เท่าทันอาการสร้างข้อมูลคลาดเคลื่อนของ AI (Hallucination) และตระหนักถึงความรับผิดชอบของผู้ใช้ในการตรวจสอบความถูกต้องของผลลัพธ์ก่อนนำไปใช้" },
-      "1.5": { levels: [1, 2], text: "อธิบายที่มาของอคติในชุดข้อมูลฝึกสอน ยกตัวอย่างผลกระทบต่อความเป็นธรรมของกลุ่มคนในสังคม และระบุแนวทางตรวจสอบเพื่อลดทอนอคติได้" },
-      "1.6": { levels: [1, 2], text: "ระบุความเสี่ยงจากการรวบรวมและเปิดเผยข้อมูลส่วนบุคคลผ่านระบบ AI พร้อมวางแนวทางป้องกันข้อมูลส่วนตัวและการใช้งานอย่างปลอดภัยได้" },
-      "2.2": { levels: [1], text: "อธิบายหลักการเขียนพรอมต์ที่มีประสิทธิภาพ ทั้งการระบุบริบทที่ชัดเจน การใช้ตัวอย่าง (Few-shot) และการให้ AI คิดเป็นขั้นตอน (Chain-of-Thought) เพื่อให้ได้ผลลัพธ์ตรงตามความต้องการ" }
-    },
+    course: "ปัญญาประดิษฐ์สำหรับนักเรียนระดับชั้นมัธยมศึกษาตอนปลาย : Module 1 วิวัฒนาการ Gen AI และจริยธรรม",
+    org: "NECTEC",
     lessons: [
-      { code: "1-1", name: "ยุคของ AI ตอนที่ 1", main: ["1.1"], sec: [], why: "เป็นการปูพื้นฐานความเป็นมาและจุดกำเนิดของเทคโนโลยี AI เพื่อสร้างความตระหนักรู้ว่าแนวคิดด้าน AI มีวิวัฒนาการและบทบาทในสังคมมนุษย์มาตั้งแต่ยุคบุกเบิก" },
-      { code: "1-2", name: "ยุคของ AI ตอนที่ 2", main: ["1.1"], sec: [], why: "ประวัติศาสตร์และการพัฒนาของ AI เล่าภาพรวมวิวัฒนาการ ความคาดหวัง การลงทุนของภาครัฐและเอกชน รวมถึงจุดเปลี่ยนสำคัญของ AI ในบริบทของสังคมและเศรษฐกิจ (ตั้งแต่ยุคบุกเบิก ยุคฤดูหนาวของ AI จนถึงยุคฟื้นฟู)" },
-      { code: "1-3", name: "ยุคของ AI ตอนที่ 3", main: ["1.1"], sec: [], why: "เนื้อหาเป็นการเน้นอธิบายประโยชน์ของเทคโนโลยี AI โดยยกตัวอย่างการนำ AI มาช่วยแก้ปัญหาระดับโลก เช่น สภาพภูมิอากาศ ความยากจน การขาดแคลนอาหาร และการจัดการทรัพยากร" },
-      { code: "1-4", name: "อนาคตของ AI", main: ["1.1"], sec: [], why: "เนื้อหาแสดงให้เห็นประโยชน์และศักยภาพของเทคโนโลยี AI ในการช่วยแก้ปัญหาสำคัญระดับโลก เช่น สภาพภูมิอากาศ ความยากจน การขาดแคลนอาหาร และการจัดการทรัพยากร" },
-      { code: "1-5", name: "ข้อจำกัดของการพัฒนาและประยุกต์ใช้ AI", main: ["1.2"], sec: [], why: "เมื่อผู้เรียนเรียนรู้เรื่องข้อจำกัดของ AI ผู้เรียนจะสามารถอธิบายได้ว่าความสามารถของ AI เกิดจากการเรียนรู้จากข้อมูล แต่ไม่ใช่จากการคิดและความรู้สึกนึกคิดในลักษณะเดียวกับมนุษย์" },
-      { code: "1-6", name: "รู้จัก Generative AI ตอนที่ 1", main: ["1.2"], sec: ["3.2"], why: "ข้อ 1.2 ตรงกับเนื้อหาที่อธิบายกลไก 3 ขั้นตอนของ Generative AI (เรียนรู้รูปแบบจากชุดข้อมูล → สร้างแบบจำลอง → สร้างเนื้อหาใหม่ที่คล้ายคลึงต้นฉบับ) ส่วนข้อ 3.2 เป็นความเข้าใจพื้นฐานว่า Generative AI สร้างเนื้อหาใหม่ได้ทั้งภาพ เสียง และข้อความ ตามความต้องการของผู้ใช้งาน" },
-      { code: "1-7", name: "รู้จัก Generative AI ตอนที่ 2", main: ["2.2"], sec: ["1.1", "1.3"], why: "ข้อ 2.2 “กำหนดพรอมต์พื้นฐานให้ AI ทำงานตามวัตถุประสงค์ และปรับปรุงพรอมต์ให้ได้ผลลัพธ์ที่ตรงตามความต้องการยิ่งขึ้น” ตอบโจทย์สไลด์เปรียบเทียบพรอมต์สั้นกับพรอมต์ละเอียด ข้อ 1.1 มาจากตัวอย่างการใช้ประโยชน์ในชีวิตประจำวัน (แต่งกลอน สร้างภาพ แต่งเพลง) และข้อ 1.3 มาจากเนื้อหาเรื่องอาการหลอนของ AI" },
-      { code: "1-8", name: "รู้จัก Generative AI ตอนที่ 3", main: ["1.2"], sec: ["1.1"], why: "ข้อ 1.1 ระบุว่า “ระบุการใช้งานและตัวอย่างของระบบ AI ในบริบทชีวิตประจำวัน” สไลด์ชุดนี้ยกตัวอย่างการประยุกต์ใช้ AI ในชีวิตประจำวันและการทำงาน ทั้งด้านความบันเทิง (แต่งเพลง) และการวิเคราะห์ข้อมูล (อ่านกราฟ)" },
-      { code: "1-9", name: "รู้จัก Generative AI ตอนที่ 4", main: ["2.2"], sec: ["1.1"], why: "ข้อ 2.2 สื่อถึงการป้อนโจทย์คำสั่งร่วมกับรูปภาพ (Multimodal Prompting) และมีสไลด์สรุปหลักการเขียนคำสั่งให้มีประสิทธิภาพ ส่วนข้อ 1.1 มีตัวอย่างการประยุกต์ใช้ AI ช่วยแก้ปัญหาในชีวิตประจำวันและการเรียนรู้" },
-      { code: "1-10", name: "ความท้าทายทางจริยธรรมในการพัฒนาและใช้งาน AI ตอนที่ 1", main: ["1.5"], sec: ["1.6"], why: "มุ่งเน้นเรื่องอคติใน AI (AI Bias) ทั้งที่มาของข้อมูลที่เอนเอียง ผลกระทบต่อความเป็นธรรมในสังคม (กรณีคัดเลือกพนักงานของ Google และระบบยุติธรรมของ ProPublica) ตลอดจนแนวทางการตรวจสอบและลดทอนอคติ ซึ่งตรงกับข้อ 1.5" },
-      { code: "1-11", name: "ความท้าทายทางจริยธรรมในการพัฒนาและใช้งาน AI ตอนที่ 2", main: ["1.6"], sec: ["3.3"], why: "ข้อ 1.6 เกี่ยวกับการป้องกันความเสี่ยงจากการใช้งาน AI ทั้งการรักษาข้อมูลส่วนบุคคลและการใช้งานอย่างปลอดภัย ส่วนข้อ 3.3 มาจากเนื้อหาเรื่องบทบาทงานระหว่างมนุษย์กับ AI และขอบเขตความรับผิดชอบของมนุษย์ในฐานะผู้กำกับและตรวจสอบ" }
+      { code: "1-1", name: "ยุคของ AI ตอนที่ 1", main: ["1.1"], sec: [] },
+      { code: "1-2", name: "ยุคของ AI ตอนที่ 2", main: ["1.1"], sec: [] },
+      { code: "1-3", name: "ยุคของ AI ตอนที่ 3", main: ["1.1"], sec: [] },
+      { code: "1-4", name: "อนาคตของ AI", main: ["1.1"], sec: [] },
+      { code: "1-5", name: "ข้อจำกัดของการพัฒนาและประยุกต์ใช้ AI", main: ["1.2"], sec: [] },
+      { code: "1-6", name: "รู้จัก Generative AI ตอนที่ 1", main: ["1.2"], sec: ["3.2"] },
+      { code: "1-7", name: "รู้จัก Generative AI ตอนที่ 2", main: ["2.2"], sec: ["1.1", "1.3"] },
+      { code: "1-8", name: "รู้จัก Generative AI ตอนที่ 3", main: ["1.2"], sec: ["1.1"] },
+      { code: "1-9", name: "รู้จัก Generative AI ตอนที่ 4", main: ["2.2"], sec: ["1.1"] },
+      { code: "1-10", name: "ความท้าทายทางจริยธรรมฯ ตอนที่ 1", main: ["1.5"], sec: ["1.6"] },
+      { code: "1-11", name: "ความท้าทายทางจริยธรรมฯ ตอนที่ 2", main: ["1.6"], sec: ["3.3"] }
     ]
   };
+
+  // ---------- Course catalog (real NECTEC courses on lead.in.th) ----------
+  // covers = competency → levels the course can evidence. Only hs1 comes from the
+  // mapping xlsx; the other courses' coverage is a demo assumption.
+  var COURSES = {
+    ms1: { run: "AILOWERSECONDARY01+NECTEC_000008", band: "ม.ต้น", name: "Module 1 ความรู้เบื้องต้นเกี่ยวกับ AI", file: "middle-01.png",
+      covers: { "1.1": [1, 2], "1.2": [1], "1.4": [1], "3.2": [1] } },
+    ms2: { run: "AILOWERSECONDARY07+NECTEC_000022", band: "ม.ต้น", name: "Module 2 Machine Learning การเรียนรู้ของเครื่อง", file: "middle-02.png",
+      covers: { "1.2": [1, 2], "4.1": [1], "4.2": [1], "4.3": [1] } },
+    ms3: { run: "AILOWERSECONDARY03+NECTEC_000015", band: "ม.ต้น", name: "Module 3 NLP ใน Chatbot", file: "middle-03-03.png",
+      covers: { "1.2": [2], "2.2": [1], "2.3": [1], "4.4": [1] } },
+    ms4: { run: "AILOWERSECONDARY06+NECTEC_000018", band: "ม.ต้น", name: "Module 4 Generative AI", file: "middle-04.png",
+      covers: { "1.3": [1], "2.1": [1, 2], "2.2": [1, 2], "2.3": [1, 2], "2.4": [1] } },
+    ms5: { run: "AILOWERSECONDARY05+NECTEC_000017", band: "ม.ต้น", name: "Module 5 จริยธรรม AI", file: "middle-05.png",
+      covers: { "1.5": [1, 2], "1.6": [1, 2], "2.6": [1], "3.3": [1], "3.6": [1] } },
+    hs1: { run: "AIUPPERSECONDARY01+NECTEC_000006", band: "ม.ปลาย", name: "Module 1 วิวัฒนาการ Gen AI และจริยธรรม", file: "high-01.png",
+      covers: { "1.1": [1, 3], "1.2": [1], "1.3": [1], "1.5": [1, 2], "1.6": [1, 2], "2.2": [1], "3.2": [1], "3.3": [1] } },
+    hs2: { run: "AIUPPERSECONDARY02+NECTEC_000009", band: "ม.ปลาย", name: "Module 2 ปัญหา AI", file: "high-02.png",
+      covers: { "2.5": [1, 2], "3.1": [1, 2, 3], "3.2": [2, 3], "3.4": [1, 2] } },
+    hs3: { run: "AIUPPERSECONDARY03+NECTEC_000010", band: "ม.ปลาย", name: "Module 3 การเรียนรู้แบบมีผู้สอน", file: "high-03.png",
+      covers: { "1.2": [2, 3], "4.1": [1, 2], "4.2": [1, 2], "4.3": [1, 2] } },
+    hs4: { run: "AIUPPERSECONDARY04+NECTEC_000011", band: "ม.ปลาย", name: "Module 4 การประมวลผลภาษาธรรมชาติ (NLP)", file: "high-04.png",
+      covers: { "1.3": [2, 3], "2.2": [2, 3], "2.3": [2], "4.1": [2] } },
+    hs5: { run: "AIUPPERSECONDARY05+NECTEC_000012", band: "ม.ปลาย", name: "Module 5 Computer Vision", file: "high-05.png",
+      covers: { "1.4": [2], "2.5": [2, 3], "4.1": [2], "4.4": [1, 2] } }
+  };
+  Object.keys(COURSES).forEach(function (k) {
+    var c = COURSES[k];
+    c.key = k;
+    c.id = "course-v1:NECTEC+" + c.run;
+    c.cover = "https://lead.in.th/asset-v1:NECTEC+" + c.run + "+type@asset+block@" + c.file;
+    c.url = "https://lead.in.th/courses/" + encodeURIComponent(c.id) + "/about";
+  });
+  var CURRENT = "hs1"; // the course in the lesson table below
 
   // ---------- Student (mock data) ----------
   var STUDENT = {
     name: "พิมพ์ชนก ตัวอย่าง",
     initials: "พช",
-    meta: "ม.5/2 · เลขที่ 12 · โรงเรียนตัวอย่างวิทยา",
+    meta: "ม.5/2 · โรงเรียนตัวอย่างวิทยา",
     band: "m2",
-    updated: "24 พ.ย. 2569",
-    // per-lesson progress: video %, bookroll %, quiz % (null = not taken)
+    // course status: done / doing
+    courses: { ms1: "done", ms4: "done", ms5: "done", hs1: "doing" },
+    // finished courses: lesson counts, average quiz score (current course is computed from progress)
+    results: {
+      ms1: { lessons: 5, done: 5, score: 82 },
+      ms4: { lessons: 5, done: 5, score: 76 },
+      ms5: { lessons: 5, done: 5, score: 88 }
+    },
+    // current course, per lesson: video %, bookroll %, quiz % (null = not taken)
     progress: {
       "1-1": [100, 100, 90], "1-2": [100, 95, 85], "1-3": [92, 100, 80], "1-4": [100, 88, 95],
       "1-5": [85, 90, 70], "1-6": [100, 100, 75], "1-7": [96, 84, 80], "1-8": [88, 92, 65],
       "1-9": [81, 86, 70], "1-10": [45, 30, null], "1-11": [0, 0, null]
     },
-    // achieved level per competency (0 = no level yet)
-    levels: { "1.1": 3, "1.2": 1, "1.3": 1, "1.5": 0, "1.6": 0, "2.2": 1, "3.2": 1, "3.3": 0 }
+    // where each competency level came from: course + lesson (+ quiz score)
+    // hs1 lessons use the real lesson codes; other courses' lessons are placeholders
+    evidence: [
+      { comp: "1.1", lv: 1, course: "ms1", lesson: "บทที่ 1", score: 85 },
+      { comp: "1.1", lv: 2, course: "ms1", lesson: "บทที่ 3", score: 78 },
+      { comp: "1.1", lv: 1, course: "hs1", lesson: "1-1", score: 90 },
+      { comp: "1.1", lv: 1, course: "hs1", lesson: "1-2", score: 85 },
+      { comp: "1.1", lv: 3, course: "hs1", lesson: "1-4", score: 95 },
+      { comp: "1.2", lv: 1, course: "ms1", lesson: "บทที่ 2", score: 80 },
+      { comp: "1.2", lv: 1, course: "hs1", lesson: "1-5", score: 70 },
+      { comp: "1.2", lv: 1, course: "hs1", lesson: "1-6", score: 75 },
+      { comp: "1.3", lv: 1, course: "ms4", lesson: "บทที่ 4", score: 72 },
+      { comp: "1.3", lv: 1, course: "hs1", lesson: "1-7", score: 80 },
+      { comp: "1.4", lv: 1, course: "ms1", lesson: "บทที่ 4", score: 88 },
+      { comp: "1.5", lv: 1, course: "ms5", lesson: "บทที่ 1", score: 90 },
+      { comp: "1.6", lv: 1, course: "ms5", lesson: "บทที่ 2", score: 86 },
+      { comp: "2.1", lv: 1, course: "ms4", lesson: "บทที่ 1", score: 74 },
+      { comp: "2.2", lv: 1, course: "ms4", lesson: "บทที่ 2", score: 80 },
+      { comp: "2.2", lv: 2, course: "ms4", lesson: "บทที่ 3", score: 76 },
+      { comp: "2.2", lv: 1, course: "hs1", lesson: "1-7", score: 80 },
+      { comp: "2.2", lv: 1, course: "hs1", lesson: "1-9", score: 70 },
+      { comp: "2.3", lv: 1, course: "ms4", lesson: "บทที่ 3", score: 76 },
+      { comp: "2.6", lv: 1, course: "ms5", lesson: "บทที่ 4", score: 92 },
+      { comp: "3.2", lv: 1, course: "ms1", lesson: "บทที่ 5", score: 84 },
+      { comp: "3.2", lv: 1, course: "hs1", lesson: "1-6", score: 75 },
+      { comp: "3.3", lv: 1, course: "ms5", lesson: "บทที่ 3", score: 85 },
+      { comp: "3.6", lv: 1, course: "ms5", lesson: "บทที่ 5", score: 89 }
+    ]
   };
-
   var COMPLETE_PCT = 80; // same rule as the teacher dashboard
 
   // ---------- helpers ----------
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
-  var domainOf = function (c) { return DOMAINS[c.d - 1]; };
-  var colorOf = function (c) { return "var(" + domainOf(c).color + ")"; };
-  var solidOf = function (c) { return "var(" + domainOf(c).solid + ")"; };
   var byCode = {}; COMPETENCIES.forEach(function (c) { byCode[c.code] = c; });
+  var lessonByCode = {}; MODULE.lessons.forEach(function (l) { lessonByCode[l.code] = l; });
+  var dom = function (c) { return DOMAINS[c.d - 1]; };
 
-  var state = { band: STUDENT.band, selected: "1.1" };
-  var bandIndex = function () { return BANDS.findIndex(function (b) { return b.id === state.band; }); };
-  var target = function (c) { return c.t[bandIndex()]; };
-  var achieved = function (c) { return STUDENT.levels[c.code] || 0; };
+  var state = { band: STUDENT.band, selected: "1.1", course: CURRENT };
+  var bandIdx = function () { return BANDS.findIndex(function (b) { return b.id === state.band; }); };
+  var target = function (c) { return c.t[bandIdx()]; };
+  var evidenceOf = function (code) { return STUDENT.evidence.filter(function (e) { return e.comp === code; }); };
+  // achieved level = highest level with evidence
+  var achieved = function (c) { return evidenceOf(c.code).reduce(function (m, e) { return Math.max(m, e.lv); }, 0); };
 
   function lessonStatus(code) {
     var p = STUDENT.progress[code] || [0, 0, null];
     if (p[0] >= COMPLETE_PCT && p[1] >= COMPLETE_PCT && p[2] != null) return "done";
-    if (p[0] > 0 || p[1] > 0) return "doing";
-    return "todo";
+    return p[0] > 0 || p[1] > 0 ? "doing" : "todo";
   }
-  var LESSON_ST = {
-    done: { label: "เรียนจบ", cls: "st-ok" },
-    doing: { label: "กำลังเรียน", cls: "st-dev" },
-    todo: { label: "ยังไม่เริ่ม", cls: "st-idle" }
+  var LESSON_ST = { done: ["เรียนจบ", "st-ok"], doing: ["กำลังเรียน", "st-dev"], todo: ["ยังไม่เริ่ม", "st-idle"] };
+
+  // Courses that can raise this competency above the current level.
+  function recommend(c) {
+    var a = achieved(c), out = [];
+    Object.keys(COURSES).forEach(function (k) {
+      var crs = COURSES[k], lv = crs.covers[c.code];
+      if (!lv || STUDENT.courses[k] === "done") return;
+      var gain = lv.filter(function (l) { return l > a; });
+      if (!gain.length) return;
+      var rest = [];
+      if (k === CURRENT) {
+        // only lessons not finished yet in the current course
+        rest = MODULE.lessons.filter(function (l) {
+          return lessonStatus(l.code) !== "done" && (l.main.indexOf(c.code) >= 0 || l.sec.indexOf(c.code) >= 0);
+        });
+        if (!rest.length) return;
+      }
+      out.push({ crs: crs, gain: gain, rest: rest });
+    });
+    var myBand = state.band === "m2" || state.band === "hi" ? "ม.ปลาย" : "ม.ต้น";
+    out.sort(function (x, y) {
+      return (y.crs.key === CURRENT) - (x.crs.key === CURRENT) ||
+        (y.gain.indexOf(a + 1) >= 0) - (x.gain.indexOf(a + 1) >= 0) ||
+        (y.crs.band === myBand) - (x.crs.band === myBand) ||
+        Math.max.apply(null, y.gain) - Math.max.apply(null, x.gain);
+    });
+    return out.slice(0, 3);
+  }
+
+  // ---------- hero ----------
+  function renderStats() {
+    var leveled = COMPETENCIES.filter(function (c) { return achieved(c) > 0; }).length;
+    var sumT = 0, sumA = 0;
+    COMPETENCIES.forEach(function (c) { sumT += target(c); sumA += Math.min(achieved(c), target(c)); });
+    var pct = Math.round(sumA / sumT * 100);
+    var taken = Object.keys(STUDENT.courses), finished = taken.filter(function (k) { return STUDENT.courses[k] === "done"; }).length;
+    $("stats").innerHTML =
+      stat("cat-1", "สู่เป้าหมายสมรรถนะ", pct + "%", "", pct) +
+      stat("cat-3", "สมรรถนะที่ได้ระดับ", leveled, " / " + COMPETENCIES.length, leveled / COMPETENCIES.length * 100) +
+      stat("cat-2", "หลักสูตรที่เรียนจบ", finished, " / " + taken.length, finished / taken.length * 100);
+  }
+
+  // ---------- wheel ----------
+  var R = { disc: 166, code: [170, 208], name: [210, 318], lv: [322, 358] };
+  function pt(r, a) { var t = a * Math.PI / 180; return [r * Math.sin(t), -r * Math.cos(t)]; }
+  function f(p) { return p[0].toFixed(2) + " " + p[1].toFixed(2); }
+  function arc(r0, r1, a0, a1) {
+    var lg = a1 - a0 > 180 ? 1 : 0;
+    return "M" + f(pt(r1, a0)) + " A" + r1 + " " + r1 + " 0 " + lg + " 1 " + f(pt(r1, a1)) +
+      " L" + f(pt(r0, a1)) + " A" + r0 + " " + r0 + " 0 " + lg + " 0 " + f(pt(r0, a0)) + "Z";
+  }
+  function multiline(lines, x, y, cls, lh) {
+    var y0 = y - (lines.length - 1) * lh / 2;
+    return '<text class="' + cls + '" text-anchor="middle" dominant-baseline="central">' + lines.map(function (s, i) {
+      return '<tspan x="' + x.toFixed(1) + '" y="' + (y0 + i * lh).toFixed(1) + '">' + esc(s) + "</tspan>";
+    }).join("") + "</text>";
+  }
+
+  var ICONS = {
+    chip: '<rect x="-9" y="-9" width="18" height="18" rx="3"/><rect x="-4" y="-4" width="8" height="8" rx="1"/><path d="M-5 -13v4M0 -13v4M5 -13v4M-5 9v4M0 9v4M5 9v4M-13 -5h4M-13 0h4M-13 5h4M9 -5h4M9 0h4M9 5h4"/>',
+    bulb: '<path d="M-6 6c0-4-6-6-6-12a12 12 0 0 1 24 0c0 6-6 8-6 12z"/><path d="M-5 10h10M-3 14h6M0 -20v-3M14 -14l2-2M-14 -14l-2-2"/>',
+    shield: '<path d="M0 -14l11 4v8c0 8-5 13-11 16c-6-3-11-8-11-16v-8z"/><path d="M-5 0l4 4l7-8"/>',
+    code: '<rect x="-14" y="-11" width="28" height="19" rx="2"/><path d="M-6 14h12M0 8v6M-4 -5l-4 3l4 3M4 -5l4 3l-4 3M1 -6l-2 8"/>'
   };
 
-  function evidenceFor(code) {
-    var out = [];
-    MODULE.lessons.forEach(function (l) {
-      if (l.main.indexOf(code) >= 0) out.push({ lesson: l, role: "หลัก" });
-      else if (l.sec.indexOf(code) >= 0) out.push({ lesson: l, role: "รอง" });
-    });
-    return out;
-  }
-
-  function compStatus(c) {
-    var a = achieved(c), t = target(c), ev = evidenceFor(c.code);
-    if (a >= t) return { key: "ok", label: "ถึงเป้าหมายช่วงชั้น", cls: "st-ok" };
-    if (ev.length) return { key: "dev", label: a ? "กำลังพัฒนา" : "เริ่มเก็บหลักฐาน", cls: "st-dev" };
-    return { key: "idle", label: "ยังไม่มีบทเรียนประเมิน", cls: "st-idle" };
-  }
-
-  function dots(n) { return n ? new Array(n + 1).join("●") : "–"; }
-
-  function levelDots(c, size) {
-    var a = achieved(c), t = target(c), col = colorOf(c), html = "";
-    for (var k = 1; k <= 3; k++) {
-      if (k <= a) html += '<i style="background:' + col + '"></i>';
-      else if (k <= t) html += '<i style="box-shadow:inset 0 0 0 1.5px ' + col + '"></i>';
-      else html += '<i class="off"></i>';
-    }
-    return '<span class="lv" title="ได้ ' + (a ? LEVELS[a] : "ยังไม่มีระดับ") + ' · เป้าหมาย ' + LEVELS[t] + '">' + html + "</span>";
-  }
-
-  // ---------- KPIs ----------
-  function renderHeader() {
-    $("avatar").textContent = STUDENT.initials;
-    $("s-name").textContent = STUDENT.name;
-    $("s-meta").textContent = STUDENT.meta + " · อัปเดต " + STUDENT.updated;
-    $("s-course").textContent = MODULE.course;
-    $("module-title").textContent = MODULE.title;
-  }
-
-  function renderKpis() {
-    var lessons = MODULE.lessons, done = lessons.filter(function (l) { return lessonStatus(l.code) === "done"; }).length;
-    var withLevel = COMPETENCIES.filter(function (c) { return achieved(c) > 0; }).length;
-    var covered = {}; lessons.forEach(function (l) { l.main.concat(l.sec).forEach(function (k) { covered[k] = 1; }); });
-    var sumT = 0, sumA = 0, met = 0;
-    COMPETENCIES.forEach(function (c) { sumT += target(c); sumA += Math.min(achieved(c), target(c)); if (achieved(c) >= target(c)) met++; });
-    var pct = Math.round(sumA / sumT * 100);
-    var quiz = lessons.map(function (l) { return (STUDENT.progress[l.code] || [])[2]; }).filter(function (v) { return v != null; });
-    var avgQuiz = quiz.length ? Math.round(quiz.reduce(function (a, b) { return a + b; }, 0) / quiz.length) : 0;
-    var band = BANDS[bandIndex()].label;
-
-    var k = [
-      { label: "บทเรียนที่เรียนจบ", value: done, of: lessons.length, hint: "Module 1", bar: done / lessons.length },
-      { label: "สมรรถนะที่ได้ระดับแล้ว", value: withLevel, of: COMPETENCIES.length, hint: "Module 1 ประเมินได้ " + Object.keys(covered).length + " สมรรถนะ", bar: withLevel / COMPETENCIES.length },
-      { label: "ความก้าวหน้าสู่เป้าหมาย", value: pct + "%", hint: "เป้าหมาย " + band + " · ถึงแล้ว " + met + " ข้อ", bar: pct / 100 },
-      { label: "คะแนนแบบทดสอบเฉลี่ย", value: avgQuiz + "%", hint: "จาก " + quiz.length + " บทเรียนที่ทำแล้ว", bar: avgQuiz / 100 }
-    ];
-    $("kpis").innerHTML = k.map(function (x) {
-      return '<div class="kpi"><div class="label">' + x.label + '</div><div class="value num">' + x.value +
-        (x.of ? ' <small>/ ' + x.of + "</small>" : "") + '</div><div class="bar"><i style="width:' + Math.round(x.bar * 100) +
-        '%"></i></div><div class="hint">' + esc(x.hint) + "</div></div>";
-    }).join("");
-    return pct;
-  }
-
-  // ---------- Wheel ----------
-  var R = { center: 70, code0: 78, code1: 108, band: [[112, 142], [146, 176], [180, 210]], mark: 224 };
-
-  function pt(r, a) { var rad = a * Math.PI / 180; return [r * Math.sin(rad), -r * Math.cos(rad)]; }
-  function arc(r0, r1, a0, a1) {
-    var large = a1 - a0 > 180 ? 1 : 0, p0 = pt(r1, a0), p1 = pt(r1, a1), p2 = pt(r0, a1), p3 = pt(r0, a0);
-    var f = function (p) { return p[0].toFixed(2) + " " + p[1].toFixed(2); };
-    return "M" + f(p0) + " A" + r1 + " " + r1 + " 0 " + large + " 1 " + f(p1) + " L" + f(p2) + " A" + r0 + " " + r0 + " 0 " + large + " 0 " + f(p3) + "Z";
-  }
-
-  function renderWheel(pct) {
-    var domainGap = 4, segGap = 1.2;
-    var segA = (360 - domainGap * DOMAINS.length) / COMPETENCIES.length;
-    var d1Count = COMPETENCIES.filter(function (c) { return c.d === 1; }).length;
-    var cur = 270 - (d1Count * segA) / 2; // domain 1 centered on the left
-    var html = "", lastD = 1, track = "var(--track)";
+  function renderWheel() {
+    var gapD = 2, gapS = 0.7, seg = (360 - gapD * 4) / COMPETENCIES.length;
+    var cur = 270 - 6 * seg / 2, lastD = 1, html = "";
+    html += '<defs><radialGradient id="disc" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e4e9ef"/></radialGradient></defs>';
 
     COMPETENCIES.forEach(function (c) {
-      if (c.d !== lastD) { cur += domainGap; lastD = c.d; }
-      var a0 = cur + segGap / 2, a1 = cur + segA - segGap / 2, mid = (a0 + a1) / 2;
-      cur += segA;
-      var col = colorOf(c), a = achieved(c), t = target(c), st = compStatus(c);
-      var g = '<g class="seg" tabindex="0" role="button" data-code="' + c.code + '" aria-label="' + esc(c.code + " " + c.name + " · " + st.label) + '">';
-      g += "<title>" + esc(c.code + " " + c.name + "\nได้: " + (a ? LEVELS[a] : "ยังไม่มีระดับ") + " · เป้าหมาย: " + LEVELS[t]) + "</title>";
-      g += '<path d="' + arc(R.code0, R.code1, a0, a1) + '" fill="' + solidOf(c) + '"/>';
-      var tp = pt((R.code0 + R.code1) / 2, mid);
-      g += '<text class="code" x="' + tp[0].toFixed(1) + '" y="' + tp[1].toFixed(1) + '" text-anchor="middle" dominant-baseline="central">' + c.code + "</text>";
+      if (c.d !== lastD) { cur += gapD; lastD = c.d; }
+      var a0 = cur + gapS / 2, a1 = cur + seg - gapS / 2, mid = (a0 + a1) / 2, d = dom(c);
+      cur += seg;
+      var a = achieved(c);
+      var g = '<g class="seg" tabindex="0" role="button" data-code="' + c.code + '" aria-label="' + esc(c.code + " " + c.name) + '">';
+      g += "<title>" + esc(c.code + " " + c.name + " · " + (a ? LEVELS[a] : "ยังไม่มีระดับ")) + "</title>";
+      g += '<path d="' + arc(R.code[0], R.code[1], a0, a1) + '" fill="' + d.solid + '"/>';
+      var cp = pt((R.code[0] + R.code[1]) / 2, mid);
+      g += '<text class="code" x="' + cp[0].toFixed(1) + '" y="' + cp[1].toFixed(1) + '" text-anchor="middle" dominant-baseline="central">' + c.code + "</text>";
+      g += '<path class="name-bg" d="' + arc(R.name[0], R.name[1], a0, a1) + '" fill="' + d.tint + '"/>';
+      var np = pt((R.name[0] + R.name[1]) / 2, mid);
+      g += multiline(c.l, np[0], np[1], "name", 13);
+      // 3 level blocks: เข้าใจ / ประยุกต์ / ต่อยอด, shaded light → dark
+      var bw = (a1 - a0) / 3;
       for (var k = 1; k <= 3; k++) {
-        var b = R.band[k - 1], fill, op;
-        if (k <= a) { fill = col; op = 1; }
-        else if (k <= t) { fill = col; op = 0.2; }
-        else { fill = track; op = 1; }
-        g += '<path class="band" d="' + arc(b[0], b[1], a0, a1) + '" fill="' + fill + '" fill-opacity="' + op + '"/>';
+        var b0 = a0 + (k - 1) * bw + (k > 1 ? 0.35 : 0), b1 = a0 + k * bw - (k < 3 ? 0.35 : 0);
+        // Student's level only (target is shown in the side panel): reached = shade, not yet = gray
+        g += '<path d="' + arc(R.lv[0], R.lv[1], b0, b1) + '" fill="' + (k <= a ? d.shade[k - 1] : "#e6ebf0") + '"/>';
       }
-      if (evidenceFor(c.code).length) {
-        var mp = pt(R.mark, mid);
-        g += '<circle cx="' + mp[0].toFixed(1) + '" cy="' + mp[1].toFixed(1) + '" r="4" fill="' + col + '"/>';
-      }
-      var sel = state.selected === c.code;
-      g += '<path class="sel-ring" d="' + arc(R.code0 - 2, R.band[2][1] + 3, a0 - 0.4, a1 + 0.4) + '" fill="none" stroke="' +
-        (sel ? "var(--ink)" : "transparent") + '" stroke-width="' + (sel ? 2.5 : 0) + '" stroke-linejoin="round"/>';
-      g += "</g>";
-      html += g;
+      var on = state.selected === c.code;
+      g += '<path class="sel" d="' + arc(R.code[0] - 1, R.lv[1] + 2, a0 - 0.3, a1 + 0.3) + '" fill="none" stroke="' + (on ? "#0f172a" : "transparent") + '" stroke-width="' + (on ? 3 : 0) + '" stroke-linejoin="round"/>';
+      html += g + "</g>";
     });
 
-    html += '<circle r="' + R.center + '" fill="var(--panel-2)" stroke="var(--line)"/>';
-    html += '<text class="center-sm" y="-26" text-anchor="middle">ความก้าวหน้า</text>';
-    html += '<text class="center-big" y="10" text-anchor="middle">' + pct + "%</text>";
-    html += '<text class="center-sm" y="32" text-anchor="middle">สู่เป้าหมาย ' + esc(BANDS[bandIndex()].label) + "</text>";
+    // center: 4 domain bubbles
+    html += '<circle r="' + R.disc + '" fill="url(#disc)"/>';
+    html += '<circle r="84" fill="none" stroke="#cbd5e1" stroke-dasharray="3 5"/>';
+    var pos = { 1: [-84, 0], 2: [0, -84], 3: [84, 0], 4: [0, 84] };
+    DOMAINS.forEach(function (d) {
+      var p = pos[d.id];
+      html += '<g transform="translate(' + p[0] + " " + p[1] + ')">' +
+        '<circle r="56" fill="' + d.bubble + '" stroke="#fff" stroke-width="3"/>' +
+        '<g transform="translate(0 -20)" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + ICONS[d.icon] + "</g>" +
+        multiline(d.name, 0, 16, "dname", 13) + "</g>";
+    });
     $("wheel").innerHTML = html;
   }
 
-  function renderLegends() {
-    $("wheel-legend").innerHTML =
-      '<span><i class="sw" style="background:var(--ink-2)"></i>ระดับที่ได้แล้ว</span>' +
-      '<span><i class="sw" style="background:var(--ink-2);opacity:.2"></i>ยังไม่ถึงเป้าหมาย</span>' +
-      '<span><i class="sw" style="background:var(--track);box-shadow:inset 0 0 0 1px var(--line)"></i>เกินเป้าหมายช่วงชั้น</span>' +
-      '<span><i class="sw" style="width:8px;height:8px;border-radius:50%;background:var(--ink-2)"></i>มีบทเรียนประเมินใน Module 1</span>';
-    $("domains-legend").innerHTML = DOMAINS.map(function (d) {
-      return '<span><i style="background:var(' + d.color + ')"></i>โดเมนที่ ' + d.id + " " + esc(d.name) + "</span>";
-    }).join("");
+  function renderLegend() {
+    var s = DOMAINS[0].shade;
+    $("legend").innerHTML =
+      '<span><i class="sw" style="background:' + s[0] + '"></i>เข้าใจ</span>' +
+      '<span><i class="sw" style="background:' + s[1] + '"></i>ประยุกต์</span>' +
+      '<span><i class="sw" style="background:' + s[2] + '"></i>ต่อยอด</span>' +
+      '<span><i class="sw" style="background:#e6ebf0"></i>ยังไม่ได้</span>';
   }
 
-  // ---------- Detail ----------
+  // ---------- detail ----------
+  function courseLabel(crs) { return crs.band + " · " + crs.name; }
+
   function renderDetail() {
-    var c = byCode[state.selected], d = domainOf(c), col = colorOf(c), solid = solidOf(c);
-    var a = achieved(c), t = target(c), st = compStatus(c), rub = RUBRICS[c.code], goal = MODULE.goals[c.code];
-    var ev = evidenceFor(c.code);
+    var c = byCode[state.selected], d = dom(c), a = achieved(c), t = target(c), ev = evidenceOf(c.code);
 
     var meter = "";
     for (var k = 1; k <= 3; k++) {
-      var cls = "step" + (k <= a ? " done" : "") + (k === t ? " goal" : "");
-      var style = k <= a ? ' style="background:' + solid + '"' : (k === t ? ' style="color:' + col + '"' : "");
-      meter += '<div class="' + cls + '"' + style + ">" + (k === t ? '<span class="flag">เป้าหมาย</span>' : "") +
-        '<div class="dots">' + dots(k) + "</div>" + LEVELS[k] + "</div>";
+      var style = "", cls = "step";
+      if (k <= a) style = "background:" + d.shade[k - 1] + ";color:" + d.on[k - 1];
+      // not reached yet but required: white box, dashed border + text in the domain color
+      // (level 1 uses the medium shade for the border so it stays visible on white)
+      else if (k <= t) { cls += " need"; style = "background:#fff;border-color:" + d.shade[Math.max(k - 1, 1)] + ";color:" + d.solid; }
+      meter += '<div class="' + cls + '" style="' + style + '">' + (k === t ? '<span class="flag">เป้าหมาย</span>' : "") + LEVELS[k] + "</div>";
     }
 
-    var line;
-    if (st.key === "ok") line = "ได้ระดับ <b>" + LEVELS[a] + "</b> ซึ่งถึงเป้าหมายของช่วงชั้น " + esc(BANDS[bandIndex()].label) + " แล้ว";
-    else if (a) line = "ได้ระดับ <b>" + LEVELS[a] + "</b> · ยังขาดอีก " + (t - a) + " ระดับจึงจะถึงเป้าหมาย (" + LEVELS[t] + ")";
-    else if (ev.length) line = "ยังไม่มีระดับ · กำลังเก็บหลักฐานจากบทเรียนที่ยังเรียนไม่จบ";
-    else line = "ยังไม่มีบทเรียนในหลักสูตรที่ประเมินสมรรถนะนี้ จะเริ่มประเมินเมื่อเปิด Module ที่เกี่ยวข้อง";
+    var status;
+    if (a >= t) status = '<span style="color:var(--ok)">✓ ถึงเป้าหมายแล้ว</span>';
+    else if (a) status = "ได้ระดับ" + LEVELS[a] + " · อีก " + (t - a) + " ระดับถึงเป้าหมาย";
+    else status = '<span class="muted">ยังไม่มีระดับ</span>';
 
     var html = "<div>" +
-      '<span class="chip" style="background:' + solid + ';color:#fff">โดเมนที่ ' + d.id + " · " + esc(d.name) + "</span> " +
-      '<span class="chip ' + st.cls + '">' + st.label + "</span>" +
-      '<div class="detail-title"><span class="num">' + c.code + "</span>" + esc(c.name) + "</div></div>" +
+      '<span class="chip" style="background:' + d.bubble + ';color:#fff">โดเมน ' + d.id + " · " + esc(d.full) + "</span>" +
+      '<div class="d-title"><span class="c">' + c.code + "</span>" + esc(c.name) + "</div></div>" +
       '<div class="meter">' + meter + "</div>" +
-      '<div class="status-line">' + line + "</div>";
+      '<div class="status">' + status + "</div>";
 
-    if (rub) {
-      html += '<div class="box"><h3>คำอธิบายสมรรถนะ</h3><p>' + esc(rub.desc) + "</p></div>";
-      html += '<div><h3 style="font-size:13px;color:var(--muted);margin-bottom:6px">เกณฑ์แต่ละระดับ</h3><div class="rubric">' +
-        rub.levels.map(function (txt, i) {
-          var lv = i + 1, cls = lv <= a ? "got" : (lv === a + 1 && lv <= t ? "next" : "later");
-          var tag = lv <= a ? "✓ " + LEVELS[lv] : (cls === "next" ? "→ " + LEVELS[lv] : LEVELS[lv]);
-          return '<div class="rub ' + cls + '"><b>' + tag + "</b><span>" + esc(txt) + "</span></div>";
-        }).join("") + "</div></div>";
-    }
-
-    if (goal) {
-      html += '<div class="box"><h3>สิ่งที่ Module 1 มุ่งพัฒนา (ระดับ' +
-        goal.levels.map(function (l) { return LEVELS[l]; }).join(" / ") + ")</h3><p>" + esc(goal.text) + "</p></div>";
-    }
-
-    html += '<div><h3 style="font-size:13px;color:var(--muted);margin-bottom:6px">หลักฐานจากบทเรียน</h3>';
+    // where the levels came from: one row per course, with level tags like the recommendations
     if (ev.length) {
-      html += '<div class="evi">' + ev.map(function (e) {
-        var s = lessonStatus(e.lesson.code), p = STUDENT.progress[e.lesson.code] || [];
-        return '<div class="evi-row"><span class="role">' + e.role + '</span><span class="name"><span class="num" style="color:var(--muted);font-weight:700;margin-right:6px">' +
-          e.lesson.code + "</span>" + esc(e.lesson.name) + '</span><span class="chip ' + LESSON_ST[s].cls + '">' + LESSON_ST[s].label +
-          '</span><span class="score num">' + (p[2] != null ? p[2] + "%" : "–") + "</span></div>";
-      }).join("") + "</div>";
-    } else {
-      html += '<div class="empty">ยังไม่มีบทเรียนที่ mapping กับสมรรถนะนี้</div>';
+      var byCourse = {};
+      ev.forEach(function (e) { (byCourse[e.course] = byCourse[e.course] || []).push(e); });
+      var maxLv = function (list) { return list.reduce(function (m, e) { return Math.max(m, e.lv); }, 0); };
+      var keys = Object.keys(byCourse).sort(function (x, y) { return maxLv(byCourse[y]) - maxLv(byCourse[x]); });
+      html += '<div><div class="label-sm">ได้มาจาก</div><div class="src">' + keys.map(function (k) {
+        var crs = COURSES[k], list = byCourse[k];
+        var lessons = list.map(function (e) {
+          var l = lessonByCode[e.lesson];
+          return k === CURRENT && l ? "บท " + e.lesson + (list.length === 1 ? " " + l.name : "") : e.lesson;
+        }).filter(function (v, i, arr) { return arr.indexOf(v) === i; }).join(", ");
+        var lvs = list.map(function (e) { return e.lv; }).filter(function (v, i, arr) { return arr.indexOf(v) === i; }).sort();
+        var tags = lvs.map(function (l) {
+          return '<span class="gain" style="background:' + d.shade[l - 1] + ";color:" + d.on[l - 1] + '">' + LEVELS[l] + "</span>";
+        }).join("");
+        var score = Math.round(list.reduce(function (s, e) { return s + e.score; }, 0) / list.length);
+        return '<a class="crs" href="' + crs.url + '" target="_blank" rel="noopener">' +
+          '<img src="' + crs.cover + '" alt="" loading="lazy">' +
+          '<span class="tx"><span class="n">' + esc(courseLabel(crs)) + '</span><span class="s">' + esc(lessons) + "</span><span>" + tags + "</span></span>" +
+          '<span class="sc num">' + score + "%</span></a>";
+      }).join("") + "</div></div>";
     }
-    html += "</div>";
+
+    // courses that would fill this competency further
+    var rec = recommend(c);
+    if (rec.length) {
+      html += '<div><div class="label-sm">แนะนำเพื่อเติมเต็มสมรรถนะนี้</div><div class="src">' + rec.map(function (r) {
+        var cur = r.crs.key === CURRENT;
+        var gains = r.gain.map(function (l) {
+          return '<span class="gain" style="background:' + d.shade[l - 1] + ";color:" + d.on[l - 1] + '">+ ' + LEVELS[l] + "</span>";
+        }).join("");
+        var sub = cur ? "บทที่เหลือ " + r.rest.map(function (l) { return l.code; }).join(", ") : "";
+        return '<a class="crs rec" href="' + r.crs.url + '" target="_blank" rel="noopener">' +
+          '<img src="' + r.crs.cover + '" alt="" loading="lazy">' +
+          '<span class="tx"><span class="n">' + esc(courseLabel(r.crs)) + "</span>" +
+          (sub ? '<span class="s">' + esc(sub) + "</span>" : "") + "<span>" + gains + "</span></span>" +
+          '<span class="go">' + (cur ? "เรียนต่อ" : "ไปเรียน") + " →</span></a>";
+      }).join("") + "</div></div>";
+    } else if (a >= 3) {
+      html += '<div class="muted">ได้ระดับสูงสุดแล้ว</div>';
+    }
 
     $("detail").innerHTML = html;
   }
 
-  // ---------- Domain cards ----------
-  function renderDomains() {
-    $("domains").innerHTML = DOMAINS.map(function (d) {
-      var list = COMPETENCIES.filter(function (c) { return c.d === d.id; });
-      var sumT = 0, sumA = 0;
-      list.forEach(function (c) { sumT += target(c); sumA += Math.min(achieved(c), target(c)); });
-      var pct = Math.round(sumA / sumT * 100);
-      var rows = list.map(function (c) {
-        var st = compStatus(c);
-        return '<button class="crow' + (state.selected === c.code ? " active" : "") + '" data-code="' + c.code + '">' +
-          '<span class="code num">' + c.code + "</span><span>" + esc(c.name) + "</span>" + levelDots(c) +
-          '<span class="chip ' + st.cls + '">' + st.label + "</span></button>";
-      }).join("");
-      return '<section class="panel dcard"><div class="dcard-head" style="background:var(' + d.solid + ')"><div><div style="font-size:12px;opacity:.85">โดเมนที่ ' + d.id +
-        "</div><h3>" + esc(d.name) + '</h3></div><div class="pct num">' + pct + "%<small>ของเป้าหมาย</small></div></div>" + rows + "</section>";
-    }).join("");
+  // ---------- courses taken (tab bar) ----------
+  function fullTitle(crs) {
+    return "ปัญญาประดิษฐ์สำหรับนักเรียนระดับชั้นมัธยมศึกษา" + (crs.band === "ม.ต้น" ? "ตอนต้น" : "ตอนปลาย") + " : " + crs.name;
   }
+  function courseSummary(k) {
+    if (k === CURRENT) {
+      var ls = MODULE.lessons, done = ls.filter(function (l) { return lessonStatus(l.code) === "done"; }).length;
+      var prog = Math.round(ls.reduce(function (s, l) { var p = STUDENT.progress[l.code]; return s + (p[0] + p[1]) / 2; }, 0) / ls.length);
+      var q = ls.map(function (l) { return STUDENT.progress[l.code][2]; }).filter(function (v) { return v != null; });
+      return { total: ls.length, done: done, progress: prog, score: q.length ? Math.round(q.reduce(function (a, b) { return a + b; }, 0) / q.length) : 0 };
+    }
+    var r = STUDENT.results[k];
+    return { total: r.lessons, done: r.done, progress: Math.round(r.done / r.lessons * 100), score: r.score, year: r.year };
+  }
+  function takenCourses() {
+    return Object.keys(STUDENT.courses).sort(function (x, y) { return (y === CURRENT) - (x === CURRENT); });
+  }
+  var COURSE_ST = { done: ["เรียนจบ", "st-ok"], doing: ["กำลังเรียน", "st-dev"] };
 
-  // ---------- Lessons ----------
-  function chipFor(code, sec) {
-    var c = byCode[code];
-    return '<button class="cchip' + (sec ? " sec" : "") + '" data-code="' + code + '" title="' + esc(c.name) + '" style="border-color:' + colorOf(c) + ";color:" + colorOf(c) + '">' + code + "</button>";
-  }
-  function mini(v) {
-    return '<div class="mini"><div class="bar"><i style="width:' + v + "%;background:" + (v >= COMPLETE_PCT ? "var(--ok)" : "var(--warn)") + '"></i></div><span class="num">' + v + "%</span></div>";
-  }
-  function renderLessons() {
-    $("lessons").innerHTML = MODULE.lessons.map(function (l) {
-      var p = STUDENT.progress[l.code] || [0, 0, null], s = LESSON_ST[lessonStatus(l.code)];
-      return '<tr class="lesson-row"><td class="lesson-name"><span class="code num">' + l.code + "</span>" + esc(l.name) +
-        '<details class="why"><summary>เหตุผลการ mapping</summary><p>' + esc(l.why) + "</p></details></td>" +
-        '<td><span class="chip ' + s.cls + '">' + s.label + "</span></td>" +
-        "<td>" + mini(p[0]) + "</td><td>" + mini(p[1]) + "</td>" +
-        '<td class="num" style="font-weight:700">' + (p[2] != null ? p[2] + "%" : '<span style="color:var(--muted);font-weight:400">ยังไม่ทำ</span>') + "</td>" +
-        "<td>" + l.main.map(function (k) { return chipFor(k, false); }).join("") + "</td>" +
-        "<td>" + (l.sec.length ? l.sec.map(function (k) { return chipFor(k, true); }).join("") : '<span style="color:var(--muted)">–</span>') + "</td></tr>";
+  function renderCourses() {
+    $("tabs").innerHTML = takenCourses().map(function (k) {
+      var crs = COURSES[k], st = COURSE_ST[STUDENT.courses[k]], on = state.course === k;
+      return '<button class="tab' + (on ? " on" : "") + '" role="tab" aria-selected="' + on + '" data-course="' + k + '">' +
+        '<img src="' + crs.cover + '" alt="">' +
+        '<span><span class="n">' + esc(crs.band + " · " + crs.name) + '</span><span class="chip ' + st[1] + '">' + st[0] + "</span></span></button>";
     }).join("");
+
+    var k = state.course, crs = COURSES[k], sum = courseSummary(k), cur = k === CURRENT;
+    var html = '<div class="ctop"><div class="cinfo"><img src="' + crs.cover + '" alt=""><div>' +
+      '<div class="t">' + esc(fullTitle(crs)) + "</div>" +
+      '<span class="org">NECTEC</span><a class="link" href="' + crs.url + '" target="_blank" rel="noopener">เปิดหลักสูตร ↗</a></div></div>' +
+      '<div class="cstats">' +
+      stat("cat-2", "ความคืบหน้า", sum.progress + "%", "", sum.progress) +
+      stat("cat-3", "บทเรียนที่ผ่าน", sum.done, " / " + sum.total, sum.done / sum.total * 100) +
+      stat("cat-4", "คะแนนเฉลี่ย", sum.score + "%", "", sum.score) +
+      "</div></div>";
+
+    // competencies this course gave the student
+    var byComp = {};
+    STUDENT.evidence.forEach(function (e) {
+      if (e.course !== k) return;
+      (byComp[e.comp] = byComp[e.comp] || []).indexOf(e.lv) < 0 && byComp[e.comp].push(e.lv);
+    });
+    var codes = Object.keys(byComp).sort();
+    html += '<div><div class="label-sm">สมรรถนะที่ได้จากหลักสูตรนี้ · ' + codes.length + " สมรรถนะ</div>";
+    html += codes.length ? '<div class="got">' + codes.map(function (code) {
+      var c = byCode[code], d = dom(c);
+      var tags = byComp[code].sort().map(function (l) {
+        return '<span class="gain" style="background:' + d.shade[l - 1] + ";color:" + d.on[l - 1] + '">' + LEVELS[l] + "</span>";
+      }).join("");
+      return '<button data-code="' + code + '" title="' + esc(c.name) + '"><span class="cd" style="background:' + d.solid + '">' + code + '</span><span class="nm">' + esc(c.name) + "</span>" + tags + "</button>";
+    }).join("") + "</div>" : '<div class="muted">ยังไม่มีสมรรถนะที่ได้</div>';
+    html += "</div>";
+
+    if (cur) {
+      html += '<div><div class="label-sm">บทเรียน</div><div class="table-wrap"><table>' +
+        "<thead><tr><th>บทเรียน</th><th>สถานะ</th><th>ความคืบหน้า</th><th>แบบทดสอบ</th><th>สมรรถนะ</th></tr></thead><tbody>" +
+        lessonRows() + "</tbody></table></div></div>";
+    }
+    $("cpanel").innerHTML = html;
+  }
+  function stat(cat, label, value, of, bar) {
+    return '<div class="clay-soft cat-card ' + cat + ' stat"><div class="label">' + label + '</div><div class="value num">' + value +
+      (of ? "<small>" + of + "</small>" : "") + '</div><div class="bar"><i style="width:' + Math.round(bar) + '%"></i></div></div>';
+  }
+  function lessonRows() {
+    return MODULE.lessons.map(function (l) {
+      var p = STUDENT.progress[l.code], st = LESSON_ST[lessonStatus(l.code)], prog = Math.round((p[0] + p[1]) / 2);
+      var chips = l.main.map(function (k) { return chip(k, false); }).concat(l.sec.map(function (k) { return chip(k, true); })).join("");
+      return "<tr><td><span class=\"lc num\">" + l.code + "</span>" + esc(l.name) + "</td>" +
+        '<td><span class="chip ' + st[1] + '">' + st[0] + "</span></td>" +
+        '<td><div class="mini"><div class="bar"><i style="width:' + prog + '%"></i></div><span class="num">' + prog + "%</span></div></td>" +
+        '<td class="num">' + (p[2] != null ? p[2] + "%" : '<span class="muted">–</span>') + "</td><td>" + chips + "</td></tr>";
+    }).join("");
+  }
+  function chip(code, sec) {
+    var c = byCode[code], d = dom(c);
+    return '<button class="cchip' + (sec ? " sec" : "") + '" data-code="' + code + '" title="' + esc(c.name + (sec ? " (รอง)" : "")) + '" style="border-color:' + d.solid + ";color:" + d.solid + (sec ? "" : ";background:" + d.tint) + '">' + code + "</button>";
   }
 
   // ---------- wiring ----------
-  function renderAll() {
-    var pct = renderKpis();
-    renderWheel(pct);
-    renderDetail();
-    renderDomains();
-  }
-
-  function select(code, scroll) {
+  function render() { renderStats(); renderWheel(); renderDetail(); }
+  function select(code, refocus, fromBelow) {
     if (!byCode[code]) return;
     state.selected = code;
-    renderWheel(renderKpis());
-    renderDetail();
-    renderDomains();
-    if (scroll && window.innerWidth <= 1000) $("detail").scrollIntoView({ behavior: "smooth", block: "start" });
+    renderWheel(); renderDetail();
+    if (refocus) { var el = $("wheel").querySelector('.seg[data-code="' + code + '"]'); if (el) el.focus(); }
+    else if (window.innerWidth <= 1000) $("detail").scrollIntoView({ behavior: "smooth", block: "start" });
+    else if (fromBelow) document.querySelector(".grid-main").scrollIntoView({ behavior: "smooth", block: "start" });
   }
-
   document.addEventListener("click", function (e) {
+    var tab = e.target.closest("[data-course]");
+    if (tab) { state.course = tab.getAttribute("data-course"); renderCourses(); return; }
     var el = e.target.closest("[data-code]");
-    if (el) select(el.getAttribute("data-code"), true);
+    if (el) select(el.getAttribute("data-code"), false, !!el.closest(".lessons"));
   });
   $("wheel").addEventListener("keydown", function (e) {
     var el = e.target.closest(".seg");
-    if (el && (e.key === "Enter" || e.key === " ")) {
-      e.preventDefault();
-      var code = el.getAttribute("data-code");
-      select(code, false);
-      var again = $("wheel").querySelector('.seg[data-code="' + code + '"]');
-      if (again) again.focus();
-    }
+    if (el && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); select(el.getAttribute("data-code"), true); }
   });
-
   var sel = $("band");
   sel.innerHTML = BANDS.map(function (b) { return '<option value="' + b.id + '"' + (b.id === state.band ? " selected" : "") + ">" + b.label + "</option>"; }).join("");
-  sel.addEventListener("change", function () { state.band = sel.value; renderAll(); });
+  sel.addEventListener("change", function () { state.band = sel.value; renderStats(); renderDetail(); });
 
-  renderHeader();
-  renderLegends();
-  renderLessons();
-  renderAll();
+  $("avatar").textContent = $("nav-av").textContent = STUDENT.initials;
+  $("s-name").textContent = STUDENT.name;
+  $("s-meta").textContent = STUDENT.meta;
+  renderLegend();
+  renderCourses();
+  render();
 })();
 </script>
 </body>
